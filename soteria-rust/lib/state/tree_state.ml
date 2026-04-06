@@ -16,24 +16,24 @@ module Make (Borrows : Tree_borrows.T) = struct
   module Sptr_base = struct
     open Rustsymex.Syntax
 
-    type ('sptr, 'snonzero, 'sint) base = {
+    type ('sptr, 'snonzero, 'sint, 'tag) base = {
       ptr : 'sptr;
-      tag : Borrows.tag option;
+      tag : 'tag option;
       align : 'snonzero;
       size : 'sint;
     }
 
-    type t = (T.sptr Typed.t, T.nonzero Typed.t, T.sint Typed.t) base
-    type syn = (Typed.Expr.t, Typed.Expr.t, Typed.Expr.t) base
+    type t =
+      (T.sptr Typed.t, T.nonzero Typed.t, T.sint Typed.t, Borrows.Tag.t) base
 
-    let pp' pp_v fmt { ptr; tag; _ } =
-      Fmt.pf fmt "%a[%a]" pp_v ptr
-        Fmt.(option ~none:(any "*") Borrows.pp_tag)
-        tag
+    type syn = (Typed.Expr.t, Typed.Expr.t, Typed.Expr.t, Borrows.Tag.syn) base
 
-    let pp = pp' Typed.ppa
+    let pp' pp_v pp_tag fmt { ptr; tag; _ } =
+      Fmt.pf fmt "%a[%a]" pp_v ptr Fmt.(option ~none:(any "*") pp_tag) tag
+
+    let pp = pp' Typed.ppa Borrows.Tag.pp
     let show = Fmt.to_to_string pp
-    let pp_syn = pp' Typed.Expr.pp
+    let pp_syn = pp' Typed.Expr.pp Borrows.Tag.pp_syn
     let show_syn = Fmt.to_to_string pp_syn
 
     let to_syn { ptr; tag; align; size } =
@@ -41,18 +41,26 @@ module Make (Borrows : Tree_borrows.T) = struct
         ptr = Typed.Expr.of_value ptr;
         align = Typed.Expr.of_value align;
         size = Typed.Expr.of_value size;
-        tag;
+        tag = Option.map Borrows.Tag.to_syn tag;
       }
 
     let learn_eq syn t =
       let open DecayMapMonad.Consumer in
       let open Syntax in
-      let* () = if syn.tag = t.tag then ok () else lfail Typed.v_false in
+      let* () =
+        match (syn.tag, t.tag) with
+        | None, None -> ok ()
+        | Some st, Some tt -> Borrows.Tag.learn_eq st tt
+        | Some _, None | None, Some _ -> lfail Typed.v_false
+      in
       let* () = learn_eq syn.ptr t.ptr in
       let* () = learn_eq syn.align t.align in
       learn_eq syn.size t.size
 
-    let exprs_syn { ptr; align; size; tag = _ } = [ ptr; align; size ]
+    let exprs_syn { ptr; align; size; tag } =
+      Option.fold ~none:[] ~some:Borrows.Tag.exprs_syn tag
+      @ [ ptr; align; size ]
+
     let fresh () = failwith "Fresh unimplemented for sptr (for now)"
 
     let subst subst_val p =
@@ -60,7 +68,8 @@ module Make (Borrows : Tree_borrows.T) = struct
       let ptr = se p.ptr in
       let align = se p.align in
       let size = se p.size in
-      { p with ptr; align; size }
+      let tag = Option.map (Borrows.Tag.subst subst_val) p.tag in
+      { ptr; align; size; tag }
 
     let null_ptr () =
       {
@@ -167,7 +176,7 @@ module Make (Borrows : Tree_borrows.T) = struct
     type t = {
       align : Typed.T.nonzero Typed.t;
       size : Typed.T.sint Typed.t;
-      tb_root : Borrows.tag;
+      tb_root : Borrows.Tag.t;
       kind : Alloc_kind.t;
       trace : Trace.t;
     }
@@ -364,7 +373,7 @@ module Make (Borrows : Tree_borrows.T) = struct
       Soteria.Sym_states.With_info.Make (DecayMapMonad) (Meta) (Freeable_block)
 
     let make ?(kind = Alloc_kind.Heap) ?span ?zeroed ~size ~align () :
-        (t * Borrows.tag option) DecayMapMonad.t =
+        (t * Borrows.Tag.t option) DecayMapMonad.t =
       let open DecayMapMonad.Syntax in
       let* tb, tag = Borrows.init () in
       let* block = Tree_block.alloc ?zeroed size in

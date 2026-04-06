@@ -463,7 +463,7 @@ struct
   (* Memory operations *)
 
   let load ~(ignore_borrow : bool) (ofs : Typed.([< T.sint ] t)) (ty : Types.ty)
-      (tag : Tree_borrows.tag option) (tb : Tree_borrows.t option) =
+      (tag : Tree_borrows.Tag.t option) (tb : Tree_borrows.t option) =
     let open SM.Syntax in
     let** size = lift_symex @@ Layout.size_of ty in
     let ((_, bound) as range) = Range.of_low_and_size ofs size in
@@ -486,7 +486,7 @@ struct
         (sval, tree))
 
   let store (ofs : Typed.([< T.sint ] t)) (value : rust_val)
-      (tag : Tree_borrows.tag option) (tb : Tree_borrows.t option) :
+      (tag : Tree_borrows.Tag.t option) (tb : Tree_borrows.t option) :
       (unit, 'err, 'fix) SM.Result.t =
     let open SM.Syntax in
     let** size = lift_symex @@ Value_codec.size_of value in

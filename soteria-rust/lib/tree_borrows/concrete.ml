@@ -17,6 +17,21 @@ module Make (Symex : Tree_borrows_intf.Rust_symex) :
 
   (* Lift operations symbolically *)
 
+  module Tag = struct
+    type t = tag [@@deriving show { with_path = false }]
+    type syn = tag [@@deriving show { with_path = false }]
+
+    let to_syn x = x
+    let fresh () = failwith "fresh tags not supported in concrete TB"
+    let subst _ x = x
+
+    let learn_eq syn tag =
+      if equal_tag syn tag then Symex.Consumer.ok ()
+      else Symex.Consumer.lfail Typed.v_false
+
+    let exprs_syn _ = []
+  end
+
   let nondet_tag () = return None
   let init () = return (init ())
   let init_st _ = return empty_state

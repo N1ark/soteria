@@ -9,7 +9,9 @@ module type S = sig
   (* state *)
   include Soteria.Sym_states.Base.M(Rustsymex).S
 
-  type 'a ret := ('a, Error.with_trace, serialized list) SM.Result.t
+  type 'a ret := ('a, Error.with_trace, syn list) SM.Result.t
+
+  val pp : t Fmt.t
 
   module Sptr : sig
     include Sptr.S

@@ -1,13 +1,18 @@
 open Symex
 open Data
 
+module Ckey (K : sig
+  type t
+end) =
+struct
+  type t = K.t
+  type syn = K.t
+end
+
 module Key (Symex : Symex.Base) = struct
   module type S = sig
     include S_map.Key(Symex).S
-
-    val fresh : unit -> t Symex.t
-    val subst : (Var.t -> Var.t) -> t -> t
-    val iter_vars : t -> 'a Symex.Value.ty Var.iter_vars
+    include Abstr.M(Symex).S_with_syn with type t := t
   end
 
   module type S_patricia_tree = sig
@@ -21,19 +26,20 @@ module M
     (Symex : Symex.Base)
     (Key : sig
       type t
+      type syn
     end) =
 struct
   module type S = sig
     type codom
-    type codom_serialized
+    type codom_syn
 
-    include Base.M(Symex).S with type serialized = Key.t * codom_serialized
+    include Base.M(Symex).S with type syn = Key.syn * codom_syn
 
-    type ('a, 'err) res := ('a, 'err, serialized list) SM.Result.t
+    type ('a, 'err) res := ('a, 'err, syn list) SM.Result.t
 
     type ('a, 'err) codom_res :=
       codom option ->
-      (('a, 'err, codom_serialized list) Compo_res.t * codom option) Symex.t
+      (('a, 'err, codom_syn list) Compo_res.t * codom option) Symex.t
 
     val empty : t
     val syntactic_bindings : t -> (Key.t * codom) Seq.t

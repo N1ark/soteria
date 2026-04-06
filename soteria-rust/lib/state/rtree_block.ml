@@ -126,7 +126,7 @@ struct
           TB.Split_tree.(Leaf ll, Leaf lr)
       | Lazy -> failwith "Should never split an intermediate node"
 
-    type serialized =
+    type syn =
       | SInit of rust_val
       | SUninit
       | SZeros
@@ -134,6 +134,12 @@ struct
       | STree_borrow_st of Tree_borrows.serialized_state
       | STree_borrow of Tree_borrows.serialized
     [@@deriving show { with_path = false }]
+
+    let ins_outs = function
+      | SInit v -> ([], Rust_val.exprs_syn Sptr.exprs_syn v)
+      | SUninit | SZeros | SAny -> ([], [])
+      | Stree_borrow_st s -> failwith "todo"
+      | Stree_borrow s -> failwith "todo"
 
     let lift_tb_st_fix s = STree_borrow_st s
 
@@ -151,21 +157,7 @@ struct
           | Tree_borrows.State s -> lift_tb_st_fix s)
         tb_s
 
-    let subst_serialized f = function
-      | SInit v -> SInit (Rust_val.subst Sptr.subst f v)
-      | STree_borrow_st tb ->
-          STree_borrow_st (Tree_borrows.subst_serialized_state f tb)
-      | STree_borrow s -> STree_borrow (Tree_borrows.subst_serialized f s)
-      | (SUninit | SZeros | SAny) as v -> v
-
-    let iter_vars_serialized v f =
-      match v with
-      | SInit v -> Rust_val.iter_vars Sptr.iter_vars v f
-      | STree_borrow_st s -> Tree_borrows.iter_vars_serialized_state s f
-      | STree_borrow s -> Tree_borrows.iter_vars_serialized s f
-      | SUninit | SZeros | SAny -> ()
-
-    let serialize : t -> serialized Seq.t option = function
+    let to_syn : t -> syn Seq.t option = function
       | Leaf (Unowned, Some tb) ->
           Some
             (Tree_borrows.serialize_state tb
@@ -194,7 +186,7 @@ struct
       (* we're basically guaranteed this won't error (ie. layout error) by now,
          so we can safely unwrap. *)
       let v = get_ok v in
-      [ SInit v ]
+      [ Init (Rust_val.to_syn Sptr.to_syn v) ]
 
     let mk_fix_any () = [ Any ]
 
@@ -229,7 +221,9 @@ struct
           mk_leaf t v tb'
       | STree_borrow _, _ -> not_impl "Consume TB structure in tree block?"
 
-    let rec produce (s : serialized) (t : tree) : tree DecayMapMonad.t =
+    let rec produce (s : syn) (t : tree) : tree DecayMapMonad.Producer.t =
+      let open DecayMapMonad.Producer in
+      let open Syntax in
       match (s, t.node) with
       | ( (SInit _ | SZeros | SUninit | SAny),
           (NotOwned Totally | Owned (Leaf (Unowned, _))) ) ->

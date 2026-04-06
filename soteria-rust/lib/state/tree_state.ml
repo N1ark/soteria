@@ -111,8 +111,14 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
     include Typed
 
     type t = T.sloc Typed.t
+    type syn = Expr.t [@@deriving show]
 
+    let to_syn v = Expr.of_value v
+    let learn_eq (s : syn) (v : t) = DecayMapMonad.Consumer.learn_eq s v
+    let exprs_syn v = [ v ]
+    let subst = Expr.subst
     let pp = ppa
+    let show = Fmt.to_to_string pp
     let to_int = unique_tag
     let concrete_loc = ref 0
     let simplify = DecayMapMonad.simplify
@@ -147,7 +153,7 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
 
   type global = String of string | Global of Types.global_decl_id
 
-  module GlobMap = Map.MakePp (struct
+  module GlobMap = Map.Make (struct
     type t = global = String of string | Global of Types.global_decl_id
     [@@deriving show { with_path = false }, ord]
   end)
@@ -160,6 +166,7 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
 
           let compare = Typed.compare
           let pp = Typed.ppa
+          let show = Fmt.to_to_string pp
         end)
         (Fun_kind)
 
@@ -177,9 +184,7 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
       | None, None -> None
       | b1, b2 -> Some (b1, b2)
 
-    type serialized =
-      | Block of Tree_block.serialized
-      | Borrow of Tree_borrows.serialized
+    type syn = Block of Tree_block.syn | Borrow of Tree_borrows.syn
     [@@deriving show { with_path = false }]
 
     module SM =
@@ -194,7 +199,7 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
 
     let lift_fix_borrow s = Borrow s
 
-    let lift_fix_block (s : Tree_block.serialized) =
+    let lift_fix_block (s : Tree_block.syn) =
       (* HACK: this is quite ugly; tree borrow misses relating to the structure
          (not the state!) can occur within [Tree_block], however fixing them
          there is not possible, since the structure is stored here, in [Block].
@@ -210,7 +215,7 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
       Soteria.Symex.Compo_res.map_missing r (List.map lift_fix_block)
 
     let with_tree_block (f : ('a, 'err, 'fix) Tree_block.SM.Result.t) :
-        ('a, 'err, serialized list) Result.t =
+        ('a, 'err, syn list) Result.t =
       let* t_opt = SM.get_state () in
       let tree, tb = of_opt t_opt in
       let*^ v, tree = f tree in
@@ -219,7 +224,7 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
 
     let with_tree_block_read_tb
         (f : Tree_borrows.t option -> ('a, 'err, 'fix) Tree_block.SM.Result.t) :
-        ('a, 'err, serialized list) SM.Result.t =
+        ('a, 'err, syn list) SM.Result.t =
       let* t_opt = SM.get_state () in
       let tree, tb = of_opt t_opt in
       let*^ v, tree = f tb tree in
@@ -289,19 +294,14 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
       let+ res = Tree_block.assert_exclusively_owned a in
       lift_fix_block_r res
 
-    let serialize (block, borrow) =
-      let s_block = Option.fold ~none:[] ~some:Tree_block.serialize block in
-      let s_borrow = Option.fold ~none:[] ~some:Tree_borrows.serialize borrow in
+    let to_syn (block, borrow) =
+      let s_block = Option.fold ~none:[] ~some:Tree_block.to_syn block in
+      let s_borrow = Option.fold ~none:[] ~some:Tree_borrows.to_syn borrow in
       List.map lift_fix_block s_block @ List.map lift_fix_borrow s_borrow
 
-    let subst_serialized f = function
-      | Block s -> Block (Tree_block.subst_serialized f s)
-      | Borrow s -> Borrow (Tree_borrows.subst_serialized f s)
-
-    let iter_vars_serialized s f =
-      match s with
-      | Block s -> Tree_block.iter_vars_serialized s f
-      | Borrow s -> Tree_borrows.iter_vars_serialized s f
+    let ins_outs = function
+      | Block s -> Tree_block.ins_outs s
+      | Borrow s -> Tree_borrows.ins_outs s
 
     let produce s =
       let* st = get_state () in
@@ -313,6 +313,8 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
       | Borrow s ->
           let*^ (), tb' = Tree_borrows.produce s tb in
           set_state (to_opt (st, tb'))
+
+    let consume _ = failwith "TODO"
   end
 
   module Freeable_block =
@@ -344,7 +346,7 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
 
     let with_ptr (ptr : Sptr_base.t)
         (f : [< T.sint ] Typed.t -> ('a, 'err, 'fix list) Block.SM.Result.t) :
-        ('a, 'err, serialized list) SM.Result.t =
+        ('a, 'err, syn list) SM.Result.t =
       let open SM in
       let open SM.Syntax in
       let** () =
@@ -384,18 +386,11 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
         (struct
           module SM = SM
 
-          type fix = serialized list
+          type fix = syn list
         end)
   end
 
-  type serialized = Heap of Heap.serialized
-  [@@deriving show { with_path = false }]
-
-  let subst_serialized subst = function
-    | Heap s -> Heap (Heap.subst_serialized subst s)
-
-  let iter_vars_serialized ser iter =
-    match ser with Heap s -> Heap.iter_vars_serialized s iter
+  type syn = Heap of Heap.syn [@@deriving show { with_path = false }]
 
   type t = {
     heap : Heap.t option;
@@ -406,8 +401,7 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
     thread_destructor :
       unit ->
       t option ->
-      ((unit, Error.with_trace, serialized list) Soteria.Symex.Compo_res.t
-      * t option)
+      ((unit, Error.with_trace, syn list) Soteria.Symex.Compo_res.t * t option)
       Rustsymex.t;
         [@printer Fmt.any "code"]
     const_generics : Sptr_base.t rust_val Types.ConstGenericVarId.Map.t;
@@ -488,14 +482,14 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
     let+ () = SM.set_state (Some { st with heap; pointers }) in
     res
 
-  let with_heap (f : ('a, 'b, Heap.serialized list) Heap.SM.Result.t) :
-      ('a, 'b, serialized list) Result.t =
+  let with_heap (f : ('a, 'b, Heap.syn list) Heap.SM.Result.t) :
+      ('a, 'b, syn list) Result.t =
     SM.Result.map_missing (with_heap_symex f) (fun fix ->
         List.map (fun h -> Heap h) fix)
 
   let apply_parser (type a) ?(ignore_borrow = false) ptr
       (parser : offset:T.sint Typed.t -> a Heap.Decoder.ParserMonad.t) :
-      (a, Error.t, serialized list) Result.t =
+      (a, Error.t, syn list) Result.t =
     let* () = log "load" ptr in
     let handler (ty, ofs) =
       let@ _ofs = Heap.with_ptr ptr in
@@ -577,7 +571,7 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
     check_non_dangling_untyped ptr size
 
   and load ?ignore_borrow ?(check_refs = true) ((ptr, meta) as fptr) ty :
-      (Sptr_base.t rust_val, Error.t, serialized list) Result.t =
+      (Sptr_base.t rust_val, Error.t, syn list) Result.t =
     let** () = check_ptr_align fptr ty in
     let parser ~offset = Heap.Decoder.decode ~meta ~offset ty in
     let** value = apply_parser ?ignore_borrow ptr parser in
@@ -662,7 +656,7 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
     tb_load_untyped ptr size
 
   let store ((ptr, _) as fptr) ty sval :
-      (unit, Error.with_trace, serialized list) Result.t =
+      (unit, Error.with_trace, syn list) Result.t =
     let@ () = with_loc_err ~trace:"Memory store" () in
     let**^ parts = Encoder.encode ~offset:Usize.(0s) sval ty in
     if Iter.is_empty parts then Result.ok ()
@@ -742,7 +736,7 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
     fake_read ptr ty
 
   let copy_nonoverlapping ~src:(src, _) ~dst:(dst, _) ~size :
-      (unit, Error.with_trace, serialized list) Result.t =
+      (unit, Error.with_trace, syn list) Result.t =
     let@ () = with_loc_err ~trace:"Non-overlapping copy" () in
     let** tree_to_write =
       let@ ofs = with_ptr src in
@@ -824,8 +818,7 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
     let**^ layout = Layout.layout_of ty in
     alloc ?kind ?span layout.size layout.align
 
-  let alloc_tys ?kind ?span tys :
-      ('a, Error.with_trace, serialized list) Result.t =
+  let alloc_tys ?kind ?span tys : ('a, Error.with_trace, syn list) Result.t =
     let@ () = with_loc_err ~trace:"Allocation" () in
     let**^ layouts = Rustsymex.Result.map_list tys ~f:Layout.layout_of in
     let layouts = List.rev layouts in
@@ -945,7 +938,7 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
                    let ptr : Sptr_base.t = { ptr; tag = None; align; size } in
                    Result.ok (ptr, Thin)))
 
-  let leak_check () : (unit, Error.with_trace, serialized list) Result.t =
+  let leak_check () : (unit, Error.with_trace, syn list) Result.t =
     (* FIXME: this is an unnecessarily complicated function; what we should do
        is properly track what allocations come from a const/static (with
        Alloc_kind), and then simply iterate over all allocations and look for
@@ -1003,7 +996,7 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
          Result.error (Error.decorate leak_trace `MemoryLeak)))
 
   let with_errors () (f : Error.with_trace list -> 'a * Error.with_trace list) :
-      ('a, Error.with_trace, serialized list) Result.t =
+      ('a, Error.with_trace, syn list) Result.t =
     let* st_opt = SM.get_state () in
     let st = of_opt st_opt in
     let res, errors = f st.errors in
@@ -1104,9 +1097,13 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
     let st = of_opt st_opt in
     st.thread_destructor () st_opt
 
-  let serialize { heap; _ } =
-    Heap.of_opt heap |> Heap.serialize |> List.map (fun h -> Heap h)
+  let to_syn { heap; _ } =
+    Heap.of_opt heap |> Heap.to_syn |> List.map (fun h -> Heap h)
+
+  let ins_outs (Heap r) = Heap.ins_outs r
 
   let produce s st =
     match s with Heap h -> with_heap_symex (Heap.produce h) st
+
+  let consume _ _ = failwith "TODO: Tree_state.consume"
 end

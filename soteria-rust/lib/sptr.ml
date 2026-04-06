@@ -45,9 +45,11 @@ module DecayMap : DecayMapS = struct
     include Typed
 
     type t = sloc Typed.t
+    type syn = Expr.t [@@deriving show { with_path = false }]
 
     let to_int = unique_tag
     let pp = ppa
+    let show = Fmt.to_to_string pp
     let simplify = Rustsymex.simplify
   end
 
@@ -99,8 +101,8 @@ module DecayMap : DecayMapS = struct
     let binding =
       Typed.iter_vars loc_int
       |> Iter.filter (fun (_, ty) -> Typed.equal_ty usize_ty ty)
-      |> Iter.filter_map (fun (var, ty) ->
-          let v = Typed.mk_var var ty in
+      |> Iter.filter_map (fun (var, _) ->
+          let v = Typed.mk_var var usize_ty in
           Seq.find
             (fun (_, { address; exposed }) -> exposed && Typed.equal v address)
             bindings)
@@ -124,14 +126,16 @@ module DecayMapMonad = struct
   let get_where () = lift @@ get_trace ()
 end
 
+module D_abstr = Soteria.Data.Abstr.M (DecayMapMonad)
+
 (** The base type of pointers, permitting simple operations on the pointer type.
     The majority of relevant operations are exposed via the state monad's
     pointer module, {!Rust_state_m.S.Sptr}. *)
 module type S = sig
   (** pointer type *)
-  type t
+  include D_abstr.S_with_syn
 
-  val pp : t Fmt.t
+  include D_abstr.Sem_eq with type t := t
 
   (** Converts an address into a pointer, without provenance. *)
   val of_address : [< sint ] Typed.t -> t
@@ -171,7 +175,4 @@ module type S = sig
   (** For Miri: get the allocation info for this pointer: its size and alignment
   *)
   val allocation_info : t -> [> sint ] Typed.t * [> nonzero ] Typed.t
-
-  val iter_vars : t -> (Svalue.Var.t * 'b ty -> unit) -> unit
-  val subst : (Svalue.Var.t -> Svalue.Var.t) -> t -> t
 end

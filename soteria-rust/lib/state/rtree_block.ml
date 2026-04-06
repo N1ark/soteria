@@ -570,7 +570,6 @@ struct
 
   let with_tb_access (ofs : Typed.([< T.sint ] t))
       (size : Typed.([< T.sint ] t)) f =
-    (* TODO: figure out [mk_fixes] for tree borrows state! *)
     let ((_, bound) as range) = Range.of_low_and_size ofs size in
     let mk_fixes = mk_fix_tb ofs size in
     with_bound_check ~mk_fixes bound (fun t ->

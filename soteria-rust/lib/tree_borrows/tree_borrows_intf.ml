@@ -69,7 +69,11 @@ module M (Symex : Rust_symex) = struct
 
     (** {2 Operations on the state} *)
 
+    (* TODO: I really want to remove this but idk how *)
+
+    (** Makes a fix to create an empty TB state *)
     val fix_empty_state : unit -> syn_state list
+
     val init_st : unit -> tb_state Symex.t
     val equal_state : tb_state option -> tb_state option -> bool
 

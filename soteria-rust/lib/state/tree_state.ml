@@ -16,17 +16,51 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
   module Sptr_base = struct
     open Rustsymex.Syntax
 
-    type t = {
-      ptr : Typed.(T.sptr t);
+    type ('sptr, 'snonzero, 'sint) base = {
+      ptr : 'sptr;
       tag : Tree_borrows.tag option;
-      align : Typed.(T.nonzero t);
-      size : Typed.(T.sint t);
+      align : 'snonzero;
+      size : 'sint;
     }
 
-    let pp fmt { ptr; tag; _ } =
-      Fmt.pf fmt "%a[%a]" Typed.ppa ptr
+    type t = (T.sptr Typed.t, T.nonzero Typed.t, T.sint Typed.t) base
+    type syn = (Typed.Expr.t, Typed.Expr.t, Typed.Expr.t) base
+
+    let pp' pp_v fmt { ptr; tag; _ } =
+      Fmt.pf fmt "%a[%a]" pp_v ptr
         Fmt.(option ~none:(any "*") Tree_borrows.pp_tag)
         tag
+
+    let pp = pp' Typed.ppa
+    let show = Fmt.to_to_string pp
+    let pp_syn = pp' Typed.Expr.pp
+    let show_syn = Fmt.to_to_string pp_syn
+
+    let to_syn { ptr; tag; align; size } =
+      {
+        ptr = Typed.Expr.of_value ptr;
+        align = Typed.Expr.of_value align;
+        size = Typed.Expr.of_value size;
+        tag;
+      }
+
+    let learn_eq syn t =
+      let open DecayMapMonad.Consumer in
+      let open Syntax in
+      let* () = if syn.tag = t.tag then ok () else lfail Typed.v_false in
+      let* () = learn_eq syn.ptr t.ptr in
+      let* () = learn_eq syn.align t.align in
+      learn_eq syn.size t.size
+
+    let exprs_syn { ptr; align; size; tag = _ } = [ ptr; align; size ]
+    let fresh () = failwith "Fresh unimplemented for sptr (for now)"
+
+    let subst subst_val p =
+      let se = Typed.Expr.subst subst_val in
+      let ptr = se p.ptr in
+      let align = se p.align in
+      let size = se p.size in
+      { p with ptr; align; size }
 
     let null_ptr () =
       {
@@ -89,17 +123,6 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
       let ptr = Typed.Ptr.mk loc ofs in
       let ptr = { ptr; tag; align = layout.align; size = layout.size } in
       Result.ok ptr
-
-    let iter_vars { ptr; align; size; tag = _ } f =
-      Typed.iter_vars ptr f;
-      Typed.iter_vars align f;
-      Typed.iter_vars size f
-
-    let subst subst_var p =
-      let ptr = Typed.subst subst_var p.ptr in
-      let align = Typed.subst subst_var p.align in
-      let size = Typed.subst subst_var p.size in
-      { p with ptr; align; size }
   end
 
   (* State details *)
@@ -303,18 +326,35 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
       | Block s -> Tree_block.ins_outs s
       | Borrow s -> Tree_borrows.ins_outs s
 
-    let produce s =
-      let* st = get_state () in
+    let produce s st =
+      let open DecayMapMonad.Producer in
+      let open Syntax in
       let st, tb = of_opt st in
       match s with
       | Block s ->
-          let*^ (), st' = Tree_block.produce s st in
-          set_state (to_opt (st', tb))
+          let+ st' = Tree_block.produce s st in
+          to_opt (st', tb)
       | Borrow s ->
-          let*^ (), tb' = Tree_borrows.produce s tb in
-          set_state (to_opt (st, tb'))
+          let+ tb' = Tree_borrows.produce s tb in
+          to_opt (st, tb')
 
-    let consume _ = failwith "TODO"
+    let consume s st =
+      let open DecayMapMonad.Consumer in
+      let open Syntax in
+      let st, tb = of_opt st in
+      match s with
+      | Block s ->
+          let+ st' =
+            let+? fixes = Tree_block.consume s st in
+            List.map lift_fix_block fixes
+          in
+          to_opt (st', tb)
+      | Borrow s ->
+          let+ tb' =
+            let+? fixes = Tree_borrows.consume s tb in
+            List.map lift_fix_borrow fixes
+          in
+          to_opt (st, tb')
   end
 
   module Freeable_block =
@@ -1102,8 +1142,13 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
 
   let ins_outs (Heap r) = Heap.ins_outs r
 
-  let produce s st =
-    match s with Heap h -> with_heap_symex (Heap.produce h) st
+  let produce _ _ =
+    failwith
+      "Can't be implement for now as we lack SM.Producer.run_with_state; \
+       implemented in https://github.com/soteria-tools/soteria/pull/299"
 
-  let consume _ _ = failwith "TODO: Tree_state.consume"
+  let consume _ _ =
+    failwith
+      "Can't be implement for now as we lack SM.Producer.run_with_state; \
+       implemented in https://github.com/soteria-tools/soteria/pull/299"
 end

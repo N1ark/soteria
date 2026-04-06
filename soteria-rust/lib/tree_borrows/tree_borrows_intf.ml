@@ -36,40 +36,27 @@ module M (Symex : Rust_symex) = struct
 
     (* Compositionality *)
 
-    type serialized
+    type syn [@@deriving show]
 
-    val pp_serialized : Format.formatter -> serialized -> unit
-    val serialize : t -> serialized list
+    val to_syn : t -> syn list
+    val ins_outs : syn -> Symex.Value.Expr.(t list * t list)
+    val consume : syn -> t option -> (t option, syn list) Symex.Consumer.t
+    val produce : syn -> t option -> t option Symex.Producer.t
 
-    val subst_serialized :
-      (Svalue.Var.t -> Svalue.Var.t) -> serialized -> serialized
+    type syn_state [@@deriving show]
 
-    val iter_vars_serialized :
-      serialized -> (Svalue.Var.t * 'a Typed.ty -> unit) -> unit
-
-    val consume : serialized -> t -> (t, 'err, serialized list) Symex.Result.t
-    val produce : serialized -> unit SM.t
-
-    type serialized_state
-
-    val pp_serialized_state : Format.formatter -> serialized_state -> unit
-    val serialize_state : tb_state -> serialized_state list
-
-    val subst_serialized_state :
-      (Svalue.Var.t -> Svalue.Var.t) -> serialized_state -> serialized_state
-
-    val iter_vars_serialized_state :
-      serialized_state -> (Svalue.Var.t * 'a Typed.ty -> unit) -> unit
+    val to_syn_state : tb_state -> syn_state list
+    val ins_outs_state : syn_state -> Symex.Value.Expr.(t list * t list)
 
     val consume_state :
-      serialized_state ->
+      syn_state ->
       tb_state option ->
-      (tb_state option, 'err, serialized_state list) Symex.Result.t
+      (tb_state option, syn_state list) Symex.Consumer.t
 
     val produce_state :
-      serialized_state -> tb_state option -> tb_state option Symex.t
+      syn_state -> tb_state option -> tb_state option Symex.Producer.t
 
-    type full_serialized = Structure of serialized | State of serialized_state
+    type syn_full = Structure of syn | State of syn_state
 
     (** {2 Operations on the structure} *)
 
@@ -84,14 +71,14 @@ module M (Symex : Rust_symex) = struct
       ?protector:protector ->
       tag ->
       state:state ->
-      (tag, 'e, serialized list) SM.Result.t
+      (tag, 'e, syn list) SM.Result.t
 
-    val unprotect : tag -> (unit, 'e, serialized list) SM.Result.t
+    val unprotect : tag -> (unit, 'e, syn list) SM.Result.t
     val strong_protector_exists : t option -> bool
 
     (** {2 Operations on the state} *)
 
-    val fix_empty_state : unit -> serialized_state list
+    val fix_empty_state : unit -> syn_state list
     val init_st : unit -> tb_state Symex.t
     val equal_state : tb_state option -> tb_state option -> bool
 
@@ -100,7 +87,7 @@ module M (Symex : Rust_symex) = struct
       tag ->
       t option ->
       tb_state option ->
-      (tb_state option, 'e, full_serialized list) Symex.Result.t
+      (tb_state option, 'e, syn_full list) Symex.Result.t
 
     (** [access root accessed e state]: Update all nodes in the mapping [state]
         for the tree rooted at [root] with an event [e], that happened at
@@ -110,10 +97,7 @@ module M (Symex : Rust_symex) = struct
       access ->
       t option ->
       tb_state option ->
-      ( tb_state option,
-        [> `AliasingError ],
-        full_serialized list )
-      Symex.Result.t
+      (tb_state option, [> `AliasingError ], syn_full list) Symex.Result.t
 
     val merge : tb_state -> tb_state -> tb_state Symex.t
   end

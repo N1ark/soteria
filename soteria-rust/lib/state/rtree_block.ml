@@ -127,19 +127,19 @@ struct
       | Lazy -> failwith "Should never split an intermediate node"
 
     type syn =
-      | SInit of rust_val
+      | SInit of Sptr.syn Rust_val.syn
       | SUninit
       | SZeros
       | SAny
-      | STree_borrow_st of Tree_borrows.serialized_state
-      | STree_borrow of Tree_borrows.serialized
+      | STree_borrow_st of Tree_borrows.syn_state
+      | STree_borrow of Tree_borrows.syn
     [@@deriving show { with_path = false }]
 
     let ins_outs = function
       | SInit v -> ([], Rust_val.exprs_syn Sptr.exprs_syn v)
       | SUninit | SZeros | SAny -> ([], [])
-      | Stree_borrow_st s -> failwith "todo"
-      | Stree_borrow s -> failwith "todo"
+      | STree_borrow_st s -> Tree_borrows.ins_outs_state s
+      | STree_borrow s -> Tree_borrows.ins_outs s
 
     let lift_tb_st_fix s = STree_borrow_st s
 
@@ -160,21 +160,21 @@ struct
     let to_syn : t -> syn Seq.t option = function
       | Leaf (Unowned, Some tb) ->
           Some
-            (Tree_borrows.serialize_state tb
+            (Tree_borrows.to_syn_state tb
             |> List.map lift_tb_st_fix
             |> List.to_seq)
       | Leaf (Unowned, None) -> failwith "Impossible: unowned with no TB state"
       | Leaf (leaf, tb) ->
           let leaf_ser =
             match leaf with
-            | Init v -> SInit v
+            | Init v -> SInit ((Rust_val.to_syn Sptr.to_syn) v)
             | Uninit -> SUninit
             | Zeros -> SZeros
             | Any -> SAny
             | Unowned -> assert false
           in
           let tb_ser =
-            Option.fold ~none:[] ~some:Tree_borrows.serialize_state tb
+            Option.fold ~none:[] ~some:Tree_borrows.to_syn_state tb
             |> List.map lift_tb_st_fix
             |> List.to_seq
           in
@@ -186,7 +186,7 @@ struct
       (* we're basically guaranteed this won't error (ie. layout error) by now,
          so we can safely unwrap. *)
       let v = get_ok v in
-      [ Init (Rust_val.to_syn Sptr.to_syn v) ]
+      [ SInit (Rust_val.to_syn Sptr.to_syn v) ]
 
     let mk_fix_any () = [ Any ]
 
@@ -200,26 +200,36 @@ struct
       in
       { range = t.range; node; children = None }
 
-    let consume (s : serialized) (t : tree) : (tree, 'e, 'f) Result.t =
+    let consume (s : syn) (t : tree) : (tree, syn list) DecayMapMonad.Consumer.t
+        =
+      let open DecayMapMonad.Consumer in
+      let open Syntax in
       match (s, t.node) with
       | _, NotOwned _ -> miss_no_fix ~reason:"rtree_block consume notowned" ()
-      | _, Owned Lazy -> not_impl "Consume on lazy node"
+      | _, Owned Lazy -> lift @@ not_impl "Consume on lazy node"
       (* init *)
-      | SInit _, _ -> not_impl "Consume typed value on rust_val equality."
+      | SInit _, _ ->
+          lift @@ not_impl "Consume typed value on rust_val equality."
       (* any *)
       | SAny, Owned (Leaf (_, tb)) -> ok (mk_leaf t Unowned tb)
       (* uninit *)
       | SUninit, Owned (Leaf (Uninit, tb)) -> ok (mk_leaf t Unowned tb)
-      | SUninit, Owned (Leaf _) -> vanish ()
+      | SUninit, Owned (Leaf _) -> lfail Typed.v_false
       (* zeros *)
       | SZeros, Owned (Leaf (Zeros, tb)) -> ok (mk_leaf t Unowned tb)
-      | SZeros, Owned (Leaf (Init _, _)) -> not_impl "Assume rust_val == 0s"
-      | SZeros, Owned (Leaf _) -> vanish ()
+      | SZeros, Owned (Leaf (Init _, _)) ->
+          lift @@ not_impl "Assume rust_val == 0s"
+      | SZeros, Owned (Leaf _) -> lfail Typed.v_false
       (* tree borrows *)
       | STree_borrow_st s, Owned (Leaf (v, tb)) ->
-          let++ tb' = lift_tb_st_miss @@ Tree_borrows.consume_state s tb in
+          let+ tb' =
+            let+? fixes = Tree_borrows.consume_state s tb in
+            List.map lift_tb_st_fix fixes
+          in
           mk_leaf t v tb'
-      | STree_borrow _, _ -> not_impl "Consume TB structure in tree block?"
+      | STree_borrow _, _ ->
+          failwith
+            "TB structure syn in tree block, should have been caught before"
 
     let rec produce (s : syn) (t : tree) : tree DecayMapMonad.Producer.t =
       let open DecayMapMonad.Producer in
@@ -227,12 +237,14 @@ struct
       match (s, t.node) with
       | ( (SInit _ | SZeros | SUninit | SAny),
           (NotOwned Totally | Owned (Leaf (Unowned, _))) ) ->
-          let v =
+          let* v =
             match s with
-            | SInit v -> Init v
-            | SZeros -> Zeros
-            | SUninit -> Uninit
-            | SAny -> Any
+            | SInit v ->
+                let+ v = Producer.apply_subst (Rust_val.subst Sptr.subst) v in
+                Init v
+            | SZeros -> return Zeros
+            | SUninit -> return Uninit
+            | SAny -> return Any
             | _ -> assert false
           in
           let tb =
@@ -250,14 +262,21 @@ struct
             match s with
             | SZeros | SUninit | SAny -> return (s, s)
             | SInit v ->
+                let* v = Producer.apply_subst (Rust_val.subst Sptr.subst) v in
                 let _, middle = l.range in
-                let+ vl, vr = split_rval v middle in
+                let+^ vl, vr = split_rval v middle in
+                (* HACK: is this sound? Doing it this way because we can't have
+                   a split_rval for exprs, given it requires decaying pointers.
+                   An alternative would be to have a [produce_leaf] which takes
+                   in a [Leaf _], so we only subst once. *)
+                let vl = Rust_val.to_syn Sptr.to_syn vl in
+                let vr = Rust_val.to_syn Sptr.to_syn vr in
                 (SInit vl, SInit vr)
             | _ -> assert false
           in
           let* l = produce sl l in
           let+ r = produce sr r in
-          let node : t TB.node =
+          let node : 'a TB.node =
             match (l.node, r.node) with
             | NotOwned Totally, NotOwned Totally -> NotOwned Totally
             | NotOwned _, _ | _, NotOwned _ -> NotOwned Partially
@@ -277,7 +296,9 @@ struct
           let* l = produce s l in
           let+ r = produce s r in
           { t with children = Some (l, r) }
-      | STree_borrow _, _ -> not_impl "Produce TB structure in tree block?"
+      | STree_borrow _, _ ->
+          failwith
+            "TB structure syn in tree block, should have been caught before"
 
     let assert_exclusively_owned _ = Result.ok ()
   end
@@ -316,22 +337,19 @@ struct
     | Some z -> return (Z.to_int z)
     | None -> not_impl "Cannot convert size to int"
 
-  let lift_miss_res ~ofs ~len =
-    List.map (fun v -> MemVal { offset = ofs; len; v })
-
-  let mk_fix_typed ofs ty () =
+  let mk_fix_typed offset ty () =
     let*^ len = Layout.size_of ty in
     let len = get_ok len in
     let+ fixes = mk_fix_typed ty () in
-    [ lift_miss_res ~ofs ~len fixes ]
+    [ lift_fixes ~offset ~len fixes ]
 
-  let mk_fix_any ofs len () = [ [ MemVal { offset = ofs; len; v = SAny } ] ]
+  let mk_fix_any offset len () = [ lift_fixes ~offset ~len [ SAny ] ]
   let mk_fix_any_s ofs len () = return (mk_fix_any ofs len ())
 
-  let mk_fix_tb ofs len () =
+  let mk_fix_tb offset len () =
     return
       [
-        lift_miss_res ~ofs ~len
+        lift_fixes ~offset ~len
         @@ List.map MemVal.lift_tb_st_fix (Tree_borrows.fix_empty_state ());
       ]
 

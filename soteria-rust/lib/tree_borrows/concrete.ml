@@ -15,13 +15,6 @@ module Make (Symex : Tree_borrows_intf.Rust_symex) :
         type nonrec t = t option
       end)
 
-  module SM_St =
-    Soteria.Sym_states.State_monad.Make
-      (Symex)
-      (struct
-        type nonrec t = tb_state option
-      end)
-
   (* Lift operations symbolically *)
 
   let nondet_tag () = return None
@@ -50,24 +43,17 @@ module Make (Symex : Tree_borrows_intf.Rust_symex) :
 
   (* Compositionality *)
 
-  type serialized = | [@@deriving show]
+  type syn = | [@@deriving show]
+  type syn_state = | [@@deriving show]
+  type syn_full = Structure of syn | State of syn_state
 
-  let serialize _ = []
-  let subst_serialized _ : serialized -> serialized = function _ -> .
-  let iter_vars_serialized _ _ = ()
-  let consume _ st = Result.ok st
-  let produce _ st = return ((), st)
-
-  type serialized_state = | [@@deriving show]
-  type full_serialized = Structure of serialized | State of serialized_state
-
-  let serialize_state _ = []
+  let to_syn _ = []
+  let ins_outs (s : syn) = match s with _ -> .
+  let consume (s : syn) _ = match s with _ -> .
+  let produce (s : syn) _ = match s with _ -> .
+  let to_syn_state _ = []
+  let ins_outs_state (s : syn_state) = match s with _ -> .
+  let consume_state (s : syn_state) _ = match s with _ -> .
+  let produce_state (s : syn_state) _ = match s with _ -> .
   let fix_empty_state () = []
-
-  let subst_serialized_state _ : serialized_state -> serialized_state = function
-    | _ -> .
-
-  let iter_vars_serialized_state _ _ = ()
-  let consume_state _ st = Result.ok st
-  let produce_state _ st = return st
 end

@@ -135,8 +135,6 @@ module type S = sig
   (** pointer type *)
   include D_abstr.S_with_syn
 
-  include D_abstr.Sem_eq with type t := t
-
   (** Converts an address into a pointer, without provenance. *)
   val of_address : [< sint ] Typed.t -> t
 

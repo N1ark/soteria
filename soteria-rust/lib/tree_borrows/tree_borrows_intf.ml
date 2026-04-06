@@ -1,27 +1,17 @@
+open Common
+
 module type Rust_symex = Soteria.Symex.Base with module Value = Rustsymex.Value
 
 module M (Symex : Rust_symex) = struct
   module type S = sig
     (** {2 Tree Borrows trees (the general structure)} *)
 
-    type tag
-    type access = Read | Write
+    (** {2 Pointer "tags", i.e. whatever gets stored inside pointers} *)
 
-    type state =
-      | Reserved of bool
-      | Unique
-      | Frozen
-      | ReservedIM
-      | Cell
-      | Disabled
-      | UB
+    (** {2 Tree Borrows trees (the general structure)} *)
 
-    type protector = Strong | Weak
-    type t
-
-    val pp : Format.formatter -> t -> unit
-    val pp_tag : Format.formatter -> tag -> unit
-    val pp_state : Format.formatter -> state -> unit
+    type tag [@@deriving show]
+    type t [@@deriving show]
 
     module SM :
       Soteria.Sym_states.State_monad.S

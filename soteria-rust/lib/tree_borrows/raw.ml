@@ -1,6 +1,8 @@
 (** A simple Tree Borrows implementation. It doesn't support any sort of
     symbolic reasoning or anything fancy, it's just the raw logic. *)
 
+open Common
+
 type tag = int
 
 let tag_counter = ref 0
@@ -12,6 +14,7 @@ let fresh_tag () =
 let zero = 0
 let equal_tag = Int.equal
 let pp_tag fmt tag = Fmt.pf fmt "‖%d‖" tag
+let show_tag = Fmt.to_to_string pp_tag
 
 module TagMap = PatriciaTree.MakeMap (struct
   type t = tag
@@ -20,24 +23,10 @@ module TagMap = PatriciaTree.MakeMap (struct
   let pp = Format.pp_print_int
 end)
 
-type access = Read | Write
-and locality = Local | Foreign
-
-and state =
-  | Reserved of bool
-  | Unique
-  | Frozen
-  | ReservedIM
-  | Cell
-  | Disabled
-  | UB
-
-and protector = Strong | Weak
-
 (** Whether this node has a protector (this is distinct from having the
     protector toggled!), its parents (including this node's ID!), and its
     initial state if it doesn't exist in the state. *)
-and node = {
+type node = {
   protector : protector option;
   parents : tag list;
   initial_state : state;
@@ -107,6 +96,8 @@ let pp ft t =
   iter_bindings TagMap.iter
     (fun ft (tag, node) -> pf ft "%a -> %a" pp_tag tag pp_node node)
     ft t
+
+let show = Fmt.to_to_string pp
 
 let init ?(initial_state = Unique) () =
   let tag = fresh_tag () in

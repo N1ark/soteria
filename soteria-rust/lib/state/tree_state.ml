@@ -8,8 +8,8 @@ open Charon
 open Common
 open Sptr
 
-module Make (Tree_borrows : Tree_borrows.T) = struct
-  module Tree_borrows = Tree_borrows (DecayMapMonad)
+module Make (Borrows : Tree_borrows.T) = struct
+  module Borrows = Borrows (DecayMapMonad)
 
   (* Pointer implementation *)
 
@@ -18,7 +18,7 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
 
     type ('sptr, 'snonzero, 'sint) base = {
       ptr : 'sptr;
-      tag : Tree_borrows.tag option;
+      tag : Borrows.tag option;
       align : 'snonzero;
       size : 'sint;
     }
@@ -28,7 +28,7 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
 
     let pp' pp_v fmt { ptr; tag; _ } =
       Fmt.pf fmt "%a[%a]" pp_v ptr
-        Fmt.(option ~none:(any "*") Tree_borrows.pp_tag)
+        Fmt.(option ~none:(any "*") Borrows.pp_tag)
         tag
 
     let pp = pp' Typed.ppa
@@ -118,7 +118,7 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
       let* ofs = nondet (Typed.t_usize ()) in
       let* tag, _ =
         DecayMapMonad.run_with_state ~state:DecayMap.empty
-        @@ Tree_borrows.nondet_tag ()
+        @@ Borrows.nondet_tag ()
       in
       let ptr = Typed.Ptr.mk loc ofs in
       let ptr = { ptr; tag; align = layout.align; size = layout.size } in
@@ -161,13 +161,13 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
 
   module Freeable = Soteria.Sym_states.Freeable.Make (DecayMapMonad)
   module Bi = Soteria.Sym_states.Bi_abd.Make (DecayMapMonad)
-  module Tree_block = Rtree_block.Make (Tree_borrows) (Sptr_base)
+  module Tree_block = Rtree_block.Make (Borrows) (Sptr_base)
 
   module Meta = struct
     type t = {
       align : Typed.T.nonzero Typed.t;
       size : Typed.T.sint Typed.t;
-      tb_root : Tree_borrows.tag;
+      tb_root : Borrows.tag;
       kind : Alloc_kind.t;
       trace : Trace.t;
     }
@@ -198,7 +198,7 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
   end
 
   module Block = struct
-    type t = Tree_block.t option * Tree_borrows.t option
+    type t = Tree_block.t option * Borrows.t option
     [@@deriving show { with_path = false }]
 
     let of_opt = function None -> (None, None) | Some (b1, b2) -> (b1, b2)
@@ -207,7 +207,7 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
       | None, None -> None
       | b1, b2 -> Some (b1, b2)
 
-    type syn = Block of Tree_block.syn | Borrow of Tree_borrows.syn
+    type syn = Block of Tree_block.syn | Borrow of Borrows.syn
     [@@deriving show { with_path = false }]
 
     module SM =
@@ -246,7 +246,7 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
       lift_fix_block_r v
 
     let with_tree_block_read_tb
-        (f : Tree_borrows.t option -> ('a, 'err, 'fix) Tree_block.SM.Result.t) :
+        (f : Borrows.t option -> ('a, 'err, 'fix) Tree_block.SM.Result.t) :
         ('a, 'err, syn list) SM.Result.t =
       let* t_opt = SM.get_state () in
       let tree, tb = of_opt t_opt in
@@ -259,24 +259,23 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
     let borrow ?(protect = false) ((ptr : Sptr_base.t), meta) tag
         (ty : Types.ty) ofs =
       let pointee = Charon_util.get_pointee ty in
-      let state =
+      let state : Tree_borrows.state =
         match (ty, Layout.is_unsafe_cell pointee) with
-        | TRef (_, _, RShared), false -> Tree_borrows.Frozen
-        | TRef (_, _, RShared), true -> Tree_borrows.Cell
-        | _, false -> Tree_borrows.Reserved false
-        | _, true -> Tree_borrows.ReservedIM
+        | TRef (_, _, RShared), false -> Frozen
+        | TRef (_, _, RShared), true -> Cell
+        | _, false -> Reserved false
+        | _, true -> ReservedIM
       in
-      let protector =
+      let protector : Tree_borrows.protector option =
         match (protect, ty) with
         | false, _ -> None
-        | true, TRef _ -> Some Tree_borrows.Strong
-        | true, TAdt adt when Charon_util.adt_is_box adt ->
-            Some Tree_borrows.Weak
+        | true, TRef _ -> Some Strong
+        | true, TAdt adt when Charon_util.adt_is_box adt -> Some Weak
         | true, _ -> failwith "Non-ref or box in borrow?"
       in
       let* t_opt = SM.get_state () in
       let block, tb = of_opt t_opt in
-      let*^ res, tb' = Tree_borrows.borrow ~state ?protector tag tb in
+      let*^ res, tb' = Borrows.borrow ~state ?protector tag tb in
       let** tag = return (lift_fix_borrow_r res) in
       let ptr' = { ptr with tag = Some tag } in
       L.debug (fun m ->
@@ -300,7 +299,7 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
     let unprotect ofs tag size =
       let* t_opt = SM.get_state () in
       let block, tb = of_opt t_opt in
-      let*^ res, tb' = Tree_borrows.unprotect tag tb in
+      let*^ res, tb' = Borrows.unprotect tag tb in
       let** () = return (lift_fix_borrow_r res) in
       let** (), block' =
         if%sat size ==@ Usize.(0s) then SM.Result.ok ((), block)
@@ -319,12 +318,12 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
 
     let to_syn (block, borrow) =
       let s_block = Option.fold ~none:[] ~some:Tree_block.to_syn block in
-      let s_borrow = Option.fold ~none:[] ~some:Tree_borrows.to_syn borrow in
+      let s_borrow = Option.fold ~none:[] ~some:Borrows.to_syn borrow in
       List.map lift_fix_block s_block @ List.map lift_fix_borrow s_borrow
 
     let ins_outs = function
       | Block s -> Tree_block.ins_outs s
-      | Borrow s -> Tree_borrows.ins_outs s
+      | Borrow s -> Borrows.ins_outs s
 
     let produce s st =
       let open DecayMapMonad.Producer in
@@ -335,7 +334,7 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
           let+ st' = Tree_block.produce s st in
           to_opt (st', tb)
       | Borrow s ->
-          let+ tb' = Tree_borrows.produce s tb in
+          let+ tb' = Borrows.produce s tb in
           to_opt (st, tb')
 
     let consume s st =
@@ -351,7 +350,7 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
           to_opt (st', tb)
       | Borrow s ->
           let+ tb' =
-            let+? fixes = Tree_borrows.consume s tb in
+            let+? fixes = Borrows.consume s tb in
             List.map lift_fix_borrow fixes
           in
           to_opt (st, tb')
@@ -365,9 +364,9 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
       Soteria.Sym_states.With_info.Make (DecayMapMonad) (Meta) (Freeable_block)
 
     let make ?(kind = Alloc_kind.Heap) ?span ?zeroed ~size ~align () :
-        (t * Tree_borrows.tag option) DecayMapMonad.t =
+        (t * Borrows.tag option) DecayMapMonad.t =
       let open DecayMapMonad.Syntax in
-      let* tb, tag = Tree_borrows.init () in
+      let* tb, tag = Borrows.init () in
       let* block = Tree_block.alloc ?zeroed size in
       let+^ trace = get_trace () in
       let trace = Trace.rename 0 "Allocation" trace in
@@ -884,11 +883,11 @@ module Make (Tree_borrows : Tree_borrows.T) = struct
     (* Freeing encurs a write access on the whole allocation. *)
     let** () = tb_load_untyped ptr ptr.size in
     (* Freeing also requires there to be no strong protectors in the tree. See:
-       https://github.com/minirust/minirust/blob/master/spec/mem/tree_borrows/memory.md *)
+       https://github.com/minirust/minirust/blob/master/spec/mem/Borrows/memory.md *)
     let** () =
       with_ptr ptr (fun _ ->
           Block.with_tree_block_read_tb (fun tb ->
-              if Tree_borrows.strong_protector_exists tb then
+              if Borrows.strong_protector_exists tb then
                 Tree_block.SM.Result.error `InvalidFreeStrongProtector
               else Tree_block.SM.Result.ok ()))
     in

@@ -299,6 +299,8 @@ struct
           failwith
             "TB structure syn in tree block, should have been caught before"
 
+    (* TODO: MemVal.assert_exclusively_owned is WRONG: it should receive a tree,
+       to account for lazy nodes *)
     let assert_exclusively_owned _ = ok ()
   end
 

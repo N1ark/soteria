@@ -257,6 +257,14 @@ module Make (Borrows : Tree_borrows.T) = struct
       let+ () = SM.set_state (to_opt { block; borrow }) in
       lift_fix_block_r v
 
+    let with_borrow (f : ('a, 'err, 'fix) Borrows.SM.Result.t) :
+        ('a, 'err, syn list) Result.t =
+      let* t_opt = SM.get_state () in
+      let { block; borrow } = of_opt t_opt in
+      let*^ v, borrow = f borrow in
+      let+ () = SM.set_state (to_opt { block; borrow }) in
+      lift_fix_borrow_r v
+
     let with_block_read_tb
         (f : Borrows.t option -> ('a, 'err, 'fix) Tree_block.SM.Result.t) :
         ('a, 'err, syn list) SM.Result.t =
@@ -285,46 +293,28 @@ module Make (Borrows : Tree_borrows.T) = struct
         | true, TAdt adt when Charon_util.adt_is_box adt -> Some Weak
         | true, _ -> failwith "Non-ref or box in borrow?"
       in
-      let* t_opt = SM.get_state () in
-      let { block; borrow } = of_opt t_opt in
-      let*^ res, borrow = Borrows.borrow ~state ?protector tag borrow in
-      let** tag = return (lift_fix_borrow_r res) in
+      let** tag = with_borrow (Borrows.borrow ~state ?protector tag) in
       let ptr' = { ptr with tag = Some tag } in
       L.debug (fun m ->
           m "%s pointer %a -> %a (%a)"
             (if protect then "Protecting" else "Borrowing")
             Sptr_base.pp ptr Sptr_base.pp ptr' Tree_borrows.pp_state state);
-      if not protect then
-        let+ () = SM.set_state (to_opt { block; borrow }) in
-        Ok (ptr', meta)
+      if not protect then Result.ok (ptr', meta)
       else
         let**^ size = DecayMap.SM.lift @@ Layout.size_of pointee in
-        if%sat size ==@ Usize.(0s) then
-          let+ () = SM.set_state (to_opt { block; borrow }) in
-          Ok (ptr', meta)
+        if%sat size ==@ Usize.(0s) then Result.ok (ptr', meta)
         else
-          let*^ res, block = Tree_block.tb_access ofs size tag borrow block in
-          let** () = return (lift_fix_block_r res) in
-          let+ () = SM.set_state (to_opt { block; borrow }) in
-          Ok (ptr', meta)
+          let++ () = with_block_read_tb (Tree_block.tb_access ofs size tag) in
+          (ptr', meta)
 
     let unprotect ofs tag size =
-      let* t_opt = SM.get_state () in
-      let { block; borrow } = of_opt t_opt in
-      let*^ res, borrow = Borrows.unprotect tag borrow in
-      let** () = return (lift_fix_borrow_r res) in
-      let** (), block =
-        if%sat size ==@ Usize.(0s) then SM.Result.ok ((), block)
-        else
-          let*^ res, block = Tree_block.unprotect ofs size tag borrow block in
-          let++ () = return (lift_fix_block_r res) in
-          ((), block)
-      in
-      SM.Result.set_state (to_opt { block; borrow })
+      let** () = with_borrow (Borrows.unprotect tag) in
+      if%sat size ==@ Usize.(0s) then SM.Result.ok ()
+      else with_block_read_tb (Tree_block.unprotect ofs size tag)
 
     let assert_exclusively_owned () =
-      (* TODO: TB assert exclusively owned *)
-      with_block (Tree_block.assert_exclusively_owned ())
+      let** () = with_block (Tree_block.assert_exclusively_owned ()) in
+      with_borrow (Borrows.assert_exclusively_owned ())
 
     let to_syn { block; borrow } =
       let s_block = Option.fold ~none:[] ~some:Tree_block.to_syn block in

@@ -55,6 +55,8 @@ module Make (Symex : Tree_borrows_intf.Rust_symex) :
   let strong_protector_exists st = strong_protector_exists (unwrap st)
   let merge l r = return (merge l r)
   let equal_state = Option.equal equal_state
+  let assert_exclusively_owned () = SM.Result.ok ()
+  let assert_exclusively_owned_state _ = Result.ok ()
 
   (* Compositionality *)
 

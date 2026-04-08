@@ -66,6 +66,7 @@ module M (Symex : Rust_symex) = struct
 
     val unprotect : Tag.t -> (unit, 'e, syn list) SM.Result.t
     val strong_protector_exists : t option -> bool
+    val assert_exclusively_owned : unit -> (unit, 'e, syn list) SM.Result.t
 
     (** {2 Operations on the state} *)
 
@@ -95,6 +96,9 @@ module M (Symex : Rust_symex) = struct
       (tb_state option, [> `AliasingError ], syn_full list) Symex.Result.t
 
     val merge : tb_state -> tb_state -> tb_state Symex.t
+
+    val assert_exclusively_owned_state :
+      tb_state option -> (unit, 'e, syn_state list) Symex.Result.t
   end
 end
 

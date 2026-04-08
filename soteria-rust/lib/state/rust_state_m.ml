@@ -376,8 +376,8 @@ module Make (State : State_intf.S) :
     let+ res, _ = f env in
     (res, old_env)
 
-  let[@inline] with_decay_map (f : 'a Sptr.DecayMapMonad.t) : ('a, 'env) t =
-    ESM.lift (State.SM.map (State.with_decay_map f) Compo_res.ok)
+  let[@inline] with_pointers_sym (f : 'a Sptr.DecayMap.SM.t) : ('a, 'env) t =
+    ESM.lift (State.SM.map (State.with_pointers_sym f) Compo_res.ok)
 
   let[@inline] lift_symex (s : 'a Rustsymex.t) : ('a, 'env) t =
     ESM.Result.lift_state @@ State.SM.lift s
@@ -432,9 +432,9 @@ module Make (State : State_intf.S) :
     let[@inline] check_non_dangling_untyped ptr size =
       ESM.lift (check_non_dangling_untyped ptr size)
 
-    let[@inline] distance ptr1 ptr2 = with_decay_map (distance ptr1 ptr2)
-    let[@inline] decay ptr = with_decay_map (decay ptr)
-    let[@inline] expose ptr = with_decay_map (expose ptr)
+    let[@inline] distance ptr1 ptr2 = with_pointers_sym (distance ptr1 ptr2)
+    let[@inline] decay ptr = with_pointers_sym (decay ptr)
+    let[@inline] expose ptr = with_pointers_sym (expose ptr)
   end
 
   module Layout = struct

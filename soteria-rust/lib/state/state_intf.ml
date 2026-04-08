@@ -11,8 +11,6 @@ module type S = sig
 
   type 'a ret := ('a, Error.with_trace, syn list) SM.Result.t
 
-  val pp : t Fmt.t
-
   module Sptr : sig
     include Sptr.S
 
@@ -85,7 +83,7 @@ module type S = sig
 
   val uninit : full_ptr -> Types.ty -> unit ret
   val zeros : full_ptr -> sint Typed.t -> unit ret
-  val with_decay_map : 'a DecayMapMonad.t -> 'a SM.t
+  val with_pointers_sym : 'a DecayMap.SM.t -> 'a SM.t
   val store_str_global : string -> full_ptr -> unit ret
   val store_global : Types.global_decl_id -> full_ptr -> unit ret
   val load_str_global : string -> full_ptr option ret

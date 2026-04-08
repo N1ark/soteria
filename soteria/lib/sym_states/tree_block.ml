@@ -101,7 +101,8 @@ module MemVal (Symex : Symex.Base) = struct
         state can be composed with it; in other words, calling [produce] on a
         tree with this node must always vanish. Otherwise this should raise a
         [miss] with the fixes needed for this to become exclusively owned. *)
-    val assert_exclusively_owned : t -> (unit, 'err, syn list) Symex.Result.t
+    val assert_exclusively_owned :
+      (t, sint) tree -> (unit, 'err, syn list) Symex.Result.t
   end
 end
 
@@ -146,11 +147,12 @@ module Make (Symex : Symex.Base) (MemVal : MemVal(Symex).S) = struct
     let is_empty = function NotOwned Totally -> true | _ -> false
     let is_fully_owned = function NotOwned _ -> false | Owned _ -> true
 
-    let assert_exclusively_owned = function
+    let assert_exclusively_owned t =
+      match t.node with
       | NotOwned _ ->
           Result.miss_no_fix
             ~reason:"assert_exclusively_owned - tree not fully owned" ()
-      | Owned n -> MemVal.assert_exclusively_owned n
+      | Owned _ -> MemVal.assert_exclusively_owned t
 
     let merge ~left ~right =
       match (left, right) with
@@ -635,11 +637,11 @@ module Make (Symex : Symex.Base) (MemVal : MemVal(Symex).S) = struct
     match t with
     | None | Some { bound = None; _ } ->
         Result.miss_no_fix ~reason:"assert_exclusively_owned - no bound" ()
-    | Some { bound = Some bound; root = { range = low, high; node; _ } } ->
+    | Some { bound = Some bound; root = { range = low, high; _ } as root } ->
         if%sat low ==@ 0s &&@ (high ==@ bound) then
           lift
           @@ lift_miss ~offset:0s ~len:bound
-          @@ Node.assert_exclusively_owned node
+          @@ Node.assert_exclusively_owned root
         else
           Result.miss_no_fix
             ~reason:"assert_exclusively_owned - tree does not span [0; bound["

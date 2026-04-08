@@ -8,8 +8,7 @@ open DecayMap.SM
 open Result
 open Syntax
 
-module Make (Tree_borrows : Tree_borrows.M(DecayMap.SM).S) (Sptr : Sptr.S) =
-struct
+module Make (Borrows : Tree_borrows.M(DecayMap.SM).S) (Sptr : Sptr.S) = struct
   module Encoder = Value_codec.Encoder (Sptr)
 
   type rust_val = Sptr.t Rust_val.t
@@ -46,7 +45,7 @@ struct
 
     type qty = Totally | Partially [@@deriving show { with_path = false }]
     type leaf = Init of rust_val | Zeros | Uninit | Any | Unowned
-    type t = Leaf of leaf * Tree_borrows.tb_state option | Lazy
+    type t = Leaf of leaf * Borrows.tb_state option | Lazy
 
     let pp_leaf ft =
       let open Fmt in
@@ -62,7 +61,7 @@ struct
       function
       | Leaf (leaf, tb) ->
           pf ft "Leaf (%a, %a)" pp_leaf leaf
-            (option ~none:(any "-") Tree_borrows.pp_tb_state)
+            (option ~none:(any "-") Borrows.pp_tb_state)
             tb
       | Lazy -> pf ft "Lazy"
 
@@ -72,7 +71,7 @@ struct
       | Leaf (Zeros, tb_l), Leaf (Zeros, tb_r)
       | Leaf (Uninit, tb_l), Leaf (Uninit, tb_r)
       | Leaf (Any, tb_l), Leaf (Any, tb_r)
-        when Tree_borrows.equal_state tb_l tb_r ->
+        when Borrows.equal_state tb_l tb_r ->
           left
       | _, _ -> Lazy
 
@@ -131,15 +130,15 @@ struct
       | SUninit
       | SZeros
       | SAny
-      | STree_borrow_st of Tree_borrows.syn_state
-      | STree_borrow of Tree_borrows.syn
+      | STree_borrow_st of Borrows.syn_state
+      | STree_borrow of Borrows.syn
     [@@deriving show { with_path = false }]
 
     let ins_outs = function
       | SInit v -> ([], Rust_val.exprs_syn Sptr.exprs_syn v)
       | SUninit | SZeros | SAny -> ([], [])
-      | STree_borrow_st s -> Tree_borrows.ins_outs_state s
-      | STree_borrow s -> Tree_borrows.ins_outs s
+      | STree_borrow_st s -> Borrows.ins_outs_state s
+      | STree_borrow s -> Borrows.ins_outs s
 
     let lift_tb_st_fix s = STree_borrow_st s
 
@@ -153,16 +152,14 @@ struct
       let+? tb_s in
       List.map
         (function
-          | Tree_borrows.Structure s -> lift_tb_fix s
-          | Tree_borrows.State s -> lift_tb_st_fix s)
+          | Borrows.Structure s -> lift_tb_fix s
+          | Borrows.State s -> lift_tb_st_fix s)
         tb_s
 
     let to_syn : t -> syn Seq.t option = function
       | Leaf (Unowned, Some tb) ->
           Some
-            (Tree_borrows.to_syn_state tb
-            |> List.map lift_tb_st_fix
-            |> List.to_seq)
+            (Borrows.to_syn_state tb |> List.map lift_tb_st_fix |> List.to_seq)
       | Leaf (Unowned, None) -> failwith "Impossible: unowned with no TB state"
       | Leaf (leaf, tb) ->
           let leaf_ser =
@@ -174,7 +171,7 @@ struct
             | Unowned -> assert false
           in
           let tb_ser =
-            Option.fold ~none:[] ~some:Tree_borrows.to_syn_state tb
+            Option.fold ~none:[] ~some:Borrows.to_syn_state tb
             |> List.map lift_tb_st_fix
             |> List.to_seq
           in
@@ -222,7 +219,7 @@ struct
       (* tree borrows *)
       | STree_borrow_st s, Owned (Leaf (v, tb)) ->
           let+ tb' =
-            let+? fixes = Tree_borrows.consume_state s tb in
+            let+? fixes = Borrows.consume_state s tb in
             List.map lift_tb_st_fix fixes
           in
           mk_leaf t v tb'
@@ -285,10 +282,10 @@ struct
       (* Tree borrows: we produce recursively, as we don't want to merge the
          leaves *)
       | STree_borrow_st s, NotOwned Totally ->
-          let+ tb = Tree_borrows.produce_state s None in
+          let+ tb = Borrows.produce_state s None in
           mk_leaf t Unowned tb
       | STree_borrow_st s, Owned (Leaf (v, tb)) ->
-          let+ tb = Tree_borrows.produce_state s tb in
+          let+ tb = Borrows.produce_state s tb in
           mk_leaf t v tb
       | STree_borrow_st _, (Owned Lazy | NotOwned Partially) ->
           let l, r = Option.get t.children in
@@ -351,7 +348,7 @@ struct
     return
       [
         lift_fixes ~offset ~len
-        @@ List.map MemVal.lift_tb_st_fix (Tree_borrows.fix_empty_state ());
+        @@ List.map MemVal.lift_tb_st_fix (Borrows.fix_empty_state ());
       ]
 
   let collect_leaves ~uninit (t : Tree.t) =
@@ -423,7 +420,7 @@ struct
         let offset, len = t.range in
         lift_miss ~offset ~len @@ decode_mem_val ~ty node
 
-  let merge_tree_borrows t =
+  let merge_Borrows t =
     fold_iter ~init:None
       ~f:(fun acc ((offset, len), _, tb_st) ->
         match (tb_st, acc) with
@@ -431,10 +428,10 @@ struct
             (* Missing state; we must miss *)
             lift_miss ~offset ~len
             @@ lift_tb_st_miss
-            @@ Result.miss [ Tree_borrows.fix_empty_state () ]
+            @@ Result.miss [ Borrows.fix_empty_state () ]
         | Some _, None -> Result.ok tb_st
         | Some tb_st, Some acc ->
-            let+ res = Tree_borrows.merge tb_st acc in
+            let+ res = Borrows.merge tb_st acc in
             Ok (Some res))
       (Tree.iter_leaves_rev t)
 
@@ -463,7 +460,7 @@ struct
   (* Memory operations *)
 
   let load ~(ignore_borrow : bool) (ofs : Typed.([< T.sint ] t)) (ty : Types.ty)
-      (tag : Tree_borrows.Tag.t option) (tb : Tree_borrows.t option) =
+      (tag : Borrows.Tag.t option) (tb : Borrows.t option) =
     let open SM.Syntax in
     let** size = lift_symex @@ Layout.size_of ty in
     let ((_, bound) as range) = Range.of_low_and_size ofs size in
@@ -475,7 +472,7 @@ struct
           match (ignore_borrow, tag) with
           | false, Some tag ->
               lift_miss ~offset:ofs ~len:bound
-              @@ Tree.map_leaves_tb (Tree_borrows.access tag Read tb) t
+              @@ Tree.map_leaves_tb (Borrows.access tag Read tb) t
           | true, _ | _, None -> Result.ok t
         in
         let rebuild_parent = Tree.of_children in
@@ -486,7 +483,7 @@ struct
         (sval, tree))
 
   let store (ofs : Typed.([< T.sint ] t)) (value : rust_val)
-      (tag : Tree_borrows.Tag.t option) (tb : Tree_borrows.t option) :
+      (tag : Borrows.Tag.t option) (tb : Borrows.t option) :
       (unit, 'err, 'fix) SM.Result.t =
     let open SM.Syntax in
     let** size = lift_symex @@ Value_codec.size_of value in
@@ -496,13 +493,13 @@ struct
         let open DecayMap.SM.Syntax in
         let replace_node t =
           let@ t = as_owned ~mk_fixes t in
-          let** tb_st = merge_tree_borrows t in
+          let** tb_st = merge_Borrows t in
           match tag with
           | Some tag ->
               let++ tb_st' =
                 lift_miss ~offset:ofs ~len:bound
                 @@ lift_tb_miss
-                @@ Tree_borrows.access tag Write tb tb_st
+                @@ Borrows.access tag Write tb tb_st
               in
               init range value tb_st'
           | None -> ok (init range value tb_st)
@@ -535,7 +532,7 @@ struct
         let open DecayMap.SM.Syntax in
         let replace_node t =
           let@ _ = as_owned ~mk_fixes t in
-          let++ tb_st = merge_tree_borrows t in
+          let++ tb_st = merge_Borrows t in
           uninit range tb_st
         in
         let rebuild_parent = Tree.of_children in
@@ -552,7 +549,7 @@ struct
         let open DecayMap.SM.Syntax in
         let replace_node t =
           let@ t = as_owned ~mk_fixes t in
-          let++ tb_st = merge_tree_borrows t in
+          let++ tb_st = merge_Borrows t in
           zeros range tb_st
         in
         let rebuild_parent = Tree.of_children in
@@ -563,7 +560,7 @@ struct
 
   let alloc ?(zeroed = false) size =
     let st = if zeroed then Zeros else Uninit in
-    let+ tb_st = Tree_borrows.init_st () in
+    let+ tb_st = Borrows.init_st () in
     alloc (Leaf (st, Some tb_st)) size
 
   (* Tree borrow updates *)
@@ -585,8 +582,8 @@ struct
         ((), tree))
 
   let unprotect ofs size tag tb =
-    with_tb_access ofs size (Tree_borrows.set_protector ~protected:false tag tb)
+    with_tb_access ofs size (Borrows.set_protector ~protected:false tag tb)
 
   let tb_access ofs size tag tb =
-    with_tb_access ofs size (Tree_borrows.access tag Read tb)
+    with_tb_access ofs size (Borrows.access tag Read tb)
 end

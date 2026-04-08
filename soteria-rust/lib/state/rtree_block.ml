@@ -296,9 +296,15 @@ module Make (Borrows : Tree_borrows.M(DecayMap.SM).S) (Sptr : Sptr.S) = struct
           failwith
             "TB structure syn in tree block, should have been caught before"
 
-    (* TODO: MemVal.assert_exclusively_owned is WRONG: it should receive a tree,
-       to account for lazy nodes *)
-    let assert_exclusively_owned _ = ok ()
+    let rec assert_exclusively_owned (t : tree) =
+      match t.node with
+      | NotOwned Totally | Owned (Leaf (Unowned, _)) -> miss [ [ SAny ] ]
+      | NotOwned Partially | Owned Lazy ->
+          let l, r = Option.get t.children in
+          let** () = assert_exclusively_owned l in
+          assert_exclusively_owned r
+      | Owned (Leaf ((Zeros | Uninit | Any | Init _), tb)) ->
+          lift_tb_st_miss @@ Borrows.assert_exclusively_owned_state tb
   end
 
   open MemVal

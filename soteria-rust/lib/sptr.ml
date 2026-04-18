@@ -155,10 +155,11 @@ module D_abstr = Soteria.Data.Abstr.M (DecayMap.SM)
     pointer module, {!Rust_state_m.S.Sptr}. *)
 module type S = sig
   (** pointer type *)
-  include D_abstr.S_with_syn
-
+  type t [@@mixins D_abstr.S_with_syn ]
+  
   (** Converts an address into a pointer, without provenance. *)
   val of_address : [< sint ] Typed.t -> t
+
 
   (** Whether this is the null pointer, meaning it always decays to 0. *)
   val is_null : t -> sbool Typed.t

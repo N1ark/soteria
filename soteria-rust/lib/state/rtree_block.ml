@@ -372,7 +372,7 @@ module Make (Borrows : Tree_borrows.M(DecayMap.SM).S) (Sptr : Sptr.S) = struct
             Ok ((Rust_val.Int value, offset) :: vs)
         | Init value -> ok ((value, offset) :: vs)
         | Any ->
-            L.info (fun m -> m "Reading from Any memory, vanishing.");
+            [%l.info "Reading from Any memory, vanishing."];
             vanish ()
         | Unowned -> miss (mk_fix_any offset (Range.size range) ()))
 

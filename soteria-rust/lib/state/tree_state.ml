@@ -429,31 +429,41 @@ module Make (Borrows : Tree_borrows.T) = struct
         end)
   end
 
-  type syn = Heap of Heap.syn | Pointers of DecayMap.syn
-  [@@deriving show { with_path = false }]
-
   type t = {
-    heap : Heap.t option;
+    heap : Heap.t option; [@sym_state.context { field = pointers }]
     functions : FunBiMap.t;
+        [@sym_state.ignore
+          {
+            empty = FunBiMap.empty;
+            is_empty = FunBiMap.is_empty;
+            pp = FunBiMap.pp;
+          }]
     globals : Sptr_base.t Rust_val.full_ptr GlobMap.t;
+        [@sym_state.ignore
+          {
+            empty = GlobMap.empty;
+            is_empty = GlobMap.is_empty;
+            pp = GlobMap.pp (pp_full_ptr Sptr_base.pp);
+          }]
     errors : Error.with_trace list;
+        [@sym_state.ignore
+          { empty = []; pp = Fmt.Dump.list Error.pp_with_trace }]
     pointers : DecayMap.t option;
     thread_destructor :
-      unit ->
+      (unit ->
       t option ->
-      ((unit, Error.with_trace, syn list) Soteria.Symex.Compo_res.t * t option)
-      Rustsymex.t;
-        [@printer Fmt.any "code"]
+      ((unit, Error.with_trace, unit) Soteria.Symex.Compo_res.t * t option)
+      Rustsymex.t)
+      option;
+        [@sym_state.ignore { empty = None }]
     const_generics : Sptr_base.t rust_val Types.ConstGenericVarId.Map.t;
+        [@sym_state.ignore
+          {
+            empty = Types.ConstGenericVarId.Map.empty;
+            pp = Types.ConstGenericVarId.Map.pp (pp_rust_val Sptr_base.pp);
+          }]
   }
-  [@@deriving show { with_path = false }]
-
-  module SM =
-    Soteria.Sym_states.State_monad.Make
-      (Rustsymex)
-      (struct
-        type nonrec t = t option
-      end)
+  [@@deriving sym_state { symex = Rustsymex }]
 
   let pp_pretty ~ignore_freed ft { heap; _ } =
     let (ignore : 'a * Freeable_block_with_meta.t -> bool) =
@@ -471,20 +481,6 @@ module Make (Borrows : Tree_borrows.T) = struct
                 Fmt.pf ft "function %a" Fun_kind.pp fn
             | { node; _ } -> Freeable_block.pp' ~inner:Block.pp_pretty ft node)
           ft st
-
-  let empty_state =
-    {
-      heap = None;
-      functions = FunBiMap.empty;
-      globals = GlobMap.empty;
-      errors = [];
-      pointers = None;
-      thread_destructor = (fun () -> SM.Result.ok ());
-      const_generics = Types.ConstGenericVarId.Map.empty;
-    }
-
-  let empty : t option = None
-  let of_opt = function None -> empty_state | Some st -> st
 
   open SM
   open SM.Syntax
@@ -507,20 +503,6 @@ module Make (Borrows : Tree_borrows.T) = struct
     in
     Error.log_at trace err;
     Error (Error.decorate trace err)
-
-  let with_heap_symex (f : 'a Heap.SM.t) : 'a SM.t =
-    let* st = SM.get_state () in
-    let st = of_opt st in
-    let*^ (res, heap), pointers =
-      DecayMap.SM.run_with_state ~state:st.pointers @@ f st.heap
-    in
-    let+ () = SM.set_state (Some { st with heap; pointers }) in
-    res
-
-  let with_heap (f : ('a, 'b, Heap.syn list) Heap.SM.Result.t) :
-      ('a, 'b, syn list) Result.t =
-    SM.Result.map_missing (with_heap_symex f) (fun fix ->
-        List.map (fun h -> Heap h) fix)
 
   let apply_parser (type a) ?(ignore_borrow = false) ptr
       (parser : offset:T.sint Typed.t -> a Heap.Decoder.ParserMonad.t) :
@@ -1118,61 +1100,26 @@ module Make (Borrows : Tree_borrows.T) = struct
         Ok v
 
   let register_thread_exit callback =
-    let* st_opt = SM.get_state () in
-    let st = of_opt st_opt in
-    let thread_destructor () =
-      let** () = st.thread_destructor () in
-      callback ()
+    (* HACK: we cannot expect thread exit callbacks to miss with syn, because
+       when we define the callback type the syn type has not yet been defined.
+       Instead we expect it to return unit; for now we fail, while we figure out
+       a solution. *)
+    let@ thread_destructor = with_thread_destructor_sym in
+    let callback () =
+      SM.Result.map_missing (callback ()) (fun _ ->
+          failwith "TODO: Miss in thread exit")
     in
-    SM.Result.set_state (Some { st with thread_destructor })
+    let destructor =
+      match thread_destructor with
+      | None -> callback
+      | Some destructor -> fun () -> Result.bind (destructor ()) callback
+    in
+    Rustsymex.Result.ok ((), Some destructor)
 
   let run_thread_exits () =
-   fun st_opt ->
+    let* st_opt = SM.get_state () in
     let st = of_opt st_opt in
-    st.thread_destructor () st_opt
-
-  let to_syn st : syn list =
-    List.map (fun v -> Heap v) (Option.fold ~none:[] ~some:Heap.to_syn st.heap)
-    @ List.map
-        (fun v -> Pointers v)
-        (Option.fold ~none:[] ~some:DecayMap.to_syn st.pointers)
-
-  let ins_outs (syn : syn) =
-    match syn with
-    | Heap v -> Heap.ins_outs v
-    | Pointers v -> DecayMap.ins_outs v
-
-  let produce (syn : syn) st =
-    let open SM.Symex.Producer.Syntax in
-    let st = of_opt st in
-    match syn with
-    | Heap v ->
-        let+ heap, pointers =
-          DecayMap.SM.Producer.run_with_state ~state:st.pointers
-            (Heap.produce v st.heap)
-        in
-        Some { st with heap; pointers }
-    | Pointers v ->
-        let+ pointers = DecayMap.produce v st.pointers in
-        Some { st with pointers }
-
-  let consume (syn : syn) st =
-    let open SM.Symex.Consumer.Syntax in
-    let st = of_opt st in
-    match syn with
-    | Heap v ->
-        let+ heap, pointers =
-          let+? fixes =
-            DecayMap.SM.Consumer.run_with_state ~state:st.pointers
-              (Heap.consume v st.heap)
-          in
-          List.map (fun s -> Heap s) fixes
-        in
-        Some { st with heap; pointers }
-    | Pointers v ->
-        let+ pointers =
-          let+? fixes = DecayMap.consume v st.pointers in
-          List.map (fun s -> Pointers s) fixes
-        in
-        Some { st with pointers }
+    match st.thread_destructor with
+    | None -> Result.ok ()
+    | Some destructor -> SM.Result.map_missing (destructor ()) (fun () -> [])
 end

@@ -94,8 +94,7 @@ let mk_concrete ~size ~align =
 let not_impl_layout msg ty =
   Fmt.kstr not_impl "Can't compute layout: %s %a" msg pp_ty ty
 
-let layout_warning msg ty =
-  L.warn (fun m -> m "Layout: %s@.Type: %a" msg pp_ty ty)
+let layout_warning msg ty = [%l.warn "Layout: %s@.Type: %a" msg pp_ty ty]
 
 let rec layout_of (ty : Types.ty) : (t, 'e, 'f) Rustsymex.Result.t =
   let* ty = Poly.subst_ty ty in
@@ -145,9 +144,10 @@ let rec layout_of (ty : Types.ty) : (t, 'e, 'f) Rustsymex.Result.t =
          polymorphic mode, meaning some types may have a layout while their
          fields don't. To avoid this, we *never* consider layouts of generic
          types, even if one is provided. This avoids inconsistent layouts. *)
-      | Some layout, _
+      | [ (_triple, layout) ], _
         when (not (Config.get ()).polymorphic) || ty_is_monomorphic ty ->
           translate_layout ty layout
+      | _ :: _ :: _, _ -> failwith "multiple layouts for the same ADT"
       | _, Struct fields -> compute_arbitrary_layout ty (field_tys fields)
       | _, Union fields -> compute_union_layout ty (field_tys fields)
       | _, Enum variants -> compute_enum_layout ty variants

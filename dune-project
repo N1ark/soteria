@@ -93,9 +93,9 @@
   ppx_deriving
   fmt
   (linol
-   (>= 0.10))
+   (= 0.10))
   (linol-eio
-   (>= 0.10))
+   (= 0.10))
   (ppx_subliner
    (>= 0.2.1))
   (odoc :with-doc)

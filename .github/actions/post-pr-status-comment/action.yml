@@ -15,16 +15,20 @@ runs:
   steps:
     - name: Replace previous status comment
       uses: actions/github-script@v7
+      env:
+        INPUT_ISSUE_NUMBER: ${{ inputs.issue-number }}
+        INPUT_MARKER: ${{ inputs.marker }}
+        INPUT_BODY: ${{ inputs.body }}
       with:
         script: |
           const owner = context.repo.owner;
           const repo = context.repo.repo;
-          const issueNumber = Number(core.getInput('issue-number'));
-          const markerInput = core.getInput('marker').trim();
+          const issueNumber = Number(process.env.INPUT_ISSUE_NUMBER);
+          const markerInput = process.env.INPUT_MARKER.trim();
           const marker = markerInput.startsWith('<!--')
             ? markerInput
             : `<!-- ${markerInput} -->`;
-          const body = core.getInput('body');
+          const body = process.env.INPUT_BODY;
           const outdatedMarker = '<!-- soteria:outdated -->';
           const outdatedNotice = '###### This comment is outdated and has been superseded by a newer run.';
 

@@ -28,7 +28,7 @@ runs:
           const marker = markerInput.startsWith('<!--')
             ? markerInput
             : `<!-- ${markerInput} -->`;
-          const body = process.env.INPUT_BODY;
+          const body = process.env.INPUT_BODY.replace(/\\n/g, '\n');
           const outdatedMarker = '<!-- soteria:outdated -->';
           const outdatedNotice = '###### This comment is outdated and has been superseded by a newer run.';
 

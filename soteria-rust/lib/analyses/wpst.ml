@@ -2,7 +2,7 @@ module Stats = Soteria.Stats
 module Compo_res = Soteria.Symex.Compo_res
 open Soteria.Logs.Printers
 open Syntaxes.FunctionWrap
-module State = State.Tree_state
+module State = State.Tree_state.Make (Tree_borrows.Concrete.Make)
 module Interp = Interp.Make (State)
 open Error.Diagnostic
 open Util
@@ -62,10 +62,18 @@ let print_outcomes entry_name f =
         "%s (%a): %s, %s@.@." entry_name pp_time time error msg;
       (entry_name, Outcome.Fatal)
 
+let flamegraph_name entry_name =
+  (Soteria.Profiling.Config.get ()).flamegraphs
+  |> Option.map (fun dirname ->
+      let entry_name =
+        Str.global_replace (Str.regexp_string "::") "-" entry_name
+      in
+      Filename.concat dirname entry_name)
+
 let exec_crate (crate : Charon.UllbcAst.crate)
     (entry_points : Frontend.entry_point list) =
   let@ () = Crate.with_crate crate in
-
+  let@ () = Call_graph.with_dumped_callgraph () in
   (* get entry points to the crate *)
   if List.is_empty entry_points then fatal "No entry points found";
 
@@ -80,20 +88,18 @@ let exec_crate (crate : Charon.UllbcAst.crate)
   let@ () = print_outcomes entry_name in
   Fmt.pr "%a %a@." (pp_clr `Teal) "=>" (pp_style `Bold)
     ("Running " ^ entry_name ^ "...");
-  let args =
+  let args : State.Sptr.t Rust_val.t list =
     if entry_name = "miri_start" then
-      [
-        Rust_val.Int (Typed.BV.usizei 0);
-        Rust_val.Ptr (State.Sptr.null_ptr (), Thin);
-      ]
+      [ Int (Typed.BV.usizei 0); Ptr (State.Sptr.null (), Thin) ]
     else []
   in
   let { res = branches; stats } : 'res Soteria.Stats.with_stats =
     let@ () = L.entry_point_section fun_decl.item_meta.name in
     let@ () = Layout.Session.with_layout_cache in
     let@@ () =
-      Rustsymex.Result.run_with_stats ~mode:OX ~fuel
-        ~fail_fast:(Config.get ()).fail_fast
+      Rustsymex.Result.run_with_stats
+        ?flamegraph:(flamegraph_name entry_name)
+        ~mode:OX ~fuel ~fail_fast:(Config.get ()).fail_fast
     in
     exec_fun fun_decl ~args
   in

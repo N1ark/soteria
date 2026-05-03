@@ -74,15 +74,15 @@ module Result = struct
     | Error (e, _) -> Error e
     | Missing f -> Missing f
 
-  let run_with_stats ?fuel ?fail_fast ~mode symex =
+  let run_with_stats ?flamegraph ?fuel ?fail_fast ~mode symex =
     run_with_state ~state:MonadState.empty symex
     |> (Fun.flip MonoSymex.map) ignore_state
-    |> MonoSymex.Result.run_with_stats ?fuel ?fail_fast ~mode
+    |> MonoSymex.Result.run_with_stats ?flamegraph ?fuel ?fail_fast ~mode
 
-  let run_needs_stats ?fuel ?fail_fast ~mode symex =
+  let run_needs_stats ?flamegraph ?fuel ?fail_fast ~mode symex =
     run_with_state ~state:MonadState.empty symex
     |> (Fun.flip MonoSymex.map) ignore_state
-    |> MonoSymex.Result.run_needs_stats ?fuel ?fail_fast ~mode
+    |> MonoSymex.Result.run_needs_stats ?flamegraph ?fuel ?fail_fast ~mode
 end
 
 module Poly = struct
@@ -153,11 +153,13 @@ let error ?trace e : ('a, Error.with_trace, 'f) Result.t =
   let e = Error.decorate where e in
   Soteria.Symex.Compo_res.Error e
 
-let with_extra_call_trace ~loc ~msg (f : 'a t) : 'a t =
+let with_extra_call_trace ?name ~loc ~msg (f : 'a t) : 'a t =
  fun st ->
   let open MonoSymex.Syntax in
   let cur_trace = st.trace in
-  let new_trace = Trace.push_to_stack ~loc ~msg cur_trace in
+  let new_name = Option.or_ name cur_trace.name in
+  let new_trace = Trace.push_to_stack ?name:new_name ~loc ~msg cur_trace in
+  Call_graph.add_edge cur_trace.name name;
   let+ result, st = f { st with trace = new_trace } in
   (result, { st with trace = cur_trace })
 

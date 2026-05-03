@@ -19,6 +19,11 @@ let of_seq seq =
   Seq.iter (fun x -> add tbl x) seq;
   tbl
 
+let of_iter iter =
+  let tbl = with_capacity 0 in
+  iter (fun x -> add tbl x);
+  tbl
+
 let cardinal tbl = Hashtbl.length tbl
 let copy tbl = Hashtbl.copy tbl
 let subseteq lset rset = to_seq lset |> Seq.for_all (fun x -> mem rset x)
@@ -27,11 +32,7 @@ let equal lset rset = cardinal lset = cardinal rset && subseteq lset rset
 let pp pp_elt : Format.formatter -> 'a t -> unit =
   Fmt.braces @@ Fmt.iter ~sep:Fmt.comma iter pp_elt
 
-module type PrintableHashedType = sig
-  include Hashtbl.HashedType
-
-  val pp : Format.formatter -> t -> unit
-end
+module type PrintableHashedType = [%mixins Hashtbl.HashedType + Sigs.Printable]
 
 module type S = sig
   type elt
@@ -46,6 +47,7 @@ module type S = sig
   val iter : (elt -> unit) -> t -> unit
   val to_seq : t -> elt Seq.t
   val of_seq : elt Seq.t -> t
+  val of_iter : elt Iter.t -> t
   val cardinal : t -> int
   val copy : t -> t
   val subseteq : t -> t -> bool
@@ -75,6 +77,11 @@ module Make (Elt : PrintableHashedType) : S with type elt = Elt.t = struct
   let of_seq seq =
     let tbl = with_capacity 0 in
     Seq.iter (fun x -> add tbl x) seq;
+    tbl
+
+  let of_iter iter =
+    let tbl = with_capacity 0 in
+    iter (fun x -> add tbl x);
     tbl
 
   let cardinal tbl = Hashtbl.length tbl

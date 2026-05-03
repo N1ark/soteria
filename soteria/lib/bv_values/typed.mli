@@ -135,6 +135,22 @@ module type Bool_ := sig
   val not : [< sbool ] t -> [> sbool ] t
   val distinct : 'a t list -> [> sbool ] t
   val ite : [< sbool ] t -> 'a t -> 'a t -> 'a t
+  val exists_1 : not_in:_ t -> 'a ty -> ('a t -> [< sbool ] t) -> [> sbool ] t
+
+  val exists_2 :
+    not_in:_ t ->
+    'a ty ->
+    'b ty ->
+    ('a t -> 'b t -> [< sbool ] t) ->
+    [> sbool ] t
+
+  val exists_3 :
+    not_in:_ t ->
+    'a ty ->
+    'b ty ->
+    'c ty ->
+    ('a t -> 'b t -> 'c t -> [< sbool ] t) ->
+    [> sbool ] t
 end
 
 include Bool_
@@ -173,6 +189,9 @@ module BitVec : sig
   val sub_overflows : signed:bool -> [< sint ] t -> [< sint ] t -> [> sbool ] t
   val mul_overflows : signed:bool -> [< sint ] t -> [< sint ] t -> [> sbool ] t
   val neg_overflows : [< sint ] t -> [> sbool ] t
+
+  (* Unsafe mark as not overflow *)
+  val no_ovf_unsafe : [< sint_ovf ] t -> [> sint ] t
 
   (* inequalities *)
   val lt : signed:bool -> [< sint ] t -> [< sint ] t -> [> sbool ] t

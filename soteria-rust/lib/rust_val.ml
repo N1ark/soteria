@@ -116,7 +116,8 @@ let rec to_syn ptr_to_syn x =
   | Ptr p -> Ptr (full_ptr_to_syn p)
   | PolyVal v -> PolyVal v
 
-module Learn_eq (Symex : Soteria.Symex.Base with module Value = Typed) = struct
+module Learn_eq (Symex : Soteria.Symex.Base with module Value = Rustsymex.Value) =
+struct
   let learn_eq_meta learn_eq_ptr s t =
     let open Symex.Consumer in
     match (s, t) with
@@ -223,3 +224,15 @@ let rec subst subst_ptr subst_val rv =
         | VTable ptr -> VTable (subst_ptr subst_val ptr)
       in
       Ptr (subst_ptr subst_val p, meta)
+
+let mk_enum ~ty variant fields =
+  let open Charon in
+  let open Common.Charon_util in
+  let variant =
+    ty_as_adt ty
+    |> Crate.as_enum
+    |> List.find (fun (v : Types.variant) -> v.variant_name = variant)
+  in
+  assert (List.compare_lengths variant.fields fields = 0);
+  let discr = BV.of_literal variant.discriminant in
+  Enum (discr, fields)

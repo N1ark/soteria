@@ -205,6 +205,7 @@ type t_kind =
   | Binop of Binop.t * t * t
   | Nop of Nop.t * t list
   | Ite of t * t * t
+  | Exists of (Var.t * ty) list * t
 
 and t_node = { kind : t_kind; ty : ty }
 and t = t_node hash_consed [@@deriving show { with_path = false }, eq, ord]
@@ -214,26 +215,28 @@ let kind t = t.node.kind
 let unique_tag t = t.tag
 let is_bool_ty = function TBool -> true | _ -> false
 
-let iter =
-  let rec aux (f : t -> unit) (sv : t) : unit =
-    f sv;
-    match sv.node.kind with
-    | Var _ | Bool _ | Float _ | BitVec _ -> ()
-    | Ptr (l, r) | Binop (_, l, r) ->
-        aux f l;
-        aux f r
-    | Unop (_, sv) -> aux f sv
-    | Nop (_, l) | Seq l -> List.iter (aux f) l
-    | Ite (c, t, e) ->
-        aux f c;
-        aux f t;
-        aux f e
-  in
-  Fun.flip aux
-
 let iter_vars (sv : t) (f : Var.t * ty -> unit) : unit =
-  iter sv @@ fun sv ->
-  match sv.node.kind with Var v -> f (v, sv.node.ty) | _ -> ()
+  let rec aux ~ignore (sv : t) : unit =
+    let aux' = aux ~ignore in
+    match sv.node.kind with
+    | Var v -> if Var.Set.mem v ignore then () else f (v, sv.node.ty)
+    | Bool _ | Float _ | BitVec _ -> ()
+    | Ptr (l, r) | Binop (_, l, r) ->
+        aux' l;
+        aux' r
+    | Unop (_, sv) -> aux' sv
+    | Nop (_, l) | Seq l -> List.iter aux' l
+    | Ite (c, t, e) ->
+        aux' c;
+        aux' t;
+        aux' e
+    | Exists (vs, sv) ->
+        let ignore =
+          List.fold_left (fun ignore (v, _) -> Var.Set.add v ignore) ignore vs
+        in
+        aux ~ignore sv
+  in
+  aux ~ignore:Var.Set.empty sv
 
 let pp_full ft t = pp_t_node ft t.node
 
@@ -251,6 +254,9 @@ let rec pp ft t =
   | Ptr (l, o) -> pf ft "&(%a, %a)" pp l pp o
   | Seq l -> pf ft "%a" (brackets (list ~sep:comma pp)) l
   | Ite (c, t, e) -> pf ft "(%a ? %a : %a)" pp c pp t pp e
+  | Exists (vs, v) ->
+      let var_pp ft (v, ty) = pf ft "V%a:%a" Var.pp v pp_ty ty in
+      pf ft "∃ %a. %a" (list ~sep:comma var_pp) vs pp v
   | Unop (Not, { node = { kind = Binop (Eq, v1, v2); _ }; _ }) ->
       pf ft "(%a != %a)" pp v1 pp v2
   | Unop (op, v) -> pf ft "%a(%a)" Unop.pp op pp v
@@ -303,6 +309,7 @@ module Hcons = Hc.Make (struct
     | Binop (op, l, r) -> Hashtbl.hash (op, l.tag, r.tag, hty)
     | Nop (op, l) -> Hashtbl.hash (op, List.map (fun sv -> sv.tag) l, hty)
     | Ite (c, t, e) -> Hashtbl.hash (c.tag, t.tag, e.tag, hty)
+    | Exists (vs, sv) -> Hashtbl.hash (vs, sv.tag, hty)
 end)
 
 let ( <| ) kind ty : t = Hcons.hashcons { kind; ty }
@@ -337,6 +344,15 @@ module type Bool = sig
   val split_ands : t -> t Iter.t
   val distinct : t list -> t
   val ite : t -> t -> t -> t
+
+  (** Do not use this directly when instantiating your own binders, use
+      [exists_n] or its variants *)
+  val mk_exists : (Var.t * ty) list -> t -> t
+
+  val exists_n : not_in:t -> ty list -> (t list -> t) -> t
+  val exists_1 : not_in:t -> ty -> (t -> t) -> t
+  val exists_2 : not_in:t -> ty -> ty -> (t -> t -> t) -> t
+  val exists_3 : not_in:t -> ty -> ty -> ty -> (t -> t -> t -> t) -> t
   val sem_eq : t -> t -> t
   val sem_eq_untyped : t -> t -> t
 end
@@ -685,6 +701,49 @@ module rec Bool : Bool = struct
           mk_commut_binop Eq v1 v2 <| TBool
     | _ -> mk_commut_binop Eq v1 v2 <| TBool
 
+  (* TODO: merge binders if the body is an exists *)
+  let mk_exists binders body =
+    let body_vars = Var.Hashset.of_iter (iter_vars body |> Iter.map fst) in
+    let binders =
+      List.filter (fun (v, _) -> Var.Hashset.mem body_vars v) binders
+    in
+    match binders with [] -> body | _ -> Exists (binders, body) <| TBool
+
+  (** * [exists_n ~not_in tys mk] creates an existential with [length tys]
+      variables of types [tys], that are not in [not_in], and with body created
+      by [mk : t list -> t] which takes the created variables as input in the
+      same order as [tys]. *)
+  let exists_n ~not_in tys mk =
+    (* FIXME: Ideally, the not_in parameter would not be necessary. What we
+       should be doing is creating variables with identifiers Int.max, Int.max -
+       1, etc., then create the value, and then substitute those variables with
+       ones that are not in the rest of the value. Unfortunately, this requires
+       calling `Eval.eval`, but that creates a cycle... *)
+    let max = ref 0 in
+    iter_vars not_in (fun (v, _) -> max := Int.max !max (Var.to_int v));
+    (* We create something high to note those are actually existentials and
+       reduce chances of conflict *)
+    let base = !max + 10_000 in
+    let binders = List.mapi (fun i ty -> (Var.of_int (base + i), ty)) tys in
+    let binders_vs = List.map (fun (v, ty) -> mk_var v ty) binders in
+    let body = mk binders_vs in
+    mk_exists binders body
+
+  let exists_1 ~not_in ty mk =
+    exists_n ~not_in [ ty ] (function
+      | [ v ] -> mk v
+      | _ -> failwith "exists_1: unreachable")
+
+  let exists_2 ~not_in ty1 ty2 mk =
+    exists_n ~not_in [ ty1; ty2 ] (function
+      | [ v1; v2 ] -> mk v1 v2
+      | _ -> failwith "exists_2: unreachable")
+
+  let exists_3 ~not_in ty1 ty2 ty3 mk =
+    exists_n ~not_in [ ty1; ty2; ty3 ] (function
+      | [ v1; v2; v3 ] -> mk v1 v2 v3
+      | _ -> failwith "exists_3: unreachable")
+
   let sem_eq_untyped v1 v2 =
     if equal_ty v1.node.ty v2.node.ty then sem_eq v1 v2 else v_false
 
@@ -821,16 +880,21 @@ and BitVec : BitVec = struct
     | (BitVec z, Unop (BvNot, v) | Unop (BvNot, v), BitVec z)
       when Z.equal z Z.one ->
         neg v
-    | Binop (Add _, ({ node = { kind = BitVec _; _ }; _ } as c1), r), BitVec _
-    | Binop (Add _, r, ({ node = { kind = BitVec _; _ }; _ } as c1)), BitVec _
-      ->
-        add ~checked (add c1 v2) r
-    | Binop (Sub _, l, ({ node = { kind = BitVec _; _ }; _ } as c1)), BitVec _
-      ->
-        add ~checked l (sub v2 c1)
-    | Binop (Sub _, ({ node = { kind = BitVec _; _ }; _ } as c1), r), BitVec _
-      ->
-        sub ~checked (add c1 v2) r
+    | ( Binop
+          (Add { checked = c }, ({ node = { kind = BitVec _; _ }; _ } as c1), r),
+        BitVec _ )
+    | ( Binop
+          (Add { checked = c }, r, ({ node = { kind = BitVec _; _ }; _ } as c1)),
+        BitVec _ ) ->
+        add ~checked:(checked && c) (add c1 v2) r
+    | ( Binop
+          (Sub { checked = c }, l, ({ node = { kind = BitVec _; _ }; _ } as c1)),
+        BitVec _ ) ->
+        add ~checked:(checked && c) l (sub v2 c1)
+    | ( Binop
+          (Sub { checked = c }, ({ node = { kind = BitVec _; _ }; _ } as c1), r),
+        BitVec _ ) ->
+        sub ~checked:(checked && c) (add c1 v2) r
     | _, Binop (Sub _, l, r) when equal r v1 -> l
     | Binop (Sub _, l, r), _ when equal r v2 -> l
     | Binop (Mul _, l1, r1), Binop (Mul _, l2, r2)
@@ -893,23 +957,33 @@ and BitVec : BitVec = struct
     | _, _ when equal v1 v2 -> zero (size_of v1.node.ty)
     (* BAD PERF:!!!! *)
     | _, Unop (Neg, v2) -> add v1 v2
-    | Binop (Sub _, ({ node = { kind = BitVec _; _ }; _ } as c1), s), BitVec _
-      ->
-        sub ~checked (sub c1 v2) s
-    | Binop (Sub _, s, ({ node = { kind = BitVec _; _ }; _ } as c1)), BitVec _
-      ->
-        sub ~checked s (add c1 v2)
-    | BitVec _, Binop (Add _, ({ node = { kind = BitVec _; _ }; _ } as r), c)
-    | BitVec _, Binop (Add _, c, ({ node = { kind = BitVec _; _ }; _ } as r)) ->
-        sub ~checked (sub v1 r) c
-    | ( Binop (Add _, ({ node = { kind = BitVec bv1; _ }; _ } as r), c),
+    | ( Binop
+          (Sub { checked = c }, ({ node = { kind = BitVec _; _ }; _ } as c1), s),
+        BitVec _ ) ->
+        sub ~checked:(c && checked) (sub c1 v2) s
+    | ( Binop
+          (Sub { checked = c }, s, ({ node = { kind = BitVec _; _ }; _ } as c1)),
+        BitVec _ ) ->
+        sub ~checked:(c && checked) s (add c1 v2)
+    | ( BitVec _,
+        Binop
+          (Add { checked = c }, ({ node = { kind = BitVec _; _ }; _ } as r), l)
+      )
+    | ( BitVec _,
+        Binop
+          (Add { checked = c }, l, ({ node = { kind = BitVec _; _ }; _ } as r))
+      ) ->
+        sub ~checked:(c && checked) (sub v1 r) l
+    | ( Binop
+          (Add { checked = c }, ({ node = { kind = BitVec bv1; _ }; _ } as r), l),
         BitVec bv2 )
-    | ( Binop (Add _, c, ({ node = { kind = BitVec bv1; _ }; _ } as r)),
+    | ( Binop
+          (Add { checked = c }, l, ({ node = { kind = BitVec bv1; _ }; _ } as r)),
         BitVec bv2 ) ->
         (* if bv1 < bv2 there would be an overflow which causes problems since
            the operation can't be deemed checked anymore. *)
-        if Z.lt bv1 bv2 then sub ~checked c (neg (sub r v2))
-        else add ~checked c (sub r v2)
+        if Z.lt bv1 bv2 then sub ~checked:(c && checked) l (neg (sub r v2))
+        else add ~checked:(c && checked) l (sub r v2)
     | Binop (Add _, l, r), _ when equal l v2 -> r
     | Binop (Add _, l, r), _ when equal r v2 -> l
     | Binop (Add _, l1, r1), Binop (Add _, l2, r2) when equal l1 l2 ->
@@ -1567,18 +1641,10 @@ and BitVec : BitVec = struct
             ( Add { checked = true },
               x,
               ({ node = { kind = BitVec bv_r; _ }; _ } as r) ) ) ) ->
-        if Stdlib.not signed then
-          if Z.lt bv_v1 bv_r then Bool.v_true
-          else lt ~signed (sub ~checked:true v1 r) x
-        else
-          let overflows =
-            overflows ~signed bits
-              (bv_to_z signed bits bv_v1)
-              (bv_to_z signed bits bv_r) Z.sub
-          in
-          (* give up if overflow *)
-          if overflows then Binop (Lt signed, v1, v2) <| TBool
-          else lt ~signed (sub ~checked:true v1 r) x
+        if Stdlib.not signed && Z.lt bv_v1 bv_r then Bool.v_true
+        else if overflows ~signed bits bv_v1 bv_r Z.( - ) then
+          Binop (Lt signed, v1, v2) <| TBool
+        else lt ~signed (sub ~checked:true v1 r) x
     | ( ( Binop
             ( Add { checked = true },
               ({ node = { kind = BitVec bv_l; _ }; _ } as l),
@@ -1588,18 +1654,10 @@ and BitVec : BitVec = struct
               x,
               ({ node = { kind = BitVec bv_l; _ }; _ } as l) ) ),
         BitVec bv_v2 ) ->
-        if Stdlib.not signed then
-          if Z.lt bv_v2 bv_l then Bool.v_false
-          else lt ~signed x (sub ~checked:true v2 l)
-        else
-          let overflows =
-            overflows ~signed bits
-              (bv_to_z signed bits bv_v2)
-              (bv_to_z signed bits bv_l) Z.sub
-          in
-          (* give up if overflow *)
-          if overflows then Binop (Lt signed, v1, v2) <| TBool
-          else lt ~signed x (sub ~checked:true v2 l)
+        if Stdlib.not signed && Z.lt bv_v2 bv_l then Bool.v_false
+        else if overflows ~signed bits bv_v2 bv_l Z.( - ) then
+          Binop (Lt signed, v1, v2) <| TBool
+        else lt ~signed x (sub ~checked:true v2 l)
     | _, Binop (Add { checked = true }, v2, v2')
       when equal v1 v2 || equal v1 v2' ->
         (* a < a + b when + doesn't overflow is equivalent to 0 < b *)
@@ -1632,7 +1690,14 @@ and BitVec : BitVec = struct
         (* we pick the option that will make a positive constant
            (superstition) *)
         if Z.geq int_l int_r then
-          lt ~signed (add ~checked:true y (sub ~checked:true l r)) x
+          (* Check that (l - r) doesn't overflow *)
+          if overflows ~signed bits int_l int_r Z.( - ) then
+            Binop (Lt signed, v1, v2) <| TBool
+          else lt ~signed (add ~checked:true y (sub ~checked:true l r)) x
+        else if
+          (* Check that (r - l) doesn't overflow *)
+          overflows ~signed bits int_r int_l Z.( - )
+        then Binop (Lt signed, v1, v2) <| TBool
         else lt ~signed y (add ~checked:true x (sub ~checked:true r l))
     | _, BitVec x when Stdlib.not signed && Z.(equal x one) ->
         (* unsigned x < 1 is x == 0 *)
@@ -1763,12 +1828,14 @@ and BitVec : BitVec = struct
         else if Z.lt c1 Z.zero then leq ~signed (div ~signed v2 v1) x
         else leq ~signed x (div ~signed v2 v1)
     | ( Binop (Mul { checked = true }, l1, r1),
-        Binop (Mul { checked = true }, l2, r2) )
-      when equal l1 l2 || equal l1 r2 || equal r1 l2 || equal r1 r2 ->
-        if equal l1 l2 then lt ~signed r1 r2
-        else if equal l1 r2 then lt ~signed r1 l2
-        else if equal r1 l2 then lt ~signed l1 r2
-        else lt ~signed l1 l2
+        Binop (Mul { checked = true }, l2, r2) ) ->
+        (* Can only cancel common factor if it's provably non-zero *)
+        let is_nonzero v = sure_neq v (zero (size_of v.node.ty)) in
+        if equal l1 l2 && is_nonzero l1 then lt ~signed r1 r2
+        else if equal l1 r2 && is_nonzero l1 then lt ~signed r1 l2
+        else if equal r1 l2 && is_nonzero r1 then lt ~signed l1 r2
+        else if equal r1 r2 && is_nonzero r1 then lt ~signed l1 l2
+        else Binop (Lt signed, v1, v2) <| TBool
     | _ -> Binop (Lt signed, v1, v2) <| TBool
 
   and leq ~signed v1 v2 =
@@ -1787,18 +1854,10 @@ and BitVec : BitVec = struct
             ( Add { checked = true },
               x,
               ({ node = { kind = BitVec bv_r; _ }; _ } as r) ) ) ) ->
-        if Stdlib.not signed then
-          if Z.lt bv_v1 bv_r then Bool.v_true
-          else leq ~signed (sub ~checked:true v1 r) x
-        else
-          let overflows =
-            overflows ~signed bits
-              (bv_to_z signed bits bv_v1)
-              (bv_to_z signed bits bv_r) Z.sub
-          in
-          (* give up if overflow *)
-          if overflows then Binop (Leq signed, v1, v2) <| TBool
-          else leq ~signed (sub ~checked:true v1 r) x
+        if Stdlib.not signed && Z.lt bv_v1 bv_r then Bool.v_true
+        else if overflows ~signed bits bv_v1 bv_r Z.( - ) then
+          Binop (Leq signed, v1, v2) <| TBool
+        else leq ~signed (sub ~checked:true v1 r) x
     | ( ( Binop
             ( Add { checked = true },
               ({ node = { kind = BitVec bv_l; _ }; _ } as l),
@@ -1808,18 +1867,10 @@ and BitVec : BitVec = struct
               x,
               ({ node = { kind = BitVec bv_l; _ }; _ } as l) ) ),
         BitVec bv_v2 ) ->
-        if Stdlib.not signed then
-          if Z.lt bv_v2 bv_l then Bool.v_false
-          else leq ~signed x (sub ~checked:true v2 l)
-        else
-          let overflows =
-            overflows ~signed bits
-              (bv_to_z signed bits bv_v2)
-              (bv_to_z signed bits bv_l) Z.sub
-          in
-          (* give up if overflow *)
-          if overflows then Binop (Leq signed, v1, v2) <| TBool
-          else leq ~signed x (sub ~checked:true v2 l)
+        if Stdlib.not signed && Z.lt bv_v2 bv_l then Bool.v_false
+        else if overflows ~signed bits bv_v2 bv_l Z.( - ) then
+          Binop (Leq signed, v1, v2) <| TBool
+        else leq ~signed x (sub ~checked:true v2 l)
     | ( ( Binop
             ( Add { checked = true },
               ({ node = { kind = BitVec bv_l; _ }; _ } as l),
@@ -1842,7 +1893,14 @@ and BitVec : BitVec = struct
         (* we pick the option that will make a positive constant
            (superstition) *)
         if Z.geq int_l int_r then
-          leq ~signed (add ~checked:true y (sub ~checked:true l r)) x
+          (* Check that (l - r) doesn't overflow *)
+          if overflows ~signed bits int_l int_r Z.( - ) then
+            Binop (Leq signed, v1, v2) <| TBool
+          else leq ~signed (add ~checked:true y (sub ~checked:true l r)) x
+        else if
+          (* Check that (r - l) doesn't overflow *)
+          overflows ~signed bits int_r int_l Z.( - )
+        then Binop (Leq signed, v1, v2) <| TBool
         else leq ~signed y (add ~checked:true x (sub ~checked:true r l))
     | _, Binop (Add { checked = true }, v2, v2')
       when equal v1 v2 || equal v1 v2' ->
@@ -1956,12 +2014,14 @@ and BitVec : BitVec = struct
         else if Z.lt c2 Z.zero then lt ~signed x (div ~signed v2 v1)
         else leq ~signed x (div ~signed v2 v1)
     | ( Binop (Mul { checked = true }, l1, r1),
-        Binop (Mul { checked = true }, l2, r2) )
-      when equal l1 l2 || equal l1 r2 || equal r1 l2 || equal r1 r2 ->
-        if equal l1 l2 then leq ~signed r1 r2
-        else if equal l1 r2 then leq ~signed r1 l2
-        else if equal r1 l2 then leq ~signed l1 r2
-        else leq ~signed l1 l2
+        Binop (Mul { checked = true }, l2, r2) ) ->
+        (* Can only cancel common factor if it's provably non-zero *)
+        let is_nonzero v = sure_neq v (zero (size_of v.node.ty)) in
+        if equal l1 l2 && is_nonzero l1 then leq ~signed r1 r2
+        else if equal l1 r2 && is_nonzero l1 then leq ~signed r1 l2
+        else if equal r1 l2 && is_nonzero r1 then leq ~signed l1 r2
+        else if equal r1 r2 && is_nonzero r1 then leq ~signed l1 l2
+        else Binop (Leq signed, v1, v2) <| TBool
     | Binop (Div false, _, { node = { kind = BitVec d; _ }; _ }), BitVec n
       when Stdlib.not signed && Z.(gt (mul n d) (max_for false bits)) ->
         Bool.v_true

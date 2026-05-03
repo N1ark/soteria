@@ -51,7 +51,41 @@ module Subst = struct
             (Svalue.Bool.ite cond v1 v2, s)
         | Nop (nop, vs) ->
             let vs, s = apply_list ~missing_var s vs in
-            (Eval.eval_nop nop vs, s))
+            (Eval.eval_nop nop vs, s)
+        | Exists (vs, sv) ->
+            (* [replaced_bindings] is a list of triples [(old_var, old_binding,
+               new_var)] where [(old_var, old_binding)] was a binding of
+               substitution and needs to be replaced by a [new_var -> new_var]
+               binding to iter over [sv] *)
+            let replaced_bindings =
+              Raw_map.to_seq s
+              |> Seq.filter_map (function
+                | (Hc.{ node = { kind = Var v; _ }; _ } as old_var), old_binding
+                  ->
+                    List.assoc_opt v vs
+                    |> Option.map (fun ty ->
+                        (old_var, old_binding, mk_var v ty))
+                | _ -> None)
+              |> List.of_seq
+            in
+            let s =
+              List.fold_left
+                (fun s (old_var, _, new_var) ->
+                  let without = Raw_map.remove old_var s in
+                  Raw_map.add new_var new_var without)
+                s replaced_bindings
+            in
+            (* Actually perform substitution *)
+            let sv, s = apply ~missing_var s sv in
+            (* Revert the dummy bindings *)
+            let subst_after_pass =
+              List.fold_left
+                (fun s (old_var, old_binding, new_var) ->
+                  let without_new = Raw_map.remove new_var s in
+                  Raw_map.add old_var old_binding without_new)
+                s replaced_bindings
+            in
+            (Svalue.Bool.mk_exists vs sv, subst_after_pass))
 
   and apply_list ~missing_var s vs =
     match vs with
@@ -61,11 +95,65 @@ module Subst = struct
         let vs, s = apply_list ~missing_var s vs in
         (v :: vs, s)
 
+  let is_known (s : t) (e : Svalue.t) : bool =
+    let exception Not_covered in
+    try
+      let _ = apply ~missing_var:(fun _ _ -> raise_notrace Not_covered) s e in
+      true
+    with Not_covered -> false
+
   let rec learn (s : t) (e : Svalue.t) (v : Svalue.t) : t option =
+    let open Syntaxes.Option in
+    let/ () = if is_known s e then Some s else None in
     match e.node.kind with
     | Var _ -> if Raw_map.mem e s then Some s else Some (extend e v s)
+    (* Boolean negation: Not(e') = v => e' = Not(v) *)
     | Unop (Unop.Not, e') -> learn s e' (Bool.not v)
-    (* This pattern matching can be extended for any reversible operation. *)
+    (* Bitwise NOT is self-inverse: BvNot(e') = v => e' = BvNot(v) *)
+    | Unop (Unop.BvNot, e') -> learn s e' (BitVec.not v)
+    (* Arithmetic negation is self-inverse mod 2^n: Neg(e') = v => e' =
+       Neg(v) *)
+    | Unop (Unop.Neg, e') -> learn s e' (BitVec.neg v)
+    (* Bit extension: BvExtend(false, by)(e') = v => e' = extract(lower bits of
+       v). This is valid whether the extension is signed or unsigned. *)
+    | Unop (Unop.BvExtend (_, _by), e') ->
+        let size = size_of e'.node.ty in
+        learn s e' (BitVec.extract 0 (size - 1) v)
+    (* BvOfBool maps false->0x0 and true->0x1. Only concrete cases are handled;
+       any other value has no valid pre-image. *)
+    | Unop (Unop.BvOfBool _, e') -> (
+        match v.node.kind with
+        | BitVec z when Z.equal z Z.zero -> learn s e' Bool.v_false
+        | BitVec z when Z.equal z Z.one -> learn s e' Bool.v_true
+        | _ -> None)
+    (* Addition: e1 + c = v => e1 = v - c (or symmetrically) *)
+    | Binop (Binop.Add _, e1, e2) ->
+        if is_known s e1 then learn s e2 (BitVec.sub v e1)
+        else if is_known s e2 then learn s e1 (BitVec.sub v e2)
+        else None
+    (* Subtraction: e1 - c = v => e1 = v + c, c - e2 = v => e2 = c - v *)
+    | Binop (Binop.Sub _, e1, e2) ->
+        if is_known s e1 then learn s e2 (BitVec.sub e1 v)
+        else if is_known s e2 then learn s e1 (BitVec.add v e2)
+        else None
+    (* XOR with a constant is self-inverse: e1 ^ c = v => e1 = v ^ c *)
+    | Binop (Binop.BitXor, e1, e2) ->
+        if is_known s e1 then learn s e2 (BitVec.xor v e1)
+        else if is_known s e2 then learn s e1 (BitVec.xor v e2)
+        else None
+    (* Concatenation: e1 ++ e2 = v => split v into high and low parts *)
+    | Binop (Binop.BvConcat, e1, e2) ->
+        let size_e2 = size_of e2.node.ty in
+        let size_e1 = size_of e1.node.ty in
+        let v_e2 = BitVec.extract 0 (size_e2 - 1) v in
+        let v_e1 = BitVec.extract size_e2 (size_e2 + size_e1 - 1) v in
+        let* s = learn s e1 v_e1 in
+        learn s e2 v_e2
+    (* Pointer: Ptr(loc_e, ofs_e) = Ptr(loc_v, ofs_v) => learn each component *)
+    | Ptr (loc_e, ofs_e) ->
+        let* s = learn s loc_e (Ptr.loc v) in
+        learn s ofs_e (Ptr.ofs v)
+    (* All other operations are not (safely) invertible. *)
     | _ -> None
 end
 

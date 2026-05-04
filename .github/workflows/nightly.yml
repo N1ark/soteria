@@ -29,14 +29,14 @@ jobs:
           FORCE_NIGHTLY: ${{ github.event.inputs.force || 'false' }}
           GH_TOKEN: ${{ github.token }}
         run: |
+          CURRENT_SHA="${{ github.sha }}"
+          echo "current_sha=$CURRENT_SHA" >> "$GITHUB_OUTPUT"
+
           if [ "$FORCE_NIGHTLY" = "true" ]; then
             echo "should_run=true" >> "$GITHUB_OUTPUT"
             echo "Forced nightly release requested"
             exit 0
           fi
-
-          CURRENT_SHA="${{ github.sha }}"
-          echo "current_sha=$CURRENT_SHA" >> "$GITHUB_OUTPUT"
           REF_DATA=$(gh api \
             repos/${{ github.repository }}/git/ref/tags/nightly \
             --jq '{sha: .object.sha, type: .object.type}' 2>/dev/null || true)

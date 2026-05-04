@@ -17,7 +17,6 @@ Testing CI is fun.
 
 ## Table of Contents
 
-nyeyehhehehehhe
 
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)

@@ -5,7 +5,7 @@ permissions:
 
 on:
   schedule:
-    - cron: '0 2 * * *'
+    - cron: "0 2 * * *"
   workflow_dispatch:
     inputs:
       force:
@@ -128,7 +128,7 @@ jobs:
           CURRENT_SHA="${{ needs.check-new-commits.outputs.current_sha }}"
 
           if [ -n "$PREVIOUS_SHA" ]; then
-            RANGE="[$PREVIOUS_SHA..$CURRENT_SHA](https://github.com/${{ github.repository }}/compare/${PREVIOUS_SHA}...${CURRENT_SHA})"
+            RANGE="[${PREVIOUS_SHA:0:7}..${CURRENT_SHA:0:7}](https://github.com/${{ github.repository }}/compare/${PREVIOUS_SHA}...${CURRENT_SHA})"
             PR_LINES=$(gh pr list \
               --repo "${{ github.repository }}" \
               --state merged \
@@ -138,19 +138,12 @@ jobs:
               --jq '.[] | select(.mergeCommit.oid != null) | [.mergeCommit.oid, .title, .url, (.author.login // "unknown")] | @tsv' | \
               while IFS=$'\t' read -r oid title url author; do
                 if git merge-base --is-ancestor "$oid" "$CURRENT_SHA" && ! git merge-base --is-ancestor "$oid" "$PREVIOUS_SHA"; then
-                  printf -- '- %s (%s) by @%s\n' "$title" "$url" "$author"
+                  printf -- '- **%s** (%s) by @%s\n' "$title" "$url" "$author"
                 fi
               done)
           else
             RANGE="(first nightly release in this repository)"
-            PR_LINES=$(gh pr list \
-              --repo "${{ github.repository }}" \
-              --state merged \
-              --base main \
-              --search "merged:>=$(date -u -d '-7 days' +%Y-%m-%d)" \
-              --limit 20 \
-              --json title,url,author \
-              --jq '.[] | "- \(.title) (\(.url)) by @\(.author.login // "unknown")"')
+            PR_LINES="- No previous nightly release to compare against, so all merged PRs are included in this release"
           fi
 
           if [ -z "$PR_LINES" ]; then

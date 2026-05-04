@@ -83,6 +83,7 @@ For **Soteria Rust**, you will also need:
 <summary>For developers who want to contribute to Soteria</summary>
 
 1. **Clone the repository:**
+2. asdjkhgafshdjsd
    ```sh
    git clone https://github.com/soteria-tools/soteria.git
    cd soteria

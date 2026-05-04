@@ -147,7 +147,7 @@ jobs:
               --search "merged:>=$(date -u -d '-7 days' +%Y-%m-%d)" \
               --limit 20 \
               --json title,url,author \
-              --jq '.[] | "- \(.title) (\(.url)) by \(.author.login // \"unknown\")"')
+              --jq '.[] | "- \(.title) (\(.url)) by \(.author.login // "unknown")"')
           fi
 
           if [ -z "$PR_LINES" ]; then

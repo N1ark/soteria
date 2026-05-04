@@ -44,7 +44,7 @@ Before using Soteria, ensure you have the following installed:
 | Z3 | latest | [github.com/Z3Prover/z3](https://github.com/Z3Prover/z3) |
 
 For **Soteria Rust**, you will also need:
-
+sjhdvcavsbdm
 | Dependency | Version | Installation |
 |------------|---------|--------------|
 | Rust | nightly | [rustup.rs](https://rustup.rs/) |

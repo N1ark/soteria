@@ -1,7 +1,2 @@
-# Sacha takes precedence unless otherwise specified
-* @giltho
-
-# Opale has control over `soteria-rust`
-soteria-rust/ @N1ark
-soteria-rust.opam @N1ark
-soteria-rust.opam.template @N1ark
+# This is a fork lol
+* @N1ark

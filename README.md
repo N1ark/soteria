@@ -7,6 +7,7 @@
 Soteria is a library for writing efficient symbolic interpreters directly in OCaml.
 The core library is just a small toolbox that we use for writing a set of analyses, currently for Rust and C.
 
+Testing CI is fun.
 
 [![Zulip Chat](https://img.shields.io/badge/join-zulip?logo=zulip&label=Zulip&labelColor=%2330363D&color=%232FBC4F)](https://soteria.zulipchat.com/)
 [![CI](https://github.com/soteria-tools/soteria/actions/workflows/ci.yml/badge.svg)](https://github.com/soteria-tools/soteria/actions/workflows/ci.yml)
@@ -15,6 +16,8 @@ The core library is just a small toolbox that we use for writing a set of analys
 **[Website](https://soteria-tools.com)** | **[API Documentation](https://soteria-tools.github.io/soteria/api/main/soteria/index.html)**
 
 ## Table of Contents
+
+nyeyehhehehehhe
 
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)

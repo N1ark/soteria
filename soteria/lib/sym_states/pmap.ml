@@ -89,9 +89,9 @@ struct
     let+ () = SM.set_state (to_opt st) in
     Ok out_keys
 
-  let wrap (type a err) (key : Key.t)
-      (f : (a, err, Codom.syn list) Codom.SM.Result.t) :
-      (a, err, syn list) SM.Result.t =
+  let wrap_with_lift_fixes (type a err fix_f fix_res)
+      ~(lift_fixes : fix_f list -> fix_res list) (key : Key.t)
+      (f : (a, err, fix_f) Codom.SM.Result.t) : (a, err, fix_res) SM.Result.t =
     let* st = SM.get_state () in
     let st = of_opt st in
     let* key, codom = lift @@ find_opt key st in
@@ -102,7 +102,9 @@ struct
         let+ () = SM.set_state (to_opt (syntactic_add_opt key codom st)) in
         Ok v
     | Error e -> SM.Result.error e
-    | Missing fixes -> SM.Result.miss (lift_fixes ~key fixes)
+    | Missing fixes -> SM.Result.miss (lift_fixes fixes)
+
+  let wrap key f = wrap_with_lift_fixes ~lift_fixes:(lift_fixes ~key) key f
 
   open Symex
 

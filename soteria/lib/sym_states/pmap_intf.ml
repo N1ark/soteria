@@ -66,6 +66,12 @@ struct
 
     val wrap : Key.t -> ('a, 'err) codom_res -> ('a, 'err) res
 
+    val wrap_with_lift_fixes :
+      lift_fixes:('fix_f list -> 'fix_res list) ->
+      Key.t ->
+      (codom option -> (('a, 'err, 'fix_f) Compo_res.t * codom option) Symex.t) ->
+      ('a, 'err, 'fix_res) SM.Result.t
+
     val fold :
       ('acc -> Key.t * codom -> 'acc Symex.t) ->
       'acc ->

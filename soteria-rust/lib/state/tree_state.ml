@@ -316,7 +316,12 @@ module Make (Borrows : Tree_borrows.T) = struct
 
   let with_ptr access ptr f = with_heap @@ Heap.with_ptr access ptr f
 
-  let rec size_and_align_of_val t (ptr : Typed.([< T.sptr_f ] t)) =
+  let rec size_and_align_of_val :
+      'a.
+      Types.ty ->
+      ([< T.sptr_f ] as 'a) Typed.t ->
+      (Typed.([> T.sint ] t) * Typed.([> T.nonzero ] t), _, _) Result.t =
+   fun t ptr ->
     let* st = get_state () in
     let load_vtable field ptr =
       let open Rustsymex.Syntax in

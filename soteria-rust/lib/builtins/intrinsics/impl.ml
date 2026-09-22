@@ -256,7 +256,7 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).Impl = struct
       | Some { file = { name = Virtual _ | NotReal _; _ }; beg_loc; _ } ->
           ("virtual", beg_loc.col, beg_loc.line)
     in
-    let* ptr = Core.string_to_ptr filename in
+    let* ptr = State.load_str_global filename in
     let location =
       Typed.Adt.mk_tuple
         [
@@ -1105,7 +1105,7 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).Impl = struct
 
   let type_name ~t =
     let str = Fmt.to_to_string pp_ty t in
-    Core.string_to_ptr str
+    State.load_str_global str
 
   let type_id_eq ~a ~b =
     let words id =

@@ -82,10 +82,15 @@ module type S = sig
   val transmute_raw : to_:Types.ty -> Typed.block list -> [> any ] v ret
   val zeros : [< sptr_f ] v -> [< nonzero ] v -> unit ret
   val with_pointers_sym : 'a Sptr.DecayMap.SM.t -> 'a SM.t
-  val store_str_global : string -> [< sptr_f ] v -> unit ret
-  val store_global : Types.global_decl_ref -> [< sptr_f ] v -> unit ret
-  val load_str_global : string -> [> sptr_f ] v option ret
-  val load_global : Types.global_decl_ref -> [> sptr_f ] v option ret
+  val load_str_global : string -> [> sptr_f ] v ret
+
+  (** Loads a global; the passed closure is a {b lazy} function, that calculates
+      the initial value of the global, were it to not be in the state. *)
+  val load_global :
+    Types.global_decl_ref ->
+    (unit -> Typed.([< T.any ] t) ret) ->
+    [> sptr_f ] v ret
+
   val borrow : ?protect:bool -> [< sptr_f ] v -> Types.ty -> [> sptr_f ] v ret
   val unprotect : [< sptr_f ] v -> Types.ty -> unit ret
   val with_exposed : [< sint ] Typed.t -> [> sptr_f ] v ret

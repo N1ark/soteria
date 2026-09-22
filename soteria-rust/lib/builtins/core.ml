@@ -244,28 +244,6 @@ module M (StateM : State.StateM.S) = struct
           try Scanf.unescaped unquoted with _ -> unquoted
         else str)
 
-  let string_to_ptr str =
-    let* ptr_res = State.load_str_global str in
-    match ptr_res with
-    | Some ptr -> ok ptr
-    | None ->
-        let len = String.length str in
-        let bytes = Bytes.of_string str in
-        let chars =
-          Iarray.init len (fun i -> BV.u8i (Bytes.get_uint8 bytes i))
-        in
-        let char_arr = Typed.Adt.mk_array u8_ty chars in
-        let str_ty : Types.ty =
-          Common.Charon_util.mk_array_ty u8_ty (Z.of_int len)
-        in
-        let@ () = with_alloc_kind ~kind:StaticString in
-        let* ptr = State.alloc_ty str_ty in
-        let ptr = Typed.Ptr.ptr_of ptr in
-        let ptr = Typed.Ptr.mk_ptr_f ptr (BV.usizei len) in
-        let* () = State.store ptr str_ty char_arr in
-        let+ () = State.store_str_global str ptr in
-        ptr
-
   let floating_inaccuracy_msg =
     String.Interned.intern
       "A complex floating point intrinsic was encountered; it will be executed \

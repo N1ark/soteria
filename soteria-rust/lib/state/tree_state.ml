@@ -794,14 +794,47 @@ module Make (Borrows : Tree_borrows.T) = struct
     let@ ofs = with_ptr Write ptr in
     Block.with_block (Tree_block.zero_range ofs size)
 
-  let store_str_global str (ptr : Typed.([< T.sptr_f ] t)) =
-    with_globals @@ Glob_map.store_str_global str ptr
+  let raw_load_global ?span ?meta key kind ty f =
+    let gen_key () =
+      let@ () = with_alloc_kind kind in
+      let++ ptr = alloc_ty ?span ty in
+      match meta with
+      | None -> ptr
+      | Some meta -> Typed.Ptr.(mk_ptr_f (ptr_of ptr) meta)
+    in
+    let* old_st = get_state () in
+    let** ptr, is_fresh, st =
+      with_globals_sym @@ Glob_map.load key gen_key old_st
+    in
+    let++ () =
+      match is_fresh with
+      | `Fresh ->
+          (* we generated a fresh key; [Global_map.load] returned the full state
+             with the allocation, but without the new global env. *)
+          let* cur_st = get_state () in
+          let globals = (of_opt cur_st).globals in
+          let* () = set_state (Some { (of_opt st) with globals }) in
+          with_alloc_kind kind @@ fun () -> Result.bind (store ptr ty) (f ())
+      | `Present -> Result.ok ()
+    in
+    (ptr : T.sptr_f Typed.t :> Typed.([> T.sptr_f ] t))
 
-  let store_global g (ptr : Typed.([< T.sptr_f ] t)) =
-    with_globals @@ Glob_map.store_global g ptr
+  let load_str_global str =
+    let len = String.length str in
+    let str_ty = Common.Charon_util.mk_array_ty u8_ty (Z.of_int len) in
+    let meta = Typed.BV.usizei len in
+    raw_load_global ~meta (String str) StaticString str_ty @@ fun () ->
+    let len = String.length str in
+    let bytes = Bytes.of_string str in
+    let chars =
+      Iarray.init len (fun i -> Typed.BV.u8i (Bytes.get_uint8 bytes i))
+    in
+    Result.ok (Typed.Adt.mk_array u8_ty chars)
 
-  let load_str_global str = with_globals @@ Glob_map.load_str_global str
-  let load_global g = with_globals @@ Glob_map.load_global g
+  let load_global g f =
+    let decl = Crate.get_global g in
+    let kind = Alloc_kind.of_global_ref g in
+    raw_load_global ~span:decl.item_meta.span.data (Global g) kind decl.ty f
 
   let borrow ?protect (ptr : Typed.([< T.sptr_f ] t)) (ty : Types.ty) =
     [%l.debug "Executing Borrow with pointer %a for %a" Typed.ppa ptr pp_ty ty];

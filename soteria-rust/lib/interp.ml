@@ -180,10 +180,10 @@ module Make (StateImpl : State.S) = struct
     | CLiteral (VChar c) -> ok (BV.u32i (Uchar.to_int c))
     | CLiteral (VFloat { float_value; float_ty }) ->
         ok (Typed.Float.mk float_ty float_value)
-    | CLiteral (VStr str) -> Core.string_to_ptr str
+    | CLiteral (VStr str) -> State.load_str_global str
     | CLiteral (VByteStr str) ->
         let str = List.to_seq str |> Seq.map Char.chr |> String.of_seq in
-        Core.string_to_ptr str
+        State.load_str_global str
     | CFnDef _ -> ok Typed.Adt.unit
     | CPtrNoProvenance v -> ok (Typed.Ptr.of_address_f (BV.usize v))
     | CArray cs ->
@@ -206,7 +206,7 @@ module Make (StateImpl : State.S) = struct
             let timpl = Crate.get_trait_impl implref in
             let global = Types.AssocConstId.Map.find const_id timpl.consts in
             let* glob_ptr = resolve_global global in
-            let glob = Crate.get_global global.id in
+            let glob = Crate.get_global global in
             State.load glob_ptr glob.ty
         | _ -> (
             (* We can't resolve a concrete impl (e.g. the trait is only known
@@ -221,7 +221,7 @@ module Make (StateImpl : State.S) = struct
             match assoc.default with
             | Some global ->
                 let* glob_ptr = resolve_global global in
-                let glob = Crate.get_global global.id in
+                let glob = Crate.get_global global in
                 State.load glob_ptr glob.ty
             | None ->
                 not_impl "unsupported trait const: %s in %a for %a" assoc.name
@@ -678,32 +678,9 @@ module Make (StateImpl : State.S) = struct
   (** Resolves a global into a *pointer* to where that global is *)
   and resolve_global (glob : Types.global_decl_ref) :
       Typed.([> T.sptr_f ] t) pure =
-    let decl = Crate.get_global glob.id in
-    let@ generics =
-      Poly.push_generics ~params:decl.generics ~args:glob.generics
-    in
-    let glob : Types.global_decl_ref = { glob with generics } in
-    let* v_opt = State.load_global glob in
-    match v_opt with
-    | Some v -> ok v
-    | None ->
-        (* First we allocate the global and store it in the State *)
-        let kind : Alloc_kind.t =
-          match decl.global_kind with
-          | Static | ThreadLocal -> Static glob
-          | NamedConst | AnonConst -> Const glob
-        in
-        let@ () = with_alloc_kind ~kind in
-        let* ty = Poly.subst_ty decl.ty in
-        let* ptr = State.alloc_ty ~span:decl.item_meta.span.data ty in
-        let* () = State.store_global glob ptr in
-        (* And only after we compute it; this enables recursive globals *)
-        let* v = resolve_constant decl.value in
-        let+ () = State.store ptr ty v in
-        [%l.info
-          "Initialized global %a at %a to %a" Crate.pp_name decl.item_meta.name
-            Typed.ppa ptr Typed.ppa v];
-        (ptr : Typed.T.sptr_f Typed.t :> Typed.([> T.sptr_f ] t))
+    let* glob = Poly.subst_globref glob in
+    let decl = Crate.get_global glob in
+    State.load_global glob @@ fun () -> resolve_constant decl.value
 
   and eval_operand (op : Expressions.operand) =
     match op with

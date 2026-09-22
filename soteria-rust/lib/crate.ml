@@ -8,6 +8,7 @@ type t = UllbcAst.crate
    it is within the same crate. *)
 type decl_cache = {
   adt : (Types.type_decl_ref, Types.type_decl) Hashtbl.t;
+  globals : (Types.global_decl_ref, GAst.global_decl) Hashtbl.t;
   trait_impl : (Types.trait_impl_ref, GAst.trait_impl) Hashtbl.t;
   trait_decl : (Types.trait_decl_ref, GAst.trait_decl) Hashtbl.t;
 }
@@ -53,6 +54,7 @@ let with_crate (crate : t) f =
   let dc =
     {
       adt = Hashtbl.create 256;
+      globals = Hashtbl.create 128;
       trait_impl = Hashtbl.create 64;
       trait_decl = Hashtbl.create 64;
     }
@@ -149,11 +151,19 @@ let get_fun id =
   | Some fn -> fn
   | None -> raise (MissingDecl "Fun")
 
-let get_global id =
+let get_global_raw id =
   let crate = get_crate () in
   match UllbcAst.GlobalDeclId.Map.find_opt id crate.global_decls with
   | Some global -> global
   | None -> raise (MissingDecl "Global")
+
+let get_global (gref : Types.global_decl_ref) =
+  memoize (get_decl_cache ()).globals gref @@ fun () ->
+  let open Substitute in
+  let global = get_global_raw gref.id in
+  let subst = make_sb_subst_from_generics global.generics gref.generics Self in
+  let subst = subst_at_binder_zero subst in
+  st_substitute_visitor#visit_global_decl subst global
 
 let get_trait_impl_raw id =
   let crate = get_crate () in

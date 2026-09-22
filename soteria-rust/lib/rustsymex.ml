@@ -134,6 +134,7 @@ module Poly = struct
   let subst_fn_sig = subst st_substitute_visitor#visit_fun_sig
   let subst_tref = subst trait_ref_substitute
   let subst_tyref = subst st_substitute_visitor#visit_type_decl_ref
+  let subst_globref = subst st_substitute_visitor#visit_global_decl_ref
   let subst_constant_expr = subst st_substitute_visitor#visit_constant_expr
   let subst_generic_args = subst generic_args_substitute
 

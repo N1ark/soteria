@@ -92,6 +92,7 @@ module type S = sig
     val subst_fn_sig : Types.fun_sig -> (Types.fun_sig, 'env) t
     val subst_tref : Types.trait_ref -> (Types.trait_ref, 'env) t
     val subst_tyref : Types.type_decl_ref -> (Types.type_decl_ref, 'env) t
+    val subst_globref : Types.global_decl_ref -> (Types.global_decl_ref, 'env) t
     val subst_generic_args : Types.generic_args -> (Types.generic_args, 'env) t
 
     val subst_constant_expr :
@@ -212,10 +213,13 @@ module type S = sig
     val unprotect : [< sptr_f ] v -> Types.ty -> (unit, 'env) t
     val with_exposed : [< sint ] v -> ([> sptr_f ] v, 'env) t
     val tb_load : [< sptr_f ] v -> Types.ty -> (unit, 'env) t
-    val load_global : Types.global_decl_ref -> ([> sptr_f ] v option, 'env) t
-    val store_global : Types.global_decl_ref -> [< sptr_f ] v -> (unit, 'env) t
-    val load_str_global : string -> ([> sptr_f ] v option, 'env) t
-    val store_str_global : string -> [< sptr_f ] v -> (unit, 'env) t
+
+    val load_global :
+      Types.global_decl_ref ->
+      (unit -> ([< any ] v, unit) t) ->
+      ([> sptr_f ] v, 'env) t
+
+    val load_str_global : string -> ([> sptr_f ] v, 'env) t
     val declare_fn : Fun_kind.t -> ([> sptr_f ] v, 'env) t
     val lookup_fn : [< sptr_f ] v -> (Fun_kind.t, 'env) t
 
@@ -424,6 +428,7 @@ module Make (State : State_intf.S) :
     let[@inline] subst_fn_sig fn_sig = lift_symex (Poly.subst_fn_sig fn_sig)
     let[@inline] subst_tref tref = lift_symex (Poly.subst_tref tref)
     let[@inline] subst_tyref tyref = lift_symex (Poly.subst_tyref tyref)
+    let[@inline] subst_globref gref = lift_symex (Poly.subst_globref gref)
 
     let[@inline] subst_generic_args generic_args =
       lift_symex (Poly.subst_generic_args generic_args)
@@ -537,10 +542,15 @@ module Make (State : State_intf.S) :
     let[@inline] unprotect ptr ty = ESM.lift (unprotect ptr ty)
     let[@inline] with_exposed addr = ESM.lift (with_exposed addr)
     let[@inline] tb_load ptr ty = ESM.lift (tb_load ptr ty)
-    let[@inline] load_global g = ESM.lift (load_global g)
-    let[@inline] store_global g ptr = ESM.lift (store_global g ptr)
+
+    let[@inline] load_global g f =
+      ESM.lift
+        (load_global g (fun () st ->
+             let open Rustsymex.Syntax in
+             let+ (res, ()), st = f () () st in
+             (res, st)))
+
     let[@inline] load_str_global str = ESM.lift (load_str_global str)
-    let[@inline] store_str_global str ptr = ESM.lift (store_str_global str ptr)
     let[@inline] declare_fn fn = ESM.lift (declare_fn fn)
     let[@inline] lookup_fn fn = ESM.lift (lookup_fn fn)
 

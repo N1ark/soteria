@@ -19,7 +19,10 @@ module Make (StateImpl : State.S) = struct
   open Syntax
 
   type 'a t = ('a, Store.t) StateM.t
+  type 'a pure = ('a, unit) StateM.t
   type 'err fun_exec = Typed.(T.any t) list -> (Typed.(T.any t), unit) StateM.t
+
+  let with_pure x = with_env ~env:() x
 
   (** The pointer a place was created from, and the type it was created at.
       {b A place must be aligned for that type}, not for the accessed subplace
@@ -123,7 +126,7 @@ module Make (StateImpl : State.S) = struct
             if%sat Typed.Ptr.have_same_provenance ptr protect then ok ()
             else State.free fptr)
 
-  let resolve_fn_ptr (fn : Types.fn_ptr) : Fun_kind.t t =
+  let resolve_fn_ptr (fn : Types.fn_ptr) : Fun_kind.t pure =
     let open Fun_kind in
     match fn.kind with
     | FunId (FRegular id) -> ok (Real { id; generics = fn.generics })
@@ -169,7 +172,7 @@ module Make (StateImpl : State.S) = struct
     | FunId (FBuiltin _) -> L.failwith "Can't resolve a builtin function"
 
   let rec resolve_constant (const : Types.constant_expr) :
-      Typed.([> T.any ] t) t =
+      Typed.([> T.any ] t) pure =
     let* const = Poly.subst_constant_expr const in
     match const.kind with
     | CLiteral (VScalar scalar) -> ok (BV.of_scalar scalar)
@@ -264,7 +267,7 @@ module Make (StateImpl : State.S) = struct
         (* Map the smaller blocks to actual rust values, ie. pointers or
            integers *)
         let ptr_size = Crate.pointer_size () in
-        let ptr_of_provenance : Types.provenance -> Typed.(T.sptr_f t) t =
+        let ptr_of_provenance : Types.provenance -> Typed.(T.sptr_f t) pure =
           function
           | ProvGlobal g -> resolve_global g
           | ProvFunction f -> State.declare_fn (Real f)
@@ -308,7 +311,7 @@ module Make (StateImpl : State.S) = struct
           | None -> ok None
           | Some meta ->
               map Option.some
-              @@ resolve_unsizing_metadata
+              @@ resolve_const_unsizing_metadata
                    ~help:(fun () -> "happened when resolving a constant")
                    meta
         in
@@ -356,7 +359,7 @@ module Make (StateImpl : State.S) = struct
         (ptr, None)
     (* Just a global *)
     | PlaceGlobal g ->
-        let+ ptr = resolve_global g in
+        let+ ptr = with_pure @@ resolve_global g in
         (ptr, None)
     (* Dereference a pointer *)
     | PlaceProjection (base, Deref) ->
@@ -410,7 +413,7 @@ module Make (StateImpl : State.S) = struct
     | PlaceProjection (base, ProjIndex (idx, from_end)) ->
         let* ptr, root = resolve_place_rooted base in
         let* pointee = Layout.normalise base.ty in
-        let* len, _ = len_of_indexable ~ptr ~pointee in
+        let* len, _ = with_pure @@ len_of_indexable ~ptr ~pointee in
         let ptr = Typed.Ptr.ptr_of ptr in
         let* idx = eval_operand idx in
         let len = Typed.cast_i Usize len and idx = Typed.cast_i Usize idx in
@@ -426,7 +429,7 @@ module Make (StateImpl : State.S) = struct
     | PlaceProjection (base, Subslice (from, to_, from_end)) ->
         let* ptr, root = resolve_place_rooted base in
         let* pointee = Layout.normalise base.ty in
-        let* len, ty = len_of_indexable ~ptr ~pointee in
+        let* len, ty = with_pure @@ len_of_indexable ~ptr ~pointee in
         let ptr = Typed.Ptr.ptr_of ptr in
         let* from = eval_operand from in
         let* to_ = eval_operand to_ in
@@ -485,7 +488,7 @@ module Make (StateImpl : State.S) = struct
         let idx = Typed.cast_i Usize idx in
         let** len =
           match base.ty with
-          | TArray (_, len) -> lift @@ resolve_constant len
+          | TArray (_, len) -> lift @@ with_pure @@ resolve_constant len
           | _ -> none ()
         in
         let len = Typed.cast_i Usize len in
@@ -566,8 +569,8 @@ module Make (StateImpl : State.S) = struct
         let*^ new_store = Store.try_store sp store v in
         OptionM.lift @@ set_env new_store)
 
-  and resolve_unsizing_metadata ?help ?(prev : Typed.([< T.sptr_f ] t) option)
-      (meta : Types.unsizing_metadata) : Typed.(T.ptr_meta t) t =
+  and resolve_const_unsizing_metadata ?help (meta : Types.unsizing_metadata) :
+      Typed.(T.ptr_meta t) pure =
     match meta with
     | MetaLength length ->
         let+ len = resolve_constant length in
@@ -575,6 +578,15 @@ module Make (StateImpl : State.S) = struct
     | MetaVTable (_, const) ->
         let+ ptr = resolve_constant const in
         Typed.Ptr.ptr_of @@ Typed.cast_ptr_f ptr
+    | MetaVTableUpcast _ -> L.failwith "non-const unsizing metadata"
+    | MetaUnknown -> (
+        match help with
+        | None -> not_impl "unknown unsizing metadata"
+        | Some help -> not_impl "unknown unsizing metadata: %s" (help ()))
+
+  and resolve_unsizing_metadata ?help ?(prev : Typed.([< T.sptr_f ] t) option)
+      (meta : Types.unsizing_metadata) : Typed.(T.ptr_meta t) t =
+    match meta with
     | MetaVTableUpcast fields ->
         let prev = Option.get ~msg:"VTable upcast with no pointer?" prev in
         fold_list fields ~init:(Typed.Ptr.vtable_meta prev) ~f:(fun vt field ->
@@ -585,10 +597,7 @@ module Make (StateImpl : State.S) = struct
             let+ vt = State.load (Typed.Ptr.of_ptr_t vt_addr) unit_ptr in
             Typed.Ptr.ptr_of @@ Typed.cast_ptr_f vt)
         |> map (fun v -> (v :> Typed.(T.ptr_meta t)))
-    | MetaUnknown -> (
-        match help with
-        | None -> not_impl "unknown unsizing metadata"
-        | Some help -> not_impl "unknown unsizing metadata: %s" (help ()))
+    | meta -> with_pure @@ resolve_const_unsizing_metadata ?help meta
 
   (** Resolve a function operand, returning a callable symbolic function to
       execute it. It also returns the types expected of the function, which is
@@ -653,7 +662,7 @@ module Make (StateImpl : State.S) = struct
     (* For static calls we don't need to check types, that's what the type
        checker does. *)
     | FnOpRegular fn_ptr ->
-        let* fn = resolve_fn_ptr fn_ptr in
+        let* fn = with_pure @@ resolve_fn_ptr fn_ptr in
         perform_call fn
     (* Here we need to check the type of the actual function, as it could have
        been cast. *)
@@ -667,8 +676,8 @@ module Make (StateImpl : State.S) = struct
         perform_call fn
 
   (** Resolves a global into a *pointer* to where that global is *)
-  and resolve_global (glob : Types.global_decl_ref) : Typed.([> T.sptr_f ] t) t
-      =
+  and resolve_global (glob : Types.global_decl_ref) :
+      Typed.([> T.sptr_f ] t) pure =
     let decl = Crate.get_global glob.id in
     let@ generics =
       Poly.push_generics ~params:decl.generics ~args:glob.generics
@@ -698,7 +707,7 @@ module Make (StateImpl : State.S) = struct
 
   and eval_operand (op : Expressions.operand) =
     match op with
-    | Constant c -> resolve_constant c
+    | Constant c -> with_pure @@ resolve_constant c
     | Move place | Copy place ->
         (* I don't think the operand being [Move] matters at all, aside from
            function calls. See:
@@ -809,7 +818,7 @@ module Make (StateImpl : State.S) = struct
         | Cast (CastFnPtr (_from, _to)) -> (
             match type_of_operand e with
             | TFnDef fn_ptr ->
-                let* fn = resolve_fn_ptr fn_ptr.binder_value in
+                let* fn = with_pure @@ resolve_fn_ptr fn_ptr.binder_value in
                 State.declare_fn fn
             | TFnPtr _ -> ok v
             | _ -> L.failwith "Invalid argument to CastFnPtr"))
@@ -1027,7 +1036,7 @@ module Make (StateImpl : State.S) = struct
     | Len (place, _, size_opt) -> (
         let* ptr = resolve_place place in
         match size_opt with
-        | Some size -> resolve_constant size
+        | Some size -> with_pure @@ resolve_constant size
         | None -> ok (Typed.Ptr.len_meta ptr))
 
   and exec_stmt (stmt : UllbcAst.statement) : unit t =
@@ -1151,7 +1160,7 @@ module Make (StateImpl : State.S) = struct
         let fun_exec =
           with_extra_call_trace ?name ~loc:terminator.span.data
             ~msg:"Call trace"
-          @@ with_env ~env:()
+          @@ with_pure
           @@ exec_fun args
         in
         unwind_with fun_exec
@@ -1221,10 +1230,10 @@ module Make (StateImpl : State.S) = struct
     | Drop (drop_kind, place, fn_ptr, target, on_unwind) ->
         assert (drop_kind = Precise);
         let* place_ptr = resolve_place place in
-        let* drop_fn = resolve_fn_ptr fn_ptr in
+        let* drop_fn = with_pure @@ resolve_fn_ptr fn_ptr in
         let fun_exec =
           with_extra_call_trace ~loc:terminator.span.data ~msg:"Drop"
-          @@ with_env ~env:()
+          @@ with_pure
           @@ exec_fun drop_fn [ (place_ptr :> Typed.(T.any t)) ]
         in
         unwind_with fun_exec

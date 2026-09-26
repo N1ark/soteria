@@ -310,7 +310,15 @@ theorem bv_and.r_mask_or.proof : bv_and.r_mask_or.Stmt := by
   sorry
 
 theorem bv_and.r_right_mask.proof : bv_and.r_right_mask.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [bv_and.r_right_mask] at h
+  have chain : ∀ M l r : Term, Refines FS (bv_and.spec (bv_and.spec M l) (bv_and.spec M r))
+      (O.bv_and (O.bv_and M l) (O.bv_and M r)) := fun M l r =>
+    Refines.trans (Refines.binop_ty (fun a => .bitVector (size a)) (fun a b h => by simp [h])
+      (hO.bv_and _ _) (hO.bv_and _ _)) (hO.bv_and _ _)
+  rcases orElse_eq_some h with h | h <;> split at h <;> simp at h <;> obtain ⟨-, rfl⟩ := h
+  · exact Refines.trans (and_mask_and (Or.inl ⟨rfl, rfl⟩) (fun n h _ => by simp [h])) (chain _ _ _)
+  · exact Refines.trans (and_mask_and (Or.inr ⟨rfl, rfl⟩) (fun n _ h => by simp [h])) (chain _ _ _)
 
 theorem bv_and.r_of_bool_r.proof : bv_and.r_of_bool_r.Stmt := by
   intro FS O hO v1 v2 res h

@@ -1285,5 +1285,58 @@ theorem lshr_mask_bits {k : Nat} {n s mask : Int} (s0 : 0 ≤ s) (m0 : 0 ≤ mas
   · rw [BitVec.getElem_eq_testBit_toNat, ← BitVec.getLsbD, BitVec.getLsbD_of_ge _ _ (by omega)]
     simp
 
+theorem and_distrib_self {w : Nat} (m l r : BitVec w) :
+    m &&& (l &&& r) = (m &&& l) &&& (m &&& r) := by
+  ext i hi; simp only [BitVec.getElem_and]; cases m[i] <;> simp
+
+/-- `M & (L & R)`, with `M` a literal on either side, is `(M & L) & (M & R)`. -/
+theorem and_mask_and {FS : FloatSem} {c : Int} {l r A B : Term} {T1 T2 T : Ty} {N : Int}
+    (hshape : (A = .mk (.bitVec c) T1 ∧ B = .mk (.binop .bitAnd l r) T2) ∨
+      (B = .mk (.bitVec c) T1 ∧ A = .mk (.binop .bitAnd l r) T2))
+    (hN : ∀ n, T1 = .bitVector n → T2 = .bitVector n → N = n) :
+    Refines FS (.mk (.binop .bitAnd A B) T)
+      (bv_and.spec (bv_and.spec (mk_bv N c) l) (bv_and.spec (mk_bv N c) r)) := by
+  have key : (Term.mk (.binop .bitAnd A B) T).WT → ∃ n : Int, 0 < n ∧ T1 = .bitVector n ∧
+      T2 = .bitVector n ∧ T = .bitVector n ∧ l.ty = .bitVector n ∧ r.ty = .bitVector n ∧ l.WT ∧
+      r.WT ∧ 0 ≤ c ∧ c < 2 ^ n.toNat := by
+    intro w
+    obtain ⟨n, hn, h1, h2, ht, w1, w2⟩ := (BitOp.and (FS := FS)).WT.1 w
+    rcases hshape with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+    · obtain ⟨n', hn', hl, hr, ht', wl, wr⟩ := (BitOp.and (FS := FS)).WT.1 w2
+      simp only [Term.ty_mk] at h1 h2; subst h1 h2
+      simp only [Ty.bitVector.injEq] at ht'; subst ht'
+      exact ⟨n, hn, rfl, rfl, ht, hl, hr, wl, wr, (lit_inv w1 n rfl).2⟩
+    · obtain ⟨n', hn', hl, hr, ht', wl, wr⟩ := (BitOp.and (FS := FS)).WT.1 w1
+      simp only [Term.ty_mk] at h1 h2; subst h1 h2
+      simp only [Ty.bitVector.injEq] at ht'; subst ht'
+      exact ⟨n, hn, rfl, rfl, ht, hl, hr, wl, wr, (lit_inv w2 n rfl).2⟩
+  refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+  · obtain ⟨n, hn, rfl, rfl, rfl, hl, hr, wl, wr, c0, c1⟩ := key w
+    obtain rfl := hN n rfl rfl
+    have wm : (mk_bv N c).WT := mk_masked_WT hn
+    refine ⟨(BitOp.and (FS := FS)).WT.2 ⟨N, hn, by simp [bv_and.spec, mk_bv],
+      by simp [bv_and.spec, mk_bv], by simp [bv_and.spec, mk_bv],
+      (BitOp.and (FS := FS)).WT.2 ⟨N, hn, rfl, hl, by simp [mk_bv], wm, wl⟩,
+      (BitOp.and (FS := FS)).WT.2 ⟨N, hn, rfl, hr, by simp [mk_bv], wm, wr⟩⟩, ?_⟩
+    simp [bv_and.spec, mk_bv]
+  · obtain ⟨n, hn, rfl, rfl, rfl, hl, hr, wl, wr, c0, c1⟩ := key w
+    obtain rfl := hN n rfl rfl
+    obtain ⟨_, w1, w2⟩ := WT_binop.1 w'
+    have em : eval FS ρ (mk_bv N c) = some (.bv N.toNat (BitVec.ofInt _ c)) := eval_mk_masked hn
+    obtain ⟨k, x, y, ea, eb, rfl⟩ := BitOp.and.eval_eq_some e
+    rcases hshape with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+    · obtain ⟨k', L, R, el, er, hy⟩ := BitOp.and.eval_eq_some eb
+      obtain ⟨rfl, rfl⟩ := Val.bv_inj hy
+      obtain ⟨rfl, rfl⟩ := lit_val ea rfl
+      simp only [bv_and.spec] at w1 w2 w' ⊢
+      rw [BitOp.and.eval_of w' (BitOp.and.eval_of w1 em el) (BitOp.and.eval_of w2 em er)]
+      rw [and_distrib_self (BitVec.ofInt _ c) L R]
+    · obtain ⟨k', L, R, el, er, hy⟩ := BitOp.and.eval_eq_some ea
+      obtain ⟨rfl, rfl⟩ := Val.bv_inj hy
+      obtain ⟨rfl, rfl⟩ := lit_val eb rfl
+      simp only [bv_and.spec] at w1 w2 w' ⊢
+      rw [BitOp.and.eval_of w' (BitOp.and.eval_of w1 em el) (BitOp.and.eval_of w2 em er)]
+      rw [BitVec.and_comm (L &&& R), and_distrib_self (BitVec.ofInt _ c) L R]
+
 end BitwiseL
 end Bvr

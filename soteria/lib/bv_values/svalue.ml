@@ -1562,7 +1562,7 @@ module Make (V : Value_ext) () = struct
           let res = Z.(l mod r) in
           let res =
             if Z.(res < zero) && Stdlib.not Z.(r < zero) then Z.(res + r)
-            else if Z.(res >= zero) && Z.(r < zero) then Z.(res + r)
+            else if Z.(res > zero) && Z.(r < zero) then Z.(res + r)
             else res
           in
           mk_masked size res

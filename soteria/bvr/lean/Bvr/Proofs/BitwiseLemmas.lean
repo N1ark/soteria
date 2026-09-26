@@ -1127,6 +1127,46 @@ theorem BitOp.lits' {FS op f} (H : BitOp FS op f) {l r z : Int} {T1 T2 t} {N : I
     cases e
     rw [eval_mk_masked hn, hz _ rfl hn l0 l1 r0 r1]
 
+/-- A shift by a literal of a bitwise operation with a literal mask is the operation on the
+shifted operand and the shifted mask. -/
+theorem shift_distrib {FS op f sop g} (H : BitOp FS op f) (S : BitOp FS sop g)
+    (hd : ∀ {k} (X M Z : BitVec k), g (f X M) Z = f (g X Z) (g M Z))
+    {I x : Term} {m s z N : Int} {T3 T4 T5 T6 : Ty}
+    (hwt : I.WT → I.ty = x.ty ∧ x.WT)
+    (hev : ∀ ρ k u, eval FS ρ I = some (.bv k u) →
+      ∃ X, eval FS ρ x = some (.bv k X) ∧ u = f X (BitVec.ofInt k m) ∧ 0 ≤ m ∧ m < 2 ^ k)
+    (hz : ∀ k : Nat, 0 ≤ m → m < 2 ^ k → 0 ≤ s → s < 2 ^ k →
+      BitVec.ofInt k z = g (BitVec.ofInt k m) (BitVec.ofInt k s))
+    (hN : ∀ n, I.ty = .bitVector n → N = n)
+    (hT5 : ∀ n, x.ty = .bitVector n → T5 = .bitVector n)
+    (hT6 : ∀ n, x.ty = .bitVector n → T6 = .bitVector n) :
+    Refines FS (.mk (.binop sop I (.mk (.bitVec s) T3)) T4)
+      (.mk (.binop op (.mk (.binop sop x (.mk (.bitVec s) T3)) T5) (mk_masked N z)) T6) := by
+  refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
+  · obtain ⟨n, hn, h1, h2, ht, w1, w2⟩ := S.WT.1 w
+    obtain ⟨hx, wx⟩ := hwt w1
+    rw [hx] at h1
+    obtain rfl := hN n (hx.trans h1)
+    refine ⟨H.WT.2 ⟨N, hn, hT5 N h1, rfl, hT6 N h1, S.WT.2 ⟨N, hn, h1, h2, hT5 N h1, wx, w2⟩,
+      mk_masked_WT hn⟩, ?_⟩
+    simp [hT6 N h1, ht]
+  · obtain ⟨_, w1, w2⟩ := WT_binop.1 w'
+    obtain ⟨n, hn, hI, h2, ht, wI, wl⟩ := S.WT.1 w
+    obtain rfl := hN n hI
+    obtain ⟨k, u, y, eI, el, rfl⟩ := S.eval_eq_some e
+    obtain ⟨u', hu'⟩ := eval_bv eI hI
+    obtain ⟨rfl, rfl⟩ := Val.bv_inj hu'
+    obtain ⟨rfl, s0, s1⟩ := lit_val₀ el
+    obtain ⟨X, ex, rfl, m0, m1⟩ := hev ρ _ _ eI
+    rw [H.eval_of w' (S.eval_of w1 ex el) (eval_mk_masked hn), hz _ m0 m1 s0 s1, hd]
+
+theorem getLsbD_ofInt_lowmask (n : Nat) (s : Int) (i : Nat) :
+    (BitVec.ofInt n (zshiftl 1 s - 1)).getLsbD i = (decide (i < n) && decide (i < s.toNat)) := by
+  have e : zshiftl 1 s - 1 = ((2 ^ s.toNat - 1 : Nat) : Int) := by
+    have := Nat.one_le_two_pow (n := s.toNat)
+    rw [zshiftl, Int.one_mul, ← int_two_pow_cast]; omega
+  rw [e, BitVec.ofInt_natCast, BitVec.getLsbD_ofNat, Nat.testBit_two_pow_sub_one]
+
 theorem ite_pos' {c : Prop} [Decidable c] {α} {a b : α} (h : c) : (if c then a else b) = a :=
   by simp [h]
 theorem ite_neg' {c : Prop} [Decidable c] {α} {a b : α} (h : ¬c) : (if c then a else b) = b :=
@@ -1142,7 +1182,8 @@ macro "bitw_simp" : tactic => `(tactic| simp (disch := omega) only [BitVec.getLs
   Bool.and_true, Bool.false_and, Bool.and_false, Bool.not_true, Bool.not_false, Nat.zero_add,
   Nat.add_zero, Int.toNat_zero, BitVec.getLsbD_of_ge, BitVec.getLsbD_signExtend,
   BitVec.getLsbD_sshiftRight, BitVec.msb_eq_getLsbD_last, Bool.not_and, Bool.not_not, Bool.false_eq_true,
-  Bool.true_eq_false, ↓reduceIte])
+  Bool.true_eq_false, ↓reduceIte, BitVec.getLsbD_not, getLsbD_ofInt_lowmask,
+  BitVec.ofInt_zlognot])
 
 end BitwiseL
 end Bvr

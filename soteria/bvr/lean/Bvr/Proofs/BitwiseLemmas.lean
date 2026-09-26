@@ -1068,6 +1068,65 @@ theorem getLsbD_add_of_dvd {w : Nat} (a b : BitVec w) {q : Nat} (h : 2 ^ q ∣ a
     rw [e1, e2, Nat.add_mod, (Nat.dvd_iff_mod_eq_zero ..).1 h, Nat.zero_add, Nat.mod_mod]
   · rw [BitVec.getLsbD_of_ge _ _ (by omega), BitVec.getLsbD_of_ge _ _ (by omega)]
 
+/-! ### Shifts of literals -/
+
+theorem ofInt_zshiftl {k : Nat} {l r : Int} (h0 : 0 ≤ l) (r0 : 0 ≤ r) (r1 : r < 2 ^ k) :
+    BitVec.ofInt k (zshiftl l r) = BitVec.ofInt k l <<< BitVec.ofInt k r := by
+  obtain ⟨a, rfl⟩ := Int.eq_ofNat_of_zero_le h0
+  rw [BitVec.shiftLeft_eq', toNat_ofInt_lit r0 r1, zshiftl, ← int_two_pow_cast]
+  apply BitVec.eq_of_toNat_eq
+  rw [← Int.natCast_mul, BitVec.ofInt_natCast, BitVec.ofInt_natCast, BitVec.toNat_shiftLeft,
+    BitVec.toNat_ofNat, BitVec.toNat_ofNat, Nat.shiftLeft_eq, Nat.mod_mul_mod]
+
+theorem ofInt_zasr {k : Nat} {l r : Int} (h0 : 0 ≤ l) (h1 : l < 2 ^ k) (r0 : 0 ≤ r)
+    (r1 : r < 2 ^ k) :
+    BitVec.ofInt k (zasr l r) = BitVec.ofInt k l >>> BitVec.ofInt k r := by
+  rw [BitVec.ushiftRight_eq', toNat_ofInt_lit r0 r1, zasr, ofInt_div_two_pow _ h0]
+  apply BitVec.eq_of_toNat_eq
+  rw [BitVec.toNat_ushiftRight, toNat_ofInt_lit h0 h1, BitVec.toNat_ofNat]
+  apply Nat.mod_eq_of_lt
+  have : l.toNat < 2 ^ k := by
+    have := int_two_pow_cast k; omega
+  exact Nat.lt_of_le_of_lt (Nat.shiftRight_le _ _) this
+
+theorem signed_extract_eq_toInt {k : Nat} {l : Int} (hk : 0 < k) (h0 : 0 ≤ l) (h1 : l < 2 ^ k) :
+    signed_extract l 0 k = (BitVec.ofInt k l).toInt := by
+  rw [BitVec.toInt_eq_toNat_cond, toNat_ofInt_lit h0 h1]
+  simp only [signed_extract, zasr, Int.toNat_zero, Int.pow_zero, Int.ediv_one, Int.toNat_natCast]
+  rw [Int.emod_eq_of_lt h0 h1]
+  have e1 := int_two_pow_cast k
+  have e2 := int_two_pow_cast (k - 1)
+  have e3 : 2 ^ k = 2 * 2 ^ (k - 1) := by
+    rw [← Nat.pow_succ']; congr 1; omega
+  split <;> split <;> omega
+
+theorem ofInt_zasr_signed {k : Nat} {l r : Int} (hk : 0 < k) (h0 : 0 ≤ l) (h1 : l < 2 ^ k)
+    (r0 : 0 ≤ r) (r1 : r < 2 ^ k) :
+    BitVec.ofInt k (zasr (signed_extract l 0 k) r) =
+      (BitVec.ofInt k l).sshiftRight' (BitVec.ofInt k r) := by
+  rw [signed_extract_eq_toInt hk h0 h1, zasr, BitVec.sshiftRight_eq', toNat_ofInt_lit r0 r1,
+    ← int_two_pow_cast, ← Int.shiftRight_eq_div_pow, ← BitVec.toInt_sshiftRight,
+    BitVec.ofInt_toInt]
+
+/-- A binary operation on literals is folded (at the width of the operation). -/
+theorem BitOp.lits' {FS op f} (H : BitOp FS op f) {l r z : Int} {T1 T2 t} {N : Int}
+    (hN : ∀ n : Int, T1 = .bitVector n → N = n)
+    (hz : ∀ n : Int, T1 = .bitVector n → 0 < n → 0 ≤ l → l < 2 ^ n.toNat → 0 ≤ r →
+      r < 2 ^ n.toNat →
+      BitVec.ofInt n.toNat z = f (BitVec.ofInt n.toNat l) (BitVec.ofInt n.toNat r)) :
+    Refines FS (.mk (.binop op (.mk (.bitVec l) T1) (.mk (.bitVec r) T2)) t) (mk_masked N z) := by
+  refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
+  · obtain ⟨n, hn, h1, _, ht, _⟩ := H.WT.1 w
+    simp only [Term.ty_mk] at h1; obtain rfl := hN n h1; subst h1 ht
+    exact ⟨mk_masked_WT hn, rfl⟩
+  · obtain ⟨n, hn, h1, h2, ht, w1, w2⟩ := H.WT.1 w
+    simp only [Term.ty_mk] at h1 h2; obtain rfl := hN n h1; subst h1 h2 ht
+    obtain ⟨_, l0, l1⟩ := lit_inv w1 N rfl
+    obtain ⟨_, r0, r1⟩ := lit_inv w2 N rfl
+    rw [H.eval_of w (eval_lit' w1 rfl) (eval_lit' w2 rfl)] at e
+    cases e
+    rw [eval_mk_masked hn, hz _ rfl hn l0 l1 r0 r1]
+
 theorem ite_pos' {c : Prop} [Decidable c] {α} {a b : α} (h : c) : (if c then a else b) = a :=
   by simp [h]
 theorem ite_neg' {c : Prop} [Decidable c] {α} {a b : α} (h : ¬c) : (if c then a else b) = b :=

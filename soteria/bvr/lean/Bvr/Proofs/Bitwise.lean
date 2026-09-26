@@ -1130,13 +1130,47 @@ theorem bv_concat.r_default.proof : bv_concat.r_default.Stmt := by
   simp [bv_concat.r_default] at h; subst h; exact Refines.refl
 
 theorem bv_shl.r_lits.proof : bv_shl.r_lits.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [bv_shl.r_lits] at h
+  split at h <;> simp at h; subst h
+  exact BitOp.shl.lits' (fun n h => by simp [h]) (fun n _ _ l0 _ r0 r1 => ofInt_zshiftl l0 r0 r1)
 
 theorem bv_shl.r_zero.proof : bv_shl.r_zero.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [bv_shl.r_zero] at h
+  split at h
+  case h_2 => simp at h
+  split at h
+  case isFalse => simp at h
+  rename_i z T2 hz
+  simp only [decide_eq_true_eq] at hz; subst hz
+  simp only [Option.some.injEq] at h; subst h
+  exact BitOp.shl.lit_r (fun n y _ _ _ => by simp)
 
 theorem bv_shl.r_big.proof : bv_shl.r_big.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [bv_shl.r_big] at h
+  split at h
+  case h_2 => simp at h
+  split at h
+  case isFalse => simp at h
+  simp only [Option.some.injEq] at h; subst h
+  rename_i s T2 hs
+  simp only [decide_eq_true_eq, ge_iff_le] at hs
+  refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+  · obtain ⟨n, hn, h1, h2, ht, w1, w2⟩ := (BitOp.shl (FS := FS)).WT.1 w
+    exact ⟨bv_zero_WT (by simp [h1]; omega), by simp [bv_shl.spec, h1]⟩
+  · obtain ⟨n, hn, h1, h2, ht, w1, w2⟩ := (BitOp.shl (FS := FS)).WT.1 w
+    obtain ⟨k, x, ex, rfl, s0, s1⟩ := BitOp.shl.eval_lit_r e
+    obtain ⟨y, hy⟩ := eval_bv ex h1
+    simp only [size_eq, h1, size_of_ty_bitVector] at hs ⊢
+    obtain ⟨rfl, rfl⟩ := Val.bv_inj hy
+    rw [eval_bv_zero hn]
+    congr 1
+    apply Val.bv_ext rfl
+    intro t ht
+    rw [BitVec.shiftLeft_eq', toNat_ofInt_lit s0 s1]
+    bitw_simp
 
 theorem bv_shl.r_shl.proof : bv_shl.r_shl.Stmt := by
   sorry
@@ -1155,13 +1189,47 @@ theorem bv_shl.r_default.proof : bv_shl.r_default.Stmt := by
   simp [bv_shl.r_default] at h; subst h; exact Refines.refl
 
 theorem bv_lshr.r_lits.proof : bv_lshr.r_lits.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [bv_lshr.r_lits] at h
+  split at h <;> simp at h; subst h
+  exact BitOp.lshr.lits' (fun n h => by simp [h]) (fun n _ _ l0 l1 r0 r1 => ofInt_zasr l0 l1 r0 r1)
 
 theorem bv_lshr.r_zero.proof : bv_lshr.r_zero.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [bv_lshr.r_zero] at h
+  split at h
+  case h_2 => simp at h
+  split at h
+  case isFalse => simp at h
+  rename_i z T2 hz
+  simp only [decide_eq_true_eq] at hz; subst hz
+  simp only [Option.some.injEq] at h; subst h
+  exact BitOp.lshr.lit_r (fun n y _ _ _ => by simp)
 
 theorem bv_lshr.r_big.proof : bv_lshr.r_big.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [bv_lshr.r_big] at h
+  split at h
+  case h_2 => simp at h
+  split at h
+  case isFalse => simp at h
+  simp only [Option.some.injEq] at h; subst h
+  rename_i s T2 hs
+  simp only [decide_eq_true_eq, ge_iff_le] at hs
+  refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+  · obtain ⟨n, hn, h1, h2, ht, w1, w2⟩ := (BitOp.lshr (FS := FS)).WT.1 w
+    exact ⟨bv_zero_WT (by simp [h1]; omega), by simp [bv_lshr.spec, h1]⟩
+  · obtain ⟨n, hn, h1, h2, ht, w1, w2⟩ := (BitOp.lshr (FS := FS)).WT.1 w
+    obtain ⟨k, x, ex, rfl, s0, s1⟩ := BitOp.lshr.eval_lit_r e
+    obtain ⟨y, hy⟩ := eval_bv ex h1
+    simp only [size_eq, h1, size_of_ty_bitVector] at hs ⊢
+    obtain ⟨rfl, rfl⟩ := Val.bv_inj hy
+    rw [eval_bv_zero hn]
+    congr 1
+    apply Val.bv_ext rfl
+    intro t ht
+    rw [BitVec.ushiftRight_eq', toNat_ofInt_lit s0 s1]
+    bitw_simp
 
 theorem bv_lshr.r_lshr.proof : bv_lshr.r_lshr.Stmt := by
   sorry
@@ -1177,13 +1245,59 @@ theorem bv_lshr.r_default.proof : bv_lshr.r_default.Stmt := by
   simp [bv_lshr.r_default] at h; subst h; exact Refines.refl
 
 theorem bv_ashr.r_lits.proof : bv_ashr.r_lits.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [bv_ashr.r_lits] at h
+  split at h <;> simp at h; subst h
+  exact BitOp.ashr.lits' (fun n h => by simp [h]) (fun n h hn l0 l1 r0 r1 => by
+    simp only [h, size_of_ty_bitVector]
+    rw [show n = (n.toNat : Int) by omega] at *
+    simp only [Int.toNat_natCast] at *
+    exact ofInt_zasr_signed (by omega) l0 l1 r0 r1)
 
 theorem bv_ashr.r_zero.proof : bv_ashr.r_zero.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [bv_ashr.r_zero] at h
+  split at h
+  case h_2 => simp at h
+  split at h
+  case isFalse => simp at h
+  rename_i z T2 hz
+  simp only [decide_eq_true_eq] at hz; subst hz
+  simp only [Option.some.injEq] at h; subst h
+  exact BitOp.ashr.lit_r (fun n y _ _ _ => by simp [BitVec.sshiftRight_eq'])
 
 theorem bv_ashr.r_big.proof : bv_ashr.r_big.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [bv_ashr.r_big] at h
+  split at h
+  case h_2 => simp at h
+  split at h
+  case isFalse => simp at h
+  simp only [Option.some.injEq] at h; subst h
+  rename_i s T2 hs
+  simp only [decide_eq_true_eq, ge_iff_le] at hs
+  refine Refines.trans ?_ (hO.bv_ashr _ _)
+  refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+  · obtain ⟨n, hn, h1, h2, ht, w1, w2⟩ := (BitOp.ashr (FS := FS)).WT.1 w
+    refine ⟨(BitOp.ashr (FS := FS)).WT.2 ⟨n, hn, h1, by simp [h1], ht, w1, mk_masked_WT (by simp [h1]; omega)⟩,
+      rfl⟩
+  · obtain ⟨n, hn, h1, h2, ht, w1, w2⟩ := (BitOp.ashr (FS := FS)).WT.1 w
+    obtain ⟨k, x, ex, rfl, s0, s1⟩ := BitOp.ashr.eval_lit_r e
+    obtain ⟨y, hy⟩ := eval_bv ex h1
+    simp only [size_eq, h1, size_of_ty_bitVector] at hs w' ⊢
+    obtain ⟨rfl, rfl⟩ := Val.bv_inj hy
+    simp only [bv_ashr.spec] at w' ⊢
+    rw [BitOp.ashr.eval_of w' ex (eval_mk_masked hn)]
+    congr 1
+    apply Val.bv_ext rfl
+    intro t ht
+    have m0 : 0 ≤ n - 1 := by omega
+    have m1 : n - 1 < 2 ^ n.toNat := by
+      have := Nat.lt_two_pow_self (n := n.toNat); have := int_two_pow_cast n.toNat; omega
+    simp only [BitVec.sshiftRight_eq', toNat_ofInt_lit s0 s1, toNat_ofInt_lit m0 m1]
+    by_cases ht0 : t = 0
+    · subst ht0; bitw_simp; congr 1; omega
+    · bitw_simp
 
 theorem bv_ashr.r_ashr.proof : bv_ashr.r_ashr.Stmt := by
   sorry

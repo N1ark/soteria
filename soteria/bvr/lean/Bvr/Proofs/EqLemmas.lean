@@ -1067,5 +1067,60 @@ theorem toNat_ofInt_of_range {w : Nat} {z : Int} (h0 : 0 ≤ z) (h1 : z < 2 ^ w)
   rw [BitVec.toNat_ofInt, Int.emod_eq_of_lt h0 (by exact_mod_cast h1)]
   omega
 
+
+theorem zland_notmask_zero {zn mask F : Int} {c : Nat} (h0 : 0 ≤ zn) (hm : 0 ≤ mask)
+    (hF : 0 ≤ F) (h : zn.toNat = mask.toNat &&& c) :
+    zland zn (zland (zlognot mask) F) = 0 := by
+  obtain ⟨N, rfl⟩ := Int.eq_ofNat_of_zero_le h0
+  obtain ⟨Mk, rfl⟩ := Int.eq_ofNat_of_zero_le hm
+  obtain ⟨Fn, rfl⟩ := Int.eq_ofNat_of_zero_le hF
+  have hl : zlognot (Mk : Int) = Int.negSucc Mk := by
+    rw [zlognot, Int.negSucc_eq]; omega
+  rw [hl]
+  show Int.ofNat (N &&& Nat.bitwise (fun a b => !a && b) Mk Fn) = 0
+  simp only [Int.toNat_natCast] at h
+  subst h
+  rw [Int.ofNat_eq_natCast, Int.natCast_eq_zero]
+  apply Nat.eq_of_testBit_eq; intro i
+  rw [Nat.testBit_and, Nat.testBit_and, Nat.testBit_bitwise rfl]
+  cases Mk.testBit i <;> simp
+
+theorem Refines.eq_and_mask {FS : FloatSem} {zn mask sz : Int} {Tn Tm T : Ty} {A B : Term}
+    (hmask : Term.mk (.bitVec mask) Tm = A ∨ Term.mk (.bitVec mask) Tm = B)
+    (hsz : sz = size_of_ty Tn ∨ sz = size_of_ty T)
+    (hc : (!decide (zland zn (zland (zlognot mask) (zshiftl 1 sz - 1)) = 0)) = true) :
+    Refines FS (sem_eq.spec (.mk (.bitVec zn) Tn) (.mk (.binop .bitAnd A B) T)) v_false := by
+  refine Refines.eq_const (fun _ _ _ => by simp) (fun ρ x y hT w1 w2 hx hy => ?_)
+  simp only [Term.ty_mk] at hT; subst hT
+  obtain ⟨⟨W', hW, hA⟩, hB, hT2, wA, wB⟩ := (WT_bvbin (Or.inr (Or.inr (Or.inr (Or.inl rfl))))).1 w2
+  have hs : sz = W' := by rcases hsz with rfl | rfl <;> rw [hT2, hA] <;> rfl
+  subst hs
+  rw [eval_binop w2] at hy; simp only [evBinop] at hy
+  obtain ⟨m, a, b, ha, hb, hab⟩ := bvBin_eq_some.1 hy
+  simp only [Option.some.injEq] at hab; subst hab
+  obtain ⟨W, _, hTn, zn0, zn1, e⟩ := eval_bitVec_range (FS := FS) (ρ := ρ) w1
+  rw [e] at hx; cases hx
+  simp only [eval_v_false, Option.some.injEq, Val.bool.injEq, Bool.false_eq,
+    decide_eq_false_iff_not]
+  intro heq
+  have ht := toNat_of_val_bv_eq heq
+  rw [BitVec.toNat_and] at ht
+  have hzn : (BitVec.ofInt W zn).toNat = zn.toNat := by
+    have := toNat_ofInt_of_range (w := W) zn0 zn1; omega
+  rw [hzn] at ht
+  have hF : 0 ≤ zshiftl 1 sz - 1 := by
+    simp only [zshiftl, Int.one_mul]
+    have := two_pow_pos' sz.toNat; omega
+  have hz : zland zn (zland (zlognot mask) (zshiftl 1 sz - 1)) = 0 := by
+    rcases hmask with rfl | rfl
+    · obtain ⟨rfl, m0, m1, _⟩ := eval_lit_bv wA ha
+      have := toNat_ofInt_of_range (w := m) m0 m1
+      exact zland_notmask_zero zn0 m0 hF (c := b.toNat) (by rw [ht]; congr 1; omega)
+    · obtain ⟨rfl, m0, m1, _⟩ := eval_lit_bv wB hb
+      have := toNat_ofInt_of_range (w := m) m0 m1
+      exact zland_notmask_zero zn0 m0 hF (c := a.toNat)
+        (by rw [ht, Nat.and_comm]; congr 1; omega)
+  simp [hz] at hc
+
 end EqL
 end Bvr

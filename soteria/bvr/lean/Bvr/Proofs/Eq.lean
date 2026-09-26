@@ -312,7 +312,15 @@ theorem sem_eq.r_or_zero.proof : sem_eq.r_or_zero.Stmt := by
   · exact Refines.trans Refines.eq_symm (sem_eq.r_or_zero.aux (Or.inr rfl))
 
 theorem sem_eq.r_and_mask.proof : sem_eq.r_and_mask.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [sem_eq.r_and_mask] at h
+  rcases orElse_eq_some4 h with h | h | h | h <;> split at h <;>
+    simp only [reduceCtorEq, Option.ite_none_right_eq_some, Option.some.injEq] at h <;>
+    obtain ⟨hc, rfl⟩ := h
+  · exact Refines.eq_and_mask (Or.inl rfl) (Or.inl rfl) hc
+  · exact Refines.eq_and_mask (Or.inr rfl) (Or.inl rfl) hc
+  · exact Refines.trans Refines.eq_symm (Refines.eq_and_mask (Or.inl rfl) (Or.inr rfl) hc)
+  · exact Refines.trans Refines.eq_symm (Refines.eq_and_mask (Or.inr rfl) (Or.inr rfl) hc)
 
 theorem sem_eq.r_concat_const.aux {FS : FloatSem} {Z l r : Term} {T : Ty} :
     Refines FS (sem_eq.spec Z (.mk (.binop .bvConcat l r) T))

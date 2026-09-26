@@ -371,7 +371,32 @@ theorem sem_eq.r_true_r.proof : sem_eq.r_true_r.Stmt := by
     rw [hx]; cases b <;> simp
 
 theorem sem_eq.r_of_bools.proof : sem_eq.r_of_bools.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [sem_eq.r_of_bools] at h
+  split at h <;> simp at h
+  subst h
+  refine Refines.trans ?_ (hO.sem_eq _ _)
+  refine Refines.eq_eq (fun hT w1 w2 => ?_) (fun ρ x y hT w1 w2 hx hy => ?_)
+  · have ⟨h1, wb⟩ := WT_unop.1 w1
+    have ⟨h2, wc⟩ := WT_unop.1 w2
+    simp [Unop.WT] at h1 h2
+    exact ⟨by rw [h1.2.1, h2.2.1], wb, wc⟩
+  · have ⟨h1, wb⟩ := WT_unop.1 w1
+    have ⟨h2, wc⟩ := WT_unop.1 w2
+    simp only [Unop.WT, Ty.sort_eq, Term.ty_mk] at h1 h2 hT
+    obtain ⟨hn, _, rfl⟩ := h1
+    obtain ⟨hm, _, hT'⟩ := h2
+    rw [hT'] at hT; cases hT
+    rw [eval_unop w1] at hx; rw [eval_unop w2] at hy
+    cases hb : eval FS ρ _ <;> rw [hb] at hx <;> simp [evUnop] at hx
+    cases hc : eval FS ρ _ <;> rw [hc] at hy <;> simp [evUnop] at hy
+    rename_i vb vc
+    rcases vb with _ | _ | _ | _ | _ | _ <;> simp [evUnop] at hx
+    rcases vc with _ | _ | _ | _ | _ | _ <;> simp [evUnop] at hy
+    subst hx hy
+    refine ⟨_, _, rfl, rfl, ?_⟩
+    simp only [Val.bv.injEq, heq_eq_eq, true_and, Val.bool.injEq]
+    exact BitVec.ofBool_inj (by omega)
 
 theorem sem_eq.r_nots.proof : sem_eq.r_nots.Stmt := by
   intro FS O hO v1 v2 res h
@@ -395,8 +420,39 @@ theorem sem_eq.r_nots.proof : sem_eq.r_nots.Stmt := by
     subst hx hy
     exact ⟨_, _, rfl, rfl, by simp⟩
 
+theorem sem_eq.r_of_bool_const.aux {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {b : Term}
+    {k z : Int} {T1 T2 : Ty} :
+    Refines FS (sem_eq.spec (.mk (.unop (.bvOfBool k) b) T1) (.mk (.bitVec z) T2))
+      (if z = 1 then b else if z = 0 then O.b_not b else v_false) := by
+  split
+  · subst_vars
+    refine Refines.eq_of_bool_lit (fun h w => ⟨w, h⟩) (fun ρ c n hn _ _ e => ?_)
+    rw [e]; cases c <;> simp [BitVec.one_ne_zero' hn, (BitVec.one_ne_zero' hn).symm] <;> omega
+  split
+  · subst_vars
+    refine Refines.trans ?_ (hO.b_not b)
+    refine Refines.eq_of_bool_lit (fun h w => ⟨WT_unop.2 ⟨by simp [Unop.WT, h], w⟩, rfl⟩)
+      (fun ρ c n hn _ _ e => ?_)
+    have hb : b.ty = .bool := by have := eval_hasSort e; simpa using this
+    rw [b_not.spec, eval_unop (WT_unop.2 ⟨by simp [Unop.WT, hb], eval_WT e⟩), e]
+    cases c <;> simp [evUnop, BitVec.one_ne_zero' hn] <;> omega
+  · rename_i h1 h0
+    refine Refines.eq_of_bool_lit (fun _ _ => ⟨by simp, rfl⟩) (fun ρ c n hn z1 z2 e => ?_)
+    simp only [eval_v_false, Option.some.injEq, Val.bool.injEq, Bool.false_eq, decide_eq_false_iff_not]
+    intro heq
+    have := congrArg BitVec.toNat heq
+    rw [BitVec.toNat_ofInt, Int.emod_eq_of_lt z1 (by exact_mod_cast z2)] at this
+    cases c
+    · simp at this; omega
+    · have h1 : (1 : BitVec n).toNat = 1 := by simp; omega
+      simp only [if_true, h1] at this; omega
+
 theorem sem_eq.r_of_bool_const.proof : sem_eq.r_of_bool_const.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [sem_eq.r_of_bool_const] at h
+  rcases orElse_eq_some h with h | h <;> split at h <;> simp only [reduceCtorEq, Option.some.injEq] at h <;> subst h <;> simp only [decide_eq_true_eq]
+  · exact sem_eq.r_of_bool_const.aux hO
+  · exact Refines.trans Refines.eq_symm (sem_eq.r_of_bool_const.aux hO)
 
 theorem sem_eq.r_msb.proof : sem_eq.r_msb.Stmt := by
   sorry

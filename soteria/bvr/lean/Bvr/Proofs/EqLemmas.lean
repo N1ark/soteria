@@ -848,5 +848,33 @@ theorem Refines.eq_and {FS : FloatSem} {a b c d e f : Term}
     simp only [Option.some.injEq, Val.bool.injEq]
     by_cases h : x = y <;> simp_all
 
+
+/-- An equality between [bv_of_bool] and a literal. -/
+theorem Refines.eq_of_bool_lit {FS : FloatSem} {b r : Term} {k z : Int} {T1 T2 : Ty}
+    (hsyn : b.ty = .bool → b.WT → r.WT ∧ r.ty = .bool)
+    (hsem : ∀ ρ (c : Bool) (n : Nat), 0 < n → 0 ≤ z → z < 2 ^ n →
+      eval FS ρ b = some (.bool c) →
+      eval FS ρ r = some (.bool (decide (((if c then 1 else 0) : BitVec n) = BitVec.ofInt n z)))) :
+    Refines FS (sem_eq.spec (.mk (.unop (.bvOfBool k) b) T1) (.mk (.bitVec z) T2)) r := by
+  refine Refines.eq_const (fun hT w1 w2 => ?_) (fun ρ x y hT w1 w2 hx hy => ?_)
+  · have ⟨h1, wb⟩ := WT_unop.1 w1
+    simp only [Unop.WT, Ty.sort_eq] at h1
+    exact hsyn h1.2.1 wb
+  · have ⟨h1, wb⟩ := WT_unop.1 w1
+    simp only [Unop.WT, Ty.sort_eq, Term.ty_mk] at h1 hT
+    obtain ⟨hk, hb, rfl⟩ := h1
+    rw [eval_unop w1] at hx
+    cases he : eval FS ρ b with
+    | none => rw [he] at hx; simp at hx
+    | some vb =>
+      obtain ⟨c, rfl⟩ := eval_bool_val he hb
+      rw [he] at hx; simp only [evUnop, Option.some.injEq] at hx; subst hx
+      obtain ⟨n, hn, hT2, z1, z2, e⟩ := eval_bitVec_range (FS := FS) (ρ := ρ) w2
+      rw [e] at hy; cases hy
+      rw [← hT] at hT2
+      have : k.toNat = n := by rcases hT2 with h | h <;> simp at h; omega
+      subst this
+      rw [hsem ρ c _ hn z1 z2 he]; simp
+
 end EqL
 end Bvr

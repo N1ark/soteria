@@ -12,21 +12,16 @@ theorem eval_WT {FS ρ t v} (h : eval FS ρ t = some v) : t.WT := by
 theorem eval_eq_ev {FS ρ t} (h : t.WT) : eval FS ρ t = ev FS ρ t := by
   simp [eval, h]
 
-@[simp] theorem Ty.sort_bitVector (n : Int) : (Ty.bitVector n).sort = .bitVector n := rfl
-@[simp] theorem Ty.sort_loc (n : Int) : (Ty.loc n).sort = .bitVector n := rfl
-@[simp] theorem Ty.sort_bool : Ty.bool.sort = .bool := rfl
-@[simp] theorem Ty.sort_float (p : Prec) : (Ty.float p).sort = .float p := rfl
-@[simp] theorem Ty.sort_pointer (n : Int) : (Ty.pointer n).sort = .pointer n := rfl
-@[simp] theorem Ty.sort_sort (t : Ty) : t.sort.sort = t.sort := by
-  induction t <;> simp_all [Ty.sort]
-
-theorem Ty.sort_eq_bitVector {t : Ty} {n : Int} :
-    t.sort = .bitVector n ↔ t = .bitVector n ∨ t = .loc n := by
-  cases t <;> simp [Ty.sort]
+/-- Types are matched exactly: [Ty.sort] is the identity. -/
+@[simp] theorem Ty.sort_eq (t : Ty) : t.sort = t := rfl
 
 theorem size_of_ty_of_sort {t : Ty} {n : Int} (h : t.sort = .bitVector n) :
     size_of_ty t = n := by
-  cases t <;> simp_all [Ty.sort, size_of_ty]
+  simp at h; subst h; rfl
+
+theorem size_of_ty_of_bits {t : Ty} {n : Int} (h : t = .bitVector n ∨ t = .loc n) :
+    size_of_ty t = n := by
+  rcases h with rfl | rfl <;> rfl
 
 @[simp] theorem size_of_ty_bitVector (n : Int) : size_of_ty (.bitVector n) = n := rfl
 @[simp] theorem ty_eq (v : Term) : ty v = v.ty := rfl
@@ -247,9 +242,7 @@ theorem Refines.unop_ite {FS op g a b t t'} :
     simp only [Triop.WT] at w3
     obtain ⟨h1, h2, h3⟩ := w3
     refine ⟨WT_triop.2 ⟨?_, wg, WT_unop.2 ⟨?_, wa⟩, WT_unop.2 ⟨?_, wb⟩⟩, rfl⟩
-    · simp [Triop.WT, h1]
-    · simp only [Term.ty_mk, h3] at w1; exact w1
-    · simp only [Term.ty_mk, h3, ← h2] at w1; exact w1
+    all_goals simp_all [Triop.WT]
   · rw [eval_unop w, eval_ite (WT_unop.1 w).2] at e
     have ⟨_, _, wa', wb'⟩ := WT_triop.1 w'
     rw [eval_ite w', eval_unop wa', eval_unop wb']
@@ -265,19 +258,21 @@ open Classical
 
 theorem WT_bitVec {z t} :
     (Term.mk (.bitVec z) t).WT ↔
-      ∃ n : Nat, 0 < n ∧ t.sort = .bitVector n ∧ 0 ≤ z ∧ z < 2 ^ n := by
+      ∃ n : Nat, 0 < n ∧ (t = .bitVector n ∨ t = .loc n) ∧ 0 ≤ z ∧ z < 2 ^ n := by
   simp [Term.WT]
 
-theorem Ty.width_of_sort {t : Ty} {n : Nat} (h : t.sort = .bitVector n) : t.width = n := by
-  simp [Ty.width, size_of_ty_of_sort h]
+theorem Ty.width_of_sort {t : Ty} {n : Nat} (h : t = .bitVector n ∨ t = .loc n) :
+    t.width = n := by
+  simp [Ty.width, size_of_ty_of_bits h]
 
 theorem eval_bitVec {FS ρ z t} (h : (Term.mk (.bitVec z) t).WT) :
     eval FS ρ (.mk (.bitVec z) t) = some (.bv t.width (BitVec.ofInt _ z)) := by
   rw [eval_eq_ev h, ev]
 
-theorem eval_bitVec' {FS ρ z t n} (h : (Term.mk (.bitVec z) t).WT) (hn : t.sort = .bitVector n) :
+theorem eval_bitVec' {FS ρ z t n} (h : (Term.mk (.bitVec z) t).WT)
+    (hn : t = .bitVector n ∨ t = .loc n) :
     eval FS ρ (.mk (.bitVec z) t) = some (.bv n.toNat (BitVec.ofInt _ z)) := by
-  rw [eval_bitVec h, Ty.width, size_of_ty_of_sort hn]
+  rw [eval_bitVec h, Ty.width, size_of_ty_of_bits hn]
 
 theorem WT_bool {b t} : (Term.mk (.bool b) t).WT ↔ t = .bool := by simp [Term.WT]
 
@@ -301,7 +296,7 @@ theorem emod_two_pow_lt (z : Int) (n : Nat) : z % 2 ^ n < 2 ^ n :=
   Int.emod_lt_of_pos _ (two_pow_pos' n)
 
 theorem mk_masked_WT {n z : Int} (hn : 0 < n) : (mk_masked n z).WT := by
-  refine WT_bitVec.2 ⟨n.toNat, by omega, by simp [Int.toNat_of_nonneg (Int.le_of_lt hn)], ?_, ?_⟩
+  refine WT_bitVec.2 ⟨n.toNat, by omega, Or.inl (by simp [Int.toNat_of_nonneg (Int.le_of_lt hn)]), ?_, ?_⟩
   · exact emod_two_pow_nonneg _ _
   · exact emod_two_pow_lt _ _
 
@@ -324,7 +319,7 @@ theorem BitVec.ofInt_emod_two_pow {w : Nat} (z : Int) :
 theorem eval_mk_masked {FS ρ} {n z : Int} (hn : 0 < n) :
     eval FS ρ (mk_masked n z) = some (.bv n.toNat (BitVec.ofInt _ z)) := by
   rw [mk_masked, eval_bitVec' (n := n.toNat) (mk_masked_WT hn)
-    (by simp [Int.toNat_of_nonneg (Int.le_of_lt hn)])]
+    (Or.inl (by simp [Int.toNat_of_nonneg (Int.le_of_lt hn)]))]
   simp only [Int.toNat_natCast, BitVec.ofInt_emod_two_pow]
 
 /-! ## Integers and bit-vectors -/
@@ -356,6 +351,6 @@ theorem WT_and {a b t} : (Term.mk (.binop .and_ a b) t).WT ↔
   · rintro ⟨⟨h1, h2, h3⟩, h4, h5⟩; exact ⟨h1, h2, by cases t <;> simp_all [Ty.sort], h4, h5⟩
   · rintro ⟨h1, h2, rfl, h4, h5⟩; exact ⟨⟨h1, h2, rfl⟩, h4, h5⟩
 
-theorem Ty.sort_eq_bool {t : Ty} : t.sort = .bool ↔ t = .bool := by cases t <;> simp [Ty.sort]
+theorem Ty.sort_eq_bool {t : Ty} : t.sort = .bool ↔ t = .bool := by simp
 
 end Bvr

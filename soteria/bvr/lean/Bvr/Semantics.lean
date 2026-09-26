@@ -33,11 +33,16 @@ open Classical
 
 /-! ## Sorts and values -/
 
-/-- The SMT sort of a type: locations are bit-vectors. -/
-def Ty.sort : Ty → Ty
-  | .loc n => .bitVector n
-  | .seq t => .seq t.sort
-  | t => t
+/-- The sort of a type. Types are matched exactly: although SMT-LIB encodes
+locations as bit-vectors, Soteria's typed layer keeps them apart, and so may the
+simplifications. -/
+def Ty.sort (t : Ty) : Ty := t
+
+/-- Types that have values: bit-vectors have a positive width. -/
+def Ty.WF : Ty → Prop
+  | .loc n | .pointer n | .bitVector n => 0 < n
+  | .seq t => t.WF
+  | _ => True
 
 inductive Val where
   | bool (b : Bool)
@@ -51,6 +56,7 @@ mutual
 def Val.hasSort : Val → Ty → Prop
   | .bool _, .bool => True
   | .bv n _, .bitVector m => (n : Int) = m ∧ 0 < n
+  | .bv n _, .loc m => (n : Int) = m ∧ 0 < n
   | .ptr n _ _, .pointer m => (n : Int) = m ∧ 0 < n
   | .float p _, .float q => p = q
   | .seq vs, .seq t => Val.hasSortList vs t
@@ -89,8 +95,8 @@ structure FloatSem where
 
 def Unop.WT : Unop → Ty → Ty → Prop
   | .not_, a, t => a = .bool ∧ t = .bool
-  | .getPtrLoc, a, t | .getPtrOfs, a, t =>
-      ∃ n : Int, 0 < n ∧ a = .pointer n ∧ t = .bitVector n
+  | .getPtrLoc, a, t => ∃ n : Int, 0 < n ∧ a = .pointer n ∧ t = .loc n
+  | .getPtrOfs, a, t => ∃ n : Int, 0 < n ∧ a = .pointer n ∧ t = .bitVector n
   | .bvOfBool n, a, t => 0 < n ∧ a = .bool ∧ t = .bitVector n
   | .bvOfFloat _ _ n, a, t => 0 < n ∧ (∃ p, a = .float p) ∧ t = .bitVector n
   | .floatOfBv _ _ p, a, t =>
@@ -126,14 +132,15 @@ def Triop.WT : Triop → Ty → Ty → Ty → Ty → Prop
   | .ite, a, b, c, t => a = .bool ∧ c = b ∧ t = b
 
 mutual
-/-- Syntactic well-typedness, up to sorts (a location is a bit-vector). -/
+/-- Syntactic well-typedness. -/
 def Term.WT : Term → Prop
   | .mk (.var _) _ => True
   | .mk (.bool _) t => t = .bool
   | .mk (.float f) t => t = .float f.prec ∧ f.bits < 2 ^ f.prec.size
-  | .mk (.bitVec z) t => ∃ n : Nat, 0 < n ∧ t.sort = .bitVector n ∧ 0 ≤ z ∧ z < 2 ^ n
+  | .mk (.bitVec z) t =>
+      ∃ n : Nat, 0 < n ∧ (t = .bitVector n ∨ t = .loc n) ∧ 0 ≤ z ∧ z < 2 ^ n
   | .mk (.ptr l o) t =>
-      ∃ n : Int, 0 < n ∧ t = .pointer n ∧ l.ty.sort = .bitVector n ∧
+      ∃ n : Int, 0 < n ∧ t = .pointer n ∧ l.ty.sort = .loc n ∧
         o.ty.sort = .bitVector n ∧ l.WT ∧ o.WT
   | .mk (.seq l) t => ∃ e, t = .seq e ∧ Term.WTList e l
   | .mk (.unop op a) t => op.WT a.ty.sort t.sort ∧ a.WT
@@ -141,7 +148,8 @@ def Term.WT : Term → Prop
   | .mk (.triop op a b c) t =>
       op.WT a.ty.sort b.ty.sort c.ty.sort t.sort ∧ a.WT ∧ b.WT ∧ c.WT
   | .mk (.nop _ l) t => t = .bool ∧ ∃ e, Term.WTList e l
-  | .mk (.exists_ _ body) t => t = .bool ∧ body.ty = .bool ∧ body.WT
+  | .mk (.exists_ bs body) t =>
+      t = .bool ∧ (∀ b ∈ bs, b.2.WF) ∧ body.ty = .bool ∧ body.WT
   | .mk (.extension _) _ => True
 
 /-- All the terms are well-typed, of the sort of [e]. -/

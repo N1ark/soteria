@@ -39,15 +39,22 @@ theorem bv_not.r_lit.proof : bv_not.r_lit.Stmt := by
   split at h <;> simp at h
   subst h
   rename_i z T
+  have key : (Term.mk (.unop .bvNot (.mk (.bitVec z) T)) T).WT →
+      ∃ n : Nat, 0 < n ∧ T = .bitVector n ∧ 0 ≤ z ∧ z < 2 ^ n := by
+    intro w
+    have ⟨w1, w2⟩ := WT_unop.1 w
+    obtain ⟨n, hn, hT, h1, h2⟩ := WT_bitVec.1 w2
+    simp [Unop.WT] at w1
+    rcases hT with rfl | rfl
+    · exact ⟨n, hn, rfl, h1, h2⟩
+    · simp at w1
   refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
-  · have ⟨_, w2⟩ := WT_unop.1 w
-    obtain ⟨n, hn, hT, _, _⟩ := WT_bitVec.1 w2
-    simp [bv_not.spec, size_of_ty_of_sort hT] at *
-    exact ⟨mk_masked_WT (by omega), hT.symm⟩
-  · have ⟨_, w2⟩ := WT_unop.1 w
-    obtain ⟨n, hn, hT, _, _⟩ := WT_bitVec.1 w2
-    simp only [bv_not.spec, size_eq, ty_eq, Term.ty_mk, size_of_ty_of_sort hT] at *
-    rw [eval_unop w, eval_bitVec' w2 hT] at e
+  · obtain ⟨n, hn, rfl, _, _⟩ := key (by simpa [bv_not.spec] using w)
+    exact ⟨mk_masked_WT (by simp [size_of_ty]; omega), by simp [bv_not.spec, size_of_ty]⟩
+  · simp only [bv_not.spec, ty_eq, Term.ty_mk] at w e
+    obtain ⟨n, hn, rfl, _, _⟩ := key w
+    rw [eval_unop w, eval_bitVec' (WT_unop.1 w).2 (Or.inl rfl)] at e
+    simp only [size_of_ty]
     rw [eval_mk_masked (by omega)]
     simp [evUnop] at e; subst e
     simp [BitVec.ofInt_zlognot]

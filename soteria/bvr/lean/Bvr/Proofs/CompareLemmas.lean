@@ -1534,5 +1534,21 @@ theorem dec_true_iff {p : Prop} {i : Decidable p} : (@decide p i = true) = p := 
 theorem dec_false_iff {p : Prop} {i : Decidable p} : (@decide p i = false) = ¬p := by
   cases i <;> simp_all
 
+/-- A cancellable factor is a literal, read as a positive integer. -/
+theorem cancellable_inv {s a N} (h : cancellable s a = true) (ha : TB a N) :
+    ∃ z t, a = .mk (.bitVec z) t ∧ 0 < bv_to_z s N z := by
+  obtain ⟨k, t⟩ := a
+  have hT := ha.2; simp only [Term.ty_mk] at hT; subst hT
+  have hs : size (Term.mk k (.bitVector N)) = N := by simp [size, size_of_ty]
+  cases s
+  · simp only [cancellable, Bool.false_eq_true, ite_false, sure_neq, hs, bv_zero] at h
+    cases k <;> unfold sure_neq at h <;> simp [firstSome, ty] at h
+    rename_i z
+    obtain ⟨M, hM, hMN, h0, h1, _⟩ := TB_lit ha
+    exact ⟨z, _, rfl, by rw [bv_to_z_false]; omega⟩
+  · simp only [cancellable, ite_true, hs] at h
+    cases k <;> simp [firstSome] at h
+    exact ⟨_, _, rfl, h⟩
+
 end CompareL
 end Bvr

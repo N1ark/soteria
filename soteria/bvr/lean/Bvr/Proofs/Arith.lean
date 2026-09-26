@@ -710,19 +710,63 @@ theorem bv_sub.r_default.proof : bv_sub.r_default.Stmt := by
   exact Refines.refl
 
 theorem bv_neg.r_lit.proof : bv_neg.r_lit.Stmt := by
-  sorry
+  intro FS O hO c v res h
+  simp only [bv_neg.r_lit] at h; split at h <;> simp at h; subst h
+  refine Refines.neg_intro (fun n wa hT => ?_) (fun n wa hT ρ x v hx e => ?_)
+  · rw [size_ty_lit wa]; exact BV_mk_masked wa.2.2
+  · rw [size_ty_lit wa, eval_mk_masked wa.2.2]
+    rw [lit_eval_eq wa hx] at e
+    simp [evUnop] at e
+    rw [← e.2, BitVec.ofInt_neg]
 
 theorem bv_neg.r_neg.proof : bv_neg.r_neg.Stmt := by
-  sorry
+  intro FS O hO c v res h
+  simp only [bv_neg.r_neg] at h; split at h <;> simp at h; subst h
+  rename_i ck T
+  refine Refines.neg_intro (fun n wa hT => (BV_neg_inv wa).1) (fun n wa hT ρ x v hx e => ?_)
+  obtain ⟨wx, rfl⟩ := BV_neg_inv wa
+  rw [eval_neg wx rfl] at hx
+  obtain ⟨X, hX, hx⟩ := evUnop_inv wx hx
+  simp [evUnop] at hx e
+  obtain ⟨-, rfl⟩ := hx; obtain ⟨-, rfl⟩ := e
+  rw [hX]; simp
 
 theorem bv_neg.r_ite.proof : bv_neg.r_ite.Stmt := by
-  sorry
+  intro FS O hO c v res h
+  simp only [bv_neg.r_ite] at h; split at h <;> simp at h; subst h
+  rename_i g l r T
+  refine Refines.neg_intro (fun n wa hT => ?_) (fun n wa hT ρ x v hx e => ?_)
+  all_goals obtain ⟨wg, hg, wl, wr, rfl⟩ := BV_ite_inv wa
+  all_goals have hA := O_neg (hO.bv_neg c l) wl
+  all_goals have hB := O_neg (hO.bv_neg c r) wr
+  all_goals have hres := O_ite hO wg hg hA.1 hB.1
+  · exact hres.1
+  · refine hres.2 ρ v ?_
+    rcases eval_ite_inv hx with ⟨h1, h2⟩ | ⟨h1, h2⟩
+    · exact .inl ⟨h1, hA.2 ρ x v h2 e⟩
+    · exact .inr ⟨h1, hB.2 ρ x v h2 e⟩
 
 theorem bv_neg.r_of_bool.proof : bv_neg.r_of_bool.Stmt := by
-  sorry
+  intro FS O hO c v res h
+  simp only [bv_neg.r_of_bool] at h; split at h <;> simp at h; subst h
+  rename_i m g T
+  refine Refines.neg_intro (fun n wa hT => ?_) (fun n wa hT ρ x v hx e => ?_)
+  all_goals obtain ⟨rfl, wg, hg, rfl⟩ := BV_ofBool_inv wa
+  all_goals have hA := O_neg (hO.bv_neg false (bv_one m)) (BV_bv_one wa.2.2)
+  all_goals have hres := O_ite hO wg hg hA.1 (BV_bv_zero wa.2.2)
+  · exact hres.1
+  · refine hres.2 ρ v ?_
+    obtain ⟨b, hb, rfl⟩ := eval_ofBool_inv wa hx
+    cases b
+    · refine .inr ⟨hb, ?_⟩
+      simp [evUnop] at e; rw [eval_bv_zero wa.2.2, ← e.2]; simp
+    · refine .inl ⟨hb, hA.2 ρ 1 v (eval_bv_one wa.2.2) ?_⟩
+      simp [evUnop] at e ⊢; exact e.2
 
 theorem bv_neg.r_default.proof : bv_neg.r_default.Stmt := by
-  sorry
+  intro FS O hO c v res h
+  simp only [bv_neg.r_default] at h; simp at h; subst h
+  exact Refines.refl
 
 theorem bv_mod.r_lits.proof : bv_mod.r_lits.Stmt := by
   sorry

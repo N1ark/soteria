@@ -274,8 +274,42 @@ theorem sem_eq.r_ite_ite.proof : sem_eq.r_ite_ite.Stmt := by
 theorem sem_eq.r_mul_cancel.proof : sem_eq.r_mul_cancel.Stmt := by
   sorry
 
+theorem sem_eq.r_or_zero.aux {FS : FloatSem} {l r : Term} {T1 T2 : Ty} {N : Int}
+    (hN : N = size_of_ty T1 ∨ N = size_of_ty T2) :
+    Refines FS (sem_eq.spec (.mk (.bitVec 0) T1) (.mk (.binop .bitOr l r) T2))
+      (b_and.spec (sem_eq.spec l (bv_zero N)) (sem_eq.spec r (bv_zero N))) := by
+  have key : T1 = T2 → (Term.mk (.binop .bitOr l r) T2).WT →
+      ∃ n : Int, 0 < n ∧ N = n ∧ l.ty = .bitVector n ∧ r.ty = .bitVector n ∧ T2 = .bitVector n ∧
+        l.WT ∧ r.WT := by
+    intro hT w2
+    obtain ⟨⟨n, hn, hl⟩, hr, hT2, wl, wr⟩ := (WT_bvbin (Or.inr (Or.inr (Or.inr (Or.inr rfl))))).1 w2
+    subst hT
+    refine ⟨n, hn, ?_, hl, by rw [hr, hl], by rw [hT2, hl], wl, wr⟩
+    rcases hN with rfl | rfl <;> rw [hT2, hl] <;> rfl
+  refine Refines.eq_and (fun hT w1 w2 => ?_) (fun ρ x y hT w1 w2 hx hy => ?_)
+  · obtain ⟨n, hn, rfl, hl, hr, _, wl, wr⟩ := key (by simpa using hT) w2
+    exact ⟨by simp [hl], wl, bv_zero_WT' hn, by simp [hr], wr, bv_zero_WT' hn⟩
+  · simp only [Term.ty_mk] at hT
+    obtain ⟨n, hn, rfl, hl, hr, hT2, wl, wr⟩ := key hT w2
+    rw [eval_binop w2] at hy; simp only [evBinop] at hy
+    obtain ⟨m, a, b, ha, hb, hab⟩ := bvBin_eq_some.1 hy
+    simp only [Option.some.injEq] at hab; subst hab
+    obtain ⟨rfl, _⟩ := eval_bv_ty ha hl
+    rw [hT2] at hT; subst hT
+    rw [eval_lit' w1] at hx; cases hx
+    refine ⟨_, _, _, _, ha, eval_bv_zero'' hn, hb, eval_bv_zero'' hn, ?_⟩
+    simp only [Val.bv.injEq, heq_eq_eq, true_and]
+    rw [@eq_comm _ (BitVec.ofInt _ 0)]; simp [BitVec.or_eq_zero_iff]
+
 theorem sem_eq.r_or_zero.proof : sem_eq.r_or_zero.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [sem_eq.r_or_zero] at h
+  rcases orElse_eq_some h with h | h <;> split at h <;> simp only [reduceCtorEq, Option.some.injEq, decide_eq_true_eq, ite_true, ite_false, Option.ite_none_right_eq_some] at h
+  all_goals
+    obtain ⟨rfl, rfl⟩ := h
+    refine Refines.trans ?_ (Refines.b_and hO (hO.sem_eq _ _) (hO.sem_eq _ _))
+  · exact sem_eq.r_or_zero.aux (Or.inl rfl)
+  · exact Refines.trans Refines.eq_symm (sem_eq.r_or_zero.aux (Or.inr rfl))
 
 theorem sem_eq.r_and_mask.proof : sem_eq.r_and_mask.Stmt := by
   sorry
@@ -445,7 +479,7 @@ theorem sem_eq.r_of_bool_const.aux {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {
     cases c
     · simp at this; omega
     · have h1 : (1 : BitVec n).toNat = 1 := by simp; omega
-      simp only [if_true, h1] at this; omega
+      simp only [ite_true, h1] at this; omega
 
 theorem sem_eq.r_of_bool_const.proof : sem_eq.r_of_bool_const.Stmt := by
   intro FS O hO v1 v2 res h

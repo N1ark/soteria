@@ -876,5 +876,29 @@ theorem Refines.eq_of_bool_lit {FS : FloatSem} {b r : Term} {k z : Int} {T1 T2 :
       subst this
       rw [hsem ρ c _ hn z1 z2 he]; simp
 
+
+theorem lit_WT' {z n : Int} (hn : 0 < n) (h0 : 0 ≤ z) (h1 : z < 2 ^ n.toNat) :
+    (Term.mk (.bitVec z) (.bitVector n)).WT :=
+  WT_bitVec.2 ⟨n.toNat, by omega, Or.inl (by simp; omega), h0, h1⟩
+
+theorem eval_lit' {FS ρ} {z n : Int} (w : (Term.mk (.bitVec z) (.bitVector n)).WT) :
+    eval FS ρ (.mk (.bitVec z) (.bitVector n)) = some (.bv n.toNat (BitVec.ofInt _ z)) :=
+  eval_bitVec' w (Or.inl rfl)
+
+@[simp] theorem bv_zero_ty' {n : Int} : (bv_zero n).ty = .bitVector n := rfl
+
+theorem bv_zero_WT' {n : Int} (hn : 0 < n) : (bv_zero n).WT :=
+  lit_WT' hn (by omega) (two_pow_pos' _)
+
+theorem eval_bv_zero'' {FS ρ} {n : Int} (hn : 0 < n) :
+    eval FS ρ (bv_zero n) = some (.bv n.toNat 0) := by
+  rw [bv_zero, eval_lit' (bv_zero_WT' hn)]; simp
+
+/-- The width of the value of a bit-vector term. -/
+theorem eval_bv_ty {FS ρ t n m x} (h : eval FS ρ t = some (.bv m x)) (ht : t.ty = .bitVector n) :
+    m = n.toNat ∧ 0 < n := by
+  obtain ⟨hn, x', hx⟩ := eval_bv_of_ty h (Or.inl ht)
+  simp at hx; exact ⟨hx.1, hn⟩
+
 end EqL
 end Bvr

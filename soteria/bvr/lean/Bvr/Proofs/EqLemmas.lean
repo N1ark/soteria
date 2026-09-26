@@ -1009,5 +1009,63 @@ theorem Refines.eq_retype {FS : FloatSem} {a b : Term} :
   · have ⟨h1, _, _⟩ := WT_sem_eq.1 w
     cases a; simp only [Term.ty_mk, Term.kind_mk] at h1 ⊢; subst h1; exact e
 
+
+theorem nat_and_mask_eq_zero_iff {z N K : Nat} (hz : z < 2^(N+K)) :
+    z &&& ((2^K - 1) * 2^N) = 0 ↔ z < 2^N := by
+  rw [← Nat.shiftLeft_eq]
+  constructor
+  · intro h
+    apply Nat.lt_pow_two_of_testBit
+    intro i hi
+    cases hb : z.testBit i
+    · rfl
+    have hik : i < N + K := by
+      have := Nat.ge_two_pow_of_testBit hb
+      refine Nat.lt_of_not_le fun hc => ?_
+      have : 2^(N+K) ≤ 2^i := Nat.pow_le_pow_right (by omega) hc
+      omega
+    have := congrArg (fun x => x.testBit i) h
+    simp only [Nat.testBit_and, Nat.testBit_shiftLeft, Nat.zero_testBit, hb,
+      Nat.testBit_two_pow_sub_one] at this
+    simp at this
+    omega
+  · intro h
+    apply Nat.eq_of_testBit_eq; intro i
+    simp only [Nat.testBit_and, Nat.testBit_shiftLeft, Nat.zero_testBit]
+    by_cases hi : i < N
+    · simp; omega
+    · have : z.testBit i = false :=
+        Nat.testBit_lt_two_pow (Nat.lt_of_lt_of_le h (Nat.pow_le_pow_right (by omega) (by omega)))
+      simp [this]
+
+theorem zland_mask_eq_zero_iff {z n k : Int} (hn : 0 ≤ n) (hk : 0 ≤ k) (h0 : 0 ≤ z)
+    (h1 : z < 2 ^ (n + k).toNat) :
+    zland z (zshiftl (zshiftl 1 k - 1) n) = 0 ↔ z < 2 ^ n.toNat := by
+  obtain ⟨Z, rfl⟩ := Int.eq_ofNat_of_zero_le h0
+  have hm : zshiftl (zshiftl 1 k - 1) n = (((2 ^ k.toNat - 1) * 2 ^ n.toNat : Nat) : Int) := by
+    have := Nat.one_le_two_pow (n := k.toNat)
+    simp only [zshiftl, Int.one_mul]
+    rw [Int.natCast_mul, Int.natCast_sub this]
+    simp
+  rw [hm]
+  show Int.ofNat (Z &&& _) = 0 ↔ _
+  have h1' : Z < 2 ^ (n.toNat + k.toNat) := by
+    have : (n + k).toNat = n.toNat + k.toNat := by omega
+    rw [this] at h1; exact_mod_cast h1
+  rw [Int.ofNat_eq_natCast, Int.natCast_eq_zero, nat_and_mask_eq_zero_iff h1']
+  constructor <;> intro h <;> exact_mod_cast h
+
+theorem val_bv_eq_iff {A B : Nat} (x : BitVec A) (y : BitVec B) (h : A = B) :
+    Val.bv A x = Val.bv B y ↔ x.toNat = y.toNat := by
+  subst h; simp [BitVec.toNat_inj]
+
+theorem toNat_of_val_bv_eq {A B : Nat} {x : BitVec A} {y : BitVec B} (h : Val.bv A x = Val.bv B y) :
+    x.toNat = y.toNat := by cases h; rfl
+
+theorem toNat_ofInt_of_range {w : Nat} {z : Int} (h0 : 0 ≤ z) (h1 : z < 2 ^ w) :
+    ((BitVec.ofInt w z).toNat : Int) = z := by
+  rw [BitVec.toNat_ofInt, Int.emod_eq_of_lt h0 (by exact_mod_cast h1)]
+  omega
+
 end EqL
 end Bvr

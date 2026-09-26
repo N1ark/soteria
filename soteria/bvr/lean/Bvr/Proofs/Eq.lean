@@ -337,8 +337,89 @@ theorem sem_eq.r_concat_const.proof : sem_eq.r_concat_const.Stmt := by
   · exact sem_eq.r_concat_const.aux
   · exact Refines.trans Refines.eq_symm (Refines.trans Refines.eq_retype sem_eq.r_concat_const.aux)
 
+theorem sem_eq.r_zext_const.aux {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {k z : Int}
+    {bv : Term} {T1 T2 : Ty} :
+    Refines FS (sem_eq.spec (.mk (.unop (.bvExtend false k) bv) T1) (.mk (.bitVec z) T2))
+      (if (!decide (zland z (zshiftl (zshiftl 1 k - 1) (size bv)) = 0)) = true then v_false
+        else O.sem_eq bv (mk_bv (size bv) z)) := by
+  have key : ∀ (hT : (Term.mk (.unop (.bvExtend false k) bv) T1).ty = (Term.mk (.bitVec z) T2).ty)
+      (w1 : (Term.mk (.unop (.bvExtend false k) bv) T1).WT) (w2 : (Term.mk (.bitVec z) T2).WT),
+      ∃ n : Int, 0 < n ∧ 0 ≤ k ∧ bv.ty = .bitVector n ∧ bv.WT ∧ 0 ≤ z ∧ z < 2 ^ (n + k).toNat ∧
+        size bv = n ∧ ∀ ρ v, eval FS ρ (.mk (.bitVec z) T2) = some v →
+          v = .bv (n + k).toNat (BitVec.ofInt _ z) := by
+    intro hT w1 w2
+    have ⟨h1, wb⟩ := WT_unop.1 w1
+    simp only [Unop.WT, Ty.sort_eq, Term.ty_mk] at h1 hT
+    obtain ⟨n, hn, hb, hk, rfl⟩ := h1
+    obtain ⟨W, hW, hT2, z0, z1, -⟩ := eval_bitVec_range (FS := FS) (ρ := ⟨fun _ => none, fun _ _ => none⟩) w2
+    have hW' : (W : Int) = n + k := by
+      rcases hT2 with h | h <;> rw [h] at hT <;> simp at hT; omega
+    refine ⟨n, hn, hk, hb, wb, z0, by rw [← hW']; simpa using z1, by simp [size, hb], fun ρ v e => ?_⟩
+    obtain ⟨W', _, hT2', _, _, e'⟩ := eval_bitVec_range (FS := FS) (ρ := ρ) w2
+    rw [e'] at e; cases e
+    have : W' = (n + k).toNat := by
+      rcases hT2' with h | h <;> rw [h] at hT <;> simp at hT; omega
+    subst this; rfl
+  split
+  · rename_i hm
+    refine Refines.eq_const (fun _ _ _ => by simp) (fun ρ x y hT w1 w2 hx hy => ?_)
+    obtain ⟨n, hn, hk, hb, wb, z0, z1, hs, hy'⟩ := key hT w1 w2
+    rw [hs] at hm
+    have hz : ¬ z < 2 ^ n.toNat := by
+      intro h; simp [(zland_mask_eq_zero_iff (by omega) hk z0 z1).2 h] at hm
+    obtain rfl := hy' ρ y hy
+    rw [eval_unop w1] at hx
+    cases he : eval FS ρ bv with
+    | none => rw [he] at hx; simp at hx
+    | some vb =>
+      obtain ⟨_, x0, rfl⟩ := eval_bv_of_ty he (Or.inl hb)
+      rw [he] at hx; simp only [evUnop, Option.some.injEq, Bool.false_eq_true, ite_false] at hx
+      subst hx
+      simp only [eval_v_false, Option.some.injEq, Val.bool.injEq, Bool.false_eq,
+        decide_eq_false_iff_not]
+      intro h
+      have := toNat_of_val_bv_eq h
+      rw [BitVec.toNat_setWidth] at this
+      have h2 := toNat_ofInt_of_range (w := (n + k).toNat) z0 z1
+      have h3 := x0.isLt
+      have h4 : x0.toNat % 2 ^ (n.toNat + k.toNat) = x0.toNat :=
+        Nat.mod_eq_of_lt (Nat.lt_of_lt_of_le h3 (Nat.pow_le_pow_right (by omega) (by omega)))
+      apply hz
+      have : (x0.toNat : Int) = z := by omega
+      rw [← this]; exact_mod_cast h3
+  · rename_i hm
+    refine Refines.trans ?_ (hO.sem_eq bv _)
+    refine Refines.eq_eq (fun hT w1 w2 => ?_) (fun ρ x y hT w1 w2 hx hy => ?_)
+    · obtain ⟨n, hn, hk, hb, wb, z0, z1, hs, -⟩ := key hT w1 w2
+      rw [hs]
+      exact ⟨by simp [hb, mk_bv], wb, mk_masked_WT hn⟩
+    · obtain ⟨n, hn, hk, hb, wb, z0, z1, hs, hy'⟩ := key hT w1 w2
+      rw [hs] at hm ⊢
+      have hz : z < 2 ^ n.toNat := by
+        simpa using (zland_mask_eq_zero_iff (by omega) hk z0 z1).1 (by simpa using hm)
+      obtain rfl := hy' ρ y hy
+      rw [eval_unop w1] at hx
+      cases he : eval FS ρ bv with
+      | none => rw [he] at hx; simp at hx
+      | some vb =>
+        obtain ⟨_, x0, rfl⟩ := eval_bv_of_ty he (Or.inl hb)
+        rw [he] at hx; simp only [evUnop, Option.some.injEq, Bool.false_eq_true, ite_false] at hx
+        subst hx
+        refine ⟨_, _, rfl, by rw [mk_bv, eval_mk_masked hn], ?_⟩
+        rw [val_bv_eq_iff _ _ (by omega), val_bv_eq_iff _ _ rfl, BitVec.toNat_setWidth]
+        have h2 := toNat_ofInt_of_range (w := (n + k).toNat) z0 z1
+        have h2' := toNat_ofInt_of_range (w := n.toNat) z0 hz
+        have h3 := x0.isLt
+        have h4 : x0.toNat % 2 ^ (n.toNat + k.toNat) = x0.toNat :=
+          Nat.mod_eq_of_lt (Nat.lt_of_lt_of_le h3 (Nat.pow_le_pow_right (by omega) (by omega)))
+        rw [h4]; omega
+
 theorem sem_eq.r_zext_const.proof : sem_eq.r_zext_const.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [sem_eq.r_zext_const] at h
+  rcases orElse_eq_some h with h | h <;> split at h <;> simp only [reduceCtorEq, Option.some.injEq] at h <;> subst h
+  · exact sem_eq.r_zext_const.aux hO
+  · exact Refines.trans Refines.eq_symm (sem_eq.r_zext_const.aux hO)
 
 theorem sem_eq.r_ite_concat.aux {FS : FloatSem} {g t e l r : Term} {T T' : Ty} :
     Refines FS (sem_eq.spec (.mk (.triop .ite g t e) T) (.mk (.binop .bvConcat l r) T'))

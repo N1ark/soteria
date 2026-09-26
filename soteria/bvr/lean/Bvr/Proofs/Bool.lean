@@ -129,7 +129,21 @@ theorem b_and.r_eq_neq.proof : b_and.r_eq_neq.Stmt := by
     | exact Refines.and_eq_neq (Or.inr ⟨rfl, rfl⟩) (Or.inr ⟨rfl, rfl⟩) hn
 
 theorem b_and.r_eq_extracts.proof : b_and.r_eq_extracts.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [b_and.r_eq_extracts] at h
+  split at h
+  · simp only [Option.ite_none_right_eq_some, Option.some.injEq, Bool.and_eq_true,
+      Bool.or_eq_true, decide_eq_true_eq, equal_iff] at h
+    obtain ⟨⟨rfl, hc⟩, rfl⟩ := h
+    split
+    · rename_i hs
+      exact (Refines.and_eq_extracts hs).trans ((Refines.binop (hO.bv_concat _ _)
+        (hO.bv_extract _ _ _) (fun _ => rfl)).trans (hO.sem_eq _ _))
+    · rename_i hs
+      exact Refines.and_comm ((Refines.and_eq_extracts (hc.resolve_left hs)).trans
+        ((Refines.binop (hO.bv_concat _ _) (hO.bv_extract _ _ _) (fun _ => rfl)).trans
+          (hO.sem_eq _ _)))
+  · simp at h
 
 theorem b_and.r_upper_bounds.proof : b_and.r_upper_bounds.Stmt := by
   intro FS O hO v1 v2 res h
@@ -745,9 +759,18 @@ theorem b_ite.r_default.proof : b_ite.r_default.Stmt := by
   simp [b_ite.r_default] at h; subst h
   exact Refines.refl
 
+-- UNSOUND: a binder that occurs twice with different types has no extension of the
+-- environment, so the `exists` is `false` whatever its body, and dropping the binders changes
+-- that. With `binders = [(1, .bool), (1, .bitVector 8)]` and `body = v_true`, `used_binders`
+-- is `[]`, so the rule returns `v_true`, which evaluates to `true`, while the spec
+-- `exists [(1, bool), (1, bv 8)]. true` is well-typed and evaluates to `false` (no `ρ'`
+-- satisfies `Env.Extends`, as `var 1` would need to be both a boolean and a bit-vector).
 theorem b_mk_exists.r_empty.proof : b_mk_exists.r_empty.Stmt := by
   sorry
 
+-- UNSOUND: for the same reason as `r_empty`. With `binders = [(2, .bool), (2, .bitVector 8)]`
+-- and `body = v_true`, the rule returns `exists []. true`, which evaluates to `true` (take
+-- `ρ' = ρ`), while the spec `exists [(2, bool), (2, bv 8)]. true` evaluates to `false`.
 theorem b_mk_exists.r_default.proof : b_mk_exists.r_default.Stmt := by
   sorry
 

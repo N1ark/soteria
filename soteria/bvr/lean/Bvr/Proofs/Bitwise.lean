@@ -304,10 +304,67 @@ theorem bv_and.r_masks.proof : bv_and.r_masks.Stmt := by
           (fun k c10 c20 => ofInt_zland c10 c20)))
 
 theorem bv_and.r_mask_or_mask.proof : bv_and.r_mask_or_mask.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [bv_and.r_mask_or_mask] at h
+  have C := fun {n} (x y : BitVec n) => BitVec.and_comm x y
+  have Co := fun {n} (x y : BitVec n) => BitVec.or_comm x y
+  have chain : ∀ M N P X : Term,
+      Refines FS (bv_or.spec (bv_and.spec M N) (bv_and.spec X (bv_and.spec M P)))
+        (O.bv_or (O.bv_and M N) (O.bv_and X (O.bv_and M P))) := fun M N P X =>
+    Refines.trans (Refines.binop_ty (fun a => ty a) (fun a b h => h) (hO.bv_and _ _)
+      (Refines.trans (Refines.binop_ty (fun a => .bitVector (size a))
+        (fun a b h => by simp [size, ty, h]) Refines.refl (hO.bv_and _ _)) (hO.bv_and _ _)))
+      (hO.bv_or _ _)
+  rcases orElse_eq_some8 h with h | h | h | h | h | h | h | h <;> split at h <;>
+    (try simp at h) <;> (try simp only [Option.some.injEq] at h) <;> subst h <;>
+    refine Refines.trans ?_ (chain _ _ _ _)
+  · exact and_mask_or_mask (fun k h1 _ => h1)
+  · exact Refines.trans (BitOp.and.congr Refines.refl
+      (BitOp.or.congr Refines.refl (BitOp.and.comm C))) (and_mask_or_mask (fun k h1 _ => h1))
+  · exact Refines.trans (BitOp.and.congr Refines.refl (BitOp.or.comm Co)) (and_mask_or_mask (fun k h1 _ => h1))
+  · exact Refines.trans (BitOp.and.congr Refines.refl (Refines.trans (BitOp.or.comm Co)
+      (BitOp.or.congr Refines.refl (BitOp.and.comm C)))) (and_mask_or_mask (fun k h1 _ => h1))
+  · exact Refines.trans (BitOp.and.comm C) (and_mask_or_mask (fun k _ h2 => h2))
+  · exact Refines.trans (BitOp.and.comm C) (Refines.trans (BitOp.and.congr Refines.refl
+      (BitOp.or.congr Refines.refl (BitOp.and.comm C))) (and_mask_or_mask (fun k _ h2 => h2)))
+  · exact Refines.trans (BitOp.and.comm C) (Refines.trans
+      (BitOp.and.congr Refines.refl (BitOp.or.comm Co)) (and_mask_or_mask (fun k _ h2 => h2)))
+  · exact Refines.trans (BitOp.and.comm C) (Refines.trans (BitOp.and.congr Refines.refl
+      (Refines.trans (BitOp.or.comm Co) (BitOp.or.congr Refines.refl (BitOp.and.comm C))))
+      (and_mask_or_mask (fun k _ h2 => h2)))
 
 theorem bv_and.r_mask_or.proof : bv_and.r_mask_or.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [bv_and.r_mask_or] at h
+  have C := fun {n} (x y : BitVec n) => BitVec.and_comm x y
+  have Co := fun {n} (x y : BitVec n) => BitVec.or_comm x y
+  rcases orElse_eq_some4 h with h | h | h | h <;> split at h <;> (try simp at h) <;>
+    (try simp only [Option.some.injEq] at h) <;> subst h
+  all_goals
+    split
+    · rename_i hmo; (try simp only [decide_eq_true_eq] at hmo)
+      first
+        | exact and_lit_or_lit_abs (fun n ht => by simpa using ht) hmo
+        | exact Refines.trans (BitOp.and.congr Refines.refl (BitOp.or.comm Co))
+            (and_lit_or_lit_abs (fun n ht => by simpa using ht) hmo)
+        | exact Refines.trans (BitOp.and.comm C)
+            (and_lit_or_lit_abs (fun n ht => by simpa using ht) hmo)
+        | exact Refines.trans (BitOp.and.comm C) (Refines.trans
+            (BitOp.and.congr Refines.refl (BitOp.or.comm Co))
+            (and_lit_or_lit_abs (fun n ht => by simpa using ht) hmo))
+    split
+    · rename_i hmo; (try simp only [decide_eq_true_eq] at hmo)
+      refine Refines.trans ?_ (hO.bv_and _ _)
+      first
+        | exact and_lit_or_lit_zero (fun n ht => by simpa using ht) hmo
+        | exact Refines.trans (BitOp.and.congr Refines.refl (BitOp.or.comm Co))
+            (and_lit_or_lit_zero (fun n ht => by simpa using ht) hmo)
+        | exact Refines.trans (BitOp.and.comm C)
+            (and_lit_or_lit_zero (fun n ht => by simpa using ht) hmo)
+        | exact Refines.trans (BitOp.and.comm C) (Refines.trans
+            (BitOp.and.congr Refines.refl (BitOp.or.comm Co))
+            (and_lit_or_lit_zero (fun n ht => by simpa using ht) hmo))
+    · exact BitOp.and.commut C
 
 theorem bv_and.r_right_mask.proof : bv_and.r_right_mask.Stmt := by
   intro FS O hO v1 v2 res h
@@ -486,13 +543,86 @@ theorem bv_or.r_masks.proof : bv_or.r_masks.Stmt := by
           (fun k c10 c20 => ofInt_zlor c10 c20)))
 
 theorem bv_or.r_extend_shl.proof : bv_or.r_extend_shl.Stmt := by
-  -- UNSOUND: when `nx = 0` (an extension by zero bits, which is well-typed), the last branch
-  -- builds `O.bv_extract 0 (-1) tail`, which is ill-typed. With `base` and `tail` variables of
-  -- type `bitVector 1` both valued `1#1` and `shift = 1`, the spec
-  -- `(zext 0 base) ||| ((zext 0 tail) <<< 1)` evaluates to `1#1`, but for `O` the specs
-  -- themselves (a sound `O`) the result `bv_concat.spec (bv_extract.spec 0 (-1) tail) base` is
-  -- ill-typed, hence poison.
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [bv_or.r_extend_shl] at h
+  split at h
+  case h_2 => simp at h
+  split at h
+  case isFalse => simp at h
+  rename_i nx base T1 k tail T4 s T5 T2 hc
+  simp only [Bool.and_eq_true, decide_eq_true_eq] at hc; obtain ⟨hs, hnx⟩ := hc
+  simp only [Option.some.injEq] at h; subst h
+  simp only [bv_or.spec, ty, Term.ty_mk]
+  split
+  · rename_i h1; simp only [decide_eq_true_eq] at h1
+    refine Refines.trans ?_ (hO.bv_concat _ _)
+    refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+    · obtain ⟨nb, nt, hnb, hnt, hb, ht, -, hk, hsum, hT1, -, wb, wt⟩ := extend_shl_WT w
+      simp only [size, ty, ht, size_of_ty] at h1
+      refine ⟨WT_concat.2 ⟨nt, nb, hnt, hnb, ht, hb, by simp [size, ty, ht, hb, size_of_ty], wt, wb⟩, ?_⟩
+      simp [bv_concat.spec, size, ty, ht, hb, size_of_ty, hT1]; omega
+    · obtain ⟨nb, nt, xb, xt, N, Y, hN, hnb, hnt, hb, ht, -, hk, hsum, hT1, eb, et, rfl, hY⟩ :=
+        extend_shl_eval hs e
+      simp only [size, ty, ht, size_of_ty] at h1
+      rw [bv_concat.spec, eval_concat_of w' et eb]
+      congr 1
+      apply Val.bv_ext (by omega)
+      intro i hi
+      rw [hY, BitVec.getLsbD_append]
+      have : i < N := by omega
+      simp [this]
+  · rename_i h1; simp only [decide_eq_true_eq] at h1
+    split
+    · rename_i h2; simp only [decide_eq_true_eq] at h2
+      refine Refines.trans ?_ (Refines.trans (Refines.unop_ty
+        (fun a => .bitVector (size a + (nx - size tail))) (fun x y h => by simp [size, ty, h])
+        (hO.bv_concat tail base)) (hO.bv_extend _ _ _))
+      refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+      · obtain ⟨nb, nt, hnb, hnt, hb, ht, -, hk, hsum, hT1, -, wb, wt⟩ := extend_shl_WT w
+        simp only [size, ty, ht, size_of_ty] at h1 h2 ⊢
+        refine ⟨WT_extend.2 ⟨nt + nb, by omega, by simp [bv_concat.spec, size, ty, ht, hb,
+          size_of_ty], by omega, by simp [bv_concat.spec, size, ty, ht, hb, size_of_ty], WT_concat.2 ⟨nt, nb, hnt, hnb, ht, hb,
+          by simp [size, ty, ht, hb, size_of_ty], wt, wb⟩⟩, ?_⟩
+        simp [bv_concat.spec, size, ty, ht, hb, size_of_ty, hT1]; omega
+      · obtain ⟨nb, nt, xb, xt, N, Y, hN, hnb, hnt, hb, ht, -, hk, hsum, hT1, eb, et, rfl, hY⟩ :=
+          extend_shl_eval hs e
+        simp only [size, ty, ht, size_of_ty] at h1 h2 w' ⊢
+        rw [eval_extend_of w' (eval_concat_of (WT_unop.1 w').2 et eb)]
+        congr 1
+        apply Val.bv_ext (by omega)
+        intro i hi
+        rw [hY]
+        simp only [Bool.false_eq_true, ↓reduceIte, BitVec.getLsbD_setWidth,
+          BitVec.getLsbD_append]
+        have h3 : i < N := by omega
+        simp [h3, hi]
+    · rename_i h2; simp only [decide_eq_true_eq] at h2
+      refine Refines.trans ?_ (Refines.trans (Refines.binop_ty2
+        (fun a b => .bitVector (size a + size b)) (fun x x' y y' h h' => by simp [size, ty, h, h'])
+        (hO.bv_extract 0 (nx - 1) tail) Refines.refl) (hO.bv_concat _ _))
+      refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+      · obtain ⟨nb, nt, hnb, hnt, hb, ht, -, hk, hsum, hT1, -, wb, wt⟩ := extend_shl_WT w
+        simp only [size, ty, ht, size_of_ty] at h1 h2 ⊢
+        refine ⟨WT_concat.2 ⟨nx, nb, hnx, hnb, by simp [bv_extract.spec], hb,
+          by simp [bv_extract.spec, size, ty, hb, size_of_ty],
+          WT_extract.2 ⟨nt, ht, by omega, by omega, by omega, by simp, wt⟩, wb⟩, ?_⟩
+        simp [bv_extract.spec, size, ty, hb, size_of_ty, hT1]; omega
+      · obtain ⟨nb, nt, xb, xt, N, Y, hN, hnb, hnt, hb, ht, -, hk, hsum, hT1, eb, et, rfl, hY⟩ :=
+          extend_shl_eval hs e
+        simp only [size, ty, ht, size_of_ty] at h1 h2 w' ⊢
+        rw [eval_concat_of w' (eval_extract_of (WT_binop.1 w').2.1 et) eb]
+        congr 1
+        apply Val.bv_ext (by omega)
+        intro i hi
+        rw [hY]
+        simp only [BitVec.getLsbD_extractLsb', BitVec.getLsbD_append]
+        have h3 : i < N := by omega
+        have h4 : nx - 1 - 0 + 1 = nx := by omega
+        simp only [h3, h4, decide_true, Bool.true_and, Int.toNat_zero, Nat.zero_add]
+        split
+        · rfl
+        · have : i - nb.toNat < nx.toNat := by omega
+          simp [this]
 
 theorem bv_or.r_of_bools.proof : bv_or.r_of_bools.Stmt := by
   intro FS O hO v1 v2 res h
@@ -1475,11 +1605,12 @@ theorem bv_shl.r_big.proof : bv_shl.r_big.Stmt := by
     bitw_simp
 
 theorem bv_shl.r_shl.proof : bv_shl.r_shl.Stmt := by
-  -- UNSOUND: the shift amounts are added modulo 2^n. With n = 1, `v` a variable of type
-  -- `bitVector 1` valued `1#1` and `s1 = s2 = 1`, the spec `(v <<< 1) <<< 1` evaluates to `0#1`,
-  -- but the result is `O.bv_shl v (mk_bv 1 2)`, where `mk_bv 1 2` is the literal `0#1`, and it
-  -- refines `v <<< 0`, which evaluates to `1#1`.
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [bv_shl.r_shl] at h
+  split at h <;> simp at h; subst h
+  rename_i v s1 T1 T2 s2 T3
+  exact Refines.trans (BitOp.shl.shift_shift (g := fun N => zmin (s1 + s2) N)
+    (fun k _ x s10 s11 s20 s21 => shl_shl_lits x s10 s11 s20 s21)) (hO.bv_shl _ _)
 
 theorem bv_shl.r_lshr.proof : bv_shl.r_lshr.Stmt := by
   intro FS O hO v1 v2 res h
@@ -1667,11 +1798,12 @@ theorem bv_lshr.r_big.proof : bv_lshr.r_big.Stmt := by
     bitw_simp
 
 theorem bv_lshr.r_lshr.proof : bv_lshr.r_lshr.Stmt := by
-  -- UNSOUND: the shift amounts are added modulo 2^n. With n = 1, `v` a variable of type
-  -- `bitVector 1` valued `1#1` and `s1 = s2 = 1`, the spec `(v >>> 1) >>> 1` evaluates to `0#1`,
-  -- but the result is `O.bv_lshr v (mk_bv 1 2)`, where `mk_bv 1 2` is the literal `0#1`, and it
-  -- refines `v >>> 0`, which evaluates to `1#1`.
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [bv_lshr.r_lshr] at h
+  split at h <;> simp at h; subst h
+  rename_i v s1 T1 T2 s2 T3
+  exact Refines.trans (BitOp.lshr.shift_shift (g := fun N => zmin (s1 + s2) N)
+    (fun k _ x s10 s11 s20 s21 => lshr_lshr_lits x s10 s11 s20 s21)) (hO.bv_lshr _ _)
 
 theorem bv_lshr.r_and_mask.proof : bv_lshr.r_and_mask.Stmt := by
   intro FS O hO v1 v2 res h
@@ -1795,11 +1927,12 @@ theorem bv_ashr.r_big.proof : bv_ashr.r_big.Stmt := by
     · bitw_simp
 
 theorem bv_ashr.r_ashr.proof : bv_ashr.r_ashr.Stmt := by
-  -- UNSOUND: the shift amounts are added modulo 2^n. With n = 2, `v` a variable of type
-  -- `bitVector 2` valued `1#2` and `s1 = s2 = 2`, the spec `ashr (ashr v 2) 2` evaluates to
-  -- `0#2`, but the result is `O.bv_ashr v (mk_bv 2 4)`, where `mk_bv 2 4` is the literal `0#2`,
-  -- and it refines `ashr v 0`, which evaluates to `1#2`.
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [bv_ashr.r_ashr] at h
+  split at h <;> simp at h; subst h
+  rename_i v s1 T1 T2 s2 T3
+  exact Refines.trans (BitOp.ashr.shift_shift (g := fun N => zmin (s1 + s2) (N - 1))
+    (fun k hk x s10 s11 s20 s21 => ashr_ashr_lits hk x s10 s11 s20 s21)) (hO.bv_ashr _ _)
 
 theorem bv_ashr.r_default.proof : bv_ashr.r_default.Stmt := by
   intro FS O hO v1 v2 res h

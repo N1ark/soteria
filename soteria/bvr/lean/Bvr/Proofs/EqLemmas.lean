@@ -821,5 +821,32 @@ theorem BitVec.ofBool_inj {k : Nat} (hk : 0 < k) {b1 b2 : Bool} :
     ((if b1 then 1 else 0 : BitVec k) = if b2 then 1 else 0) ↔ b1 = b2 := by
   cases b1 <;> cases b2 <;> simp <;> omega
 
+
+theorem pand_bools (a b : Bool) :
+    pand (some (.bool a)) (some (.bool b)) = some (.bool (a && b)) := by
+  cases a <;> cases b <;> rfl
+
+/-- An equality that splits into the conjunction of two equalities. -/
+theorem Refines.eq_and {FS : FloatSem} {a b c d e f : Term}
+    (syn : a.ty = b.ty → a.WT → b.WT → c.ty = d.ty ∧ c.WT ∧ d.WT ∧ e.ty = f.ty ∧ e.WT ∧ f.WT)
+    (sem : ∀ ρ x y, a.ty = b.ty → a.WT → b.WT → eval FS ρ a = some x →
+      eval FS ρ b = some y → ∃ xc xd xe xf, eval FS ρ c = some xc ∧ eval FS ρ d = some xd ∧
+        eval FS ρ e = some xe ∧ eval FS ρ f = some xf ∧ (x = y ↔ xc = xd ∧ xe = xf)) :
+    Refines FS (sem_eq.spec a b) (b_and.spec (sem_eq.spec c d) (sem_eq.spec e f)) := by
+  refine Refines.intro (fun w => ?_) (fun ρ v w w' hev => ?_)
+  · have ⟨h1, h2, h3⟩ := WT_sem_eq.1 w
+    obtain ⟨k1, k2, k3, k4, k5, k6⟩ := syn h1 h2 h3
+    exact ⟨WT_and.2 ⟨by simp, by simp, rfl, WT_sem_eq.2 ⟨k1, k2, k3⟩, WT_sem_eq.2 ⟨k4, k5, k6⟩⟩,
+      rfl⟩
+  · have ⟨h1, h2, h3⟩ := WT_sem_eq.1 w
+    obtain ⟨x, y, hx, hy, rfl⟩ := eval_eq_some hev
+    obtain ⟨xc, xd, xe, xf, ec, ed, ee, ef, hiff⟩ := sem ρ x y h1 h2 h3 hx hy
+    have ⟨_, wl, wr⟩ := WT_binop.1 w'
+    simp only [sem_eq.spec] at wl wr
+    rw [b_and.spec, eval_binop w', sem_eq.spec, sem_eq.spec, eval_eq_of wl ec ed,
+      eval_eq_of wr ee ef, evBinop, pand_bools]
+    simp only [Option.some.injEq, Val.bool.injEq]
+    by_cases h : x = y <;> simp_all
+
 end EqL
 end Bvr

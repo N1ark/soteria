@@ -24,7 +24,29 @@ theorem sem_eq.r_bools.proof : sem_eq.r_bools.Stmt := by
   cases hx; cases hy; simp
 
 theorem sem_eq.r_ptrs.proof : sem_eq.r_ptrs.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [sem_eq.r_ptrs] at h
+  split at h <;> simp at h
+  subst h
+  refine Refines.trans ?_ (Refines.b_and hO (hO.sem_eq _ _) (hO.sem_eq _ _))
+  refine Refines.eq_and (fun hT w1 w2 => ?_) (fun ρ x y hT w1 w2 hx hy => ?_)
+  · obtain ⟨n, _, rfl, hl, ho, wl, wo⟩ := WT_ptr.1 w1
+    obtain ⟨m, _, hm, hl', ho', wl', wo'⟩ := WT_ptr.1 w2
+    simp only [Term.ty_mk] at hT hm; rw [← hT] at hm; cases hm
+    exact ⟨by rw [hl, hl'], wl, wl', by rw [ho, ho'], wo, wo'⟩
+  · obtain ⟨n, x1, y1, e1, e2, rfl⟩ := (eval_ptr_eq_some w1).1 hx
+    obtain ⟨m, x2, y2, e3, e4, rfl⟩ := (eval_ptr_eq_some w2).1 hy
+    obtain ⟨N, _, hN, hl, _⟩ := WT_ptr.1 w1
+    obtain ⟨M, _, hM, hl', _⟩ := WT_ptr.1 w2
+    simp only [Term.ty_mk] at hT hN hM
+    rw [hT, hM] at hN; cases hN
+    obtain ⟨_, _, h1⟩ := eval_bv_of_ty e1 (Or.inr hl)
+    obtain ⟨_, _, h2⟩ := eval_bv_of_ty e3 (Or.inr hl')
+    simp only [Val.bv.injEq] at h1 h2
+    have : m = n := by omega
+    subst this
+    refine ⟨_, _, _, _, e1, e3, e2, e4, ?_⟩
+    simp
 
 theorem sem_eq.r_bvs.proof : sem_eq.r_bvs.Stmt := by
   intro FS O hO v1 v2 res h
@@ -626,15 +648,9 @@ theorem float_add.r_lits.proof : float_add.r_lits.Stmt := by
   exact Refines.float_bin_lits hO (by simp)
 
 theorem float_add.r_default.proof : float_add.r_default.Stmt := by
-  -- UNSOUND: when `tag_le v1 v2 = false` the result is `fAdd v2 v1`, but `FS.add` need not
-  -- be commutative on bit patterns: with two NaN operands, which payload propagates is
-  -- implementation-defined (x86 SSE `addss` returns the first operand's). Counterexample:
-  -- `FS.add p x y := x` (quiet-NaN propagation of the first operand), `O := opsRaw orc` with
-  -- `orc.tag_le := fun _ _ => false` and `orc.f_add f1 f2 := f1` (so `O.Sound FS`),
-  -- v1 = var 0 : float f32, v2 = var 1 : float f32, ρ.var 0 = float f32 0x7fc00001,
-  -- ρ.var 1 = float f32 0x7fc00002. The spec `fAdd v1 v2` evaluates to 0x7fc00001, the
-  -- result `fAdd v2 v1` to 0x7fc00002.
-  sorry
+  intro FS O hO v1 v2 res h
+  simp [float_add.r_default] at h; subst h
+  exact Refines.refl
 
 theorem float_sub.r_lits.proof : float_sub.r_lits.Stmt := by
   intro FS O hO v1 v2 res h
@@ -668,12 +684,9 @@ theorem float_mul.r_lits.proof : float_mul.r_lits.Stmt := by
   exact Refines.float_bin_lits hO (by simp)
 
 theorem float_mul.r_default.proof : float_mul.r_default.Stmt := by
-  -- UNSOUND: as for `float_add.r_default`, the operands may be swapped (`fMul v2 v1`), but
-  -- `FS.mul` need not be commutative on NaN payloads. Counterexample: `FS.mul p x y := x`,
-  -- `O := opsRaw orc` with `orc.tag_le := fun _ _ => false` and `orc.f_mul f1 f2 := f1`,
-  -- v1 = var 0, v2 = var 1 : float f32 with values 0x7fc00001 and 0x7fc00002: the spec
-  -- evaluates to 0x7fc00001, the result to 0x7fc00002.
-  sorry
+  intro FS O hO v1 v2 res h
+  simp [float_mul.r_default] at h; subst h
+  exact Refines.refl
 
 theorem float_rem.r_lits.proof : float_rem.r_lits.Stmt := by
   intro FS O hO v1 v2 res h

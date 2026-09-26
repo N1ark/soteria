@@ -1108,5 +1108,13 @@ theorem BoolT_ite {c : Prop} [Decidable c] {a b : Term} (ha : BoolT a) (hb : Boo
   split <;> assumption
 
 
+theorem umul_mulOvf_div {w : Nat} (X Y : BitVec w) : X.umulOverflow (Y.smtUDiv X) = false := by
+  rw [umul_ok, BitVec.smtUDiv_eq]
+  split
+  · rename_i h; subst h; simp [Nat.two_pow_pos]
+  · rw [BitVec.toNat_udiv]
+    exact Nat.lt_of_le_of_lt (Nat.mul_div_le _ _) Y.isLt
+
+
 end ArithL
 end Bvr

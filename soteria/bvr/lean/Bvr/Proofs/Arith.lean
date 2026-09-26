@@ -1262,10 +1262,34 @@ theorem bv_add_overflows.r_default.proof : bv_add_overflows.r_default.Stmt := by
   exact Refines.commut_binop (.addOvf s)
 
 theorem bv_mul_overflows.r_lits.proof : bv_mul_overflows.r_lits.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_mul_overflows.r_lits] at h; split at h <;> simp at h; subst h
+  refine Refines.cmp_intro (.mulOvf s) (fun n wa wb hT => of_bool_BoolT _)
+    (fun n wa wb hT ρ x y v hx hy e => ?_)
+  obtain ⟨rfl, hz1⟩ := BV_lit wa; obtain ⟨-, hz2⟩ := BV_lit wb
+  rw [lit_eval_eq wa hx, lit_eval_eq wb hy] at e
+  simp [evBinop, bvBin] at e; subst e
+  rw [size_of_ty_bitVector, overflows_mul_lit wa.2.2 hz1.1 hz1.2 hz2.1 hz2.2, eval_of_bool]
 
 theorem bv_mul_overflows.r_size1.proof : bv_mul_overflows.r_size1.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_mul_overflows.r_size1] at h; split at h <;> simp at h; subst h
+  rename_i h1
+  simp only [Bool.and_eq_true, decide_eq_true_eq] at h1; obtain ⟨rfl, h1⟩ := h1
+  refine Refines.cmp_intro (.mulOvf true) (fun n wa wb hT => ?_)
+    (fun n wa wb hT ρ x y v hx hy e => ?_)
+  all_goals obtain rfl : n = 1 := by simpa [wa.2.1] using h1
+  all_goals have e1 := O_sem_eq hO wa (BV_bv_one (n := 1) (by omega))
+  all_goals have e2 := O_sem_eq hO wb (BV_bv_one (n := 1) (by omega))
+  all_goals have hr := O_b_and hO e1.1 e2.1
+  · exact hr.1
+  · rw [hr.2 ρ _ _ (e1.2 ρ x 1 hx (eval_bv_one (by omega))) (e2.2 ρ y 1 hy (eval_bv_one (by omega)))]
+    simp [evBinop, bvBin] at e; subst e
+    congr 2
+    clear hx hy
+    revert x y
+    show ∀ x y : BitVec 1, _
+    decide
 
 theorem bv_mul_overflows.r_msb.proof : bv_mul_overflows.r_msb.Stmt := by
   sorry
@@ -1274,13 +1298,36 @@ theorem bv_mul_overflows.r_const.proof : bv_mul_overflows.r_const.Stmt := by
   sorry
 
 theorem bv_mul_overflows.r_div.proof : bv_mul_overflows.r_div.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_mul_overflows.r_div] at h
+  rcases orElse_eq_some h with h | h <;> split at h <;> simp [equal] at h <;>
+    obtain ⟨⟨rfl, rfl⟩, rfl⟩ := h <;>
+    refine Refines.cmp_intro (.mulOvf false) (fun n wa wb hT => ⟨v_false_WT, rfl⟩)
+      (fun n wa wb hT ρ x y v hx hy e => ?_)
+  · rename_i y' _
+    obtain ⟨wy, wx, rfl⟩ := BV_arith_inv (.div false) wb
+    rw [eval_arith (.div false) wy wx rfl] at hy
+    obtain ⟨Y, X, hY, hX, hy⟩ := evBinop_inv (.inl (.div false)) wy wx hy
+    rw [hx] at hX; simp at hX; subst hX
+    simp [evBinop, bvBin] at hy e; subst hy; subst e
+    rw [umul_mulOvf_div]; exact eval_v_false
+  · rename_i y' _
+    obtain ⟨wy, wx, rfl⟩ := BV_arith_inv (.div false) wa
+    rw [eval_arith (.div false) wy wx rfl] at hx
+    obtain ⟨Y, X, hY, hX, hx⟩ := evBinop_inv (.inl (.div false)) wy wx hx
+    rw [hy] at hX; simp at hX; subst hX
+    simp [evBinop, bvBin] at hx e; subst hx; subst e
+    rw [umulOverflow_comm, umul_mulOvf_div]; exact eval_v_false
 
 theorem bv_mul_overflows.r_default.proof : bv_mul_overflows.r_default.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_mul_overflows.r_default] at h; simp at h; subst h
+  exact Refines.commut_binop (.mulOvf s)
 
 theorem bv_neg_overflows.r_main.proof : bv_neg_overflows.r_main.Stmt := by
-  sorry
+  intro FS O hO v res h
+  simp only [bv_neg_overflows.r_main] at h; simp at h; subst h
+  exact hO.sem_eq _ _
 
 theorem bv_sub_overflows.r_lits.proof : bv_sub_overflows.r_lits.Stmt := by
   sorry

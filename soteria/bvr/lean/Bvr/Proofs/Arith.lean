@@ -1355,10 +1355,13 @@ theorem bv_div.r_div_mul.proof : bv_div.r_div_mul.Stmt := by
   · refine Refines.trans (Refines.binop (Refines.comm (.mul _)) Refines.refl (fun _ => rfl))
       (bv_div.div_mul_aux hO hd (fun m h => by simp [h]))
 
--- UNSOUND: when the inner divisor is zero, `x / 0` is all ones (SMT-LIB), and dividing it again
--- differs from dividing `x` by `0 * d = 0`. Take 8 bits, `signed = false`, v1 = Div (false, x, 0),
--- v2 = 2, with x = 5 (take `O` returning the raw spec terms); `overflows_mul false 8 0 2` is false.
--- The spec is `(5 /u 0) /u 2 = 0xff /u 2 = some 0x7f`, and the result is `x /u 0 = some 0xff`.
+-- UNSOUND (still, after requiring `n <> 0`; the unsigned case is sound): signed division wraps,
+-- and `x /s 0` depends on the sign of `x`. Take 8 bits, `signed = s = true`, v1 = Div (true, x,
+-- 0xff), v2 = 2, with x = 0x80 (-128) (take `O` returning the raw spec terms). Then
+-- `overflows_mul true 8 255 2` is false (-1 * 2 = -2). The spec is `(0x80 /s 0xff) /s 2 =
+-- 0x80 /s 2 = some 0xc0` (-64), and the result is `x /s mk_bv 8 510 = 0x80 /s 0xfe = some 0x40`
+-- (64). Another one, with a zero outer divisor: v1 = Div (true, x, 2), v2 = 0, x = 0xff (-1); the
+-- spec is `(0xff /s 2) /s 0 = 0 /s 0 = some 0xff`, and the result is `0xff /s 0 = some 0x01`.
 theorem bv_div.r_div_div.proof : bv_div.r_div_div.Stmt := by
   sorry
 

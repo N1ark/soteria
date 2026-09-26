@@ -7,10 +7,23 @@ namespace Bvr
 open Classical CompareL
 
 theorem bv_lt.r_lits.proof : bv_lt.r_lits.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_lt.r_lits] at h
+  split at h <;> simp at h
+  subst h
+  refine cmp_refines_lt (fun _ _ _ _ => ⟨of_bool_WT, of_bool_ty⟩)
+    (fun ρ N n x y hN h1 h2 hn _ e1 e2 => ?_)
+  obtain ⟨rfl, rfl, -⟩ := lit_val h1 e1
+  simp only [eval_of_bool, size_eq, Term.ty_mk, size_of_ty_bitVector, lit_val' s h1 e1,
+    lit_val' s h2 e2]
 
 theorem bv_lt.r_same.proof : bv_lt.r_same.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_lt.r_same, equal] at h
+  by_cases hv : v1 = v2 <;> simp [hv] at h
+  subst h hv
+  refine cmp_refines_lt (fun _ _ _ _ => TBool_false) (fun ρ N n x y _ _ _ _ _ e1 e2 => ?_)
+  rw [e1] at e2; cases e2; simp
 
 theorem bv_lt.r_negs.proof : bv_lt.r_negs.Stmt := by
   sorry
@@ -97,13 +110,28 @@ theorem bv_lt.r_to_unsigned_r.proof : bv_lt.r_to_unsigned_r.Stmt := by
   sorry
 
 theorem bv_lt.r_default.proof : bv_lt.r_default.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_lt.r_default, Option.some.injEq] at h
+  subst h; exact Refines.refl
 
 theorem bv_leq.r_same.proof : bv_leq.r_same.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_leq.r_same, equal] at h
+  by_cases hv : v1 = v2 <;> simp [hv] at h
+  subst h hv
+  refine cmp_refines_leq (fun _ _ _ _ => TBool_true) (fun ρ N n x y _ _ _ _ _ e1 e2 => ?_)
+  rw [e1] at e2; cases e2; simp
 
 theorem bv_leq.r_lits.proof : bv_leq.r_lits.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_leq.r_lits] at h
+  split at h <;> simp at h
+  subst h
+  refine cmp_refines_leq (fun _ _ _ _ => ⟨of_bool_WT, of_bool_ty⟩)
+    (fun ρ N n x y hN h1 h2 hn _ e1 e2 => ?_)
+  obtain ⟨rfl, rfl, -⟩ := lit_val h1 e1
+  simp only [eval_of_bool, size_eq, Term.ty_mk, size_of_ty_bitVector, lit_val' s h1 e1,
+    lit_val' s h2 e2]
 
 theorem bv_leq.r_negs.proof : bv_leq.r_negs.Stmt := by
   sorry
@@ -178,6 +206,8 @@ theorem bv_leq.r_to_unsigned_r.proof : bv_leq.r_to_unsigned_r.Stmt := by
   sorry
 
 theorem bv_leq.r_default.proof : bv_leq.r_default.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_leq.r_default, Option.some.injEq] at h
+  subst h; exact Refines.refl
 
 end Bvr

@@ -5,6 +5,9 @@ import Bvr.Lemmas
 namespace Bvr
 namespace CompareL
 
+set_option linter.unusedVariables false
+set_option linter.unusedSimpArgs false
+
 open Classical
 
 /-! ## Integer readings of bit-vectors -/
@@ -103,6 +106,178 @@ theorem bvBin_eq_some {f : ∀ {n : Nat}, BitVec n → BitVec n → Option Val} 
 
 theorem bvBin_bv {f : ∀ {n : Nat}, BitVec n → BitVec n → Option Val} {n : Nat} (x y : BitVec n) :
     bvBin f (some (.bv n x)) (some (.bv n y)) = f x y := by simp [bvBin]
+
+/-! ### Evaluation preserves sorts -/
+
+theorem unop_hasSort {FS op a t v v'} (w : op.WT a t) (ha : ∀ va, v' = some va → va.hasSort a)
+    (h : evUnop FS op v' = some v) : v.hasSort t := by
+  rcases v' with _ | va
+  · simp at h
+  have ha := ha va rfl
+  cases op <;> rcases va with _ | _ | _ | _ | _ | _ <;> simp only [evUnop, reduceCtorEq, Option.some.injEq] at h
+  all_goals (try split at h) <;> (try simp only [reduceCtorEq, Option.some.injEq] at h)
+  all_goals subst h
+  all_goals simp only [Unop.WT] at w
+  all_goals first
+    | (obtain ⟨rfl, rfl⟩ := w; simp_all [Val.hasSort] <;> omega)
+    | (obtain ⟨n, hn, rfl, rfl⟩ := w; simp_all [Val.hasSort] <;> omega)
+    | (obtain ⟨hn, rfl, rfl⟩ := w; simp_all [Val.hasSort] <;> omega)
+    | (obtain ⟨hn, ⟨p, rfl⟩, rfl⟩ := w; simp_all [Val.hasSort] <;> omega)
+    | (obtain ⟨⟨n, hn, rfl⟩, rfl⟩ := w; simp_all [Val.hasSort] <;> omega)
+    | (obtain ⟨⟨q, rfl⟩, rfl⟩ := w; simp_all [Val.hasSort] <;> omega)
+    | (obtain ⟨n, rfl, h1, h2, h3, rfl⟩ := w; simp_all [Val.hasSort] <;> omega)
+    | (obtain ⟨n, hn, rfl, hk, rfl⟩ := w; simp_all [Val.hasSort] <;> omega)
+
+theorem fBin_eq_some {f : (p : Prec) → FBits p → FBits p → Option Val} {a b v} :
+    fBin f a b = some v ↔
+      ∃ p x y, a = some (.float p x) ∧ b = some (.float p y) ∧ f p x y = some v := by
+  constructor
+  · intro h
+    unfold fBin at h; split at h
+    · rename_i p x q y; split at h
+      · rename_i e; subst e; exact ⟨_, x, y, rfl, rfl, h⟩
+      · simp at h
+    · simp at h
+  · rintro ⟨p, x, y, rfl, rfl, h⟩; simpa [fBin] using h
+
+theorem binop_hasSort {FS op a b t v va vb} (w : op.WT a b t)
+    (ha : ∀ x, va = some x → x.hasSort a) (hb : ∀ x, vb = some x → x.hasSort b)
+    (h : evBinop FS op va vb = some v) : v.hasSort t := by
+  cases op
+  all_goals simp only [evBinop, checkedOp, fArith] at h
+  all_goals first
+    | (rw [pand_eq_some] at h; simp only [Binop.WT] at w; obtain ⟨_, _, rfl⟩ := w
+       rcases h with ⟨_, rfl⟩ | ⟨_, rfl⟩ | ⟨_, _, rfl⟩ <;> simp [Val.hasSort])
+    | (rw [por_eq_some] at h; simp only [Binop.WT] at w; obtain ⟨_, _, rfl⟩ := w
+       rcases h with ⟨_, rfl⟩ | ⟨_, rfl⟩ | ⟨_, _, rfl⟩ <;> simp [Val.hasSort])
+    | (rw [fBin_eq_some] at h; obtain ⟨p, x, y, rfl, rfl, h⟩ := h
+       have := ha _ rfl; simp only [Binop.WT] at w
+       obtain ⟨⟨q, rfl⟩, rfl, rfl⟩ := w
+       simp at h; subst h; simp_all [Val.hasSort])
+    | (rw [bvBin_eq_some] at h; obtain ⟨n, x, y, rfl, rfl, h⟩ := h
+       have := ha _ rfl; simp only [Binop.WT] at w
+       obtain ⟨⟨m, hm, rfl⟩, rfl, rfl⟩ := w
+       (try split at h) <;> simp at h <;> subst h <;> simp_all [Val.hasSort])
+    | (simp only [Binop.WT] at w; obtain ⟨_, rfl⟩ := w
+       rcases va with _ | x <;> rcases vb with _ | y <;> simp at h; subst h; simp [Val.hasSort])
+    | (simp only [Binop.WT] at w; obtain ⟨n, m, hn, hm, rfl, rfl, rfl⟩ := w
+       rcases va with _ | ⟨_ | ⟨n', x⟩ | _ | _ | _ | _⟩ <;>
+         rcases vb with _ | ⟨_ | ⟨m', y⟩ | _ | _ | _ | _⟩ <;> simp at h
+       subst h; have := ha _ rfl; have := hb _ rfl; simp_all [Val.hasSort]; omega)
+
+mutual
+theorem ev_hasSort {FS : FloatSem} {ρ : Env} :
+    ∀ (t : Term), t.WT → ∀ v, ev FS ρ t = some v → v.hasSort t.ty
+  | .mk (.var x) T, _, v, h => by
+      simp only [ev] at h; split at h
+      · split at h
+        · simp at h; subst h; simpa [Val.hasTy] using ‹_›
+        · simp at h
+      · simp at h
+  | .mk (.bool b) T, w, v, h => by
+      simp [Term.WT] at w; simp [ev] at h; subst h w; simp [Val.hasSort]
+  | .mk (.float f) T, w, v, h => by
+      simp [Term.WT] at w; simp [ev] at h; subst h; rw [w.1]; simp [FloatLit.sem, Val.hasSort]
+  | .mk (.bitVec z) T, w, v, h => by
+      obtain ⟨n, hn, hT, _⟩ := WT_bitVec.1 w
+      simp [ev] at h; subst h
+      rcases hT with rfl | rfl <;> simpa [Val.hasSort, Ty.width, size_of_ty] using hn
+  | .mk (.ptr l o) T, w, v, h => by
+      simp only [Term.WT, Ty.sort_eq] at w
+      obtain ⟨n, hn, rfl, hl, ho, wl, wo⟩ := w
+      simp only [ev] at h; split at h
+      · rename_i n' x m y hl' ho'
+        split at h
+        · simp at h; subst h
+          have := ev_hasSort l wl _ hl'; rw [hl] at this
+          simpa [Val.hasSort] using this
+        · simp at h
+      · simp at h
+  | .mk (.seq l) T, w, v, h => by
+      simp only [Term.WT] at w
+      obtain ⟨e, rfl, wl⟩ := w
+      simp only [ev, Option.map_eq_some_iff] at h
+      obtain ⟨vs, hvs, rfl⟩ := h
+      simpa [Val.hasSort] using evList_hasSort e l wl vs hvs
+  | .mk (.unop op a) T, w, v, h => by
+      simp only [ev] at h
+      have w1 := (WT_unop.1 w).1; simp only [Ty.sort_eq] at w1
+      exact unop_hasSort w1 (ev_hasSort a (WT_unop.1 w).2) h
+  | .mk (.binop op a b) T, w, v, h => by
+      simp only [ev] at h
+      have ⟨w1, wa, wb⟩ := WT_binop.1 w
+      simp only [Ty.sort_eq] at w1
+      exact binop_hasSort w1 (ev_hasSort a wa) (ev_hasSort b wb) h
+  | .mk (.triop .ite g a b) T, w, v, h => by
+      have ⟨w1, wg, wa, wb⟩ := WT_triop.1 w
+      simp only [Triop.WT, Ty.sort_eq] at w1
+      obtain ⟨_, hb, rfl⟩ := w1
+      simp only [ev] at h
+      split at h
+      · exact ev_hasSort a wa _ h
+      · have := ev_hasSort b wb _ h; rwa [hb] at this
+      · simp at h
+  | .mk (.triop .fma a b c) T, w, v, h => by
+      have ⟨w1, wa, wb, wc⟩ := WT_triop.1 w
+      simp only [Triop.WT, Ty.sort_eq] at w1
+      obtain ⟨⟨p, hp⟩, _, _, rfl⟩ := w1
+      simp only [ev] at h
+      unfold evFma at h
+      split at h
+      · rename_i p' x q y r z ha _ _
+        split at h
+        · simp at h; subst h
+          have := ev_hasSort a wa _ ha; rw [hp] at this ⊢; simpa [Val.hasSort] using this
+        · simp at h
+      · simp at h
+  | .mk (.nop .distinct l) T, w, v, h => by
+      simp only [Term.WT] at w; obtain ⟨rfl, _⟩ := w
+      simp only [ev, Option.map_eq_some_iff] at h
+      obtain ⟨vs, _, rfl⟩ := h; simp [Val.hasSort]
+  | .mk (.exists_ bs body) T, w, v, h => by
+      simp only [Term.WT] at w; obtain ⟨rfl, _⟩ := w
+      simp only [ev] at h; split at h
+      · simp at h; subst h; simp [Val.hasSort]
+      · simp at h
+  | .mk (.extension e) T, _, v, h => by
+      simp only [ev] at h; split at h
+      · split at h
+        · simp at h; subst h; simpa [Val.hasTy] using ‹_›
+        · simp at h
+      · simp at h
+
+theorem evList_hasSort {FS : FloatSem} {ρ : Env} :
+    ∀ (e : Ty) (l : List Term), Term.WTList e l → ∀ vs, evList FS ρ l = some vs →
+      Val.hasSortList vs e.sort
+  | e, [], _, vs, h => by simp [evList] at h; subst h; simp [Val.hasSortList]
+  | e, t :: ts, w, vs, h => by
+      simp only [Term.WTList] at w
+      obtain ⟨ht, wt, wts⟩ := w
+      simp only [evList] at h
+      split at h
+      · rename_i v vs' h1 h2
+        simp at h; subst h
+        have := ev_hasSort t wt _ h1
+        simp only [Ty.sort_eq] at ht
+        rw [ht] at this
+        exact ⟨this, evList_hasSort e ts wts vs' h2⟩
+      · simp at h
+end
+
+theorem eval_hasSort {FS ρ t v} (h : eval FS ρ t = some v) : v.hasSort t.ty := by
+  have w := eval_WT h
+  rw [eval_eq_ev w] at h
+  exact ev_hasSort t w v h
+
+/-- The value of a bit-vector term has its width. -/
+theorem eval_bv_width {FS ρ t n x} {N : Int} (hT : t.ty = .bitVector N)
+    (h : eval FS ρ t = some (.bv n x)) : (n : Int) = N ∧ 0 < n := by
+  have := eval_hasSort h; rw [hT] at this; simpa [Val.hasSort] using this
+
+theorem eval_bool_val {FS ρ t v} (hT : t.ty = .bool) (h : eval FS ρ t = some v) :
+    ∃ b, v = .bool b := by
+  have := eval_hasSort h; rw [hT] at this
+  rcases v with _ | _ | _ | _ | _ | _ <;> simp [Val.hasSort] at this; exact ⟨_, rfl⟩
 
 /-- [t] is a well-typed term of sort [bitVector N]. -/
 def TB (t : Term) (N : Int) : Prop := t.WT ∧ t.ty = .bitVector N
@@ -678,6 +853,95 @@ theorem max_for_nonneg {N : Nat} (hN : 0 < N) (s : Bool) : 0 ≤ max_for s N := 
   have := two_pow_pos' (N - 1)
   have := two_pow_succ_pred (N := N) hN
   rw [max_for_eq]; split <;> omega
+
+/-! ## Refinement of a comparison -/
+
+@[simp] theorem of_bool_WT {b} : (of_bool b).WT := by cases b <;> simp [of_bool]
+@[simp] theorem of_bool_ty {b} : (of_bool b).ty = .bool := by cases b <;> simp [of_bool]
+@[simp] theorem eval_of_bool {FS ρ b} : eval FS ρ (of_bool b) = some (.bool b) := by
+  cases b <;> simp [of_bool]
+
+/-- A comparison of bit-vectors, read as integers. -/
+def cmpv (le s : Bool) {n : Nat} (x y : BitVec n) : Bool :=
+  if le then decide (bvz s x ≤ bvz s y) else decide (bvz s x < bvz s y)
+
+/-- The comparison operator. -/
+def cmpOp (le s : Bool) : Binop := if le then .leq s else .lt s
+
+theorem cmpOp_is (le s : Bool) : ∃ s', cmpOp le s = .lt s' ∨ cmpOp le s = .leq s' := by
+  cases le <;> simp [cmpOp]
+
+theorem cmp_spec_eq_lt (s : Bool) (v1 v2 : Term) :
+    bv_lt.spec s v1 v2 = .mk (.binop (cmpOp false s) v1 v2) .bool := rfl
+theorem cmp_spec_eq_leq (s : Bool) (v1 v2 : Term) :
+    bv_leq.spec s v1 v2 = .mk (.binop (cmpOp true s) v1 v2) .bool := rfl
+
+theorem eval_cmp_eq_some {FS ρ le s a b t v}
+    (h : eval FS ρ (.mk (.binop (cmpOp le s) a b) t) = some v) :
+    ∃ n x y, eval FS ρ a = some (.bv n x) ∧ eval FS ρ b = some (.bv n y) ∧
+      v = .bool (cmpv le s x y) := by
+  cases le
+  · obtain ⟨n, x, y, h1, h2, h3⟩ := eval_lt_eq_some h
+    exact ⟨n, x, y, h1, h2, by simp [h3, cmpv]⟩
+  · obtain ⟨n, x, y, h1, h2, h3⟩ := eval_leq_eq_some h
+    exact ⟨n, x, y, h1, h2, by simp [h3, cmpv]⟩
+
+theorem eval_cmp_of {FS ρ le s a b t n} {x y : BitVec n}
+    (w : (Term.mk (.binop (cmpOp le s) a b) t).WT)
+    (ha : eval FS ρ a = some (.bv n x)) (hb : eval FS ρ b = some (.bv n y)) :
+    eval FS ρ (.mk (.binop (cmpOp le s) a b) t) = some (.bool (cmpv le s x y)) := by
+  cases le <;> simp only [cmpOp, Bool.false_eq_true, ite_false, ite_true] at w ⊢
+  · rw [eval_lt_of w ha hb]; simp [cmpv]
+  · rw [eval_leq_of w ha hb]; simp [cmpv]
+
+/-- The generic refinement lemma of the comparison rules. -/
+theorem cmp_refines {FS le s v1 v2 r}
+    (syn : ∀ N : Int, 0 < N → TB v1 N → TB v2 N → TBool r)
+    (sem : ∀ ρ (N : Int) (n : Nat) (x y : BitVec n), 0 < N → TB v1 N → TB v2 N → (n : Int) = N → 0 < n →
+      eval FS ρ v1 = some (.bv n x) → eval FS ρ v2 = some (.bv n y) →
+      eval FS ρ r = some (.bool (cmpv le s x y))) :
+    Refines FS (.mk (.binop (cmpOp le s) v1 v2) .bool) r := by
+  refine Refines.intro (fun w => ?_) (fun ρ v w _ e => ?_)
+  · obtain ⟨N, hN, h1, h2, _⟩ := (WT_cmp (cmpOp_is le s)).1 w
+    have := syn N hN h1 h2; exact ⟨this.1, by simp [this.2]⟩
+  · obtain ⟨N, hN, h1, h2, _⟩ := (WT_cmp (cmpOp_is le s)).1 w
+    obtain ⟨n, x, y, ea, eb, rfl⟩ := eval_cmp_eq_some e
+    have := eval_bv_width h1.2 ea
+    exact sem ρ N n x y hN h1 h2 this.1 this.2 ea eb
+
+theorem cmp_refines_lt {FS s v1 v2 r}
+    (syn : ∀ N : Int, 0 < N → TB v1 N → TB v2 N → TBool r)
+    (sem : ∀ ρ (N : Int) (n : Nat) (x y : BitVec n), 0 < N → TB v1 N → TB v2 N → (n : Int) = N → 0 < n →
+      eval FS ρ v1 = some (.bv n x) → eval FS ρ v2 = some (.bv n y) →
+      eval FS ρ r = some (.bool (decide (bvz s x < bvz s y)))) :
+    Refines FS (bv_lt.spec s v1 v2) r :=
+  cmp_refines (le := false) syn (fun ρ N n x y a b c d e f g => by
+    simpa [cmpv] using sem ρ N n x y a b c d e f g)
+
+theorem cmp_refines_leq {FS s v1 v2 r}
+    (syn : ∀ N : Int, 0 < N → TB v1 N → TB v2 N → TBool r)
+    (sem : ∀ ρ (N : Int) (n : Nat) (x y : BitVec n), 0 < N → TB v1 N → TB v2 N → (n : Int) = N → 0 < n →
+      eval FS ρ v1 = some (.bv n x) → eval FS ρ v2 = some (.bv n y) →
+      eval FS ρ r = some (.bool (decide (bvz s x ≤ bvz s y)))) :
+    Refines FS (bv_leq.spec s v1 v2) r :=
+  cmp_refines (le := true) syn (fun ρ N n x y a b c d e f g => by
+    simpa [cmpv] using sem ρ N n x y a b c d e f g)
+
+/-- The value of a literal of a width [N]. -/
+theorem lit_val {FS ρ z t N n} {x : BitVec n} (h : TB (.mk (.bitVec z) t) N)
+    (e : eval FS ρ (.mk (.bitVec z) t) = some (.bv n x)) :
+    N = n ∧ t = .bitVector n ∧ 0 < n ∧ 0 ≤ z ∧ z < 2 ^ n ∧ x = BitVec.ofInt n z ∧
+      bv_to_z false N z = bvz false x ∧ bv_to_z true N z = bvz true x := by
+  obtain ⟨M, rfl, hM, h0, h1, ev⟩ := TB_lit h
+  rw [ev] at e; simp at e; obtain ⟨rfl, e⟩ := e; cases e
+  have := h.2; simp only [Term.ty_mk] at this
+  exact ⟨rfl, this, hM, h0, h1, rfl, bv_to_z_lit hM false h0 h1, bv_to_z_lit hM true h0 h1⟩
+
+theorem lit_val' {FS ρ z t N n} {x : BitVec n} (s : Bool) (h : TB (.mk (.bitVec z) t) N)
+    (e : eval FS ρ (.mk (.bitVec z) t) = some (.bv n x)) : bv_to_z s N z = bvz s x := by
+  have := lit_val h e; cases s
+  · exact this.2.2.2.2.2.2.1
+  · exact this.2.2.2.2.2.2.2
 
 end CompareL
 end Bvr

@@ -1437,5 +1437,38 @@ theorem sdiv_lits_zero {w : Nat} (X Y : BitVec w) (h : X.toInt = 0) :
   rw [BitVec.smtSDiv_eq, ← BitVec.msb_eq_toInt]
   cases Y.msb <;> simp [BitVec.smtUDiv_zero, ← BitVec.neg_one_eq_allOnes, ofInt_neg_one']
 
+/-! ## Overflow of booleans as bit-vectors -/
+
+theorem ofBool_toNat {w : Nat} (hw : 1 < w) (b : Bool) :
+    (if b = true then 1#w else 0#w).toNat = if b then 1 else 0 := by
+  cases b <;> simp [Nat.one_mod_eq_one]; omega
+
+theorem ofBool_toInt {w : Nat} (hw : 1 < w) (b : Bool) :
+    (if b = true then 1#w else 0#w).toInt = if b then 1 else 0 := by
+  cases b
+  · simp
+  · simp only [↓reduceIte]; rw [BitVec.toInt_eq_toNat_cond]
+    have h4 : 4 ≤ 2 ^ w := by
+      have := Nat.pow_le_pow_right (n := 2) (by omega) hw; simpa using this
+    have : (1#w).toNat = 1 := by simp [Nat.one_mod_eq_one]; omega
+    rw [this]; split <;> omega
+
+theorem ofBools_addOvf {w : Nat} (hw : 1 < w) (s b1 b2 : Bool) (hs : ¬ (s = true ∧ w = 2)) :
+    (if s then (if b1 = true then 1#w else 0#w).saddOverflow (if b2 = true then 1#w else 0#w)
+      else (if b1 = true then 1#w else 0#w).uaddOverflow (if b2 = true then 1#w else 0#w)) =
+      false := by
+  cases s
+  · simp only [Bool.false_eq_true, ↓reduceIte]
+    rw [uadd_ok, ofBool_toNat hw, ofBool_toNat hw]
+    have h4 : 4 ≤ 2 ^ w := by
+      have := Nat.pow_le_pow_right (n := 2) (by omega) hw; simpa using this
+    split <;> split <;> omega
+  · simp only [↓reduceIte, true_and] at hs ⊢
+    rw [sadd_ok, ofBool_toInt hw, ofBool_toInt hw]
+    have h4 : 4 ≤ 2 ^ (w - 1) := by
+      have := Nat.pow_le_pow_right (n := 2) (by omega) (show 2 ≤ w - 1 by omega); simpa using this
+    have : (4 : Int) ≤ 2 ^ (w - 1) := by exact_mod_cast h4
+    split <;> split <;> omega
+
 end ArithL
 end Bvr

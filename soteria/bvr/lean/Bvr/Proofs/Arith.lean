@@ -1525,12 +1525,29 @@ theorem bv_add_overflows.r_signed.proof : bv_add_overflows.r_signed.Stmt := by
         saddOverflow_nonpos (by have := wa.2.2; omega) _ _ (by omega)]
       simp
 
--- UNSOUND: for one-bit vectors, `1 + 1` overflows (in both signednesses). Take `signed = false`,
--- v1 = BvOfBool (1, b1), v2 = BvOfBool (1, b2), with b1 = b2 = true. The spec is
--- `uaddOverflow 1 1 = some true`, and the result is `v_false`. In `bv_add_overflows.step`,
--- `r_size1` fires first on one-bit vectors.
 theorem bv_add_overflows.r_of_bools.proof : bv_add_overflows.r_of_bools.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_add_overflows.r_of_bools] at h; split at h <;> simp at h; obtain ⟨hm, rfl⟩ := h
+  rename_i m g1 T1 m2 g2 T2
+  refine Refines.cmp_intro (.addOvf s) (fun n wa wb hT => ?_)
+    (fun n wa wb hT ρ x y v hx hy e => ?_)
+  all_goals obtain ⟨rfl, wg1, hg1, rfl⟩ := BV_ofBool_inv wa
+  all_goals obtain ⟨rfl, wg2, hg2, -⟩ := BV_ofBool_inv wb
+  all_goals have hr := O_b_and hO ⟨wg1, hg1⟩ ⟨wg2, hg2⟩
+  · split
+    · exact hr.1
+    · exact ⟨v_false_WT, rfl⟩
+  · obtain ⟨b1, hb1, rfl⟩ := eval_ofBool_inv wa hx
+    obtain ⟨b2, hb2, rfl⟩ := eval_ofBool_inv wb hy
+    simp [evBinop, bvBin] at e; subst e
+    split
+    · rename_i hs
+      obtain ⟨rfl, rfl⟩ : s = true ∧ m2 = 2 := by simpa using hs
+      rw [hr.2 ρ b1 b2 hb1 hb2]
+      congr 2; cases b1 <;> cases b2 <;> decide
+    · rename_i hs
+      have hs' : s = true → ¬m2 = 2 := by simpa using hs
+      rw [eval_v_false, ofBools_addOvf (by omega) s b1 b2 (fun h => hs' h.1 (by omega))]
 
 -- UNSOUND: for one-bit vectors, `BvOfBool (1, true)` is -1 as a signed number, not 1. Take
 -- `signed = true`, v1 = BvOfBool (1, b), v2 = the literal 0 (of 1 bit), with b = true (take `O`

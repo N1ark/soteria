@@ -237,11 +237,12 @@ let[@spec Eq (v1, v2) <| TBool] sem_eq (v1 : t) (v2 : t) : t =
   | Ite (b, l, r), Ite (b, l', r') [@r ite_ite] ->
       b_ite b (sem_eq l l') (sem_eq r r')
   (* Cancelling a common factor [a] from [a*b == a*d] is only sound when [a] is
-     odd (invertible modulo 2^n), or when both multiplications are
-     overflow-checked (so they behave like exact integer arithmetic). *)
+     odd (invertible modulo 2^n), or when [a] is non-zero and both
+     multiplications are overflow-checked (so they behave like exact integer
+     arithmetic). *)
   | Mul (ck1, BitVec a, b) [@comm], Mul (ck2, BitVec a, d) [@comm]
     [@r mul_cancel]
-    when a land 1 = 1 || is_checked (checked_meet ck1 ck2) ->
+    when a land 1 = 1 || (a <> 0 && is_checked (checked_meet ck1 ck2)) ->
       sem_eq b d
   (* Bitvectors *)
   (* 0 == L | R ==> 0 == L && 0 == R, splitting is better for the PC *)

@@ -714,16 +714,16 @@ module Make (P : PRIMS) = struct
         when ((P.equal b bvr__1)) ->
         (b_ite b (sem_eq l l') (sem_eq r r'))
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (ck1)), { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (a); _ }; _ }, b); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (ck2)), { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (bvr__1); _ }; _ }, d); _ }; _ })
-        when ((((Z.equal a bvr__1)) && (((Z.equal (Z.logand a Z.one) Z.one)) || (is_checked (checked_meet ck1 ck2))))) ->
+        when ((((Z.equal a bvr__1)) && (((Z.equal (Z.logand a Z.one) Z.one)) || ((not (Z.equal a Z.zero)) && (is_checked (checked_meet ck1 ck2)))))) ->
         (sem_eq b d)
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (ck1)), { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (a); _ }; _ }, b); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (ck2)), d, { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (bvr__1); _ }; _ }); _ }; _ })
-        when ((((Z.equal a bvr__1)) && (((Z.equal (Z.logand a Z.one) Z.one)) || (is_checked (checked_meet ck1 ck2))))) ->
+        when ((((Z.equal a bvr__1)) && (((Z.equal (Z.logand a Z.one) Z.one)) || ((not (Z.equal a Z.zero)) && (is_checked (checked_meet ck1 ck2)))))) ->
         (sem_eq b d)
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (ck1)), b, { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (a); _ }; _ }); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (ck2)), { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (bvr__1); _ }; _ }, d); _ }; _ })
-        when ((((Z.equal a bvr__1)) && (((Z.equal (Z.logand a Z.one) Z.one)) || (is_checked (checked_meet ck1 ck2))))) ->
+        when ((((Z.equal a bvr__1)) && (((Z.equal (Z.logand a Z.one) Z.one)) || ((not (Z.equal a Z.zero)) && (is_checked (checked_meet ck1 ck2)))))) ->
         (sem_eq b d)
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (ck1)), b, { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (a); _ }; _ }); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (ck2)), d, { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (bvr__1); _ }; _ }); _ }; _ })
-        when ((((Z.equal a bvr__1)) && (((Z.equal (Z.logand a Z.one) Z.one)) || (is_checked (checked_meet ck1 ck2))))) ->
+        when ((((Z.equal a bvr__1)) && (((Z.equal (Z.logand a Z.one) Z.one)) || ((not (Z.equal a Z.zero)) && (is_checked (checked_meet ck1 ck2)))))) ->
         (sem_eq b d)
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (bvr__1); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.BitOr), l, r); _ }; _ })
         when (((Z.equal bvr__1 Z.zero))) ->

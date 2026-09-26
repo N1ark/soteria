@@ -1473,25 +1473,25 @@ def sem_eq.r_ite_ite (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 def sem_eq.r_mul_cancel (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | (Term.mk (Kind.binop (Binop.mul ck1) (Term.mk (Kind.bitVec a) _) b) _), (Term.mk (Kind.binop (Binop.mul ck2) (Term.mk (Kind.bitVec bvr__1) _) d) _) =>
-    (if ((decide (a = bvr__1)) && ((decide ((zland a (1 : Int)) = (1 : Int))) || (is_checked (checked_meet ck1 ck2))))
+    (if ((decide (a = bvr__1)) && ((decide ((zland a (1 : Int)) = (1 : Int))) || ((decide (a ≠ (0 : Int))) && (is_checked (checked_meet ck1 ck2)))))
     then some ((O.sem_eq b d))
     else none)
     | _, _ => none)
   <|> (match v1, v2 with
         | (Term.mk (Kind.binop (Binop.mul ck1) (Term.mk (Kind.bitVec a) _) b) _), (Term.mk (Kind.binop (Binop.mul ck2) d (Term.mk (Kind.bitVec bvr__1) _)) _) =>
-        (if ((decide (a = bvr__1)) && ((decide ((zland a (1 : Int)) = (1 : Int))) || (is_checked (checked_meet ck1 ck2))))
+        (if ((decide (a = bvr__1)) && ((decide ((zland a (1 : Int)) = (1 : Int))) || ((decide (a ≠ (0 : Int))) && (is_checked (checked_meet ck1 ck2)))))
         then some ((O.sem_eq b d))
         else none)
         | _, _ => none)
   <|> (match v1, v2 with
         | (Term.mk (Kind.binop (Binop.mul ck1) b (Term.mk (Kind.bitVec a) _)) _), (Term.mk (Kind.binop (Binop.mul ck2) (Term.mk (Kind.bitVec bvr__1) _) d) _) =>
-        (if ((decide (a = bvr__1)) && ((decide ((zland a (1 : Int)) = (1 : Int))) || (is_checked (checked_meet ck1 ck2))))
+        (if ((decide (a = bvr__1)) && ((decide ((zland a (1 : Int)) = (1 : Int))) || ((decide (a ≠ (0 : Int))) && (is_checked (checked_meet ck1 ck2)))))
         then some ((O.sem_eq b d))
         else none)
         | _, _ => none)
   <|> (match v1, v2 with
         | (Term.mk (Kind.binop (Binop.mul ck1) b (Term.mk (Kind.bitVec a) _)) _), (Term.mk (Kind.binop (Binop.mul ck2) d (Term.mk (Kind.bitVec bvr__1) _)) _) =>
-        (if ((decide (a = bvr__1)) && ((decide ((zland a (1 : Int)) = (1 : Int))) || (is_checked (checked_meet ck1 ck2))))
+        (if ((decide (a = bvr__1)) && ((decide ((zland a (1 : Int)) = (1 : Int))) || ((decide (a ≠ (0 : Int))) && (is_checked (checked_meet ck1 ck2)))))
         then some ((O.sem_eq b d))
         else none)
         | _, _ => none)

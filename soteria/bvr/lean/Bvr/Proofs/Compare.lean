@@ -1069,7 +1069,33 @@ theorem bv_leq.r_mul_mul.proof : bv_leq.r_mul_mul.Stmt := by
   sorry
 
 theorem bv_leq.r_udiv_big.proof : bv_leq.r_udiv_big.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_leq.r_udiv_big] at h
+  split at h <;> (try split at h) <;> simp at h
+  rename_i hc; subst h
+  simp at hc; obtain ⟨rfl, hc⟩ := hc
+  refine cmp_refines_leq (fun _ _ _ _ => TBool_true) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+  subst hn
+  obtain ⟨m, xa, xb, ea, eb, hv⟩ := eval_div_eq_some e1
+  simp at hv; obtain ⟨rfl, hv⟩ := hv; cases hv
+  have hd := lit_val' false (TB_div_inv h1).2.2 eb
+  have hy := lit_val' false h2 e2
+  rsz h1 at hc
+  simp only [bv_to_z_false] at hd hy
+  rw [hd, hy, max_for_false] at hc
+  simp only [bvz, Bool.false_eq_true, ite_false] at hc ⊢
+  have hc' : 2 ^ n ≤ y.toNat * xb.toNat := by
+    have : (2 : Int) ^ n ≤ (y.toNat : Int) * xb.toNat := by omega
+    exact_mod_cast this
+  have hpos : 0 < xb.toNat := by
+    rcases Nat.eq_zero_or_pos xb.toNat with h | h
+    · rw [h] at hc'; have := Nat.two_pow_pos n; omega
+    · exact h
+  have hxb : xb ≠ 0 := fun e => by subst e; simp at hpos
+  have hlt : xa.toNat / xb.toNat < y.toNat :=
+    (Nat.div_lt_iff_lt_mul hpos).2 (by have := xa.isLt; omega)
+  simp only [BitVec.smtUDiv, hxb, ite_false, eval_v_true, Option.some.injEq, Val.bool.injEq]
+  simp; omega
 
 theorem bv_leq.r_ite_l.proof : bv_leq.r_ite_l.Stmt := by
   intro FS O hO s v1 v2 res h

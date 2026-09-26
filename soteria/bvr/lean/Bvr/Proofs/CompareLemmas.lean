@@ -960,5 +960,14 @@ theorem ne_intMin_of_bvz {n : Nat} (hn : 0 < n) {x : BitVec n}
   intro e; apply h; rw [min_for_eq]; simp only [bvz, ite_true]
   exact (eq_intMin_iff hn).1 e
 
+theorem ite_inv {FS ρ g a b t v} (h : eval FS ρ (.mk (.triop .ite g a b) t) = some v) :
+    (eval FS ρ g = some (.bool true) ∧ eval FS ρ a = some v) ∨
+      (eval FS ρ g = some (.bool false) ∧ eval FS ρ b = some v) := by
+  rw [eval_ite (eval_WT h)] at h
+  split at h
+  · exact Or.inl ⟨‹_›, h⟩
+  · exact Or.inr ⟨‹_›, h⟩
+  · simp at h
+
 end CompareL
 end Bvr

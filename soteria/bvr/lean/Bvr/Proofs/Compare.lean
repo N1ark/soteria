@@ -90,25 +90,93 @@ theorem bv_lt.r_of_bool.proof : bv_lt.r_of_bool.Stmt := by
   sorry
 
 theorem bv_lt.r_ite_l.proof : bv_lt.r_ite_l.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_lt.r_ite_l] at h
+  split at h <;> simp at h
+  subst h
+  refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_ite hO (TB_ite_inv h1).1
+      (TBool_O_lt hO hN (TB_ite_inv h1).2.1 h2) (TBool_O_lt hO hN (TB_ite_inv h1).2.2 h2))
+    (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+  obtain ⟨hb, hl, hr⟩ := TB_ite_inv h1
+  refine eval_O_ite hO hb (TBool_O_lt hO hN hl h2) (TBool_O_lt hO hN hr h2) _ ?_
+  rcases ite_inv e1 with ⟨eg, ex⟩ | ⟨eg, ex⟩ <;> rw [eg] <;> dsimp only
+  · exact eval_O_lt hO hN hl h2 ex e2
+  · exact eval_O_lt hO hN hr h2 ex e2
 
 theorem bv_lt.r_ite_r.proof : bv_lt.r_ite_r.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_lt.r_ite_r] at h
+  split at h <;> simp at h
+  subst h
+  refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_ite hO (TB_ite_inv h2).1
+      (TBool_O_lt hO hN h1 (TB_ite_inv h2).2.1) (TBool_O_lt hO hN h1 (TB_ite_inv h2).2.2))
+    (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+  obtain ⟨hb, hl, hr⟩ := TB_ite_inv h2
+  refine eval_O_ite hO hb (TBool_O_lt hO hN h1 hl) (TBool_O_lt hO hN h1 hr) _ ?_
+  rcases ite_inv e2 with ⟨eg, ex⟩ | ⟨eg, ex⟩ <;> rw [eg] <;> dsimp only
+  · exact eval_O_lt hO hN h1 hl e1 ex
+  · exact eval_O_lt hO hN h1 hr e1 ex
 
 theorem bv_lt.r_lt_zero.proof : bv_lt.r_lt_zero.Stmt := by
   sorry
 
 theorem bv_lt.r_max_l.proof : bv_lt.r_max_l.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_lt.r_max_l] at h
+  split at h <;> (try split at h) <;> simp at h
+  rename_i hc; subst h; have hc := of_decide_eq_true hc
+  refine cmp_refines_lt (fun _ _ _ _ => TBool_false) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+  obtain ⟨rfl, -⟩ := lit_val h1 e1
+  rw [TB_size h1, lit_val' s h1 e1] at hc
+  have := bvz_range hn0 s x; have := bvz_range hn0 s y
+  simp only [eval_v_true, eval_v_false, Option.some.injEq, Val.bool.injEq]
+  symm; simp only [decide_eq_true_eq, decide_eq_false_iff_not]; omega
 
 theorem bv_lt.r_min_r.proof : bv_lt.r_min_r.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_lt.r_min_r] at h
+  split at h <;> (try split at h) <;> simp at h
+  rename_i hc; subst h; have hc := of_decide_eq_true hc
+  refine cmp_refines_lt (fun _ _ _ _ => TBool_false) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+  obtain ⟨rfl, -⟩ := lit_val h2 e2
+  rw [TB_size h1, lit_val' s h2 e2] at hc
+  have := bvz_range hn0 s x; have := bvz_range hn0 s y
+  simp only [eval_v_true, eval_v_false, Option.some.injEq, Val.bool.injEq]
+  symm; simp only [decide_eq_true_eq, decide_eq_false_iff_not]; omega
 
 theorem bv_lt.r_min_l.proof : bv_lt.r_min_l.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_lt.r_min_l] at h
+  split at h <;> (try split at h) <;> simp at h
+  rename_i hc; subst h; have hc := of_decide_eq_true hc
+  refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_not hO (TBool_O_eq hO h1 h2))
+    (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+  obtain ⟨rfl, -⟩ := lit_val h1 e1
+  rw [TB_size h1, lit_val' s h1 e1] at hc
+  rw [eval_O_not hO (TBool_O_eq hO h1 h2) (eval_O_eq hO h1.1 h2.1 (h1.2.trans h2.2.symm) e1 e2)]
+  have := bvz_range hn0 s x; have := bvz_range hn0 s y
+  simp only [Option.some.injEq, Val.bool.injEq, val_bv_eq]
+  by_cases e : x = y
+  · subst e; simp
+  · have : bvz s x ≠ bvz s y := fun h => e (bvz_inj.1 h)
+    simp [e]; omega
 
 theorem bv_lt.r_max_r.proof : bv_lt.r_max_r.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_lt.r_max_r] at h
+  split at h <;> (try split at h) <;> simp at h
+  rename_i hc; subst h; have hc := of_decide_eq_true hc
+  refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_not hO (TBool_O_eq hO h1 h2))
+    (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+  obtain ⟨rfl, -⟩ := lit_val h2 e2
+  rw [TB_size h1, lit_val' s h2 e2] at hc
+  rw [eval_O_not hO (TBool_O_eq hO h1 h2) (eval_O_eq hO h1.1 h2.1 (h1.2.trans h2.2.symm) e1 e2)]
+  have := bvz_range hn0 s x; have := bvz_range hn0 s y
+  simp only [Option.some.injEq, Val.bool.injEq, val_bv_eq]
+  by_cases e : x = y
+  · subst e; simp
+  · have : bvz s x ≠ bvz s y := fun h => e (bvz_inj.1 h)
+    simp [e]; omega
 
 theorem bv_lt.r_const_mul.proof : bv_lt.r_const_mul.Stmt := by
   sorry
@@ -226,10 +294,28 @@ theorem bv_leq.r_self_add_l.proof : bv_leq.r_self_add_l.Stmt := by
   sorry
 
 theorem bv_leq.r_min_l.proof : bv_leq.r_min_l.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_leq.r_min_l] at h
+  split at h <;> (try split at h) <;> simp at h
+  rename_i hc; subst h; have hc := of_decide_eq_true hc
+  refine cmp_refines_leq (fun _ _ _ _ => TBool_true) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+  obtain ⟨rfl, -⟩ := lit_val h1 e1
+  rw [TB_size h1, lit_val' s h1 e1] at hc
+  have := bvz_range hn0 s x; have := bvz_range hn0 s y
+  simp only [eval_v_true, eval_v_false, Option.some.injEq, Val.bool.injEq]
+  symm; simp only [decide_eq_true_eq, decide_eq_false_iff_not]; omega
 
 theorem bv_leq.r_max_r.proof : bv_leq.r_max_r.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_leq.r_max_r] at h
+  split at h <;> (try split at h) <;> simp at h
+  rename_i hc; subst h; have hc := of_decide_eq_true hc
+  refine cmp_refines_leq (fun _ _ _ _ => TBool_true) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+  obtain ⟨rfl, -⟩ := lit_val h2 e2
+  rw [TB_size h1, lit_val' s h2 e2] at hc
+  have := bvz_range hn0 s x; have := bvz_range hn0 s y
+  simp only [eval_v_true, eval_v_false, Option.some.injEq, Val.bool.injEq]
+  symm; simp only [decide_eq_true_eq, decide_eq_false_iff_not]; omega
 
 theorem bv_leq.r_const_mul.proof : bv_leq.r_const_mul.Stmt := by
   sorry
@@ -244,10 +330,32 @@ theorem bv_leq.r_udiv_big.proof : bv_leq.r_udiv_big.Stmt := by
   sorry
 
 theorem bv_leq.r_ite_l.proof : bv_leq.r_ite_l.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_leq.r_ite_l] at h
+  split at h <;> simp at h
+  subst h
+  refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_ite hO (TB_ite_inv h1).1
+      (TBool_O_leq hO hN (TB_ite_inv h1).2.1 h2) (TBool_O_leq hO hN (TB_ite_inv h1).2.2 h2))
+    (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+  obtain ⟨hb, hl, hr⟩ := TB_ite_inv h1
+  refine eval_O_ite hO hb (TBool_O_leq hO hN hl h2) (TBool_O_leq hO hN hr h2) _ ?_
+  rcases ite_inv e1 with ⟨eg, ex⟩ | ⟨eg, ex⟩ <;> rw [eg] <;> dsimp only
+  · exact eval_O_leq hO hN hl h2 ex e2
+  · exact eval_O_leq hO hN hr h2 ex e2
 
 theorem bv_leq.r_ite_r.proof : bv_leq.r_ite_r.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_leq.r_ite_r] at h
+  split at h <;> simp at h
+  subst h
+  refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_ite hO (TB_ite_inv h2).1
+      (TBool_O_leq hO hN h1 (TB_ite_inv h2).2.1) (TBool_O_leq hO hN h1 (TB_ite_inv h2).2.2))
+    (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+  obtain ⟨hb, hl, hr⟩ := TB_ite_inv h2
+  refine eval_O_ite hO hb (TBool_O_leq hO hN h1 hl) (TBool_O_leq hO hN h1 hr) _ ?_
+  rcases ite_inv e2 with ⟨eg, ex⟩ | ⟨eg, ex⟩ <;> rw [eg] <;> dsimp only
+  · exact eval_O_leq hO hN h1 hl e1 ex
+  · exact eval_O_leq hO hN h1 hr e1 ex
 
 theorem bv_leq.r_const_sub1.proof : bv_leq.r_const_sub1.Stmt := by
   sorry

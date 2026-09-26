@@ -1500,5 +1500,52 @@ theorem extend_shl_eval {FS ρ nx k base tail s T1 T4 T5 T2 T v}
   · have h1' : ¬ i < nt.toNat + k.toNat := by omega
     simp only [h1, h1', decide_false, Bool.false_and, Bool.and_false, Bool.or_false]
 
+/-! ## A mask of an or with a literal -/
+
+theorem and_lit_or_lit_abs {FS} {m o N : Int} {x T1 T2 T3 t}
+    (hN : ∀ n : Int, t = .bitVector n → N = n) (hmo : zland m o = m) :
+    Refines FS (.mk (.binop .bitAnd (.mk (.bitVec m) T1)
+      (.mk (.binop .bitOr x (.mk (.bitVec o) T3)) T2)) t) (mk_masked N m) := by
+  refine BitOp.and.lit_l_abs_of (fun n _ _ ht => hN n ht) (fun ρ n y hn m0 h1 h2 eb => ?_)
+  obtain ⟨k, x', ex, hv, o0, o1⟩ := BitOp.or.eval_lit_r eb
+  obtain ⟨rfl, rfl⟩ := Val.bv_inj hv
+  have h := congrArg (BitVec.ofInt n.toNat) hmo
+  rw [ofInt_zland m0 o0] at h
+  ext i hi
+  have h' := congrArg (fun v => v.getLsbD i) h
+  simp at h' ⊢
+  grind
+
+theorem and_lit_or_lit_zero {FS} {m o N : Int} {x T1 T2 T3 t}
+    (hN : ∀ n : Int, t = .bitVector n → N = n) (hmo : zland m o = 0) :
+    Refines FS (.mk (.binop .bitAnd (.mk (.bitVec m) T1)
+      (.mk (.binop .bitOr x (.mk (.bitVec o) T3)) T2)) t)
+      (.mk (.binop .bitAnd x (mk_masked N m)) (.bitVector (size x))) := by
+  refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+  · obtain ⟨n, hn, h1, h2, ht, w1, w2⟩ := (BitOp.and (FS := FS)).WT.1 w
+    obtain ⟨n', hn', hx, h3, h4, wx, w3⟩ := (BitOp.or (FS := FS)).WT.1 w2
+    simp only [Term.ty_mk] at h2 h4; subst h2; simp only [Ty.bitVector.injEq] at h4; subst h4
+    obtain rfl := hN _ ht
+    exact ⟨(BitOp.and (FS := FS)).WT.2 ⟨N, hn, hx, rfl, by simp [size, ty, hx, size_of_ty], wx,
+      mk_masked_WT hn⟩, by simp [size, ty, hx, size_of_ty, ht]⟩
+  · obtain ⟨n, hn, h1, h2, ht, w1, w2⟩ := (BitOp.and (FS := FS)).WT.1 w
+    obtain ⟨n', hn', hx, h3, h4, wx, w3⟩ := (BitOp.or (FS := FS)).WT.1 w2
+    simp only [Term.ty_mk] at h2 h4; subst h2; simp only [Ty.bitVector.injEq] at h4; subst h4
+    obtain rfl := hN _ ht
+    obtain ⟨k, y, ey, rfl, m0, m1⟩ := BitOp.and.eval_lit_l e
+    obtain ⟨k', x', ex, hv, o0, o1⟩ := BitOp.or.eval_lit_r ey
+    obtain ⟨rfl, rfl⟩ := Val.bv_inj hv
+    obtain ⟨z, hz⟩ := eval_bv ex hx
+    obtain ⟨hk, -⟩ := Val.bv_inj hz
+    subst hk
+    rw [BitOp.and.eval_of w' ex (eval_mk_masked hn)]
+    have h := congrArg (BitVec.ofInt N.toNat) hmo
+    rw [ofInt_zland m0 o0] at h
+    congr 2
+    ext i hi
+    have h' := congrArg (fun v => v.getLsbD i) h
+    simp at h' ⊢
+    grind
+
 end BitwiseL
 end Bvr

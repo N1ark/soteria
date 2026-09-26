@@ -307,7 +307,37 @@ theorem bv_and.r_mask_or_mask.proof : bv_and.r_mask_or_mask.Stmt := by
   sorry
 
 theorem bv_and.r_mask_or.proof : bv_and.r_mask_or.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [bv_and.r_mask_or] at h
+  have C := fun {n} (x y : BitVec n) => BitVec.and_comm x y
+  have Co := fun {n} (x y : BitVec n) => BitVec.or_comm x y
+  rcases orElse_eq_some4 h with h | h | h | h <;> split at h <;> (try simp at h) <;>
+    (try simp only [Option.some.injEq] at h) <;> subst h
+  all_goals
+    split
+    · rename_i hmo; (try simp only [decide_eq_true_eq] at hmo)
+      first
+        | exact and_lit_or_lit_abs (fun n ht => by simpa using ht) hmo
+        | exact Refines.trans (BitOp.and.congr Refines.refl (BitOp.or.comm Co))
+            (and_lit_or_lit_abs (fun n ht => by simpa using ht) hmo)
+        | exact Refines.trans (BitOp.and.comm C)
+            (and_lit_or_lit_abs (fun n ht => by simpa using ht) hmo)
+        | exact Refines.trans (BitOp.and.comm C) (Refines.trans
+            (BitOp.and.congr Refines.refl (BitOp.or.comm Co))
+            (and_lit_or_lit_abs (fun n ht => by simpa using ht) hmo))
+    split
+    · rename_i hmo; (try simp only [decide_eq_true_eq] at hmo)
+      refine Refines.trans ?_ (hO.bv_and _ _)
+      first
+        | exact and_lit_or_lit_zero (fun n ht => by simpa using ht) hmo
+        | exact Refines.trans (BitOp.and.congr Refines.refl (BitOp.or.comm Co))
+            (and_lit_or_lit_zero (fun n ht => by simpa using ht) hmo)
+        | exact Refines.trans (BitOp.and.comm C)
+            (and_lit_or_lit_zero (fun n ht => by simpa using ht) hmo)
+        | exact Refines.trans (BitOp.and.comm C) (Refines.trans
+            (BitOp.and.congr Refines.refl (BitOp.or.comm Co))
+            (and_lit_or_lit_zero (fun n ht => by simpa using ht) hmo))
+    · exact BitOp.and.commut C
 
 theorem bv_and.r_right_mask.proof : bv_and.r_right_mask.Stmt := by
   intro FS O hO v1 v2 res h

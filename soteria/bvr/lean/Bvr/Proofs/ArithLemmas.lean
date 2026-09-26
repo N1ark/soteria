@@ -1301,5 +1301,40 @@ theorem mulOvf_of_msb {w : Nat} {x y : BitVec w} {m1 m2 : Int} (s : Bool) (h1 : 
     · exact this
 
 
+
+theorem udiv_mul_eq {w : Nat} {N X D K : BitVec w} {n d k : Nat} (hN : N.toNat = n)
+    (hD : D.toNat = d) (hK : K.toNat = k) (hnk : n = d * k) (hd : d ≠ 0)
+    (hov : n * X.toNat < 2 ^ w) :
+    (N * X).smtUDiv D = X * K ∧ X.umulOverflow K = false := by
+  have hkn : k ≤ n := by rw [hnk]; exact Nat.le_mul_of_pos_left k (by omega)
+  have hXk : X.toNat * k < 2 ^ w := by
+    have := Nat.mul_le_mul_left X.toNat hkn
+    rw [Nat.mul_comm n] at hov; omega
+  refine ⟨?_, by rw [umul_ok, hK]; exact hXk⟩
+  have h1 : D ≠ 0#w := fun h => hd (by rw [← hD, h]; simp)
+  rw [BitVec.smtUDiv_eq]; simp only [h1, ↓reduceIte]
+  apply BitVec.eq_of_toNat_eq
+  rw [BitVec.toNat_udiv, BitVec.toNat_mul, BitVec.toNat_mul, hN, hD, hK, Nat.mod_eq_of_lt hov,
+    Nat.mod_eq_of_lt hXk, hnk, Nat.mul_assoc, Nat.mul_div_cancel_left _ (by omega), Nat.mul_comm]
+
+theorem mod_mod_min {x a b : Nat} (ha : 0 < a) (hb : 0 < b) (h : b ∣ a ∨ a ∣ b) :
+    (x % a) % b = x % (if a ≤ b then a else b) := by
+  split
+  · exact Nat.mod_eq_of_lt (Nat.lt_of_lt_of_le (Nat.mod_lt _ ha) (by assumption))
+  · rename_i hab
+    rcases h with h | h
+    · exact Nat.mod_mod_of_dvd x h
+    · exact absurd (Nat.le_of_dvd hb h) hab
+
+theorem dvd_of_trem {a b : Int} (ha : 0 ≤ a) (hb : 0 ≤ b) (h : 0 = trem a b) :
+    b.toNat ∣ a.toNat := by
+  simp only [trem, Int.tmod_eq_emod, ha, true_or, ↓reduceIte, Int.cast_ofNat_Int,
+    Int.sub_zero] at h
+  obtain ⟨p, rfl⟩ := Int.eq_ofNat_of_zero_le ha
+  obtain ⟨q, rfl⟩ := Int.eq_ofNat_of_zero_le hb
+  simp only [Int.toNat_natCast]
+  exact Nat.dvd_of_mod_eq_zero (by exact_mod_cast h.symm)
+
+
 end ArithL
 end Bvr

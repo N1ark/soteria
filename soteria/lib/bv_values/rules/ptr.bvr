@@ -1,0 +1,13 @@
+(* Pointers *)
+
+let[@spec Unop (GetPtrLoc, p) <| TLoc (size p)] ptr_loc (p : t) : t =
+  match p with
+  | Ptr (l, _) [@r ptr] -> l
+  | _ [@r default] -> Unop (GetPtrLoc, p) <| TLoc (size p)
+
+let[@spec Unop (GetPtrOfs, p) <| TBitVector (size p)] ptr_ofs (p : t) : t =
+  match p with
+  | Ptr (_, o) [@r ptr] -> o
+  | _ [@r default] ->
+      let n = size p in
+      Unop (GetPtrOfs, p) <| TBitVector n

@@ -1,0 +1,19 @@
+; The smart constructors are generated from the rules, and promoted to the
+; source tree so that they are committed and reviewed with them.
+
+(rule
+ (targets svalue_rules.ml)
+ (mode promote)
+ (deps
+  (glob_files rules/*.bvr))
+ (action
+  (with-stdout-to
+   %{targets}
+   (run
+    %{exe:../../bvr/main.exe}
+    ocaml
+    rules/prelude.bvr
+    rules/bool.bvr
+    rules/bitvec.bvr
+    rules/float.bvr
+    rules/ptr.bvr))))

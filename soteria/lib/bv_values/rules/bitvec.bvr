@@ -558,9 +558,10 @@ let[@spec Div (signed, v1, v2) <| ty v1] bv_div (signed : bool) (v1 : t)
   | Mul ({ unsigned = true; _ }, BitVec n, x) [@comm], BitVec d [@r div_mul]
     when (not signed) && divisible d n ->
       bv_div signed x (mk_bv (size v1) (tdiv d n))
-  (* (x / n) / d = x / (n * d) (if n * d doesn't overflow) *)
-  | Div (s, x, BitVec n), BitVec d [@r div_div]
-    when s = signed && n <> 0 && not (overflows_mul signed (size v1) n d) ->
+  (* (x /u n) /u d = x /u (n * d) (if n * d doesn't overflow); not for signed
+     divisions, which wrap for INT_MIN / -1 *)
+  | Div (false, x, BitVec n), BitVec d [@r div_div]
+    when (not signed) && n <> 0 && not (overflows_mul false (size v1) n d) ->
       bv_div signed x (mk_bv (size v1) (n * d))
   (* extend[uN](X) / N when msb(N) < size(X) <=> extend[uN](X / N) *)
   | BvExtend (false, by, x), BitVec z [@r zext]

@@ -1515,8 +1515,8 @@ module Make (P : PRIMS) = struct
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul ({ Svalue_ast.unsigned = true; _ })), x, { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (n); _ }; _ }); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (d); _ }; _ })
         when (((not signed) && (P.divisible d n))) ->
         (bv_div signed x (P.mk_bv (size v1) (P.tdiv d n)))
-      | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Div (s)), x, { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (n); _ }; _ }); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (d); _ }; _ })
-        when ((((Stdlib.( = ) s signed)) && ((not (Z.equal n Z.zero)) && (not (overflows_mul signed (size v1) n d))))) ->
+      | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Div (false)), x, { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (n); _ }; _ }); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (d); _ }; _ })
+        when (((not signed) && ((not (Z.equal n Z.zero)) && (not (overflows_mul false (size v1) n d))))) ->
         (bv_div signed x (P.mk_bv (size v1) (Z.mul n d)))
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Unop ((Svalue_ast.Unop.BvExtend (false, by)), x); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (z); _ }; _ })
         when (let by = Z.of_int by in

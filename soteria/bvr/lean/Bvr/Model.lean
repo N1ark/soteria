@@ -3306,8 +3306,8 @@ def bv_div.r_div_mul (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option 
 
 def bv_div.r_div_div (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.div s) x (Term.mk (Kind.bitVec n) _)) _), (Term.mk (Kind.bitVec d) _) =>
-    (if ((decide (s = signed)) && ((decide (n ≠ (0 : Int))) && (! (overflows_mul signed (size v1) n d))))
+    | (Term.mk (Kind.binop (Binop.div false) x (Term.mk (Kind.bitVec n) _)) _), (Term.mk (Kind.bitVec d) _) =>
+    (if ((! signed) && ((decide (n ≠ (0 : Int))) && (! (overflows_mul false (size v1) n d))))
     then some ((O.bv_div signed x (mk_bv (size v1) (n * d))))
     else none)
     | _, _ => none)

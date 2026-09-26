@@ -340,8 +340,58 @@ theorem sem_eq.r_concat_const.proof : sem_eq.r_concat_const.Stmt := by
 theorem sem_eq.r_zext_const.proof : sem_eq.r_zext_const.Stmt := by
   sorry
 
+theorem sem_eq.r_ite_concat.aux {FS : FloatSem} {g t e l r : Term} {T T' : Ty} :
+    Refines FS (sem_eq.spec (.mk (.triop .ite g t e) T) (.mk (.binop .bvConcat l r) T'))
+      (b_and.spec
+        (sem_eq.spec (b_ite.spec g (bv_extract.spec (size r) (size r + size l - 1) t)
+          (bv_extract.spec (size r) (size r + size l - 1) e)) l)
+        (sem_eq.spec (b_ite.spec g (bv_extract.spec 0 (size r - 1) t)
+          (bv_extract.spec 0 (size r - 1) e)) r)) := by
+  have key : ∀ n m : Int, 0 < n → 0 < m → (Term.mk (.triop .ite g t e) T).WT →
+      (Term.mk (.triop .ite g t e) T).ty = .bitVector (n + m) →
+      g.ty = .bool ∧ g.WT ∧ t.WT ∧ t.ty = .bitVector (n + m) ∧ e.WT ∧ e.ty = .bitVector (n + m) := by
+    intro n m _ _ wZ hZ
+    obtain ⟨hg, h1, h2, wg, wt, we⟩ := WT_ite.1 wZ
+    simp only [Term.ty_mk] at hZ
+    exact ⟨hg, wg, wt, by rw [← h2, hZ], we, by rw [h1, ← h2, hZ]⟩
+  refine Refines.eq_concat (fun n m hn hm hl hr wZ hZ => ?_) (fun n m hn hm hl hr wZ hZ ρ W c h => ?_)
+  · simp only [size, ty_eq, hl, hr, size_of_ty_bitVector]
+    obtain ⟨hg, wg, wt, ht, we, he⟩ := key n m hn hm wZ hZ
+    have E : Env := ⟨fun _ => none, fun _ _ => none⟩
+    obtain ⟨a1, a2, -⟩ := extract_hi (FS := FS) (ρ := E) hn hm wt ht
+    obtain ⟨b1, b2, -⟩ := extract_lo (FS := FS) (ρ := E) hn hm wt ht
+    obtain ⟨c1, c2, -⟩ := extract_hi (FS := FS) (ρ := E) hn hm we he
+    obtain ⟨d1, d2, -⟩ := extract_lo (FS := FS) (ρ := E) hn hm we he
+    refine ⟨WT_triop.2 ⟨by simp [Triop.WT, hg, a2, c2], wg, a1, c1⟩, by simp [b_ite.spec, a2],
+      WT_triop.2 ⟨by simp [Triop.WT, hg, b2, d2], wg, b1, d1⟩, by simp [b_ite.spec, b2]⟩
+  · simp only [size, ty_eq, hl, hr, size_of_ty_bitVector]
+    obtain ⟨hg, wg, wt, ht, we, he⟩ := key n m hn hm wZ hZ
+    obtain ⟨a1, a2, a3⟩ := extract_hi (FS := FS) (ρ := ρ) hn hm wt ht
+    obtain ⟨b1, b2, b3⟩ := extract_lo (FS := FS) (ρ := ρ) hn hm wt ht
+    obtain ⟨c1, c2, c3⟩ := extract_hi (FS := FS) (ρ := ρ) hn hm we he
+    obtain ⟨d1, d2, d3⟩ := extract_lo (FS := FS) (ρ := ρ) hn hm we he
+    have w1 : (b_ite.spec g (bv_extract.spec m (m + n - 1) t) (bv_extract.spec m (m + n - 1) e)).WT :=
+      WT_triop.2 ⟨by simp [Triop.WT, hg, a2, c2], wg, a1, c1⟩
+    have w2 : (b_ite.spec g (bv_extract.spec 0 (m - 1) t) (bv_extract.spec 0 (m - 1) e)).WT :=
+      WT_triop.2 ⟨by simp [Triop.WT, hg, b2, d2], wg, b1, d1⟩
+    rcases (eval_ite_eq_some wZ).1 h with ⟨hc, hv⟩ | ⟨hc, hv⟩
+    · rw [b_ite.spec, eval_ite_of w1 hc, b_ite.spec, eval_ite_of w2 hc]
+      exact ⟨a3 W c hv, b3 W c hv⟩
+    · rw [b_ite.spec, eval_ite_of w1 hc, b_ite.spec, eval_ite_of w2 hc]
+      exact ⟨c3 W c hv, d3 W c hv⟩
+
 theorem sem_eq.r_ite_concat.proof : sem_eq.r_ite_concat.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [sem_eq.r_ite_concat] at h
+  rcases orElse_eq_some h with h | h <;> split at h <;> simp only [reduceCtorEq, Option.some.injEq] at h <;> subst h
+  all_goals
+    refine Refines.trans ?_ (Refines.b_and hO
+      (Refines.sem_eq hO (Refines.b_ite hO Refines.refl (hO.bv_extract _ _ _) (hO.bv_extract _ _ _))
+        Refines.refl)
+      (Refines.sem_eq hO (Refines.b_ite hO Refines.refl (hO.bv_extract _ _ _) (hO.bv_extract _ _ _))
+        Refines.refl))
+  · exact sem_eq.r_ite_concat.aux
+  · exact Refines.trans Refines.eq_symm sem_eq.r_ite_concat.aux
 
 theorem sem_eq.r_concat_concat.proof : sem_eq.r_concat_concat.Stmt := by
   intro FS O hO v1 v2 res h

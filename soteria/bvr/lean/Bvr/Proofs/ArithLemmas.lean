@@ -715,5 +715,108 @@ theorem mask_lits {c : Checked} {za zb : Int} {Ta Tb : Ty} {is_add : Bool} :
   simp [mask_checked_after_fold, firstSome, checked_has, HOrElse.hOrElse, OrElse.orElse,
     Option.orElse]
 
+/-! ## Generic refinement lemmas for the arithmetic rules -/
+
+theorem Refines.arith_intro {FS op a b T r} (hop : IsArith op)
+    (hsyn : ∀ n, BV a n → BV b n → T = .bitVector n → BV r n)
+    (hsem : ∀ n, BV a n → BV b n → T = .bitVector n → ∀ ρ (x y : BitVec n.toNat) v,
+      eval FS ρ a = some (.bv _ x) → eval FS ρ b = some (.bv _ y) →
+      evBinop FS op (some (.bv _ x)) (some (.bv _ y)) = some v → eval FS ρ r = some v) :
+    Refines FS (.mk (.binop op a b) T) r := by
+  refine Refines.intro (fun w => ?_) (fun ρ v w _ e => ?_)
+  all_goals obtain ⟨n, wa, wb, hT⟩ := (WT_arith hop).1 w
+  · have := hsyn n wa wb hT; exact ⟨this.1, by simp [this.2.1, hT]⟩
+  · rw [eval_arith hop wa wb hT] at e
+    obtain ⟨x, y, hx, hy, e⟩ := evBinop_inv (.inl hop) wa wb e
+    exact hsem n wa wb hT ρ x y v hx hy e
+
+theorem Refines.cmp_intro {FS op a b T r} (hop : IsCmp op)
+    (hsyn : ∀ n, BV a n → BV b n → T = .bool → r.WT ∧ r.ty = .bool)
+    (hsem : ∀ n, BV a n → BV b n → T = .bool → ∀ ρ (x y : BitVec n.toNat) v,
+      eval FS ρ a = some (.bv _ x) → eval FS ρ b = some (.bv _ y) →
+      evBinop FS op (some (.bv _ x)) (some (.bv _ y)) = some v → eval FS ρ r = some v) :
+    Refines FS (.mk (.binop op a b) T) r := by
+  refine Refines.intro (fun w => ?_) (fun ρ v w _ e => ?_)
+  all_goals obtain ⟨n, wa, wb, hT⟩ := (WT_cmp hop).1 w
+  · have := hsyn n wa wb hT; exact ⟨this.1, by simp [this.2, hT]⟩
+  · rw [eval_cmp hop wa wb hT] at e
+    obtain ⟨x, y, hx, hy, e⟩ := evBinop_inv (.inr hop) wa wb e
+    exact hsem n wa wb hT ρ x y v hx hy e
+
+theorem Refines.neg_intro {FS c a T r}
+    (hsyn : ∀ n, BV a n → T = .bitVector n → BV r n)
+    (hsem : ∀ n, BV a n → T = .bitVector n → ∀ ρ (x : BitVec n.toNat) v,
+      eval FS ρ a = some (.bv _ x) → evUnop FS (.neg c) (some (.bv _ x)) = some v →
+      eval FS ρ r = some v) :
+    Refines FS (.mk (.unop (.neg c) a) T) r := by
+  refine Refines.intro (fun w => ?_) (fun ρ v w _ e => ?_)
+  all_goals obtain ⟨n, wa, hT⟩ := WT_neg.1 w
+  · have := hsyn n wa hT; exact ⟨this.1, by simp [this.2.1, hT]⟩
+  · rw [eval_neg wa hT] at e
+    obtain ⟨x, hx, e⟩ := evUnop_inv wa e
+    exact hsem n wa hT ρ x v hx e
+
+/-- Evaluating a rule function refining an arithmetic operator. -/
+theorem O_eval {FS op a b r n} (hop : IsArith op) (hR : Refines FS (.mk (.binop op a b) a.ty) r)
+    (wa : BV a n) (wb : BV b n) {ρ x y v} (hx : eval FS ρ a = some (.bv n.toNat x))
+    (hy : eval FS ρ b = some (.bv n.toNat y))
+    (e : evBinop FS op (some (.bv n.toNat x)) (some (.bv n.toNat y)) = some v) :
+    eval FS ρ r = some v :=
+  (O_arith hop hR wa wb).2 ρ v (by rw [hx, hy]; exact e)
+
+theorem O_neg {FS c a r n} (hR : Refines FS (.mk (.unop (.neg c) a) a.ty) r) (wa : BV a n) :
+    BV r n ∧ ∀ ρ x v, eval FS ρ a = some (.bv n.toNat x) →
+      evUnop FS (.neg c) (some (.bv n.toNat x)) = some v → eval FS ρ r = some v :=
+  ⟨BV_neg hR wa, fun ρ x v hx e => hR.sem ρ v (by rw [eval_neg wa wa.2.1, hx]; exact e)⟩
+
+theorem O_cmp {FS op a b r n} (hop : IsCmp op) (hR : Refines FS (.mk (.binop op a b) .bool) r)
+    (wa : BV a n) (wb : BV b n) : (r.WT ∧ r.ty = .bool) ∧ ∀ ρ x y v,
+      eval FS ρ a = some (.bv n.toNat x) → eval FS ρ b = some (.bv n.toNat y) →
+      evBinop FS op (some (.bv n.toNat x)) (some (.bv n.toNat y)) = some v →
+      eval FS ρ r = some v := by
+  have w : (Term.mk (.binop op a b) .bool).WT := (WT_cmp hop).2 ⟨n, wa, wb, rfl⟩
+  refine ⟨?_, fun ρ x y v hx hy e => hR.sem ρ v (by rw [eval_cmp hop wa wb rfl, hx, hy]; exact e)⟩
+  have := hR.syn w; exact ⟨this.1, by simpa using this.2⟩
+
+theorem lit_eval_eq {FS ρ z T n x} (w : BV (.mk (.bitVec z) T) n)
+    (h : eval FS ρ (.mk (.bitVec z) T) = some (.bv n.toNat x)) : x = BitVec.ofInt _ z := by
+  rw [eval_lit w] at h; simp at h; exact h.symm
+
+theorem size_lit {z T n} (w : BV (.mk (.bitVec z) T) n) : size (.mk (.bitVec z) T) = n := by
+  obtain ⟨rfl, -⟩ := BV_lit w; rfl
+
+theorem size_BV {t n} (w : BV t n) : size t = n := by simp [w.2.1]
+
+
+theorem size_ty_lit {z T n} (w : BV (.mk (.bitVec z) T) n) : size_of_ty T = n := by
+  obtain ⟨rfl, -⟩ := BV_lit w; rfl
+
+theorem BV_lit_of {z n : Int} (hn : 0 < n) (h0 : 0 ≤ z) (h1 : z < 2 ^ n.toNat) :
+    BV (.mk (.bitVec z) (.bitVector n)) n :=
+  ⟨WT_bitVec.2 ⟨n.toNat, by omega, Or.inl (by simp; omega), h0, h1⟩, rfl, hn⟩
+
+theorem one_lt_two_pow' {n : Int} (hn : 0 < n) : (1 : Int) < 2 ^ n.toNat := by
+  have := two_pow_pred (w := n.toNat) (by omega)
+  have := two_pow_pos' (n.toNat - 1); omega
+
+theorem BV_bv_zero {n : Int} (hn : 0 < n) : BV (bv_zero n) n :=
+  BV_lit_of hn (Int.le_refl _) (two_pow_pos' _)
+
+theorem BV_bv_one {n : Int} (hn : 0 < n) : BV (bv_one n) n :=
+  BV_lit_of hn (by omega) (one_lt_two_pow' hn)
+
+theorem eval_bv_zero {FS ρ} {n : Int} (hn : 0 < n) :
+    eval FS ρ (bv_zero n) = some (.bv n.toNat 0) := by
+  rw [bv_zero, eval_lit (BV_bv_zero hn)]; simp
+
+theorem eval_bv_one {FS ρ} {n : Int} (hn : 0 < n) :
+    eval FS ρ (bv_one n) = some (.bv n.toNat 1) := by
+  rw [bv_one, eval_lit (BV_bv_one hn)]; simp
+
+theorem ssubOverflow_zero_intMin {w : Nat} (hw : 0 < w) :
+    (0#w).ssubOverflow (BitVec.intMin w) = true := by
+  simp [BitVec.ssubOverflow, BitVec.toInt_intMin_of_pos hw]
+
+
 end ArithL
 end Bvr

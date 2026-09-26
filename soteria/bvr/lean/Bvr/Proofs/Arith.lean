@@ -346,19 +346,60 @@ theorem bv_add.r_default.proof : bv_add.r_default.Stmt := by
   exact Refines.commut_binop (.add c)
 
 theorem bv_sub.r_lits.proof : bv_sub.r_lits.Stmt := by
-  sorry
+  intro FS O hO c v1 v2 res h
+  simp only [bv_sub.r_lits] at h; split at h <;> simp at h; subst h
+  refine Refines.arith_intro (.sub c) (fun n wa wb hT => ?_) (fun n wa wb hT ρ x y v hx hy e => ?_)
+  · rw [size_ty_lit wa]; exact BV_mk_masked wa.2.2
+  · rw [size_ty_lit wa, eval_mk_masked wa.2.2]
+    rw [lit_eval_eq wa hx, lit_eval_eq wb hy] at e
+    simp [evBinop, checkedOp, bvBin] at e
+    rw [← e.2, BitVec.ofInt_sub]
 
 theorem bv_sub.r_zero_r.proof : bv_sub.r_zero_r.Stmt := by
-  sorry
+  intro FS O hO c v1 v2 res h
+  simp only [bv_sub.r_zero_r] at h; split at h <;> simp at h; obtain ⟨rfl, rfl⟩ := h
+  refine Refines.arith_intro (.sub c) (fun n wa wb hT => wa) (fun n wa wb hT ρ x y v hx hy e => ?_)
+  rw [lit_eval_eq wb hy] at e
+  simp [evBinop, checkedOp, bvBin] at e
+  rw [hx, ← e.2]
 
 theorem bv_sub.r_zero_l.proof : bv_sub.r_zero_l.Stmt := by
-  sorry
+  intro FS O hO c v1 v2 res h
+  simp only [bv_sub.r_zero_l] at h; split at h <;> simp at h; obtain ⟨rfl, rfl⟩ := h
+  refine Refines.arith_intro (.sub c) (fun n wa wb hT => (O_neg (hO.bv_neg _ _) wb).1)
+    (fun n wa wb hT ρ x y v hx hy e => ?_)
+  refine (O_neg (hO.bv_neg _ _) wb).2 ρ y v hy ?_
+  rw [lit_eval_eq wa hx] at e
+  simp [evBinop, evUnop, checkedOp, bvBin] at e ⊢
+  obtain ⟨⟨h1, -⟩, rfl⟩ := e
+  refine ⟨fun hs hy => ?_, by simp⟩
+  have := h1 hs; subst hy
+  rw [ssubOverflow_zero_intMin (by have := wa.2.2; omega)] at this; cases this
 
 theorem bv_sub.r_same.proof : bv_sub.r_same.Stmt := by
-  sorry
+  intro FS O hO c v1 v2 res h
+  simp only [bv_sub.r_same] at h; split at h <;> simp at h; subst h
+  rename_i he; simp [equal] at he; subst he
+  refine Refines.arith_intro (.sub c) (fun n wa wb hT => ?_) (fun n wa wb hT ρ x y v hx hy e => ?_)
+  · simp only [size_eq, wa.2.1, size_of_ty_bitVector]; exact BV_bv_zero wa.2.2
+  · rw [hx] at hy; simp at hy; subst hy
+    simp [evBinop, checkedOp, bvBin] at e
+    simp only [size_eq, wa.2.1, size_of_ty_bitVector]
+    rw [eval_bv_zero wa.2.2, ← e.2]; simp
 
 theorem bv_sub.r_neg_r.proof : bv_sub.r_neg_r.Stmt := by
-  sorry
+  intro FS O hO c v1 v2 res h
+  simp only [bv_sub.r_neg_r] at h; split at h <;> simp at h; subst h
+  rename_i ck x T
+  refine Refines.arith_intro (.sub c) (fun n wa wb hT => ?_) (fun n wa wb hT ρ X y v hx hy e => ?_)
+  · obtain ⟨wx, rfl⟩ := BV_neg_inv wb
+    exact BV_arith (.add _) (hO.bv_add unchecked _ x) wa wx
+  · obtain ⟨wx, rfl⟩ := BV_neg_inv wb
+    rw [eval_neg wx rfl] at hy
+    obtain ⟨x', hx', hy⟩ := evUnop_inv wx hy
+    refine O_eval (.add _) (hO.bv_add _ _ _) wa wx hx hx' ?_
+    simp [evBinop, evUnop, checkedOp, bvBin, unchecked] at e hy ⊢
+    rw [← e.2, ← hy.2, BitVec.sub_neg]
 
 theorem bv_sub.r_sub_const_l.proof : bv_sub.r_sub_const_l.Stmt := by
   sorry

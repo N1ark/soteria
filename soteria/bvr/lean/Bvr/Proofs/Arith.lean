@@ -1355,15 +1355,32 @@ theorem bv_div.r_div_mul.proof : bv_div.r_div_mul.Stmt := by
   · refine Refines.trans (Refines.binop (Refines.comm (.mul _)) Refines.refl (fun _ => rfl))
       (bv_div.div_mul_aux hO hd (fun m h => by simp [h]))
 
--- UNSOUND (still, after requiring `n <> 0`; the unsigned case is sound): signed division wraps,
--- and `x /s 0` depends on the sign of `x`. Take 8 bits, `signed = s = true`, v1 = Div (true, x,
--- 0xff), v2 = 2, with x = 0x80 (-128) (take `O` returning the raw spec terms). Then
--- `overflows_mul true 8 255 2` is false (-1 * 2 = -2). The spec is `(0x80 /s 0xff) /s 2 =
--- 0x80 /s 2 = some 0xc0` (-64), and the result is `x /s mk_bv 8 510 = 0x80 /s 0xfe = some 0x40`
--- (64). Another one, with a zero outer divisor: v1 = Div (true, x, 2), v2 = 0, x = 0xff (-1); the
--- spec is `(0xff /s 2) /s 0 = 0 /s 0 = some 0xff`, and the result is `0xff /s 0 = some 0x01`.
 theorem bv_div.r_div_div.proof : bv_div.r_div_div.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_div.r_div_div] at h; split at h <;> simp at h
+  obtain ⟨⟨rfl, hn, hov⟩, rfl⟩ := h
+  rename_i x n Tn T d T2
+  refine Refines.arith_intro (.div false) (fun m wa wb hT => ?_)
+    (fun m wa wb hT ρ P Dv v hx hy e => ?_)
+  all_goals obtain ⟨wx, wn, rfl⟩ := BV_arith_inv (.div false) wa
+  all_goals obtain ⟨rfl, hzn⟩ := BV_lit wn
+  all_goals obtain ⟨-, hzd⟩ := BV_lit wb
+  all_goals simp only [size_eq, Term.ty_mk, size_of_ty_bitVector] at hov ⊢
+  all_goals have hk := O_arith (.div _) (hO.bv_div false x (mk_bv m (n * d))) wx (BV_mk_bv wa.2.2)
+  · exact hk.1
+  · rw [eval_arith (.div false) wx wn rfl] at hx
+    obtain ⟨X, Nv, hX, hNv, hx⟩ := evBinop_inv (.inl (.div false)) wx wn hx
+    obtain rfl := lit_eval_eq wn hNv
+    obtain rfl := lit_eval_eq wb hy
+    simp [evBinop, bvBin] at hx e; subst hx; subst e
+    refine hk.2 ρ _ ?_
+    rw [hX, mk_bv, eval_mk_masked wa.2.2]
+    simp only [evBinop, bvBin, dite_true, Bool.false_eq_true, ↓reduceIte, Option.some.injEq]
+    rw [overflows_mul_lit wa.2.2 hzn.1 hzn.2 hzd.1 hzd.2] at hov
+    simp only [Bool.false_eq_true, ↓reduceIte] at hov
+    have hN : BitVec.ofInt m.toNat n ≠ 0#_ := by
+      intro h0; have := lit_toNat (w := m.toNat) hzn.1 hzn.2; rw [h0] at this; simp at this; omega
+    rw [BitVec.ofInt_mul, udiv_udiv_ok hN (by simpa using hov)]
 
 theorem bv_div.r_zext.proof : bv_div.r_zext.Stmt := by
   intro FS O hO s v1 v2 res h

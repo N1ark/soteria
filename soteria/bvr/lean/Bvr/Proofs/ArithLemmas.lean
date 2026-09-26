@@ -1673,5 +1673,20 @@ theorem mulOvfConst_sound {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {s z T x n
             smulOvf_neg hw _ X (by omega)]
           simp [tdiv]
 
+theorem udiv_udiv_ok {w : Nat} {X N D : BitVec w} (hN : N ≠ 0#w)
+    (hov : N.umulOverflow D = false) : (X.smtUDiv N).smtUDiv D = X.smtUDiv (N * D) := by
+  have hN' : N.toNat ≠ 0 := fun h => hN (BitVec.eq_of_toNat_eq (by simp [h]))
+  have hm := toNat_mul_ok hov
+  by_cases hD : D = 0#w
+  · subst hD; simp
+  · have hD' : D.toNat ≠ 0 := fun h => hD (BitVec.eq_of_toNat_eq (by simp [h]))
+    have hND : N * D ≠ 0#w := by
+      intro h; have := congrArg BitVec.toNat h; rw [hm] at this
+      rw [BitVec.toNat_ofNat, Nat.zero_mod] at this
+      rcases Nat.mul_eq_zero.1 this with h | h <;> contradiction
+    rw [BitVec.smtUDiv_eq, BitVec.smtUDiv_eq, BitVec.smtUDiv_eq, if_neg hN, if_neg hD, if_neg hND]
+    apply BitVec.eq_of_toNat_eq
+    rw [BitVec.toNat_udiv, BitVec.toNat_udiv, BitVec.toNat_udiv, hm, Nat.div_div_eq_div_mul]
+
 end ArithL
 end Bvr

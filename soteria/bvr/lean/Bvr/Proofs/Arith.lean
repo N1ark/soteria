@@ -307,14 +307,44 @@ theorem bv_add.r_add_sub.proof : bv_add.r_add_sub.Stmt := by
     obtain ⟨n, w1, w2, -⟩ := (WT_arith (.add c)).1 w
     have := w1.2.1; have := w2.2.1; simp_all
 
--- UNSOUND: the flags of the outer addition are given to the rebuilt multiplication, but the
--- original multiplications may wrap. Take 8 bits, `checked = {signed := true, unsigned := false}`,
--- v1 = Mul (unchecked, x, y), v2 = Mul (unchecked, x, z), with x = 2, y = 64, z = 0 (unsigned
--- representations; take `O` returning the raw spec terms). Then x*y wraps to 0x80 (-128), and
--- x*y + x*z = 0x80 without a signed overflow, so the spec is `some 0x80`. The result is
--- x *s (y +s z) = 2 *s 64, whose signed overflow makes it poison.
+theorem bv_add.factor_aux {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {c ck1 ck2 a b cc T1 T2 T} :
+    Refines FS (.mk (.binop (.add c) (.mk (.binop (.mul ck1) a b) T1) (.mk (.binop (.mul ck2) a cc) T2)) T)
+      (O.bv_mul unchecked a (O.bv_add unchecked b cc)) := by
+  refine Refines.arith_intro (.add c) (fun n w1 w2 hT => ?_) (fun n w1 w2 hT ρ P Q v hp hq e => ?_)
+  all_goals obtain ⟨wa, wb, rfl⟩ := BV_arith_inv (.mul _) w1
+  all_goals obtain ⟨-, wc, rfl⟩ := BV_arith_inv (.mul _) w2
+  all_goals have hs := O_arith (.add _) (hO.bv_add unchecked b cc) wb wc
+  all_goals have hm := O_arith (.mul _) (hO.bv_mul unchecked a _) wa hs.1
+  · exact hm.1
+  · rw [eval_arith (.mul _) wa wb rfl] at hp
+    obtain ⟨A, B, hA, hB, hp⟩ := evBinop_inv (.inl (.mul _)) wa wb hp
+    rw [eval_arith (.mul _) wa wc rfl] at hq
+    obtain ⟨A', C, hA', hC, hq⟩ := evBinop_inv (.inl (.mul _)) wa wc hq
+    rw [hA] at hA'; simp at hA'; subst hA'
+    have hS := O_eval (.add _) (hO.bv_add unchecked b cc) wb wc hB hC (v := .bv _ (B + C))
+      (by simp [evBinop, checkedOp, bvBin, unchecked])
+    refine O_eval (.mul _) (hO.bv_mul _ _ _) wa hs.1 hA hS ?_
+    simp [evBinop, checkedOp, bvBin, unchecked] at hp hq e ⊢
+    obtain ⟨-, rfl⟩ := hp; obtain ⟨-, rfl⟩ := hq; obtain ⟨-, rfl⟩ := e
+    rw [BitVec.mul_add]
+
 theorem bv_add.r_factor.proof : bv_add.r_factor.Stmt := by
-  sorry
+  intro FS O hO c v1 v2 res h
+  simp only [bv_add.r_factor] at h
+  rcases orElse_eq_some h with h | h
+  · split at h <;> simp [equal] at h; obtain ⟨rfl, rfl⟩ := h
+    exact bv_add.factor_aux hO
+  rcases orElse_eq_some h with h | h
+  · split at h <;> simp [equal] at h; obtain ⟨rfl, rfl⟩ := h
+    exact Refines.trans (Refines.binop Refines.refl (Refines.comm (.mul _)) (fun _ => rfl))
+      (bv_add.factor_aux hO)
+  rcases orElse_eq_some h with h | h
+  · split at h <;> simp [equal] at h; obtain ⟨rfl, rfl⟩ := h
+    exact Refines.trans (Refines.binop (Refines.comm (.mul _)) Refines.refl (fun _ => rfl))
+      (bv_add.factor_aux hO)
+  · split at h <;> simp [equal] at h; obtain ⟨rfl, rfl⟩ := h
+    exact Refines.trans (Refines.binop (Refines.comm (.mul _)) (Refines.comm (.mul _))
+      (fun _ => rfl)) (bv_add.factor_aux hO)
 
 -- UNSOUND: `divisible` and `tdiv` are applied to the unsigned representations of the constants,
 -- which is wrong for signed flags. Take 8 bits, `checked = ck1 = ck2 = {signed := true,

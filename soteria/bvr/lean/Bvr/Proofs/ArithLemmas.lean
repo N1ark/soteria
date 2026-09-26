@@ -1116,5 +1116,41 @@ theorem umul_mulOvf_div {w : Nat} (X Y : BitVec w) : X.umulOverflow (Y.smtUDiv X
     exact Nat.lt_of_le_of_lt (Nat.mul_div_le _ _) Y.isLt
 
 
+
+/-- Factoring `l1 * r1 + l2 * r2` as `l1 * (r1 + (l2 / l1) * r2)` keeps the unsigned flags. -/
+theorem factor_const_bv {w : Nat} {L1 L2 K R1 R2 : BitVec w}
+    (hdk : L2.toNat = L1.toNat * K.toNat) (hk0 : L1.toNat = 0 → K.toNat = 0)
+    (h1 : L1.umulOverflow R1 = false) (h2 : L2.umulOverflow R2 = false)
+    (h3 : (L1 * R1).uaddOverflow (L2 * R2) = false) :
+    K.umulOverflow R2 = false ∧ R1.uaddOverflow (K * R2) = false ∧
+      L1.umulOverflow (R1 + K * R2) = false ∧ L1 * (R1 + K * R2) = L1 * R1 + L2 * R2 := by
+  have e1 := toNat_mul_ok h1
+  have e2 := toNat_mul_ok h2
+  rw [uadd_ok, e1, e2] at h3
+  rw [umul_ok] at h1 h2
+  have hR1 := R1.isLt
+  have hLK : L1 * K = L2 := by
+    apply BitVec.eq_of_toNat_eq
+    rw [BitVec.toNat_mul, ← hdk, Nat.mod_eq_of_lt L2.isLt]
+  have hval : L1 * (R1 + K * R2) = L1 * R1 + L2 * R2 := by
+    rw [BitVec.mul_add, ← BitVec.mul_assoc, hLK]
+  rcases Nat.eq_zero_or_pos L1.toNat with ha | ha
+  · have hk := hk0 ha
+    have hK : K = 0#w := BitVec.eq_of_toNat_eq (by simp [hk])
+    have hL : L1 = 0#w := BitVec.eq_of_toNat_eq (by simp [ha])
+    subst hK hL
+    refine ⟨?_, ?_, ?_, hval⟩ <;> simp [umul_ok, uadd_ok, hR1, Nat.two_pow_pos]
+  · have q1 : K.toNat * R2.toNat ≤ L2.toNat * R2.toNat := by
+      rw [hdk, Nat.mul_assoc]; exact Nat.le_mul_of_pos_left _ ha
+    have q2 : R1.toNat ≤ L1.toNat * R1.toNat := Nat.le_mul_of_pos_left _ ha
+    have q3 : L1.toNat * (R1.toNat + K.toNat * R2.toNat) =
+        L1.toNat * R1.toNat + L2.toNat * R2.toNat := by
+      rw [Nat.mul_add, hdk, Nat.mul_assoc]
+    have k1 : K.umulOverflow R2 = false := by rw [umul_ok]; omega
+    have k2 : R1.uaddOverflow (K * R2) = false := by rw [uadd_ok, toNat_mul_ok k1]; omega
+    refine ⟨k1, k2, ?_, hval⟩
+    rw [umul_ok, toNat_add_ok k2, toNat_mul_ok k1]; omega
+
+
 end ArithL
 end Bvr

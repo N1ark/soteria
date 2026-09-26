@@ -943,5 +943,22 @@ theorem lit_val' {FS ρ z t N n} {x : BitVec n} (s : Bool) (h : TB (.mk (.bitVec
   · exact this.2.2.2.2.2.2.1
   · exact this.2.2.2.2.2.2.2
 
+theorem neg_inv {FS ρ c a t n} {x : BitVec n}
+    (h : eval FS ρ (.mk (.unop (.neg c) a) t) = some (.bv n x)) :
+    ∃ xa, eval FS ρ a = some (.bv n xa) ∧ (c = true → xa ≠ BitVec.intMin n) ∧ x = -xa := by
+  obtain ⟨m, xa, ea, hc, hv⟩ := eval_neg_eq_some h
+  simp at hv; obtain ⟨rfl, hv⟩ := hv; cases hv
+  exact ⟨xa, ea, hc, rfl⟩
+
+theorem bvz_neg {n : Nat} {x : BitVec n} (h : x ≠ BitVec.intMin n) :
+    bvz true (-x) = - bvz true x := by
+  simp only [bvz, ite_true]
+  exact toInt_neg' (pos_of_ne_intMin h) (toInt_ne_of_ne_intMin h)
+
+theorem ne_intMin_of_bvz {n : Nat} (hn : 0 < n) {x : BitVec n}
+    (h : bvz true x ≠ min_for true n) : x ≠ BitVec.intMin n := by
+  intro e; apply h; rw [min_for_eq]; simp only [bvz, ite_true]
+  exact (eq_intMin_iff hn).1 e
+
 end CompareL
 end Bvr

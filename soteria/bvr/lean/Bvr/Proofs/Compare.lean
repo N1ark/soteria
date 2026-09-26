@@ -26,13 +26,47 @@ theorem bv_lt.r_same.proof : bv_lt.r_same.Stmt := by
   rw [e1] at e2; cases e2; simp
 
 theorem bv_lt.r_negs.proof : bv_lt.r_negs.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_lt.r_negs] at h
+  split at h <;> simp at h
+  obtain ⟨rfl, rfl⟩ := h
+  rename_i a _ b _
+  refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_lt hO hN (TB_neg_inv h2).2 (TB_neg_inv h1).2)
+    (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+  obtain ⟨xa, ea, ha, rfl⟩ := neg_inv e1
+  obtain ⟨yb, eb, hb, rfl⟩ := neg_inv e2
+  rw [eval_O_lt hO hN (TB_neg_inv h2).2 (TB_neg_inv h1).2 eb ea, bvz_neg (ha rfl), bvz_neg (hb rfl)]
+  simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
 theorem bv_lt.r_neg_l.proof : bv_lt.r_neg_l.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_lt.r_neg_l] at h
+  split at h <;> simp at h
+  obtain ⟨⟨rfl, hc⟩, rfl⟩ := h
+  rename_i a _ c _
+  refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_lt hO hN (TB_O_neg hO hN h2) (TB_neg_inv h1).2)
+    (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+  obtain ⟨xa, ea, ha, rfl⟩ := neg_inv e1
+  obtain ⟨rfl, -⟩ := lit_val h2 e2
+  have hc := of_decide_eq_false hc; rw [TB_mk_size h1, lit_val' true h2 e2] at hc
+  rw [eval_O_lt hO hN (TB_O_neg hO hN h2) (TB_neg_inv h1).2 (eval_O_neg hO hN h2 e2 (by simp)) ea,
+    bvz_neg (ha rfl), bvz_neg (ne_intMin_of_bvz hn0 hc)]
+  simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
 theorem bv_lt.r_neg_r.proof : bv_lt.r_neg_r.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_lt.r_neg_r] at h
+  split at h <;> simp at h
+  obtain ⟨⟨rfl, hc⟩, rfl⟩ := h
+  rename_i c _ a _
+  refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_lt hO hN (TB_neg_inv h2).2 (TB_O_neg hO hN h1))
+    (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+  obtain ⟨yb, eb, hb, rfl⟩ := neg_inv e2
+  obtain ⟨rfl, -⟩ := lit_val h1 e1
+  have hc := of_decide_eq_false hc; rw [TB_mk_size h1, lit_val' true h1 e1] at hc
+  rw [eval_O_lt hO hN (TB_neg_inv h2).2 (TB_O_neg hO hN h1) eb (eval_O_neg hO hN h1 e1 (by simp)),
+    bvz_neg (hb rfl), bvz_neg (ne_intMin_of_bvz hn0 hc)]
+  simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
 theorem bv_lt.r_const_add.proof : bv_lt.r_const_add.Stmt := by
   sorry
@@ -134,13 +168,47 @@ theorem bv_leq.r_lits.proof : bv_leq.r_lits.Stmt := by
     lit_val' s h2 e2]
 
 theorem bv_leq.r_negs.proof : bv_leq.r_negs.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_leq.r_negs] at h
+  split at h <;> simp at h
+  obtain ⟨rfl, rfl⟩ := h
+  rename_i a _ b _
+  refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_leq hO hN (TB_neg_inv h2).2 (TB_neg_inv h1).2)
+    (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+  obtain ⟨xa, ea, ha, rfl⟩ := neg_inv e1
+  obtain ⟨yb, eb, hb, rfl⟩ := neg_inv e2
+  rw [eval_O_leq hO hN (TB_neg_inv h2).2 (TB_neg_inv h1).2 eb ea, bvz_neg (ha rfl), bvz_neg (hb rfl)]
+  simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
 theorem bv_leq.r_neg_l.proof : bv_leq.r_neg_l.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_leq.r_neg_l] at h
+  split at h <;> simp at h
+  obtain ⟨⟨rfl, hc⟩, rfl⟩ := h
+  rename_i a _ c _
+  refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_leq hO hN (TB_O_neg hO hN h2) (TB_neg_inv h1).2)
+    (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+  obtain ⟨xa, ea, ha, rfl⟩ := neg_inv e1
+  obtain ⟨rfl, -⟩ := lit_val h2 e2
+  have hc := of_decide_eq_false hc; rw [TB_mk_size h1, lit_val' true h2 e2] at hc
+  rw [eval_O_leq hO hN (TB_O_neg hO hN h2) (TB_neg_inv h1).2 (eval_O_neg hO hN h2 e2 (by simp)) ea,
+    bvz_neg (ha rfl), bvz_neg (ne_intMin_of_bvz hn0 hc)]
+  simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
 theorem bv_leq.r_neg_r.proof : bv_leq.r_neg_r.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_leq.r_neg_r] at h
+  split at h <;> simp at h
+  obtain ⟨⟨rfl, hc⟩, rfl⟩ := h
+  rename_i c _ a _
+  refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_leq hO hN (TB_neg_inv h2).2 (TB_O_neg hO hN h1))
+    (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+  obtain ⟨yb, eb, hb, rfl⟩ := neg_inv e2
+  obtain ⟨rfl, -⟩ := lit_val h1 e1
+  have hc := of_decide_eq_false hc; rw [TB_mk_size h1, lit_val' true h1 e1] at hc
+  rw [eval_O_leq hO hN (TB_neg_inv h2).2 (TB_O_neg hO hN h1) eb (eval_O_neg hO hN h1 e1 (by simp)),
+    bvz_neg (hb rfl), bvz_neg (ne_intMin_of_bvz hn0 hc)]
+  simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
 theorem bv_leq.r_const_add.proof : bv_leq.r_const_add.Stmt := by
   sorry

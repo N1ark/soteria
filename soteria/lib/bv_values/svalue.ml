@@ -1948,8 +1948,8 @@ module Make (V : Value_ext) () = struct
           let r_low = extract from_ to_ r in
           mul ~checked:unchecked l_low r_low
       | Binop (Rem false, l, { node = { kind = BitVec n; _ }; _ })
-        when from_ = 0 && Z.log2 n < to_ ->
-          (* extract[0,N](X % M) when M < 2^M can be pushed down *)
+        when from_ = 0 && is_pow2 n && Z.log2 n < to_ ->
+          (* extract[0,N](X % 2^M) when M < N can be pushed down *)
           let l = extract from_ to_ l in
           rem ~signed:false l (mk (to_ + 1) n)
       | _ -> Unop (BvExtract (from_, to_), v) <| t_bv size

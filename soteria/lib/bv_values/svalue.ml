@@ -2320,7 +2320,7 @@ module Make (V : Value_ext) () = struct
             Binop (Lt signed, v, zero (size_of v.node.ty)) <| TBool
           in
           let not_eq_0 v =
-            Bool.not (Bool.sem_eq v1 (zero (size_of v.node.ty)))
+            Bool.not (Bool.sem_eq v (zero (size_of v.node.ty)))
           in
           (* this function returns if this node is negative if we can tell, and
              otherwise the node that represents the sign bit *)
@@ -2328,11 +2328,7 @@ module Make (V : Value_ext) () = struct
             match v.node.kind with
             | Unop (BvExtend (true, _), v) -> aux_lt_zero v
             | Unop (BvExtend (false, _), _) -> Bool.v_false
-            | Binop (Mod, _, r) -> Bool.and_ (aux_lt_zero r) (not_eq_0 v)
             | Binop (Rem true, l, _) -> Bool.and_ (aux_lt_zero l) (not_eq_0 v)
-            | Binop (Div true, l, r) ->
-                Bool.and_ (not_eq_0 v)
-                  (Bool.not (Bool.sem_eq (aux_lt_zero l) (aux_lt_zero r)))
             | Binop (BvConcat, l, _) -> aux_lt_zero l
             | Unop (BvNot, v) -> Bool.not (aux_lt_zero v)
             | Unop (BvOfBool n, _) when n > 1 -> Bool.v_false

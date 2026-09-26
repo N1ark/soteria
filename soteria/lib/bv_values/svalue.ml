@@ -1546,7 +1546,7 @@ module Make (V : Value_ext) () = struct
       | Binop (Add _, l, r), _ when equal l v2 -> r
       | Binop (Add _, l, r), _ when equal r v2 -> l
       | Binop (Add _, l1, r1), Binop (Add _, l2, r2) when equal l1 l2 ->
-          sub ~checked r1 r2
+          sub r1 r2
       | _l, Binop (Sub _, l', r) when equal v1 l' -> r
       (* distributing over a shared guard lets the branches cancel pairwise *)
       | Triop (Ite, b, l, r), Triop (Ite, b', l', r') when equal b b' ->
@@ -1616,6 +1616,7 @@ module Make (V : Value_ext) () = struct
       | ( Binop (Rem false, r, ({ node = { kind = BitVec r1; _ }; _ } as v_r1)),
           BitVec r2 )
         when Stdlib.not signed
+             && Z.(gt r1 zero && gt r2 zero)
              && Z.(equal zero (rem r1 r2) || equal zero (rem r2 r1)) ->
           let rhs = if Z.(equal (min r1 r2) r1) then v_r1 else v2 in
           rem ~signed r rhs
@@ -2150,8 +2151,15 @@ module Make (V : Value_ext) () = struct
           ( Binop (Mul ckm, { node = { kind = BitVec n; _ }; _ }, x)
           | Binop (Mul ckm, x, { node = { kind = BitVec n; _ }; _ }) ) )
         when is_checked (checked_meet checked ckm) ->
-          mul ~checked:(checked_meet checked ckm) x
-            (mk_masked (size_of v1.node.ty) Z.(n * m))
+          let size = size_of v1.node.ty in
+          let checked = checked_meet checked ckm in
+          (* the signed check only carries over if [n * m] does not overflow *)
+          let checked =
+            if overflows ~signed:true size n m Z.mul then
+              checked_meet checked checked_unsigned
+            else checked
+          in
+          mul ~checked x (mk_masked size Z.(n * m))
       (* only propagate down ites if we know it's concrete *)
       | Triop (Ite, b, l, r), BitVec x | BitVec x, Triop (Ite, b, l, r) ->
           let n = size_of v1.node.ty in
@@ -2166,7 +2174,13 @@ module Make (V : Value_ext) () = struct
           let size = size_of v1.node.ty in
           let l = bv_to_z signed size l in
           let r = bv_to_z signed size r in
-          let res = Z.(l / r) in
+          (* division by zero gives all ones, or 1 for signed negative
+             dividends *)
+          let res =
+            if Z.(equal r zero) then
+              if signed && Z.(lt l zero) then Z.one else Z.minus_one
+            else Z.(l / r)
+          in
           mk_masked size res
       | _, BitVec r when Z.equal r Z.one -> v1
       (* this case shouldn't happen but it avoids conflicts for the next two
@@ -2183,7 +2197,9 @@ module Make (V : Value_ext) () = struct
       | ( Binop
             (Mul { unsigned = true; _ }, x, { node = { kind = BitVec n; _ }; _ }),
           BitVec d )
-        when Stdlib.not signed && Z.(divisible n d) ->
+        when Stdlib.not signed
+             && Stdlib.not (Z.equal d Z.zero)
+             && Z.(divisible n d) ->
           (* (x * n) / d = x * (n / d) when n % d == 0 *)
           mul ~checked:checked_unsigned x (mk (size_of v1.node.ty) Z.(n / d))
       | ( Binop
@@ -2198,6 +2214,7 @@ module Make (V : Value_ext) () = struct
           div ~signed x (mk (size_of v1.node.ty) divisor)
       | Binop (Div s, x, { node = { kind = BitVec n; _ }; _ }), BitVec d
         when s = signed
+             && Stdlib.not (Z.equal n Z.zero)
              && (Stdlib.not @@ overflows ~signed (size_of v1.node.ty) n d Z.mul)
         ->
           (* (x / n) / d = x / (n * d) (if n * d doesn't overflow) *)

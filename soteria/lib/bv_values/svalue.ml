@@ -988,7 +988,8 @@ module Make (V : Value_ext) () = struct
       | _, Bool true, _ -> or_ guard else_
       | _, _, Bool false -> and_ guard if_
       | _, _, Bool true -> or_ (not guard) if_
-      | _, BitVec o, BitVec z when Z.(equal o one) && Z.equal z Z.zero ->
+      | _, BitVec o, BitVec z
+        when Z.(equal o one) && Z.equal z Z.zero && is_bv if_.node.ty ->
           BitVec.of_bool (size_of if_.node.ty) guard
       | Unop (Not, g), _, _ -> ite g else_ if_
       | _ when equal guard if_ -> or_ guard else_

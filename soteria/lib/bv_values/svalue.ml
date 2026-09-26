@@ -892,11 +892,18 @@ module Make (V : Value_ext) () = struct
              || (equal r1 l2 && sure_neq l1 r2)
              || (equal r1 r2 && sure_neq l1 l2) ->
           v_false
+      (* only for constants: if [bv1] or [bv2] could be undefined (an operation
+         whose overflow check does not hold), the conjunction could still be
+         false thanks to the other conjunct, while the merged equality would be
+         undefined *)
       | ( Binop
-            (Eq, bv1, { node = { kind = Unop (BvExtract (s1, e1), x); _ }; _ }),
+            ( Eq,
+              ({ node = { kind = BitVec _; _ }; _ } as bv1),
+              { node = { kind = Unop (BvExtract (s1, e1), x); _ }; _ } ),
           Binop
-            (Eq, bv2, { node = { kind = Unop (BvExtract (s2, e2), y); _ }; _ })
-        )
+            ( Eq,
+              ({ node = { kind = BitVec _; _ }; _ } as bv2),
+              { node = { kind = Unop (BvExtract (s2, e2), y); _ }; _ } ) )
         when equal x y && (e1 + 1 = s2 || e2 + 1 = s1) ->
           let bv, xy =
             if e1 + 1 = s2 then (BitVec.concat bv2 bv1, BitVec.extract s1 e2 x)

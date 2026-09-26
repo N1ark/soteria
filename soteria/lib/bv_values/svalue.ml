@@ -2212,12 +2212,13 @@ module Make (V : Value_ext) () = struct
           (* (x * n) / d = x / (d / n) when d % n == 0 *)
           let divisor = Z.(d / n) in
           div ~signed x (mk (size_of v1.node.ty) divisor)
-      | Binop (Div s, x, { node = { kind = BitVec n; _ }; _ }), BitVec d
-        when s = signed
+      | Binop (Div false, x, { node = { kind = BitVec n; _ }; _ }), BitVec d
+        when Stdlib.not signed
              && Stdlib.not (Z.equal n Z.zero)
              && (Stdlib.not @@ overflows ~signed (size_of v1.node.ty) n d Z.mul)
         ->
-          (* (x / n) / d = x / (n * d) (if n * d doesn't overflow) *)
+          (* (x /u n) /u d = x /u (n * d) (if n * d doesn't overflow); not for
+             signed divisions, which wrap for INT_MIN / -1 *)
           div ~signed x (mk (size_of v1.node.ty) Z.(n * d))
       | Unop (BvExtend (false, by), x), BitVec z
         when Stdlib.not signed && msb_of v2 < size_of x.node.ty ->

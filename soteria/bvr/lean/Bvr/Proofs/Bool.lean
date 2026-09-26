@@ -1,10 +1,10 @@
-import Bvr.Lemmas
+import Bvr.Proofs.BoolLemmas
 
 /-! Booleans: `b_and`, `b_or`, `b_not`, `b_ite`, `b_mk_exists`, `b_distinct`, `sem_eq_untyped`. -/
 
 namespace Bvr
 
-open Classical
+open Classical BoolL
 
 theorem b_and.r_same.proof : b_and.r_same.Stmt := by
   sorry

@@ -1550,5 +1550,44 @@ theorem cancellable_inv {s a N} (h : cancellable s a = true) (ha : TB a N) :
     cases k <;> simp [firstSome] at h
     exact ⟨_, _, rfl, h⟩
 
+/-- [v] is a multiplication of [x] by [a], on either side. -/
+def IsMulBy (c : Checked) (a x v : Term) : Prop :=
+  ∃ t, v = .mk (.binop (.mul c) a x) t ∨ v = .mk (.binop (.mul c) x a) t
+
+theorem TB_mulBy {c a x v N} (h : IsMulBy c a x v) (hv : TB v N) : TB a N ∧ TB x N := by
+  obtain ⟨t, rfl | rfl⟩ := h
+  · exact (TB_mul_inv hv).2
+  · exact ⟨(TB_mul_inv hv).2.2, (TB_mul_inv hv).2.1⟩
+
+theorem eval_mulBy {FS ρ c a x v m} {y : BitVec m} (s : Bool) (hc : checked_has s c = true)
+    (h : IsMulBy c a x v) (e : eval FS ρ v = some (.bv m y)) :
+    ∃ xa xx, eval FS ρ a = some (.bv m xa) ∧ eval FS ρ x = some (.bv m xx) ∧
+      bvz s y = bvz s xa * bvz s xx := by
+  obtain ⟨t, rfl | rfl⟩ := h
+  · obtain ⟨xa, xx, ea, ex, hy, -⟩ := eval_mul_inv s hc e
+    exact ⟨xa, xx, ea, ex, hy⟩
+  · obtain ⟨xx, xa, ex, ea, hy, -⟩ := eval_mul_inv s hc e
+    exact ⟨xa, xx, ea, ex, by rw [hy, Int.mul_comm]⟩
+
+/-- Cancelling a common positive factor of two checked multiplications. -/
+theorem mul_mul_refines {FS : FloatSem} {O : Ops} (hO : O.Sound FS) (le s : Bool)
+    {c1 c2 a x y v1 v2} (h1 : IsMulBy c1 a x v1) (h2 : IsMulBy c2 a y v2)
+    (hc1 : checked_has s c1 = true) (hc2 : checked_has s c2 = true)
+    (hca : cancellable s a = true) :
+    Refines FS (.mk (.binop (cmpOp le s) v1 v2) .bool)
+      (if le then O.bv_leq s x y else O.bv_lt s x y) := by
+  refine cmp_refines (fun N hN t1 t2 => TBool_O_cmp hO le s hN (TB_mulBy h1 t1).2 (TB_mulBy h2 t2).2)
+    (fun ρ N n vx vy hN t1 t2 hn hn0 e1 e2 => ?_)
+  subst hn
+  obtain ⟨xa, xx, ea, ex, hy1⟩ := eval_mulBy s hc1 h1 e1
+  obtain ⟨xa', yy, ea', ey, hy2⟩ := eval_mulBy s hc2 h2 e2
+  have := eval_val_eq ea ea'; subst this
+  have ta := (TB_mulBy h1 t1).1
+  obtain ⟨z, t, rfl, hz⟩ := cancellable_inv hca ta
+  rw [lit_val' s ta ea] at hz
+  rw [eval_O_cmp hO le s hN (TB_mulBy h1 t1).2 (TB_mulBy h2 t2).2 ex ey]
+  simp only [cmpv, hy1, hy2]
+  cases le <;> simp [Int.mul_lt_mul_left hz, Int.mul_le_mul_left hz]
+
 end CompareL
 end Bvr

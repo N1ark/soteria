@@ -1039,8 +1039,40 @@ theorem bv_div.r_mul_lits.proof : bv_div.r_mul_lits.Stmt := by
 theorem bv_div.r_mul_div.proof : bv_div.r_mul_div.Stmt := by
   sorry
 
+theorem bv_div.div_mul_aux {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {s' n Tn x T1 d T2 N}
+    (hdiv : n ∣ d) (hN : ∀ m, T1 = .bitVector m → N = m) :
+    Refines FS (.mk (.binop (.div false) (.mk (.binop (.mul ⟨s', true⟩) (.mk (.bitVec n) Tn) x) T1)
+        (.mk (.bitVec d) T2)) T1)
+      (O.bv_div false x (mk_bv N (tdiv d n))) := by
+  refine Refines.arith_intro (.div false) (fun m wa wb hT => ?_)
+    (fun m wa wb hT ρ P Dv v hx hy e => ?_)
+  all_goals obtain ⟨wn, wx, rfl⟩ := BV_arith_inv (.mul _) wa
+  all_goals obtain rfl := hN m rfl
+  all_goals obtain ⟨rfl, hzn⟩ := BV_lit wn
+  all_goals obtain ⟨rfl, hzd⟩ := BV_lit wb
+  all_goals have hk := BV_mk_bv (n := N) (z := tdiv d n) wa.2.2
+  all_goals have hres := O_arith (.div _) (hO.bv_div false x _) wx hk
+  · exact hres.1
+  · rw [eval_arith (.mul _) wn wx rfl] at hx
+    obtain ⟨Nv, X, hNv, hX, hx⟩ := evBinop_inv (.inl (.mul _)) wn wx hx
+    obtain rfl := lit_eval_eq wn hNv
+    obtain rfl := lit_eval_eq wb hy
+    simp [evBinop, checkedOp, bvBin] at hx e; obtain ⟨⟨-, hu⟩, rfl⟩ := hx; subst e
+    refine O_eval (.div _) (hO.bv_div _ _ _) wx hk hX (by rw [mk_bv, eval_mk_masked wa.2.2]) ?_
+    simp [evBinop, bvBin]
+    obtain ⟨t0, t1, t2, t3⟩ := tdiv_facts hzn.1 hzd.1 hdiv
+    rw [umul_ok, lit_toNat hzn.1 hzn.2] at hu
+    exact (udiv_mul_cancel (lit_toNat hzn.1 hzn.2) (lit_toNat hzd.1 hzd.2)
+      (lit_toNat t0 (by omega)) t2 (fun h => by rw [t3 (by omega)]; rfl) hu).symm
+
 theorem bv_div.r_div_mul.proof : bv_div.r_div_mul.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_div.r_div_mul] at h
+  rcases orElse_eq_some h with h | h <;> split at h <;> simp [divisible] at h <;>
+    obtain ⟨⟨rfl, hd⟩, rfl⟩ := h
+  · exact bv_div.div_mul_aux hO hd (fun m h => by simp [h])
+  · refine Refines.trans (Refines.binop (Refines.comm (.mul _)) Refines.refl (fun _ => rfl))
+      (bv_div.div_mul_aux hO hd (fun m h => by simp [h]))
 
 -- UNSOUND: when the inner divisor is zero, `x / 0` is all ones (SMT-LIB), and dividing it again
 -- differs from dividing `x` by `0 * d = 0`. Take 8 bits, `signed = false`, v1 = Div (false, x, 0),

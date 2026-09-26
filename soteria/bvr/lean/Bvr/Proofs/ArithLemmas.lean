@@ -910,5 +910,51 @@ theorem Refines.retype {FS k t t'} (h : (Term.mk k t).WT → t' = t) :
   · obtain rfl := h w; exact e
 
 
+
+theorem udiv_mul_cancel {w : Nat} {N X D K : BitVec w} {n d k : Nat} (hN : N.toNat = n)
+    (hD : D.toNat = d) (hK : K.toNat = k) (hdk : d = n * k) (hk0 : d = 0 → k = 0)
+    (hov : n * X.toNat < 2 ^ w) : (N * X).smtUDiv D = X.smtUDiv K := by
+  rw [BitVec.smtUDiv_eq, BitVec.smtUDiv_eq]
+  by_cases hd : d = 0
+  · have := hk0 hd
+    have h1 : D = 0#w := BitVec.eq_of_toNat_eq (by simp [hD, hd])
+    have h2 : K = 0#w := BitVec.eq_of_toNat_eq (by simp [hK, this])
+    simp [h1, h2]
+  · have hn : 0 < n := by rcases Nat.eq_zero_or_pos n with h | h <;> simp_all
+    have hk : 0 < k := by rcases Nat.eq_zero_or_pos k with h | h <;> simp_all
+    have h1 : D ≠ 0#w := fun h => hd (by rw [← hD, h]; simp)
+    have h2 : K ≠ 0#w := fun h => by rw [h] at hK; simp at hK; omega
+    simp only [h1, h2, ↓reduceIte]
+    apply BitVec.eq_of_toNat_eq
+    rw [BitVec.toNat_udiv, BitVec.toNat_udiv, BitVec.toNat_mul, hN, hD, hK, hdk,
+      Nat.mod_eq_of_lt hov, Nat.mul_div_mul_left _ _ hn]
+
+theorem tdiv_facts {n d : Int} (h0 : 0 ≤ n) (h1 : 0 ≤ d) (h : n ∣ d) :
+    0 ≤ d.tdiv n ∧ d.tdiv n ≤ d ∧ d.toNat = n.toNat * (d.tdiv n).toNat ∧
+      (d = 0 → d.tdiv n = 0) := by
+  by_cases hn : n = 0
+  · subst hn; obtain rfl : d = 0 := Int.zero_dvd.1 h; simp
+  obtain ⟨k, rfl⟩ := h
+  rw [Int.mul_tdiv_cancel_left _ hn]
+  obtain ⟨a, rfl⟩ := Int.eq_ofNat_of_zero_le h0
+  have ha : 0 < a := by omega
+  have hk : 0 ≤ k := by
+    rcases Int.lt_or_le k 0 with hk | hk
+    · have : (a : Int) * k < 0 := Int.mul_neg_of_pos_of_neg (by omega) hk
+      omega
+    · exact hk
+  obtain ⟨b, rfl⟩ := Int.eq_ofNat_of_zero_le hk
+  refine ⟨hk, ?_, ?_, ?_⟩
+  · have : b ≤ a * b := Nat.le_mul_of_pos_left b ha
+    exact_mod_cast this
+  · simp only [Int.toNat_natCast]; exact_mod_cast rfl
+  · intro h; have : a * b = 0 := by exact_mod_cast h
+    rcases Nat.mul_eq_zero.1 this with h | h <;> simp_all
+
+theorem lit_toNat {w : Nat} {z : Int} (h0 : 0 ≤ z) (h1 : z < 2 ^ w) :
+    (BitVec.ofInt w z).toNat = z.toNat := by
+  have := toNat_ofInt_lit h0 h1; omega
+
+
 end ArithL
 end Bvr

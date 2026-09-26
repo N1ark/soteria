@@ -1106,27 +1106,36 @@ module Make (V : Value_ext) () = struct
       | Triop (Ite, b, l, r), Triop (Ite, b', l', r') when equal b b' ->
           ite b (sem_eq l l') (sem_eq r r')
       (* Cancelling a common factor [a] from [a*b == a*d] is only sound when [a]
-         is odd (invertible modulo 2^n), or when both multiplications are
-         overflow-checked (so they behave like exact integer arithmetic). *)
+         is odd (invertible modulo 2^n), or when [a] is non-zero and both
+         multiplications are overflow-checked (so they behave like exact integer
+         arithmetic). *)
       | ( Binop (Mul ck1, { node = { kind = BitVec a; _ }; _ }, b),
           Binop (Mul ck2, { node = { kind = BitVec c; _ }; _ }, d) )
-        when Z.(equal a c) && (Z.is_odd a || is_checked (checked_meet ck1 ck2))
-        ->
+        when Z.(equal a c)
+             && (Z.is_odd a
+                || (Stdlib.not (Z.equal a Z.zero)
+                   && is_checked (checked_meet ck1 ck2))) ->
           sem_eq b d
       | ( Binop (Mul ck1, b, { node = { kind = BitVec a; _ }; _ }),
           Binop (Mul ck2, d, { node = { kind = BitVec c; _ }; _ }) )
-        when Z.(equal a c) && (Z.is_odd a || is_checked (checked_meet ck1 ck2))
-        ->
+        when Z.(equal a c)
+             && (Z.is_odd a
+                || (Stdlib.not (Z.equal a Z.zero)
+                   && is_checked (checked_meet ck1 ck2))) ->
           sem_eq b d
       | ( Binop (Mul ck1, { node = { kind = BitVec a; _ }; _ }, b),
           Binop (Mul ck2, d, { node = { kind = BitVec c; _ }; _ }) )
-        when Z.(equal a c) && (Z.is_odd a || is_checked (checked_meet ck1 ck2))
-        ->
+        when Z.(equal a c)
+             && (Z.is_odd a
+                || (Stdlib.not (Z.equal a Z.zero)
+                   && is_checked (checked_meet ck1 ck2))) ->
           sem_eq b d
       | ( Binop (Mul ck1, b, { node = { kind = BitVec a; _ }; _ }),
           Binop (Mul ck2, { node = { kind = BitVec c; _ }; _ }, d) )
-        when Z.(equal a c) && (Z.is_odd a || is_checked (checked_meet ck1 ck2))
-        ->
+        when Z.(equal a c)
+             && (Z.is_odd a
+                || (Stdlib.not (Z.equal a Z.zero)
+                   && is_checked (checked_meet ck1 ck2))) ->
           sem_eq b d (* Bitvectors *)
       (* 0 == L | R ==> 0 == L && 0 == R, splitting is better for the PC *)
       | (BitVec z, Binop (BitOr, l, r) | Binop (BitOr, l, r), BitVec z)

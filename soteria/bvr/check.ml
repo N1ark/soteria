@@ -362,7 +362,10 @@ let rec alternatives (p : Syntax.pat) : Syntax.pat list =
 
 let fresh_counter = ref 0
 
+(* Fresh names are numbered per case, so that changing a rule does not rename
+   the variables of the others in the generated code. *)
 let linearize (p : Syntax.pat) : Syntax.pat * Syntax.expr list =
+  fresh_counter := 0;
   let seen = Hashtbl.create 8 and conds = ref [] in
   let fresh () =
     incr fresh_counter;

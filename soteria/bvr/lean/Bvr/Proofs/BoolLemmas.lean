@@ -1390,5 +1390,197 @@ theorem Refines.and_eq_extracts {FS : FloatSem} {clo chi slo elo shi ehi : Int} 
       rw [← Nat.shiftLeft_add_eq_or_of_lt hl, Nat.shiftLeft_eq, ← Bool.decide_and]
       exact decide_eq_decide.2 (split_mod_iff hl)
 
+theorem mem_freeVars_exists {bs : List (Int × Ty)} {body : Term} {T : Ty} {v : Int} :
+    v ∈ (Term.mk (.exists_ bs body) T).freeVars ↔ v ∈ body.freeVars ∧ ∀ b ∈ bs, b.1 ≠ v := by
+  simp [Term.freeVars]
+
+/-- Moving an extension of [ρa] to one of [ρb], where they agree on the free variables. -/
+theorem extends_transfer {bs : List (Int × Ty)} {P : Int → Prop} {ρa ρb ρ' : Env}
+    (he : ρa.ext = ρb.ext) (hv : ∀ v, P v → (∀ b ∈ bs, b.1 ≠ v) → ρa.var v = ρb.var v)
+    (h : ρ'.Extends ρa bs) :
+    ∃ ρ'' : Env, ρ''.Extends ρb bs ∧ ρ''.ext = ρ'.ext ∧ ∀ v, P v → ρ''.var v = ρ'.var v := by
+  refine ⟨⟨fun v => if ∃ b ∈ bs, b.1 = v then ρ'.var v else ρb.var v, ρ'.ext⟩,
+    ⟨by rw [h.1, he], fun v hn => ?_, fun b hb => ?_⟩, rfl, fun v hP => ?_⟩
+  · have : ¬ ∃ b ∈ bs, b.1 = v := fun ⟨b, hb, e⟩ => hn b hb e
+    simp only [this, ite_false]
+  · simp only [show ∃ b' ∈ bs, b'.1 = b.1 from ⟨b, hb, rfl⟩, ite_true]; exact h.2.2 b hb
+  · by_cases hc : ∃ b ∈ bs, b.1 = v
+    · simp [hc]
+    · have hn : ∀ b ∈ bs, b.1 ≠ v := fun b hb e => hc ⟨b, hb, e⟩
+      simp only [hc, ite_false]; rw [h.2.1 v hn, hv v hP hn]
+
+mutual
+
+theorem ev_congr {FS : FloatSem} :
+    ∀ (t : Term) (ρ1 ρ2 : Env), ρ1.ext = ρ2.ext → (∀ v ∈ t.freeVars, ρ1.var v = ρ2.var v) →
+      ev FS ρ1 t = ev FS ρ2 t
+  | .mk (.var x) T, ρ1, ρ2, _, hv => by
+      simp only [ev]; rw [hv x (by simp [Term.freeVars])]
+  | .mk (.bool b) T, ρ1, ρ2, _, _ => by simp only [ev]
+  | .mk (.float f) T, ρ1, ρ2, _, _ => by simp only [ev]
+  | .mk (.bitVec z) T, ρ1, ρ2, _, _ => by simp only [ev]
+  | .mk (.ptr l o) T, ρ1, ρ2, he, hv => by
+      simp only [ev]
+      rw [ev_congr l ρ1 ρ2 he (fun v h => hv v (by simp [Term.freeVars, h])),
+        ev_congr o ρ1 ρ2 he (fun v h => hv v (by simp [Term.freeVars, h]))]
+  | .mk (.seq l) T, ρ1, ρ2, he, hv => by
+      simp only [ev]
+      rw [evList_congr l ρ1 ρ2 he (fun v h => hv v (by simpa [Term.freeVars] using h))]
+  | .mk (.unop op a) T, ρ1, ρ2, he, hv => by
+      simp only [ev]
+      rw [ev_congr a ρ1 ρ2 he (fun v h => hv v (by simpa [Term.freeVars] using h))]
+  | .mk (.binop op a b) T, ρ1, ρ2, he, hv => by
+      simp only [ev]
+      rw [ev_congr a ρ1 ρ2 he (fun v h => hv v (by simp [Term.freeVars, h])),
+        ev_congr b ρ1 ρ2 he (fun v h => hv v (by simp [Term.freeVars, h]))]
+  | .mk (.triop op g a b) T, ρ1, ρ2, he, hv => by
+      have hg := ev_congr (FS := FS) g ρ1 ρ2 he (fun v h => hv v (by simp [Term.freeVars, h]))
+      have ha := ev_congr (FS := FS) a ρ1 ρ2 he (fun v h => hv v (by simp [Term.freeVars, h]))
+      have hb := ev_congr (FS := FS) b ρ1 ρ2 he (fun v h => hv v (by simp [Term.freeVars, h]))
+      cases op <;> simp only [ev] <;> rw [hg, ha, hb]
+  | .mk (.nop op l) T, ρ1, ρ2, he, hv => by
+      cases op
+      simp only [ev]
+      rw [evList_congr l ρ1 ρ2 he (fun v h => hv v (by simpa [Term.freeVars] using h))]
+  | .mk (.exists_ bs body) T, ρ1, ρ2, he, hv => by
+      have key : ∀ ρa ρb : Env, ρa.ext = ρb.ext →
+          (∀ v, v ∈ body.freeVars → (∀ b ∈ bs, b.1 ≠ v) → ρa.var v = ρb.var v) →
+          ∀ ρ' : Env, ρ'.Extends ρa bs →
+            ∃ ρ'' : Env, ρ''.Extends ρb bs ∧ ev FS ρ'' body = ev FS ρ' body := by
+        intro ρa ρb hab hvab ρ' hext
+        obtain ⟨ρ'', h1, h2, h3⟩ := extends_transfer (P := (· ∈ body.freeVars)) hab hvab hext
+        exact ⟨ρ'', h1, ev_congr body ρ'' ρ' h2 h3⟩
+      have hv' : ∀ v, v ∈ body.freeVars → (∀ b ∈ bs, b.1 ≠ v) → ρ1.var v = ρ2.var v :=
+        fun v h1 h2 => hv v (mem_freeVars_exists.2 ⟨h1, h2⟩)
+      have k12 := key ρ1 ρ2 he hv'
+      have k21 := key ρ2 ρ1 he.symm (fun v h1 h2 => (hv' v h1 h2).symm)
+      have hC : (∀ ρ' : Env, ρ'.Extends ρ1 bs → ∃ b, ev FS ρ' body = some (.bool b)) ↔
+          (∀ ρ' : Env, ρ'.Extends ρ2 bs → ∃ b, ev FS ρ' body = some (.bool b)) := by
+        constructor
+        · intro h ρ' hx; obtain ⟨ρ'', h1, h2⟩ := k21 ρ' hx; rw [← h2]; exact h ρ'' h1
+        · intro h ρ' hx; obtain ⟨ρ'', h1, h2⟩ := k12 ρ' hx; rw [← h2]; exact h ρ'' h1
+      have hE : (∃ ρ' : Env, ρ'.Extends ρ1 bs ∧ ev FS ρ' body = some (.bool true)) ↔
+          (∃ ρ' : Env, ρ'.Extends ρ2 bs ∧ ev FS ρ' body = some (.bool true)) := by
+        constructor
+        · rintro ⟨ρ', hx, e⟩; obtain ⟨ρ'', h1, h2⟩ := k12 ρ' hx; exact ⟨ρ'', h1, h2.trans e⟩
+        · rintro ⟨ρ', hx, e⟩; obtain ⟨ρ'', h1, h2⟩ := k21 ρ' hx; exact ⟨ρ'', h1, h2.trans e⟩
+      simp only [ev]
+      simp only [hC, hE]
+  | .mk (.extension x) T, ρ1, ρ2, he, _ => by simp only [ev]; rw [he]
+
+theorem evList_congr {FS : FloatSem} :
+    ∀ (l : List Term) (ρ1 ρ2 : Env), ρ1.ext = ρ2.ext →
+      (∀ v ∈ Term.freeVarsList l, ρ1.var v = ρ2.var v) → evList FS ρ1 l = evList FS ρ2 l
+  | [], _, _, _, _ => by simp only [evList]
+  | t :: ts, ρ1, ρ2, he, hv => by
+      simp only [evList]
+      rw [ev_congr t ρ1 ρ2 he (fun v h => hv v (by simp [Term.freeVarsList, h])),
+        evList_congr ts ρ1 ρ2 he (fun v h => hv v (by simp [Term.freeVarsList, h]))]
+end
+
+theorem Ty.WF.inhabited : ∀ {t : Ty}, t.WF → ∃ x : Val, x.hasTy t
+  | .bool, _ => ⟨.bool false, by simp [Val.hasTy, Val.hasSort]⟩
+  | .float p, _ => ⟨.float p 0, by simp [Val.hasTy, Val.hasSort]⟩
+  | .loc n, h => ⟨.bv n.toNat 0, by simp [Val.hasTy, Val.hasSort, Ty.WF] at h ⊢; omega⟩
+  | .pointer n, h => ⟨.ptr n.toNat 0 0, by simp [Val.hasTy, Val.hasSort, Ty.WF] at h ⊢; omega⟩
+  | .seq t, _ => ⟨.seq [], by simp [Val.hasTy, Val.hasSort, Val.hasSortList]⟩
+  | .bitVector n, h => ⟨.bv n.toNat 0, by simp [Val.hasTy, Val.hasSort, Ty.WF] at h ⊢; omega⟩
+  | .extension e, _ => ⟨.ext 0, by simp [Val.hasTy, Val.hasSort]⟩
+
+theorem binders_fst_inj : ∀ {bs : List (Int × Ty)}, (bs.map Prod.fst).Nodup →
+    ∀ {b b' : Int × Ty}, b ∈ bs → b' ∈ bs → b.1 = b'.1 → b = b'
+  | [], _, _, _, h, _, _ => by simp at h
+  | a :: rest, hn, b, b', hb, hb', e => by
+    simp only [List.map_cons, List.nodup_cons, List.mem_map] at hn
+    obtain ⟨ha, hn⟩ := hn
+    rcases List.mem_cons.1 hb with rfl | hb1 <;> rcases List.mem_cons.1 hb' with rfl | hb2
+    · rfl
+    · exact absurd ⟨b', hb2, e.symm⟩ ha
+    · exact absurd ⟨b, hb1, e⟩ ha
+    · exact binders_fst_inj hn hb1 hb2 e
+
+theorem binders_values : ∀ {bs : List (Int × Ty)}, (bs.map Prod.fst).Nodup → (∀ b ∈ bs, b.2.WF) →
+    ∃ f : Int → Option Val, ∀ b ∈ bs, ∃ x, f b.1 = some x ∧ x.hasTy b.2
+  | [], _, _ => ⟨fun _ => none, by simp⟩
+  | a :: rest, hn, hw => by
+    simp only [List.map_cons, List.nodup_cons, List.mem_map] at hn
+    obtain ⟨ha, hn⟩ := hn
+    obtain ⟨f, hf⟩ := binders_values hn (fun b hb => hw b (List.mem_cons_of_mem _ hb))
+    obtain ⟨x, hx⟩ := Ty.WF.inhabited (hw a (by simp))
+    refine ⟨fun v => if v = a.1 then some x else f v, fun b hb => ?_⟩
+    rcases List.mem_cons.1 hb with rfl | hb
+    · exact ⟨x, by simp, hx⟩
+    · have : b.1 ≠ a.1 := fun e => ha ⟨b, hb, e⟩
+      simp only [this, ite_false]; exact hf b hb
+
+theorem mem_used_binders {bs : List (Int × Ty)} {body : Term} {b : Int × Ty} :
+    b ∈ used_binders bs body ↔ b ∈ bs ∧ b.1 ∈ body.freeVars := by
+  simp [used_binders]
+
+theorem ev_exists_used {FS : FloatSem} {ρ : Env} {bs : List (Int × Ty)} {body : Term} {T T' : Ty}
+    (hn : (bs.map Prod.fst).Nodup) (hw : ∀ b ∈ bs, b.2.WF) :
+    ev FS ρ (.mk (.exists_ bs body) T) = ev FS ρ (.mk (.exists_ (used_binders bs body) body) T') := by
+  have kA : ∀ ρ' : Env, ρ'.Extends ρ bs →
+      ∃ ρ'' : Env, ρ''.Extends ρ (used_binders bs body) ∧ ev FS ρ'' body = ev FS ρ' body := by
+    intro ρ' h
+    refine ⟨⟨fun v => if ∃ b ∈ used_binders bs body, b.1 = v then ρ'.var v else ρ.var v, ρ'.ext⟩,
+      ⟨h.1, fun v hv => ?_, fun b hb => ?_⟩, ev_congr _ _ _ rfl fun v hv => ?_⟩
+    · have : ¬ ∃ b ∈ used_binders bs body, b.1 = v := fun ⟨b, hb, e⟩ => hv b hb e
+      simp only [this, ite_false]
+    · simp only [show ∃ b' ∈ used_binders bs body, b'.1 = b.1 from ⟨b, hb, rfl⟩, ite_true]
+      exact h.2.2 b (mem_used_binders.1 hb).1
+    · by_cases hc : ∃ b ∈ used_binders bs body, b.1 = v
+      · simp [hc]
+      · simp only [hc, ite_false]
+        refine (h.2.1 v fun b hb e => hc ⟨b, mem_used_binders.2 ⟨hb, e ▸ hv⟩, e⟩).symm
+  have kB : ∀ ρ'' : Env, ρ''.Extends ρ (used_binders bs body) →
+      ∃ ρ' : Env, ρ'.Extends ρ bs ∧ ev FS ρ' body = ev FS ρ'' body := by
+    intro ρ'' h
+    obtain ⟨f, hf⟩ := binders_values hn hw
+    refine ⟨⟨fun v => if ∃ b ∈ used_binders bs body, b.1 = v then ρ''.var v
+        else if ∃ b ∈ bs, b.1 = v then f v else ρ.var v, ρ.ext⟩,
+      ⟨rfl, fun v hv => ?_, fun b hb => ?_⟩, ev_congr _ _ _ h.1.symm fun v hv => ?_⟩
+    · have h1 : ¬ ∃ b ∈ used_binders bs body, b.1 = v :=
+        fun ⟨b, hb, e⟩ => hv b (mem_used_binders.1 hb).1 e
+      have h2 : ¬ ∃ b ∈ bs, b.1 = v := fun ⟨b, hb, e⟩ => hv b hb e
+      simp only [h1, h2, ite_false]
+    · by_cases hc : ∃ b' ∈ used_binders bs body, b'.1 = b.1
+      · simp only [hc, ite_true]
+        obtain ⟨b', hb', e⟩ := hc
+        obtain rfl := binders_fst_inj hn (mem_used_binders.1 hb').1 hb e
+        exact h.2.2 b' hb'
+      · simp only [hc, show ∃ b' ∈ bs, b'.1 = b.1 from ⟨b, hb, rfl⟩, ite_false, ite_true]
+        exact hf b hb
+    · by_cases hc : ∃ b ∈ used_binders bs body, b.1 = v
+      · simp [hc]
+      · have h2 : ¬ ∃ b ∈ bs, b.1 = v :=
+          fun ⟨b, hb, e⟩ => hc ⟨b, mem_used_binders.2 ⟨hb, e ▸ hv⟩, e⟩
+        simp only [hc, h2, ite_false]
+        exact (h.2.1 v fun b hb e => hc ⟨b, hb, e⟩).symm
+  have hC : (∀ ρ' : Env, ρ'.Extends ρ bs → ∃ b, ev FS ρ' body = some (.bool b)) ↔
+      (∀ ρ' : Env, ρ'.Extends ρ (used_binders bs body) → ∃ b, ev FS ρ' body = some (.bool b)) := by
+    constructor
+    · intro h ρ' hx; obtain ⟨ρ'', h1, h2⟩ := kB ρ' hx; rw [← h2]; exact h ρ'' h1
+    · intro h ρ' hx; obtain ⟨ρ'', h1, h2⟩ := kA ρ' hx; rw [← h2]; exact h ρ'' h1
+  have hE : (∃ ρ' : Env, ρ'.Extends ρ bs ∧ ev FS ρ' body = some (.bool true)) ↔
+      (∃ ρ' : Env, ρ'.Extends ρ (used_binders bs body) ∧ ev FS ρ' body = some (.bool true)) := by
+    constructor
+    · rintro ⟨ρ', hx, e⟩; obtain ⟨ρ'', h1, h2⟩ := kA ρ' hx; exact ⟨ρ'', h1, h2.trans e⟩
+    · rintro ⟨ρ', hx, e⟩; obtain ⟨ρ'', h1, h2⟩ := kB ρ' hx; exact ⟨ρ'', h1, h2.trans e⟩
+  simp only [ev]
+  simp only [hC, hE]
+
+theorem extends_nil {ρ ρ' : Env} : ρ'.Extends ρ [] ↔ ρ' = ρ := by
+  constructor
+  · rintro ⟨he, hv, -⟩
+    rcases ρ with ⟨v, x⟩; rcases ρ' with ⟨v', x'⟩
+    simp only [Env.mk.injEq] at he hv ⊢
+    exact ⟨funext fun a => hv a (by simp), he⟩
+  · rintro rfl; exact ⟨rfl, fun _ _ => rfl, by simp⟩
+
+theorem WT_exists {bs body T} : (Term.mk (.exists_ bs body) T).WT ↔
+    T = .bool ∧ (bs.map Prod.fst).Nodup ∧ (∀ b ∈ bs, b.2.WF) ∧ body.ty = .bool ∧ body.WT := by
+  simp [Term.WT]
+
 end BoolL
 end Bvr

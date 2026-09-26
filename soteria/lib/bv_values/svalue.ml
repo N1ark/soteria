@@ -1585,10 +1585,15 @@ module Make (V : Value_ext) () = struct
           let bitwidth = Z.log2 r in
           let lower = extract 0 (bitwidth - 1) v1 in
           extend ~signed:false (size - bitwidth) lower
-      | Binop (Add _, { node = { kind = BitVec l; _ }; _ }, r), BitVec d
+      (* (d + r) %u d = r %u d, when the addition does not wrap *)
+      | ( Binop
+            (Add { unsigned = true; _ }, { node = { kind = BitVec l; _ }; _ }, r),
+          BitVec d )
         when Stdlib.not signed && Z.(equal l d) ->
           rem ~signed r v2
-      | Binop (Add _, r, { node = { kind = BitVec l; _ }; _ }), BitVec d
+      | ( Binop
+            (Add { unsigned = true; _ }, r, { node = { kind = BitVec l; _ }; _ }),
+          BitVec d )
         when Stdlib.not signed && Z.(equal l d) ->
           rem ~signed r v2
       | ( Binop (Rem false, r, ({ node = { kind = BitVec r1; _ }; _ } as v_r1)),

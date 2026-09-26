@@ -346,14 +346,91 @@ theorem bv_add.r_factor.proof : bv_add.r_factor.Stmt := by
     exact Refines.trans (Refines.binop (Refines.comm (.mul _)) (Refines.comm (.mul _))
       (fun _ => rfl)) (bv_add.factor_aux hO)
 
--- UNSOUND: `divisible` and `tdiv` are applied to the unsigned representations of the constants,
--- which is wrong for signed flags. Take 8 bits, `checked = ck1 = ck2 = {signed := true,
--- unsigned := false}`, v1 = Mul (ck1, 3, x), v2 = Mul (ck2, 255, y), with x = 0, y = 1 (take `O`
--- returning the raw spec terms). `divisible 255 3` holds and common = 85. The spec is
--- 3 *s 0 +s (-1) *s 1 = -1 = `some 0xff`, with no signed overflow. The result is
--- 3 *s (x +s 85 *s y) = 3 *s 85 = 255, which overflows as a signed product, so it is poison.
+theorem bv_add.factor_const_aux {FS : FloatSem} {O : Ops} (hO : O.Sound FS)
+    {c ck1 ck2 l1 T1 r1 S1 l2 T2 r2 S2 T N} (hc : c.unsigned = true) (h1 : ck1.unsigned = true)
+    (h2 : ck2.unsigned = true) (hd : l1 ∣ l2) (hN : ∀ n, S1 = .bitVector n → S2 = .bitVector n → N = n) :
+    Refines FS (.mk (.binop (.add c) (.mk (.binop (.mul ck1) (.mk (.bitVec l1) T1) r1) S1)
+        (.mk (.binop (.mul ck2) (.mk (.bitVec l2) T2) r2) S2)) T)
+      (O.bv_mul checked_unsigned (.mk (.bitVec l1) T1) (O.bv_add checked_unsigned r1
+        (O.bv_mul checked_unsigned (mk_bv N (tdiv l2 l1)) r2))) := by
+  refine Refines.arith_intro (.add c) (fun n w1 w2 hT => ?_) (fun n w1 w2 hT ρ P Q v hp hq e => ?_)
+  all_goals obtain ⟨wl1, wr1, rfl⟩ := BV_arith_inv (.mul _) w1
+  all_goals obtain ⟨wl2, wr2, rfl⟩ := BV_arith_inv (.mul _) w2
+  all_goals obtain rfl := hN n rfl rfl
+  all_goals obtain ⟨rfl, hz1⟩ := BV_lit wl1
+  all_goals obtain ⟨rfl, hz2⟩ := BV_lit wl2
+  all_goals have hk := BV_mk_bv (n := N) (z := tdiv l2 l1) w1.2.2
+  all_goals have m2 := O_arith (.mul _) (hO.bv_mul checked_unsigned _ r2) hk wr2
+  all_goals have s := O_arith (.add _) (hO.bv_add checked_unsigned r1 _) wr1 m2.1
+  all_goals have m1 := O_arith (.mul _) (hO.bv_mul checked_unsigned _ _) wl1 s.1
+  · exact m1.1
+  · rw [eval_arith (.mul _) wl1 wr1 rfl] at hp
+    obtain ⟨L1, R1, hL1, hR1, hp⟩ := evBinop_inv (.inl (.mul _)) wl1 wr1 hp
+    obtain rfl := lit_eval_eq wl1 hL1
+    rw [eval_arith (.mul _) wl2 wr2 rfl] at hq
+    obtain ⟨L2, R2, hL2, hR2, hq⟩ := evBinop_inv (.inl (.mul _)) wl2 wr2 hq
+    obtain rfl := lit_eval_eq wl2 hL2
+    simp [evBinop, checkedOp, bvBin] at hp hq e
+    obtain ⟨⟨-, hp1⟩, rfl⟩ := hp; obtain ⟨⟨-, hq1⟩, rfl⟩ := hq; obtain ⟨⟨-, he1⟩, rfl⟩ := e
+    obtain ⟨t0, t1, t2, t3⟩ := tdiv_facts hz1.1 hz2.1 hd
+    have hK : (BitVec.ofInt N.toNat (tdiv l2 l1)).toNat = (l2.tdiv l1).toNat :=
+      lit_toNat (w := N.toNat) t0 (by simp only [tdiv]; omega)
+    obtain ⟨k1, k2, k3, hv⟩ := factor_const_bv (K := BitVec.ofInt N.toNat (tdiv l2 l1))
+      (by rw [lit_toNat hz1.1 hz1.2, lit_toNat hz2.1 hz2.2, hK]; exact t2)
+      (by
+        intro h; rw [lit_toNat hz1.1 hz1.2] at h
+        obtain rfl : l1 = 0 := by omega
+        rw [hK, t3 (Int.zero_dvd.1 hd)]; rfl)
+      (hp1 h1) (hq1 h2) (he1 hc)
+    have hM2 := m2.2 ρ (.bv _ (BitVec.ofInt N.toNat (tdiv l2 l1) * R2))
+      (by rw [mk_bv, eval_mk_masked w1.2.2, hR2]; simp [evBinop, checkedOp, bvBin, checked_unsigned, k1])
+    have hS := s.2 ρ (.bv _ (R1 + BitVec.ofInt N.toNat (tdiv l2 l1) * R2))
+      (by rw [hR1, hM2]; simp [evBinop, checkedOp, bvBin, checked_unsigned, k2])
+    refine m1.2 ρ _ ?_
+    rw [eval_lit wl1, hS]; simp [evBinop, checkedOp, bvBin, checked_unsigned, k3, hv]
+
+theorem bv_add.factor_const_v1 {FS : FloatSem} {O : Ops} (hO : O.Sound FS)
+    {c ck1 ck2 l1 T1 r1 S1 l2 T2 r2 S2 T}
+    (hm : (checked_meet (checked_meet c ck1) ck2).unsigned = true)
+    (hdv : divisible l1 l2 = true ∨ divisible l2 l1 = true) :
+    Refines FS (.mk (.binop (.add c) (.mk (.binop (.mul ck1) (.mk (.bitVec l1) T1) r1) S1)
+        (.mk (.binop (.mul ck2) (.mk (.bitVec l2) T2) r2) S2)) T)
+      (if divisible l2 l1 = true then
+        O.bv_mul checked_unsigned (.mk (.bitVec l1) T1) (O.bv_add checked_unsigned r1
+          (O.bv_mul checked_unsigned (mk_bv (size_of_ty S1) (tdiv l2 l1)) r2))
+      else
+        O.bv_mul checked_unsigned (.mk (.bitVec l2) T2) (O.bv_add checked_unsigned r2
+          (O.bv_mul checked_unsigned (mk_bv (size_of_ty S1) (tdiv l1 l2)) r1))) := by
+  simp only [checked_meet, Bool.and_eq_true] at hm
+  obtain ⟨⟨hc, h1⟩, h2⟩ := hm
+  split
+  · rename_i hd; simp [divisible] at hd
+    exact bv_add.factor_const_aux hO hc h1 h2 hd (fun n h _ => by simp [h])
+  · rename_i hd
+    have hd' : l2 ∣ l1 := by
+      simp [divisible] at hd hdv; rcases hdv with h | h
+      · exact h
+      · exact absurd h hd
+    exact Refines.trans (Refines.comm (.add c))
+      (bv_add.factor_const_aux hO hc h2 h1 hd' (fun n _ h => by simp [h]))
+
 theorem bv_add.r_factor_const.proof : bv_add.r_factor_const.Stmt := by
-  sorry
+  intro FS O hO c v1 v2 res h
+  simp only [bv_add.r_factor_const] at h
+  rcases orElse_eq_some h with h | h
+  · split at h <;> simp at h; obtain ⟨⟨hm, hdv⟩, rfl⟩ := h
+    exact bv_add.factor_const_v1 hO hm hdv
+  rcases orElse_eq_some h with h | h
+  · split at h <;> simp at h; obtain ⟨⟨hm, hdv⟩, rfl⟩ := h
+    exact Refines.trans (Refines.binop Refines.refl (Refines.comm (.mul _)) (fun _ => rfl))
+      (bv_add.factor_const_v1 hO hm hdv)
+  rcases orElse_eq_some h with h | h
+  · split at h <;> simp at h; obtain ⟨⟨hm, hdv⟩, rfl⟩ := h
+    exact Refines.trans (Refines.binop (Refines.comm (.mul _)) Refines.refl (fun _ => rfl))
+      (bv_add.factor_const_v1 hO hm hdv)
+  · split at h <;> simp at h; obtain ⟨⟨hm, hdv⟩, rfl⟩ := h
+    exact Refines.trans (Refines.binop (Refines.comm (.mul _)) (Refines.comm (.mul _))
+      (fun _ => rfl)) (bv_add.factor_const_v1 hO hm hdv)
 
 theorem bv_add.r_ite.proof : bv_add.r_ite.Stmt := by
   intro FS O hO c v1 v2 res h

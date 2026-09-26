@@ -704,6 +704,23 @@ theorem uadd_sub_reassoc'' (h1 : z.uaddOverflow x = false) (h2 : (z + x).usubOve
     (h3 : z.usubOverflow y = false) : x.uaddOverflow (z - y) = false := by
   have := toNat_add_ok h1; have := toNat_sub_ok h3; ovf
 
+-- (x * n) * m  ~>  x * (n * m)
+theorem smul_assoc_ok (h1 : x.smulOverflow y = false) (h2 : (x * y).smulOverflow z = false)
+    (h3 : y.smulOverflow z = false) : x.smulOverflow (y * z) = false := by
+  rw [smul_ok] at h2 ⊢
+  rw [toInt_mul_ok h1] at h2; rw [toInt_mul_ok h3, ← Int.mul_assoc]; exact h2
+
+theorem umul_assoc_ok (h1 : x.umulOverflow y = false) (h2 : (x * y).umulOverflow z = false) :
+    x.umulOverflow (y * z) = false := by
+  rw [umul_ok] at h2 ⊢
+  rw [toNat_mul_ok h1] at h2
+  rw [Nat.mul_assoc] at h2
+  rcases Nat.eq_zero_or_pos x.toNat with h | h
+  · rw [h, Nat.zero_mul]; exact Nat.two_pow_pos w
+  · have : y.toNat * z.toNat < 2 ^ w :=
+      Nat.lt_of_le_of_lt (Nat.le_mul_of_pos_left _ h) h2
+    rw [BitVec.toNat_mul, Nat.mod_eq_of_lt this]; exact h2
+
 end Ovf
 
 theorem mask_lits {c : Checked} {za zb : Int} {Ta Tb : Ty} {is_add : Bool} :

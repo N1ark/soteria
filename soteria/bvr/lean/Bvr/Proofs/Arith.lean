@@ -1161,13 +1161,53 @@ theorem bv_mul.r_neg.proof : bv_mul.r_neg.Stmt := by
     obtain ⟨n, w1, w2, -⟩ := (WT_arith (.mul c)).1 w
     have := w1.2.1; simp at this; simp [this]
 
--- UNSOUND: the folded constant `n * m` may overflow as a signed product even when `(x * n) * m`
--- does not. Take 8 bits, `checked = ckm = {signed := true, unsigned := false}`,
--- v1 = Mul (ckm, x, 0x40), v2 = 2, with x = 0xff (-1) (take `O` returning the raw spec terms).
--- Then x *s 64 = -64 and -64 *s 2 = -128 have no signed overflow, so the spec is `some 0x80`. The
--- result is x *s 0x80 = (-1) *s (-128), whose signed overflow makes it poison.
+theorem bv_mul.mul_const_aux {FS : FloatSem} {O : Ops} (hO : O.Sound FS)
+    {c ckm x zN TN T1 zM TM T W} (hW : ∀ n, T = .bitVector n → W = n) :
+    Refines FS (.mk (.binop (.mul c) (.mk (.binop (.mul ckm) x (.mk (.bitVec zN) TN)) T1)
+        (.mk (.bitVec zM) TM)) T)
+      (O.bv_mul (if overflows_mul true W zN zM = true
+          then checked_meet (checked_meet c ckm) checked_unsigned else checked_meet c ckm)
+        x (mk_masked W (zN * zM))) := by
+  refine Refines.arith_intro (.mul c) (fun n wa wb hT => ?_)
+    (fun n wa wb hT ρ X Y v hx hy e => ?_)
+  all_goals obtain ⟨wx, wN, rfl⟩ := BV_arith_inv (.mul ckm) wa
+  all_goals obtain rfl := hW n hT
+  all_goals have hm := O_arith (.mul _) (hO.bv_mul (if overflows_mul true W zN zM = true
+          then checked_meet (checked_meet c ckm) checked_unsigned else checked_meet c ckm)
+        x (mk_masked W (zN * zM))) wx (BV_mk_masked wx.2.2)
+  · exact hm.1
+  · rw [eval_arith (.mul ckm) wx wN rfl] at hx
+    obtain ⟨X', Nv, hX', hN, hx⟩ := evBinop_inv (.inl (.mul ckm)) wx wN hx
+    obtain ⟨-, z1⟩ := BV_lit wN
+    obtain ⟨-, z2⟩ := BV_lit wb
+    rw [lit_eval_eq wN hN] at hx; rw [lit_eval_eq wb hy] at e
+    refine hm.2 ρ v ?_
+    rw [hX', eval_mk_masked wx.2.2, overflows_mul_lit wx.2.2 z1.1 z1.2 z2.1 z2.2]
+    simp [evBinop, checkedOp, bvBin, checked_meet, checked_unsigned] at hx e ⊢
+    obtain ⟨⟨h1s, h1u⟩, rfl⟩ := hx; obtain ⟨⟨e1s, e1u⟩, rfl⟩ := e
+    rw [BitVec.ofInt_mul]
+    refine ⟨⟨fun hs => ?_, fun hu => ?_⟩, by rw [BitVec.mul_assoc]⟩
+    · split at hs
+      · simp at hs
+      · rename_i hn
+        simp only [Bool.and_eq_true] at hs
+        exact smul_assoc_ok (h1s hs.2) (e1s hs.1) (by simpa using hn)
+    · have : c.unsigned = true ∧ ckm.unsigned = true := by split at hu <;> simpa using hu
+      exact umul_assoc_ok (h1u this.2) (e1u this.1)
+
 theorem bv_mul.r_mul_const.proof : bv_mul.r_mul_const.Stmt := by
-  sorry
+  intro FS O hO c v1 v2 res h
+  simp only [bv_mul.r_mul_const] at h
+  rcases orElse_eq_some h with h | h <;> (try rcases orElse_eq_some h with h | h) <;>
+    (try rcases orElse_eq_some h with h | h) <;> split at h <;> simp at h <;>
+    obtain ⟨-, rfl⟩ := h <;> simp only [bv_mul.spec, ty_eq, Term.ty_mk]
+  · exact bv_mul.mul_const_aux hO (fun n h => by simp [h])
+  · exact Refines.trans (Refines.binop (Refines.comm (.mul _)) Refines.refl (fun _ => rfl))
+      (bv_mul.mul_const_aux hO (fun n h => by simp [h]))
+  · exact Refines.trans (Refines.comm (.mul _)) (bv_mul.mul_const_aux hO (fun n h => by simp [h]))
+  · exact Refines.trans (Refines.comm (.mul _)) (Refines.trans
+      (Refines.binop (Refines.comm (.mul _)) Refines.refl (fun _ => rfl))
+      (bv_mul.mul_const_aux hO (fun n h => by simp [h])))
 
 theorem bv_mul.r_ite.proof : bv_mul.r_ite.Stmt := by
   intro FS O hO c v1 v2 res h

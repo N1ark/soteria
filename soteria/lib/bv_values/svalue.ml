@@ -1460,10 +1460,10 @@ module Make (V : Value_ext) () = struct
       | Binop (Sub _, c, a'), Binop (Add _, b, a) when equal a a' -> add b c
       | Binop (Mul _, l1, r1), Binop (Mul _, l2, r2)
         when equal l1 l2 || equal l1 r2 || equal r1 l2 || equal r1 r2 ->
-          if equal l1 l2 then mul ~checked l1 (add ~checked r1 r2)
-          else if equal l1 r2 then mul ~checked l1 (add ~checked r1 l2)
-          else if equal r1 l2 then mul ~checked r1 (add ~checked l1 r2)
-          else mul ~checked r1 (add ~checked l1 l2)
+          if equal l1 l2 then mul l1 (add r1 r2)
+          else if equal l1 r2 then mul l1 (add r1 l2)
+          else if equal r1 l2 then mul r1 (add l1 r2)
+          else mul r1 (add l1 l2)
       | ( Binop (Mul ck1, ({ node = { kind = BitVec l1; _ }; _ } as v_l1), r1),
           Binop (Mul ck2, ({ node = { kind = BitVec l2; _ }; _ } as v_l2), r2) )
       | ( Binop (Mul ck1, r1, ({ node = { kind = BitVec l1; _ }; _ } as v_l1)),
@@ -1472,9 +1472,9 @@ module Make (V : Value_ext) () = struct
           Binop (Mul ck2, r2, ({ node = { kind = BitVec l2; _ }; _ } as v_l2)) )
       | ( Binop (Mul ck1, r1, ({ node = { kind = BitVec l1; _ }; _ } as v_l1)),
           Binop (Mul ck2, r2, ({ node = { kind = BitVec l2; _ }; _ } as v_l2)) )
-        when is_checked (checked_meet (checked_meet checked ck1) ck2)
+        when (checked_meet (checked_meet checked ck1) ck2).unsigned
              && (Z.divisible l1 l2 || Z.divisible l2 l1) ->
-          let checked = checked_meet (checked_meet checked ck1) ck2 in
+          let checked = checked_unsigned in
           if Z.divisible l2 l1 then
             let common = mk (size_of v1.node.ty) (Z.div l2 l1) in
             mul ~checked v_l1 (add ~checked r1 (mul ~checked common r2))

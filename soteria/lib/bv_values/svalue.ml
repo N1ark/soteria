@@ -2957,7 +2957,6 @@ module Make (V : Value_ext) () = struct
     let cast ~rounding ~fp v =
       match v.node.kind with
       | Float f -> mk_raw fp (F.convert rounding fp f)
-      | _ when FloatPrecision.equal (fp_of v) fp -> v
       | _ -> Unop (FloatOfFloat (rounding, fp), v) <| t_float fp
 
     let eq v1 v2 =
@@ -2991,7 +2990,7 @@ module Make (V : Value_ext) () = struct
     let add v1 v2 =
       match (v1.node.kind, v2.node.kind) with
       | Float f1, Float f2 -> Float (F.add f1 f2) <| v1.node.ty
-      | _ -> mk_commut_binop FAdd v1 v2 <| v1.node.ty
+      | _ -> Binop (FAdd, v1, v2) <| v1.node.ty
 
     let sub v1 v2 =
       match (v1.node.kind, v2.node.kind) with
@@ -3006,7 +3005,7 @@ module Make (V : Value_ext) () = struct
     let mul v1 v2 =
       match (v1.node.kind, v2.node.kind) with
       | Float f1, Float f2 -> Float (F.mul f1 f2) <| v1.node.ty
-      | _ -> mk_commut_binop FMul v1 v2 <| v1.node.ty
+      | _ -> Binop (FMul, v1, v2) <| v1.node.ty
 
     let rem v1 v2 =
       match (v1.node.kind, v2.node.kind) with

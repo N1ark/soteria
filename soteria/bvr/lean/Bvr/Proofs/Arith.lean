@@ -402,16 +402,182 @@ theorem bv_sub.r_neg_r.proof : bv_sub.r_neg_r.Stmt := by
     rw [← e.2, ← hy.2, BitVec.sub_neg]
 
 theorem bv_sub.r_sub_const_l.proof : bv_sub.r_sub_const_l.Stmt := by
-  sorry
+  intro FS O hO c v1 v2 res h
+  simp only [bv_sub.r_sub_const_l] at h; split at h <;> simp at h; subst h
+  rename_i ck z1 Tc s T1 z2 T2
+  simp only [bv_sub.spec, ty_eq, Term.ty_mk]
+  refine Refines.intro (fun w => ?_) (fun ρ v w _ e => ?_)
+  all_goals obtain ⟨n, wa, wb, rfl⟩ := (WT_arith (.sub c)).1 w
+  all_goals obtain ⟨wc, ws, -⟩ := BV_arith_inv (.sub ck) wa
+  all_goals obtain ⟨rfl, hz1⟩ := BV_lit wc
+  all_goals obtain ⟨rfl, hz2⟩ := BV_lit wb
+  all_goals have wi := BV_arith (.sub _) (hO.bv_sub unchecked _ _) wc wb
+  all_goals have wres := BV_arith (.sub _) (hO.bv_sub (mask_checked_after_fold (checked_meet ck c)
+    (.mk (.bitVec z1) (.bitVector n)) (.mk (.bitVec z2) (.bitVector n)) false) _ s) wi ws
+  · exact ⟨wres.1, by simp [wres.2.1]⟩
+  · rw [eval_arith (.sub c) wa wb rfl] at e
+    obtain ⟨S, Y, hS, hY, e⟩ := evBinop_inv (.inl (.sub c)) wa wb e
+    rw [eval_lit wb] at hY; simp at hY; subst hY
+    rw [eval_arith (.sub ck) wc ws rfl] at hS
+    obtain ⟨X, R, hX, hR, hS⟩ := evBinop_inv (.inl (.sub ck)) wc ws hS
+    rw [eval_lit wc] at hX; simp at hX; subst hX
+    have hi := (hO.bv_sub unchecked _ _).sem ρ (.bv n.toNat (BitVec.ofInt _ z1 - BitVec.ofInt _ z2))
+      (by rw [bv_sub.spec, ty_eq, eval_arith (.sub _) wc wb wc.2.1, eval_lit wc, eval_lit wb]
+          simp [evBinop, checkedOp, bvBin, unchecked])
+    refine (hO.bv_sub _ _ _).sem ρ v ?_
+    rw [bv_sub.spec, ty_eq, eval_arith (.sub _) wi ws wi.2.1, hi, hR, mask_lits,
+      size_of_ty_bitVector, overflows_sub_lit wc.2.2 hz1.1 hz1.2 hz2.1 hz2.2,
+      overflows_sub_lit wc.2.2 hz1.1 hz1.2 hz2.1 hz2.2]
+    simp [evBinop, checkedOp, bvBin, checked_meet] at e hS ⊢
+    obtain ⟨⟨e1, e2⟩, rfl⟩ := e; obtain ⟨⟨h1, h2⟩, rfl⟩ := hS
+    refine ⟨⟨fun hck hc h3 => ssub_sub_reassoc (h1 hck) (e1 hc) h3,
+      fun hck hc h3 => usub_sub_reassoc (h2 hck) (e2 hc) h3⟩, ?_⟩
+    congr 1; rw [BitVec.sub_eq_add_neg, BitVec.sub_eq_add_neg, BitVec.sub_eq_add_neg,
+      BitVec.sub_eq_add_neg]; ac_rfl
 
 theorem bv_sub.r_sub_const_r.proof : bv_sub.r_sub_const_r.Stmt := by
-  sorry
+  intro FS O hO c v1 v2 res h
+  simp only [bv_sub.r_sub_const_r] at h; split at h <;> simp at h; subst h
+  rename_i ck s z1 Tc T1 z2 T2
+  simp only [bv_sub.spec, ty_eq, Term.ty_mk]
+  refine Refines.intro (fun w => ?_) (fun ρ v w _ e => ?_)
+  all_goals obtain ⟨n, wa, wb, rfl⟩ := (WT_arith (.sub c)).1 w
+  all_goals obtain ⟨ws, wc, -⟩ := BV_arith_inv (.sub ck) wa
+  all_goals obtain ⟨rfl, hz1⟩ := BV_lit wc
+  all_goals obtain ⟨rfl, hz2⟩ := BV_lit wb
+  all_goals have wi := BV_arith (.add _) (hO.bv_add unchecked _ _) wc wb
+  all_goals have wres := BV_arith (.sub _) (hO.bv_sub (mask_checked_after_fold (checked_meet ck c)
+    (.mk (.bitVec z1) (.bitVector n)) (.mk (.bitVec z2) (.bitVector n)) true) s _) ws wi
+  · exact ⟨wres.1, by simp [wres.2.1]⟩
+  · rw [eval_arith (.sub c) wa wb rfl] at e
+    obtain ⟨S, Y, hS, hY, e⟩ := evBinop_inv (.inl (.sub c)) wa wb e
+    rw [eval_lit wb] at hY; simp at hY; subst hY
+    rw [eval_arith (.sub ck) ws wc rfl] at hS
+    obtain ⟨R, X, hR, hX, hS⟩ := evBinop_inv (.inl (.sub ck)) ws wc hS
+    rw [eval_lit wc] at hX; simp at hX; subst hX
+    have hi := (hO.bv_add unchecked _ _).sem ρ (.bv n.toNat (BitVec.ofInt _ z1 + BitVec.ofInt _ z2))
+      (by rw [bv_add.spec, ty_eq, eval_arith (.add _) wc wb wc.2.1, eval_lit wc, eval_lit wb]
+          simp [evBinop, checkedOp, bvBin, unchecked])
+    refine (hO.bv_sub _ _ _).sem ρ v ?_
+    rw [bv_sub.spec, ty_eq, eval_arith (.sub _) ws wi ws.2.1, hi, hR, mask_lits,
+      size_of_ty_bitVector, overflows_add_lit wc.2.2 hz1.1 hz1.2 hz2.1 hz2.2,
+      overflows_add_lit wc.2.2 hz1.1 hz1.2 hz2.1 hz2.2]
+    simp [evBinop, checkedOp, bvBin, checked_meet] at e hS ⊢
+    obtain ⟨⟨e1, e2⟩, rfl⟩ := e; obtain ⟨⟨h1, h2⟩, rfl⟩ := hS
+    refine ⟨⟨fun hck hc h3 => ssub_sub_reassoc' (h1 hck) (e1 hc) h3,
+      fun hck hc h3 => usub_sub_reassoc' (h2 hck) (e2 hc) h3⟩, ?_⟩
+    congr 1; grind
+
+theorem bv_sub.const_add_aux {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {c ck z1 T1 z2 T2 l T} :
+    Refines FS (bv_sub.spec c (.mk (.bitVec z1) T1) (.mk (.binop (.add ck) (.mk (.bitVec z2) T2) l) T))
+      (O.bv_sub (mask_checked_after_fold (checked_meet ck c) (.mk (.bitVec z1) T1)
+          (.mk (.bitVec z2) T2) false)
+        (O.bv_sub unchecked (.mk (.bitVec z1) T1) (.mk (.bitVec z2) T2)) l) := by
+  simp only [bv_sub.spec, ty_eq, Term.ty_mk]
+  refine Refines.intro (fun w => ?_) (fun ρ v w _ e => ?_)
+  all_goals obtain ⟨n, wa, wb, hT⟩ := (WT_arith (.sub c)).1 w
+  all_goals obtain ⟨wc, wl, rfl⟩ := BV_arith_inv (.add ck) wb
+  all_goals obtain ⟨rfl, hz1⟩ := BV_lit wa
+  all_goals obtain ⟨rfl, hz2⟩ := BV_lit wc
+  all_goals have wi := BV_arith (.sub _) (hO.bv_sub unchecked _ _) wa wc
+  all_goals have wres := BV_arith (.sub _) (hO.bv_sub (mask_checked_after_fold (checked_meet ck c)
+    (.mk (.bitVec z1) (.bitVector n)) (.mk (.bitVec z2) (.bitVector n)) false) _ l) wi wl
+  · exact ⟨wres.1, by simp [wres.2.1]⟩
+  · rw [eval_arith (.sub c) wa wb rfl] at e
+    obtain ⟨X, S, hX, hS, e⟩ := evBinop_inv (.inl (.sub c)) wa wb e
+    rw [eval_lit wa] at hX; simp at hX; subst hX
+    rw [eval_arith (.add ck) wc wl rfl] at hS
+    obtain ⟨Z, L, hZ, hL, hS⟩ := evBinop_inv (.inl (.add ck)) wc wl hS
+    rw [eval_lit wc] at hZ; simp at hZ; subst hZ
+    have hi := (hO.bv_sub unchecked _ _).sem ρ (.bv n.toNat (BitVec.ofInt _ z1 - BitVec.ofInt _ z2))
+      (by rw [bv_sub.spec, ty_eq, eval_arith (.sub _) wa wc wa.2.1, eval_lit wc, eval_lit wa]
+          simp [evBinop, checkedOp, bvBin, unchecked])
+    refine (hO.bv_sub _ _ _).sem ρ v ?_
+    rw [bv_sub.spec, ty_eq, eval_arith (.sub _) wi wl wi.2.1, hi, hL, mask_lits,
+      size_of_ty_bitVector, overflows_sub_lit wa.2.2 hz1.1 hz1.2 hz2.1 hz2.2,
+      overflows_sub_lit wa.2.2 hz1.1 hz1.2 hz2.1 hz2.2]
+    simp [evBinop, checkedOp, bvBin, checked_meet] at e hS ⊢
+    obtain ⟨⟨e1, e2⟩, rfl⟩ := e; obtain ⟨⟨h1, h2⟩, rfl⟩ := hS
+    refine ⟨⟨fun hck hc h3 => sadd_sub_reassoc (h1 hck) (e1 hc) h3,
+      fun hck hc h3 => uadd_sub_reassoc (h2 hck) (e2 hc) h3⟩, ?_⟩
+    congr 1; grind
 
 theorem bv_sub.r_const_add.proof : bv_sub.r_const_add.Stmt := by
-  sorry
+  intro FS O hO c v1 v2 res h
+  simp only [bv_sub.r_const_add] at h
+  rcases orElse_eq_some h with h | h <;> split at h <;> simp at h <;> subst h
+  · exact bv_sub.const_add_aux hO
+  · rename_i T
+    refine Refines.trans ?_ (bv_sub.const_add_aux hO (T := T))
+    exact Refines.binop Refines.refl (Refines.comm (.add _)) (fun _ => rfl)
+
+theorem bv_sub.add_const_aux {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {c ck z1 T1 l T z2 T2} :
+    Refines FS (bv_sub.spec c (.mk (.binop (.add ck) (.mk (.bitVec z1) T1) l) T) (.mk (.bitVec z2) T2))
+      (if decide (z1 < z2) = true then
+        O.bv_sub (mask_checked_after_fold (checked_meet ck c) (.mk (.bitVec z2) T2)
+          (.mk (.bitVec z1) T1) false) l
+          (O.bv_neg false (O.bv_sub unchecked (.mk (.bitVec z1) T1) (.mk (.bitVec z2) T2)))
+      else
+        O.bv_add (mask_checked_after_fold (checked_meet ck c) (.mk (.bitVec z1) T1)
+          (.mk (.bitVec z2) T2) false) l
+          (O.bv_sub unchecked (.mk (.bitVec z1) T1) (.mk (.bitVec z2) T2))) := by
+  simp only [bv_sub.spec, ty_eq, Term.ty_mk]
+  refine Refines.intro (fun w => ?_) (fun ρ v w _ e => ?_)
+  all_goals obtain ⟨n, wa, wb, rfl⟩ := (WT_arith (.sub c)).1 w
+  all_goals obtain ⟨wc, wl, -⟩ := BV_arith_inv (.add ck) wa
+  all_goals obtain ⟨rfl, hz1⟩ := BV_lit wc
+  all_goals obtain ⟨rfl, hz2⟩ := BV_lit wb
+  all_goals have wi := BV_arith (.sub _) (hO.bv_sub unchecked _ _) wc wb
+  all_goals have wn := O_neg (hO.bv_neg false _) wi
+  · split
+    · have := BV_arith (.sub _) (hO.bv_sub (mask_checked_after_fold (checked_meet ck c)
+        (.mk (.bitVec z2) (.bitVector n)) (.mk (.bitVec z1) (.bitVector n)) false) l _) wl wn.1
+      exact ⟨this.1, by simp [this.2.1]⟩
+    · have := BV_arith (.add _) (hO.bv_add (mask_checked_after_fold (checked_meet ck c)
+        (.mk (.bitVec z1) (.bitVector n)) (.mk (.bitVec z2) (.bitVector n)) false) l _) wl wi
+      exact ⟨this.1, by simp [this.2.1]⟩
+  · rw [eval_arith (.sub c) wa wb rfl] at e
+    obtain ⟨S, Y, hS, hY, e⟩ := evBinop_inv (.inl (.sub c)) wa wb e
+    rw [eval_lit wb] at hY; simp at hY; subst hY
+    rw [eval_arith (.add ck) wc wl rfl] at hS
+    obtain ⟨Z, L, hZ, hL, hS⟩ := evBinop_inv (.inl (.add ck)) wc wl hS
+    rw [eval_lit wc] at hZ; simp at hZ; subst hZ
+    have hi := (hO.bv_sub unchecked _ _).sem ρ (.bv n.toNat (BitVec.ofInt _ z1 - BitVec.ofInt _ z2))
+      (by rw [bv_sub.spec, ty_eq, eval_arith (.sub _) wc wb wc.2.1, eval_lit wc, eval_lit wb]
+          simp [evBinop, checkedOp, bvBin, unchecked])
+    simp [evBinop, checkedOp, bvBin] at e hS
+    obtain ⟨⟨e1, e2⟩, rfl⟩ := e; obtain ⟨⟨h1, h2⟩, rfl⟩ := hS
+    split
+    · have hn := wn.2 ρ (BitVec.ofInt _ z1 - BitVec.ofInt _ z2)
+        (.bv n.toNat (-(BitVec.ofInt _ z1 - BitVec.ofInt _ z2))) hi (by simp [evUnop])
+      refine (hO.bv_sub _ _ _).sem ρ _ ?_
+      rw [bv_sub.spec, ty_eq, eval_arith (.sub _) wl wn.1 wl.2.1, hn, hL, mask_lits,
+        size_of_ty_bitVector, overflows_sub_lit wc.2.2 hz2.1 hz2.2 hz1.1 hz1.2,
+        overflows_sub_lit wc.2.2 hz2.1 hz2.2 hz1.1 hz1.2]
+      simp only [BitVec.neg_sub]
+      simp [evBinop, checkedOp, bvBin, checked_meet]
+      rw [show -BitVec.ofInt n.toNat z1 + BitVec.ofInt n.toNat z2 =
+        BitVec.ofInt n.toNat z2 - BitVec.ofInt n.toNat z1 by grind]
+      refine ⟨⟨fun hck hc h3 => sadd_sub_reassoc' (h1 hck) (e1 hc) h3,
+        fun hck hc h3 => uadd_sub_reassoc' (h2 hck) (e2 hc) h3⟩, ?_⟩
+      grind
+    · refine (hO.bv_add _ _ _).sem ρ _ ?_
+      rw [bv_add.spec, ty_eq, eval_arith (.add _) wl wi wl.2.1, hi, hL, mask_lits,
+        size_of_ty_bitVector, overflows_sub_lit wc.2.2 hz1.1 hz1.2 hz2.1 hz2.2,
+        overflows_sub_lit wc.2.2 hz1.1 hz1.2 hz2.1 hz2.2]
+      simp [evBinop, checkedOp, bvBin, checked_meet]
+      refine ⟨⟨fun hck hc h3 => sadd_sub_reassoc'' (h1 hck) (e1 hc) h3,
+        fun hck hc h3 => uadd_sub_reassoc'' (h2 hck) (e2 hc) h3⟩, ?_⟩
+      congr 1; grind
 
 theorem bv_sub.r_add_const.proof : bv_sub.r_add_const.Stmt := by
-  sorry
+  intro FS O hO c v1 v2 res h
+  simp only [bv_sub.r_add_const] at h
+  rcases orElse_eq_some h with h | h <;> split at h <;> simp only [Option.some.injEq, reduceCtorEq] at h <;> subst h
+  · exact bv_sub.add_const_aux hO
+  · rename_i T _ _
+    refine Refines.trans ?_ (bv_sub.add_const_aux hO (T := T))
+    exact Refines.binop (Refines.comm (.add _)) Refines.refl (fun _ => rfl)
 
 theorem bv_sub.r_add_cancel_l.proof : bv_sub.r_add_cancel_l.Stmt := by
   sorry

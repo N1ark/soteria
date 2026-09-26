@@ -922,5 +922,92 @@ theorem eval_concat_some {FS ρ a b t v} (w : (Term.mk (.binop .bvConcat a b) t)
         simp [evBinop] at h
       exact ⟨n, m, x, y, rfl, rfl, h.symm⟩
 
+
+theorem Val_bv_extract_congr {W k k' : Nat} (h : k = k') (c : BitVec W) (i : Nat) :
+    Val.bv k (c.extractLsb' i k) = Val.bv k' (c.extractLsb' i k') := by subst h; rfl
+
+theorem val_concat_iff {W A B : Nat} (c : BitVec W) (x : BitVec A) (y : BitVec B)
+    (h : W = A + B) :
+    Val.bv W c = Val.bv (A + B) (x ++ y) ↔
+      (Val.bv A (c.extractLsb' B A) = Val.bv A x ∧ Val.bv B (c.extractLsb' 0 B) = Val.bv B y) := by
+  subst h
+  simp only [Val.bv.injEq, heq_eq_eq, true_and]
+  constructor
+  · rintro rfl
+    exact ⟨BitVec.extractLsb'_append_eq_left, BitVec.extractLsb'_append_eq_right⟩
+  · rintro ⟨rfl, rfl⟩
+    exact BitVec.extractLsb'_append_extractLsb'.symm
+
+theorem WT_extract_spec {Z : Term} {i j N : Int} (wZ : Z.WT) (hZ : Z.ty = .bitVector N)
+    (h0 : 0 ≤ i) (h1 : i ≤ j) (h2 : j < N) : (bv_extract.spec i j Z).WT :=
+  WT_unop.2 ⟨⟨N, by simpa using hZ, h0, h1, h2, rfl⟩, wZ⟩
+
+theorem eval_extract_spec {FS ρ} {Z : Term} {i j : Int} {W : Nat} {c : BitVec W}
+    (w : (bv_extract.spec i j Z).WT) (h : eval FS ρ Z = some (.bv W c)) :
+    eval FS ρ (bv_extract.spec i j Z) = some (.bv (j - i + 1).toNat (c.extractLsb' i.toNat _)) := by
+  rw [bv_extract.spec, eval_unop w, h]; rfl
+
+/-- The high part of a bit-vector of width [n + m]. -/
+theorem extract_hi {FS ρ} {Z : Term} {n m : Int} (hn : 0 < n) (hm : 0 < m) (wZ : Z.WT)
+    (hZ : Z.ty = .bitVector (n + m)) :
+    (bv_extract.spec m (m + n - 1) Z).WT ∧ (bv_extract.spec m (m + n - 1) Z).ty = .bitVector n ∧
+      ∀ W (c : BitVec W), eval FS ρ Z = some (.bv W c) →
+        eval FS ρ (bv_extract.spec m (m + n - 1) Z) =
+          some (.bv n.toNat (c.extractLsb' m.toNat n.toNat)) := by
+  have w := WT_extract_spec (i := m) (j := m + n - 1) wZ hZ (by omega) (by omega) (by omega)
+  refine ⟨w, by simp [bv_extract.spec]; omega, fun W c h => ?_⟩
+  rw [eval_extract_spec w h, Val_bv_extract_congr (k' := n.toNat) (by omega)]
+
+/-- The low part of a bit-vector of width [n + m]. -/
+theorem extract_lo {FS ρ} {Z : Term} {n m : Int} (hn : 0 < n) (hm : 0 < m) (wZ : Z.WT)
+    (hZ : Z.ty = .bitVector (n + m)) :
+    (bv_extract.spec 0 (m - 1) Z).WT ∧ (bv_extract.spec 0 (m - 1) Z).ty = .bitVector m ∧
+      ∀ W (c : BitVec W), eval FS ρ Z = some (.bv W c) →
+        eval FS ρ (bv_extract.spec 0 (m - 1) Z) =
+          some (.bv m.toNat (c.extractLsb' 0 m.toNat)) := by
+  have w := WT_extract_spec (i := 0) (j := m - 1) wZ hZ (by omega) (by omega) (by omega)
+  refine ⟨w, by simp [bv_extract.spec], fun W c h => ?_⟩
+  rw [eval_extract_spec w h, Val_bv_extract_congr (k' := m.toNat) (by omega)]; rfl
+
+/-- An equality with a concatenation, split into its two parts. -/
+theorem Refines.eq_concat {FS : FloatSem} {Z l r EL ER : Term} {T : Ty}
+    (sL : ∀ n m : Int, 0 < n → 0 < m → l.ty = .bitVector n → r.ty = .bitVector m → Z.WT →
+      Z.ty = .bitVector (n + m) →
+      EL.WT ∧ EL.ty = .bitVector n ∧ ER.WT ∧ ER.ty = .bitVector m)
+    (eL : ∀ n m : Int, 0 < n → 0 < m → l.ty = .bitVector n → r.ty = .bitVector m → Z.WT →
+      Z.ty = .bitVector (n + m) → ∀ ρ W (c : BitVec W), eval FS ρ Z = some (.bv W c) →
+      eval FS ρ EL = some (.bv n.toNat (c.extractLsb' m.toNat n.toNat)) ∧
+      eval FS ρ ER = some (.bv m.toNat (c.extractLsb' 0 m.toNat))) :
+    Refines FS (sem_eq.spec Z (.mk (.binop .bvConcat l r) T))
+      (b_and.spec (sem_eq.spec EL l) (sem_eq.spec ER r)) := by
+  refine Refines.eq_and (fun hT w1 w2 => ?_) (fun ρ x y hT w1 w2 hx hy => ?_)
+  · obtain ⟨n, m, hn, hm, hl, hr, hT2, wl, wr⟩ := WT_concat.1 w2
+    simp only [Term.ty_mk] at hT
+    obtain ⟨k1, k2, k3, k4⟩ := sL n m hn hm hl hr w1 (by rw [hT, hT2])
+    exact ⟨by rw [k2, hl], k1, wl, by rw [k4, hr], k3, wr⟩
+  · obtain ⟨n, m, hn, hm, hl, hr, hT2, wl, wr⟩ := WT_concat.1 w2
+    simp only [Term.ty_mk] at hT
+    have hZ : Z.ty = .bitVector (n + m) := by rw [hT, hT2]
+    obtain ⟨_, c, rfl⟩ := eval_bv_of_ty hx (Or.inl hZ)
+    obtain ⟨a, b, x1, y1, e1, e2, rfl⟩ := eval_concat_some w2 hy
+    obtain ⟨rfl, _⟩ := eval_bv_ty e1 hl
+    obtain ⟨rfl, _⟩ := eval_bv_ty e2 hr
+    obtain ⟨k1, k2⟩ := eL n m hn hm hl hr w1 hZ ρ _ c hx
+    exact ⟨_, _, _, _, k1, e1, k2, e2, val_concat_iff c x1 y1 (by omega)⟩
+
+theorem Refines.and_eq_symm {FS : FloatSem} {a b c d : Term} :
+    Refines FS (b_and.spec (sem_eq.spec a b) (sem_eq.spec c d))
+      (b_and.spec (sem_eq.spec b a) (sem_eq.spec d c)) :=
+  Refines.binop Refines.eq_symm Refines.eq_symm (fun _ => rfl)
+
+
+theorem Refines.eq_retype {FS : FloatSem} {a b : Term} :
+    Refines FS (sem_eq.spec a b) (sem_eq.spec (.mk a.kind b.ty) b) := by
+  refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
+  · have ⟨h1, _, _⟩ := WT_sem_eq.1 w
+    cases a; simp only [Term.ty_mk, Term.kind_mk] at h1 ⊢; subst h1; exact ⟨w, rfl⟩
+  · have ⟨h1, _, _⟩ := WT_sem_eq.1 w
+    cases a; simp only [Term.ty_mk, Term.kind_mk] at h1 ⊢; subst h1; exact e
+
 end EqL
 end Bvr

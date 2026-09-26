@@ -314,8 +314,28 @@ theorem sem_eq.r_or_zero.proof : sem_eq.r_or_zero.Stmt := by
 theorem sem_eq.r_and_mask.proof : sem_eq.r_and_mask.Stmt := by
   sorry
 
+theorem sem_eq.r_concat_const.aux {FS : FloatSem} {Z l r : Term} {T : Ty} :
+    Refines FS (sem_eq.spec Z (.mk (.binop .bvConcat l r) T))
+      (b_and.spec (sem_eq.spec l (bv_extract.spec (size r) (size r + size l - 1) Z))
+        (sem_eq.spec r (bv_extract.spec 0 (size r - 1) Z))) := by
+  refine Refines.trans ?_ Refines.and_eq_symm
+  refine Refines.eq_concat (fun n m hn hm hl hr wZ hZ => ?_) (fun n m hn hm hl hr wZ hZ ρ W c h => ?_)
+  · simp only [size, ty_eq, hl, hr, size_of_ty_bitVector]
+    obtain ⟨a1, a2, -⟩ := extract_hi (FS := FS) (ρ := ⟨fun _ => none, fun _ _ => none⟩) hn hm wZ hZ
+    obtain ⟨b1, b2, -⟩ := extract_lo (FS := FS) (ρ := ⟨fun _ => none, fun _ _ => none⟩) hn hm wZ hZ
+    exact ⟨a1, a2, b1, b2⟩
+  · simp only [size, ty_eq, hl, hr, size_of_ty_bitVector]
+    exact ⟨(extract_hi hn hm wZ hZ).2.2 W c h, (extract_lo hn hm wZ hZ).2.2 W c h⟩
+
 theorem sem_eq.r_concat_const.proof : sem_eq.r_concat_const.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [sem_eq.r_concat_const] at h
+  rcases orElse_eq_some h with h | h <;> split at h <;> simp only [reduceCtorEq, Option.some.injEq] at h <;> subst h
+  all_goals
+    refine Refines.trans ?_ (Refines.b_and hO (Refines.sem_eq hO Refines.refl (hO.bv_extract _ _ _))
+      (Refines.sem_eq hO Refines.refl (hO.bv_extract _ _ _)))
+  · exact sem_eq.r_concat_const.aux
+  · exact Refines.trans Refines.eq_symm (Refines.trans Refines.eq_retype sem_eq.r_concat_const.aux)
 
 theorem sem_eq.r_zext_const.proof : sem_eq.r_zext_const.Stmt := by
   sorry

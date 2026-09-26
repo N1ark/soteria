@@ -1403,5 +1403,39 @@ theorem eval_extract_spec {FS ρ i j a m X} (wa : BV a m) (h0 : 0 ≤ i) (h1 : i
   rw [bv_extract.spec, eval_unop (WT_extract.2 ⟨m, wa.2.1, h0, h1, h2, rfl, wa.1⟩), hX]
   rfl
 
+/-! ## Division of literals -/
+
+theorem ofInt_neg_one' {w : Nat} : BitVec.ofInt w (-1) = -1#w := by
+  rw [BitVec.ofInt_neg, show (1:Int) = ((1:Nat):Int) from rfl, BitVec.ofInt_natCast]
+
+theorem udiv_lits_zero {w : Nat} (X Y : BitVec w) (h : (X.toNat : Int) = 0) :
+    BitVec.ofInt w (-1) = Y.smtUDiv X := by
+  have : X = 0#w := BitVec.eq_of_toNat_eq (by simp; omega)
+  subst this
+  rw [BitVec.smtUDiv_zero, ← BitVec.neg_one_eq_allOnes]
+  exact ofInt_neg_one'
+
+theorem udiv_lits {w : Nat} (X Y : BitVec w) (h : ¬ (X.toNat : Int) = 0) :
+    BitVec.ofInt w (tdiv Y.toNat X.toNat) = Y.smtUDiv X := by
+  have : X ≠ 0#w := fun e => h (by simp [e])
+  rw [BitVec.smtUDiv_eq, if_neg this, tdiv, ← Int.ofNat_tdiv, BitVec.ofInt_natCast]
+  apply BitVec.eq_of_toNat_eq
+  rw [BitVec.toNat_ofNat, BitVec.toNat_udiv,
+    Nat.mod_eq_of_lt (Nat.lt_of_le_of_lt (Nat.div_le_self _ _) Y.isLt)]
+
+theorem sdiv_lits {w : Nat} (X Y : BitVec w) (h : ¬ X.toInt = 0) :
+    BitVec.ofInt w (tdiv Y.toInt X.toInt) = Y.smtSDiv X := by
+  have : X ≠ 0#w := fun e => h (by simp [e])
+  rw [smtSDiv_of_ne_zero this]
+  apply BitVec.eq_of_toInt_eq
+  rw [BitVec.toInt_sdiv, BitVec.toInt_ofInt, tdiv]
+
+theorem sdiv_lits_zero {w : Nat} (X Y : BitVec w) (h : X.toInt = 0) :
+    BitVec.ofInt w (if decide (Y.toInt < 0) = true then 1 else -1) = Y.smtSDiv X := by
+  have : X = 0#w := BitVec.eq_of_toInt_eq (by simp [h])
+  subst this
+  rw [BitVec.smtSDiv_eq, ← BitVec.msb_eq_toInt]
+  cases Y.msb <;> simp [BitVec.smtUDiv_zero, ← BitVec.neg_one_eq_allOnes, ofInt_neg_one']
+
 end ArithL
 end Bvr

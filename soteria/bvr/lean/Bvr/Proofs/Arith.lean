@@ -1233,11 +1233,30 @@ theorem bv_mul.r_default.proof : bv_mul.r_default.Stmt := by
   simp only [bv_mul.r_default] at h; simp at h; subst h
   exact Refines.commut_binop (.mul c)
 
--- UNSOUND: the literals are divided with `tdiv`, for which `tdiv l 0 = 0`, but division by zero
--- follows SMT-LIB (`x /u 0` is all ones, `x /s 0` is -1 or 1). Take 8 bits, `signed = false`,
--- v1 = 5 and v2 = 0. The spec `5 /u 0` is `some 0xff`, and the result is the literal 0.
 theorem bv_div.r_lits.proof : bv_div.r_lits.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_div.r_lits] at h; split at h <;> simp only [Option.some.injEq, reduceCtorEq] at h
+  subst h
+  refine Refines.arith_intro (.div s) (fun n wa wb hT => ?_) (fun n wa wb hT ρ x y v hx hy e => ?_)
+  · rw [size_eq, Term.ty_mk, size_ty_lit wa]; split <;> exact BV_mk_masked wa.2.2
+  · obtain ⟨-, hz1⟩ := BV_lit wa
+    obtain ⟨-, hz2⟩ := BV_lit wb
+    rw [lit_eval_eq wa hx, lit_eval_eq wb hy] at e
+    simp [evBinop, bvBin] at e; subst e
+    rw [size_eq, Term.ty_mk, size_ty_lit wa, bv_to_z_lit wa.2.2 hz1.1 hz1.2,
+      bv_to_z_lit wa.2.2 hz2.1 hz2.2]
+    have hn : 0 < n.toNat := by have := wa.2.2; omega
+    generalize BitVec.ofInt n.toNat _ = X
+    generalize BitVec.ofInt n.toNat _ = Y
+    cases s
+    · simp only [Bool.false_eq_true, ↓reduceIte, Bool.false_and]
+      split <;> rename_i hc <;> rw [eval_mk_masked wa.2.2] <;> congr 2
+      · exact udiv_lits_zero _ _ (by simpa using hc)
+      · exact udiv_lits _ _ (by simpa using hc)
+    · simp only [↓reduceIte, Bool.true_and]
+      split <;> rename_i hc <;> rw [eval_mk_masked wa.2.2] <;> congr 2
+      · exact sdiv_lits_zero _ _ (by simpa using hc)
+      · exact sdiv_lits _ _ (by simpa using hc)
 
 theorem bv_div.r_one.proof : bv_div.r_one.Stmt := by
   intro FS O hO s v1 v2 res h

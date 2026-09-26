@@ -1498,5 +1498,135 @@ theorem Refines.eq_low {FS : FloatSem} {a b : Term} {M : Int} (hM : 0 ≤ M)
     have e1 : (M - 0 + 1).toNat = M.toNat + 1 := by omega
     rw [e1, Int.toNat_zero, Nat.shiftRight_zero, Nat.shiftRight_zero, Nat.mod_eq_of_lt ba, Nat.mod_eq_of_lt bb]
 
+
+theorem mul_cancel_nat {M a b d : Nat} (hM : Nat.Coprime M a) (hb : b < M) (hd : d < M)
+    (h : a * b % M = a * d % M) : b = d := by
+  rcases Nat.le_total b d with hbd | hbd
+  · have h1 := Nat.sub_mod_eq_zero_of_mod_eq h.symm
+    rw [← Nat.mul_sub] at h1
+    have h2 := hM.dvd_of_dvd_mul_left (Nat.dvd_of_mod_eq_zero h1)
+    have := Nat.eq_zero_of_dvd_of_lt h2 (by omega)
+    omega
+  · have h1 := Nat.sub_mod_eq_zero_of_mod_eq h
+    rw [← Nat.mul_sub] at h1
+    have h2 := hM.dvd_of_dvd_mul_left (Nat.dvd_of_mod_eq_zero h1)
+    have := Nat.eq_zero_of_dvd_of_lt h2 (by omega)
+    omega
+
+theorem coprime_two_pow_of_odd {w a : Nat} (h : a % 2 = 1) : Nat.Coprime (2 ^ w) a := by
+  apply Nat.Coprime.pow_left
+  show Nat.gcd 2 a = 1
+  rw [Nat.gcd_rec, h]; rfl
+
+theorem bv_mul_cancel_odd {w : Nat} {A B D : BitVec w} (h : A.toNat % 2 = 1) :
+    A * B = A * D ↔ B = D := by
+  constructor
+  · intro e
+    have := congrArg BitVec.toNat e
+    simp only [BitVec.toNat_mul] at this
+    exact BitVec.eq_of_toNat_eq (mul_cancel_nat (coprime_two_pow_of_odd h) B.isLt D.isLt this)
+  · rintro rfl; rfl
+
+theorem smulOverflow_comm {w : Nat} (a b : BitVec w) : a.smulOverflow b = b.smulOverflow a := by
+  simp [BitVec.smulOverflow, Int.mul_comm]
+
+theorem umulOverflow_comm {w : Nat} (a b : BitVec w) : a.umulOverflow b = b.umulOverflow a := by
+  simp [BitVec.umulOverflow, Nat.mul_comm]
+
+theorem iv_mul_of {ck : Checked} {s : Bool} (hs : (if s then ck.signed else ck.unsigned) = true)
+    {w : Nat} {a b : BitVec w}
+    (hf : ((ck.signed && a.smulOverflow b) || (ck.unsigned && a.umulOverflow b)) = false) :
+    iv s (a * b) = iv s a * iv s b := by
+  cases s
+  · simp only [Bool.false_eq_true, ite_false] at hs
+    simp only [hs, Bool.true_and, Bool.or_eq_false_iff] at hf
+    simp only [iv, Bool.false_eq_true, ite_false]
+    rw [BitVec.toNat_mul_of_not_umulOverflow (by simp [hf.2])]; push_cast; rfl
+  · simp only [ite_true] at hs
+    simp only [hs, Bool.true_and, Bool.or_eq_false_iff] at hf
+    simp only [iv, ite_true]
+    exact BitVec.toInt_mul_of_not_smulOverflow (by simp [hf.1])
+
+/-- One side of [mul_cancel]: a product of a literal and a term. -/
+theorem mul_cancel_side {FS : FloatSem} {za : Int} {ck : Checked} {b L R : Term} {Ta T : Ty}
+    (hLR : (L = .mk (.bitVec za) Ta ∧ R = b) ∨ (L = b ∧ R = .mk (.bitVec za) Ta))
+    (w : (Term.mk (.binop (.mul ck) L R) T).WT) :
+    ∃ W : Int, 0 < W ∧ b.ty = .bitVector W ∧ b.WT ∧ T = .bitVector W ∧ 0 ≤ za ∧
+      za < 2 ^ W.toNat ∧ ∀ ρ v, eval FS ρ (.mk (.binop (.mul ck) L R) T) = some v →
+        ∃ B, eval FS ρ b = some (.bv W.toNat B) ∧ v = .bv W.toNat (BitVec.ofInt _ za * B) ∧
+          ((ck.signed && (BitVec.ofInt W.toNat za).smulOverflow B) ||
+            (ck.unsigned && (BitVec.ofInt W.toNat za).umulOverflow B)) = false := by
+  obtain ⟨⟨W, hW, hL⟩, hR, hT2, wL, wR⟩ :=
+    (WT_bvbin (Or.inr (Or.inr (Or.inl ⟨ck, rfl⟩)))).1 w
+  have hlit : ∀ {T' : Ty}, T' = .bitVector W → (Term.mk (.bitVec za) T').WT →
+      0 ≤ za ∧ za < 2 ^ W.toNat := by
+    intro T' h w
+    obtain ⟨k, _, hk, z0, z1⟩ := WT_bitVec.1 w
+    have : k = W.toNat := by rcases hk with hk | hk <;> rw [hk] at h <;> simp at h; omega
+    subst this; exact ⟨z0, z1⟩
+  rcases hLR with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+  · simp only [Term.ty_mk] at hL; subst hL
+    obtain ⟨z0, z1⟩ := hlit rfl wL
+    refine ⟨W, hW, by rw [hR]; rfl, wR, hT2, z0, z1, fun ρ v e => ?_⟩
+    rw [eval_binop w] at e; simp only [evBinop] at e
+    obtain ⟨k, a, b', ea, eb, hf, rfl⟩ := checkedOp_eq_some.1 e
+    rw [eval_lit' wL] at ea; simp only [Option.some.injEq, Val.bv.injEq] at ea
+    obtain ⟨rfl, ea⟩ := ea; cases ea
+    exact ⟨b', eb, rfl, hf⟩
+  · simp only [Term.ty_mk] at hR; rw [hL] at hR; subst hR
+    obtain ⟨z0, z1⟩ := hlit rfl wR
+    refine ⟨W, hW, hL, wL, by rw [hT2, hL], z0, z1, fun ρ v e => ?_⟩
+    rw [eval_binop w] at e; simp only [evBinop] at e
+    obtain ⟨k, a, b', ea, eb, hf, rfl⟩ := checkedOp_eq_some.1 e
+    rw [eval_lit' wR] at eb; simp only [Option.some.injEq, Val.bv.injEq] at eb
+    obtain ⟨rfl, eb⟩ := eb; cases eb
+    refine ⟨a, ea, by rw [BitVec.mul_comm], ?_⟩
+    rw [smulOverflow_comm, umulOverflow_comm]; exact hf
+
+theorem Refines.eq_mul_cancel {FS : FloatSem} {za : Int} {ck1 ck2 : Checked}
+    {b d L1 R1 L2 R2 : Term} {Ta Ta' T1 T2 : Ty}
+    (h1 : (L1 = .mk (.bitVec za) Ta ∧ R1 = b) ∨ (L1 = b ∧ R1 = .mk (.bitVec za) Ta))
+    (h2 : (L2 = .mk (.bitVec za) Ta' ∧ R2 = d) ∨ (L2 = d ∧ R2 = .mk (.bitVec za) Ta'))
+    (hc : zland za 1 = 1 ∨ (za ≠ 0 ∧ is_checked (checked_meet ck1 ck2) = true)) :
+    Refines FS (sem_eq.spec (.mk (.binop (.mul ck1) L1 R1) T1) (.mk (.binop (.mul ck2) L2 R2) T2))
+      (sem_eq.spec b d) := by
+  refine Refines.eq_eq (fun hT w1 w2 => ?_) (fun ρ x y hT w1 w2 hx hy => ?_)
+  · obtain ⟨W, _, hb, wb, hT1, -⟩ := mul_cancel_side (FS := FS) h1 w1
+    obtain ⟨W', _, hd, wd, hT2, -⟩ := mul_cancel_side (FS := FS) h2 w2
+    simp only [Term.ty_mk] at hT
+    rw [hT1, hT2] at hT
+    exact ⟨by rw [hb, hd, hT], wb, wd⟩
+  · obtain ⟨W, hW, hb, wb, hT1, z0, z1, s1⟩ := mul_cancel_side (FS := FS) h1 w1
+    obtain ⟨W', _, hd, wd, hT2, -, -, s2⟩ := mul_cancel_side (FS := FS) h2 w2
+    simp only [Term.ty_mk] at hT
+    rw [hT1, hT2] at hT; simp only [Ty.bitVector.injEq] at hT; subst hT
+    obtain ⟨B, eb, rfl, f1⟩ := s1 ρ x hx
+    obtain ⟨D, ed, rfl, f2⟩ := s2 ρ y hy
+    refine ⟨_, _, eb, ed, ?_⟩
+    simp only [Val.bv.injEq, heq_eq_eq, true_and]
+    have hA := toNat_ofInt_of_range (w := W.toNat) z0 z1
+    rcases hc with hc | ⟨hz, hc⟩
+    · obtain ⟨Z, rfl⟩ := Int.eq_ofNat_of_zero_le z0
+      have hodd : Z % 2 = 1 := by
+        have : zland (Z : Int) 1 = ((Z &&& 1 : Nat) : Int) := rfl
+        rw [this, Nat.and_one_is_mod] at hc; omega
+      exact bv_mul_cancel_odd (by omega)
+    · obtain ⟨c1s, c1u⟩ := ck1
+      obtain ⟨c2s, c2u⟩ := ck2
+      simp only [is_checked, checked_meet, Bool.or_eq_true, Bool.and_eq_true] at hc
+      have key : ∀ s : Bool, (if s then c1s else c1u) = true → (if s then c2s else c2u) = true →
+          (BitVec.ofInt W.toNat za * B = BitVec.ofInt W.toNat za * D ↔ B = D) := by
+        intro s hs1 hs2
+        have hA0 : iv s (BitVec.ofInt W.toNat za) ≠ 0 := by
+          intro h0
+          rw [← iv_zero (s := s) (w := W.toNat), iv_inj] at h0
+          have h' : (BitVec.ofInt W.toNat za).toNat = 0 := by rw [h0]; rfl
+          omega
+        rw [← iv_inj (s := s), ← iv_inj (s := s) (a := B), iv_mul_of hs1 f1, iv_mul_of hs2 f2]
+        exact Int.mul_eq_mul_left_iff hA0
+      rcases hc with ⟨h1, h2⟩ | ⟨h1, h2⟩
+      · exact key true (by simpa using h1) (by simpa using h2)
+      · exact key false (by simpa using h1) (by simpa using h2)
+
 end EqL
 end Bvr

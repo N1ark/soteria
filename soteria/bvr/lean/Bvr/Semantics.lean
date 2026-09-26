@@ -81,6 +81,9 @@ structure FloatSem where
   convert : RM → (p q : Prec) → FBits p → FBits q
   toBv : RM → Bool → (n : Nat) → (p : Prec) → FBits p → BitVec n
   ofBv : RM → Bool → (p : Prec) → (n : Nat) → BitVec n → FBits p
+  /-- [fp.add] and [fp.mul] are commutative (up to the payload of NaNs). -/
+  add_comm : ∀ p x y, (add p x y).canon = (add p y x).canon
+  mul_comm : ∀ p x y, (mul p x y).canon = (mul p y x).canon
 
 /-! ## Well-typed terms -/
 

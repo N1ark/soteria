@@ -714,14 +714,23 @@ theorem bv_sub.r_add_cancel_r.proof : bv_sub.r_add_cancel_r.Stmt := by
   obtain ⟨-, rfl⟩ := hx; obtain ⟨-, rfl⟩ := e
   rw [hL]; congr 2; grind
 
--- UNSOUND: the flags of the outer subtraction are kept, but the inner additions may wrap. Take
--- 8 bits, `checked = {signed := true, unsigned := false}`, v1 = Add (unchecked, l, r1),
--- v2 = Add (unchecked, l, r2), with l = 1, r1 = 127, r2 = 0xff (take `O` returning the raw spec
--- terms). Then l + r1 = 0x80 (-128) and l + r2 = 0, and -128 -s 0 = -128 has no signed overflow,
--- so the spec is `some 0x80`. The result is r1 -s r2 = 127 -s (-1), whose signed overflow makes it
--- poison.
 theorem bv_sub.r_add_add.proof : bv_sub.r_add_add.Stmt := by
-  sorry
+  intro FS O hO c v1 v2 res h
+  simp only [bv_sub.r_add_add] at h; split at h <;> simp [equal] at h; obtain ⟨rfl, rfl⟩ := h
+  rename_i ck1 l r1 T1 ck2 r2 T2
+  refine Refines.arith_intro (.sub c) (fun n wa wb hT => ?_) (fun n wa wb hT ρ x y v hx hy e => ?_)
+  all_goals obtain ⟨wl, wr1, rfl⟩ := BV_arith_inv (.add ck1) wa
+  all_goals obtain ⟨-, wr2, hT2⟩ := BV_arith_inv (.add ck2) wb
+  · exact BV_arith (.sub _) (hO.bv_sub unchecked r1 r2) wr1 wr2
+  rw [eval_arith (.add ck1) wl wr1 rfl] at hx
+  obtain ⟨L, R1, hL, hR1, hx⟩ := evBinop_inv (.inl (.add ck1)) wl wr1 hx
+  rw [eval_arith (.add ck2) wl wr2 hT2] at hy
+  obtain ⟨L', R2, hL', hR2, hy⟩ := evBinop_inv (.inl (.add ck2)) wl wr2 hy
+  rw [hL] at hL'; simp at hL'; subst hL'
+  refine O_eval (.sub _) (hO.bv_sub unchecked r1 r2) wr1 wr2 hR1 hR2 ?_
+  simp [evBinop, checkedOp, bvBin, unchecked] at hx hy e ⊢
+  obtain ⟨-, rfl⟩ := hx; obtain ⟨-, rfl⟩ := hy; obtain ⟨-, rfl⟩ := e
+  congr 1; grind
 
 theorem bv_sub.r_sub_sub.proof : bv_sub.r_sub_sub.Stmt := by
   intro FS O hO c v1 v2 res h

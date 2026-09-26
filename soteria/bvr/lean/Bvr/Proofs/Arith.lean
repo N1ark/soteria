@@ -886,19 +886,50 @@ theorem bv_rem.r_default.proof : bv_rem.r_default.Stmt := by
   exact Refines.refl
 
 theorem bv_mul.r_lits.proof : bv_mul.r_lits.Stmt := by
-  sorry
+  intro FS O hO c v1 v2 res h
+  simp only [bv_mul.r_lits] at h; split at h <;> simp at h; subst h
+  refine Refines.arith_intro (.mul c) (fun n wa wb hT => ?_) (fun n wa wb hT ρ x y v hx hy e => ?_)
+  · rw [size_ty_lit wa]; exact BV_mk_masked wa.2.2
+  · rw [size_ty_lit wa, eval_mk_masked wa.2.2]
+    rw [lit_eval_eq wa hx, lit_eval_eq wb hy] at e
+    simp [evBinop, checkedOp, bvBin] at e
+    rw [← e.2, BitVec.ofInt_mul]
 
 theorem bv_mul.r_one_r.proof : bv_mul.r_one_r.Stmt := by
-  sorry
+  intro FS O hO c v1 v2 res h
+  simp only [bv_mul.r_one_r] at h; split at h <;> simp at h; obtain ⟨rfl, rfl⟩ := h
+  refine Refines.arith_intro (.mul c) (fun n wa wb hT => wa) (fun n wa wb hT ρ x y v hx hy e => ?_)
+  rw [lit_eval_eq wb hy] at e
+  simp [evBinop, checkedOp, bvBin] at e
+  rw [hx, ← e.2]
 
 theorem bv_mul.r_one_l.proof : bv_mul.r_one_l.Stmt := by
-  sorry
+  intro FS O hO c v1 v2 res h
+  simp only [bv_mul.r_one_l] at h; split at h <;> simp at h; obtain ⟨rfl, rfl⟩ := h
+  refine Refines.arith_intro (.mul c) (fun n wa wb hT => wb) (fun n wa wb hT ρ x y v hx hy e => ?_)
+  rw [lit_eval_eq wa hx] at e
+  simp [evBinop, checkedOp, bvBin] at e
+  rw [hy, ← e.2]
 
 theorem bv_mul.r_zero_r.proof : bv_mul.r_zero_r.Stmt := by
-  sorry
+  intro FS O hO c v1 v2 res h
+  simp only [bv_mul.r_zero_r] at h; split at h <;> simp at h; obtain ⟨rfl, rfl⟩ := h
+  refine Refines.arith_intro (.mul c) (fun n wa wb hT => ?_) (fun n wa wb hT ρ x y v hx hy e => ?_)
+  · simp only [wa.2.1, size_of_ty_bitVector]; exact BV_bv_zero wa.2.2
+  · simp only [wa.2.1, size_of_ty_bitVector]; rw [eval_bv_zero wa.2.2]
+    rw [lit_eval_eq wb hy] at e
+    simp [evBinop, checkedOp, bvBin] at e
+    rw [← e.2]; rfl
 
 theorem bv_mul.r_zero_l.proof : bv_mul.r_zero_l.Stmt := by
-  sorry
+  intro FS O hO c v1 v2 res h
+  simp only [bv_mul.r_zero_l] at h; split at h <;> simp at h; obtain ⟨rfl, rfl⟩ := h
+  refine Refines.arith_intro (.mul c) (fun n wa wb hT => ?_) (fun n wa wb hT ρ x y v hx hy e => ?_)
+  · rw [size_ty_lit wa]; exact BV_bv_zero wa.2.2
+  · rw [size_ty_lit wa, eval_bv_zero wa.2.2]
+    rw [lit_eval_eq wa hx] at e
+    simp [evBinop, checkedOp, bvBin] at e
+    rw [← e.2]; rfl
 
 theorem bv_mul.r_neg.proof : bv_mul.r_neg.Stmt := by
   sorry
@@ -907,10 +938,28 @@ theorem bv_mul.r_mul_const.proof : bv_mul.r_mul_const.Stmt := by
   sorry
 
 theorem bv_mul.r_ite.proof : bv_mul.r_ite.Stmt := by
-  sorry
+  intro FS O hO c v1 v2 res h
+  simp only [bv_mul.r_ite] at h
+  rcases orElse_eq_some h with h | h <;> split at h <;> simp at h <;> subst h
+  · simp only [bv_mul.spec, ty_eq, Term.ty_mk]
+    refine Refines.ite_push_l hO (.mul c) (fun n wl wV hT => ?_) (fun n wr wV hT => ?_)
+    all_goals subst hT; rw [size_of_ty_bitVector]
+    · have := O_arith_lit (.mul _) (hO.bv_mul unchecked _ _) wl wV
+      exact ⟨this.1, fun ρ v e => this.2 ρ v (evBinop_mul_unchecked e)⟩
+    · have := O_arith_lit (.mul _) (hO.bv_mul unchecked _ _) wr wV
+      exact ⟨this.1, fun ρ v e => this.2 ρ v (evBinop_mul_unchecked e)⟩
+  · simp only [bv_mul.spec, ty_eq, Term.ty_mk]
+    refine Refines.ite_push_r hO (.mul c) (fun n wl wV hT => ?_) (fun n wr wV hT => ?_)
+    all_goals obtain ⟨rfl, -⟩ := BV_lit wV; rw [size_of_ty_bitVector]
+    · have := O_arith_lit' (.mul _) (.mul _) (hO.bv_mul unchecked _ _) wl wV
+      exact ⟨this.1, fun ρ v e => this.2 ρ v (evBinop_mul_unchecked e)⟩
+    · have := O_arith_lit' (.mul _) (.mul _) (hO.bv_mul unchecked _ _) wr wV
+      exact ⟨this.1, fun ρ v e => this.2 ρ v (evBinop_mul_unchecked e)⟩
 
 theorem bv_mul.r_default.proof : bv_mul.r_default.Stmt := by
-  sorry
+  intro FS O hO c v1 v2 res h
+  simp only [bv_mul.r_default] at h; simp at h; subst h
+  exact Refines.commut_binop (.mul c)
 
 theorem bv_div.r_lits.proof : bv_div.r_lits.Stmt := by
   sorry

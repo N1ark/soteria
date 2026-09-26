@@ -124,7 +124,7 @@ let[@spec Sub (checked, v1, v2) <| ty v1] bv_sub (checked : checked) (v1 : t)
   | Add (_, l, r), l [@r add_cancel_l] -> r
   | Add (_, l, r), r [@r add_cancel_r] -> l
   (* (l + r1) - (l + r2) = r1 - r2 *)
-  | Add (_, l, r1), Add (_, l, r2) [@r add_add] -> bv_sub checked r1 r2
+  | Add (_, l, r1), Add (_, l, r2) [@r add_add] -> bv_sub unchecked r1 r2
   (* l - (l - r) = r *)
   | l, Sub (_, l, r) [@r sub_sub] -> r
   (* distributing over a shared guard lets the branches cancel pairwise *)
@@ -181,7 +181,7 @@ let[@spec Rem (signed, v1, v2) <| ty v1] bv_rem (signed : bool) (v1 : t)
   | 0, _ [@r zero_l] -> bv_zero (size v1)
   | _, 1 [@r one_r] when not signed -> bv_zero (size v1)
   (* x %u 2^k keeps the k lowest bits of x *)
-  | _, BitVec r [@r pow2] when (not signed) && is_pow2 r ->
+  | _, BitVec r [@r pow2] when (not signed) && is_pow2 r && r > 1 ->
       let sz = size v1 in
       let bitwidth = log2 r in
       let lower = bv_extract 0 (bitwidth - 1) v1 in
@@ -191,7 +191,8 @@ let[@spec Rem (signed, v1, v2) <| ty v1] bv_rem (signed : bool) (v1 : t)
     when (not signed) && ck.unsigned ->
       bv_rem signed r v2
   | Rem (false, r, (BitVec r1 as v_r1)), BitVec r2 [@r rem_rem]
-    when (not signed) && (0 = trem r1 r2 || 0 = trem r2 r1) ->
+    when (not signed) && r1 > 0 && r2 > 0
+         && (0 = trem r1 r2 || 0 = trem r2 r1) ->
       let rhs = if zmin r1 r2 = r1 then v_r1 else v2 in
       bv_rem signed r rhs
   | _ [@r default] -> Rem (signed, v1, v2) <| ty v1
@@ -518,7 +519,14 @@ let[@spec Mul (checked, v1, v2) <| ty v1] bv_mul (checked : checked) (v1 : t)
   (* (x * n) * m = x * (n * m) *)
   | (Mul (ckm, x, BitVec n) [@comm], BitVec m) [@comm] [@r mul_const]
     when is_checked (checked_meet checked ckm) ->
-      bv_mul (checked_meet checked ckm) x (mk_masked (size v1) (n * m))
+      let checked = checked_meet checked ckm in
+      (* the signed check only carries over if [n * m] does not overflow *)
+      let checked =
+        if overflows_mul true (size v1) n m then
+          checked_meet checked checked_unsigned
+        else checked
+      in
+      bv_mul checked x (mk_masked (size v1) (n * m))
   (* only propagate down ites if we know it's concrete *)
   | (Ite (b, l, r), BitVec x) [@comm] [@r ite] ->
       let x = mk_bv (size v1) x in
@@ -531,7 +539,11 @@ let[@spec Div (signed, v1, v2) <| ty v1] bv_div (signed : bool) (v1 : t)
   match (v1, v2) with
   | BitVec l, BitVec r [@r lits] ->
       let sz = size v1 in
-      mk_masked sz (tdiv (bv_to_z signed sz l) (bv_to_z signed sz r))
+      let l = bv_to_z signed sz l in
+      let r = bv_to_z signed sz r in
+      (* division by zero gives all ones, or 1 for signed negative dividends *)
+      if r = 0 then mk_masked sz (if signed && l < 0 then 1 else -1)
+      else mk_masked sz (tdiv l r)
   | _, 1 [@r one] -> v1
   (* this case shouldn't happen but it avoids conflicts for the next two
      patterns *)
@@ -539,7 +551,7 @@ let[@spec Div (signed, v1, v2) <| ty v1] bv_div (signed : bool) (v1 : t)
       bv_div signed (bv_mul checked l r) v2
   (* (x * n) / d = x * (n / d) when n % d == 0 *)
   | Mul ({ unsigned = true; _ }, BitVec n, x) [@comm], BitVec d [@r mul_div]
-    when (not signed) && divisible n d ->
+    when (not signed) && d <> 0 && divisible n d ->
       bv_mul checked_unsigned x (mk_bv (size v1) (tdiv n d))
   (* (x * n) / d = x / (d / n) when d % n == 0 *)
   | Mul ({ unsigned = true; _ }, BitVec n, x) [@comm], BitVec d [@r div_mul]
@@ -547,7 +559,7 @@ let[@spec Div (signed, v1, v2) <| ty v1] bv_div (signed : bool) (v1 : t)
       bv_div signed x (mk_bv (size v1) (tdiv d n))
   (* (x / n) / d = x / (n * d) (if n * d doesn't overflow) *)
   | Div (s, x, BitVec n), BitVec d [@r div_div]
-    when s = signed && not (overflows_mul signed (size v1) n d) ->
+    when s = signed && n <> 0 && not (overflows_mul signed (size v1) n d) ->
       bv_div signed x (mk_bv (size v1) (n * d))
   (* extend[uN](X) / N when msb(N) < size(X) <=> extend[uN](X / N) *)
   | BvExtend (false, by, x), BitVec z [@r zext]
@@ -928,14 +940,14 @@ let[@spec AddOvf (signed, v1, v2) <| TBool] bv_add_overflows (signed : bool)
       else
         (* z < 0 so overflows if x < min - z *)
         bv_lt signed x (mk_masked n (min_for signed n - z))
-  | BvOfBool (n, b1), BvOfBool (_, b2) [@r of_bools] ->
+  | BvOfBool (n, b1), BvOfBool (_, b2) [@r of_bools] when n > 1 ->
       if signed && n = 2 then
         (* Signed addition of two booleans of size 2 overflows iff they are both
            true *)
         b_and b1 b2
       else v_false
   (* ite(b, 1, 0) + x only overflows if b && x == max *)
-  | (BvOfBool (_, b), other) [@comm] [@r of_bool] ->
+  | (BvOfBool (_, b), other) [@comm] [@r of_bool] when size v1 > 1 ->
       let n = size v1 in
       let other = kind other <| TBitVector n in
       b_and b (sem_eq other (mk_bv n (max_for signed n)))
@@ -954,7 +966,7 @@ let[@spec MulOvf (signed, v1, v2) <| TBool] bv_mul_overflows (signed : bool)
     when if signed then msb_of v1 + msb_of v2 < size v1 - 2
          else msb_of v1 + msb_of v2 < size v1 - 1 ->
       v_false
-  | (BitVec z, x) [@comm] [@r const] ->
+  | (BitVec z, x) [@comm] [@r const] when (not signed) || size v1 > 1 ->
       if z = 0 || z = 1 then v_false
       else
         let n = size v1 in

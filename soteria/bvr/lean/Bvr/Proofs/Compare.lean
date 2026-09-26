@@ -884,12 +884,20 @@ theorem bv_lt.r_mul_const.proof : bv_lt.r_mul_const.Stmt := by
       clear rx rc r1 r2 hr1 hr2 hC1 hC2
       tdiv_omega (bvz s y) (bvz s xc) (bvz s xx) hnz
 
--- UNSOUND: when a is negative (signed). Take signed = true, 8 bits, v1 = Mul (checked_signed,
--- a, x), v2 = Mul (checked_signed, a, y) with a = BitVec 255 (-1, so sure_neq a 0), x ↦ 1#8 and
--- y ↦ 2#8. Neither product overflows. The spec evaluates to (-1) <s (-2) = false, but the result
--- bv_lt true x y evaluates to 1 <s 2 = true.
 theorem bv_lt.r_mul_mul.proof : bv_lt.r_mul_mul.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_lt.r_mul_mul] at h
+  rw [cmp_spec_eq_lt]
+  replace h := orElse_eq_some h
+  rcases h with h | h <;> (try replace h := orElse_eq_some h) <;> (try rcases h with h | h) <;>
+    (try replace h := orElse_eq_some h) <;> (try rcases h with h | h) <;>
+    split at h <;> (try split at h) <;> simp only [Option.some.injEq, reduceCtorEq] at h <;>
+    rename_i hc <;> subst h <;>
+    simp only [equal, Bool.and_eq_true, decide_eq_true_eq] at hc <;> obtain ⟨rfl, hc1, hc2, hca⟩ := hc
+  · exact mul_mul_refines hO false s ⟨_, .inl rfl⟩ ⟨_, .inl rfl⟩ hc1 hc2 hca
+  · exact mul_mul_refines hO false s ⟨_, .inl rfl⟩ ⟨_, .inr rfl⟩ hc1 hc2 hca
+  · exact mul_mul_refines hO false s ⟨_, .inr rfl⟩ ⟨_, .inl rfl⟩ hc1 hc2 hca
+  · exact mul_mul_refines hO false s ⟨_, .inr rfl⟩ ⟨_, .inr rfl⟩ hc1 hc2 hca
 
 theorem bv_lt.r_const_sub1.proof : bv_lt.r_const_sub1.Stmt := by
   intro FS O hO s v1 v2 res h
@@ -1969,12 +1977,20 @@ theorem bv_leq.r_mul_const.proof : bv_leq.r_mul_const.Stmt := by
       clear rx rc r1 r2 hr1 hr2 hC1 hC2
       tdiv_omega (bvz s y) (bvz s xc) (bvz s xx) hnz
 
--- UNSOUND: when a is negative (signed). Take signed = true, 8 bits, v1 = Mul (checked_signed,
--- a, x), v2 = Mul (checked_signed, a, y) with a = BitVec 255 (-1, so sure_neq a 0), x ↦ 1#8 and
--- y ↦ 2#8. Neither product overflows. The spec evaluates to (-1) ≤s (-2) = false, but the result
--- bv_leq true x y evaluates to 1 ≤s 2 = true.
 theorem bv_leq.r_mul_mul.proof : bv_leq.r_mul_mul.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_leq.r_mul_mul] at h
+  rw [cmp_spec_eq_leq]
+  replace h := orElse_eq_some h
+  rcases h with h | h <;> (try replace h := orElse_eq_some h) <;> (try rcases h with h | h) <;>
+    (try replace h := orElse_eq_some h) <;> (try rcases h with h | h) <;>
+    split at h <;> (try split at h) <;> simp only [Option.some.injEq, reduceCtorEq] at h <;>
+    rename_i hc <;> subst h <;>
+    simp only [equal, Bool.and_eq_true, decide_eq_true_eq] at hc <;> obtain ⟨rfl, hc1, hc2, hca⟩ := hc
+  · exact mul_mul_refines hO true s ⟨_, .inl rfl⟩ ⟨_, .inl rfl⟩ hc1 hc2 hca
+  · exact mul_mul_refines hO true s ⟨_, .inl rfl⟩ ⟨_, .inr rfl⟩ hc1 hc2 hca
+  · exact mul_mul_refines hO true s ⟨_, .inr rfl⟩ ⟨_, .inl rfl⟩ hc1 hc2 hca
+  · exact mul_mul_refines hO true s ⟨_, .inr rfl⟩ ⟨_, .inr rfl⟩ hc1 hc2 hca
 
 theorem bv_leq.r_udiv_big.proof : bv_leq.r_udiv_big.Stmt := by
   intro FS O hO s v1 v2 res h

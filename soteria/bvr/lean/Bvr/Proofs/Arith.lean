@@ -931,9 +931,48 @@ theorem bv_mul.r_zero_l.proof : bv_mul.r_zero_l.Stmt := by
     simp [evBinop, checkedOp, bvBin] at e
     rw [← e.2]; rfl
 
-theorem bv_mul.r_neg.proof : bv_mul.r_neg.Stmt := by
-  sorry
+theorem bv_mul.neg_aux {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {c z Tc x Tn T N}
+    (hN : ∀ n, Tc = .bitVector n → Tn = .bitVector n → N = n)
+    (hz : ¬bv_to_z true N z = min_for true N) :
+    Refines FS (.mk (.binop (.mul c) (.mk (.bitVec z) Tc) (.mk (.unop (.neg true) x) Tn)) T)
+      (O.bv_mul (checked_meet c checked_signed) (O.bv_neg false (mk_bv N z)) x) := by
+  refine Refines.arith_intro (.mul c) (fun n wa wb hT => ?_) (fun n wa wb hT ρ C Y v hx hy e => ?_)
+  all_goals obtain ⟨rfl, hz'⟩ := BV_lit wa
+  all_goals obtain ⟨wx, rfl⟩ := BV_neg_inv wb
+  all_goals obtain rfl := hN n rfl rfl
+  all_goals have hneg := O_neg (hO.bv_neg false (mk_bv N z)) (BV_mk_bv wa.2.2)
+  all_goals have hmul := O_arith (.mul _) (hO.bv_mul (checked_meet c checked_signed) _ x) hneg.1 wx
+  · exact hmul.1
+  · rw [lit_eval_eq wa hx] at e
+    rw [eval_neg wx rfl] at hy
+    obtain ⟨X, hX, hy⟩ := evUnop_inv wx hy
+    simp [evUnop] at hy; obtain ⟨hXm, rfl⟩ := hy
+    have hN' := hneg.2 ρ (BitVec.ofInt _ z) _ (by rw [eval_mk_bv_lit wa, eval_lit wa])
+      (by simp [evUnop]; rfl)
+    refine O_eval (.mul _) (hO.bv_mul _ _ _) hneg.1 wx hN' hX ?_
+    rw [bv_to_z_lit wa.2.2 hz'.1 hz'.2, min_for_eq wa.2.2] at hz
+    have hC := ne_intMin_of_toInt (w := N.toNat) (C := BitVec.ofInt _ z) (by have := wa.2.2; omega)
+      (by simpa using hz)
+    simp [evBinop, checkedOp, bvBin, checked_meet, checked_signed] at e ⊢
+    obtain ⟨⟨e1, -⟩, rfl⟩ := e
+    exact ⟨fun hs => smul_neg_swap hC hXm (e1 hs), by simp⟩
 
+theorem bv_mul.r_neg.proof : bv_mul.r_neg.Stmt := by
+  intro FS O hO c v1 v2 res h
+  simp only [bv_mul.r_neg] at h
+  rcases orElse_eq_some h with h | h <;> split at h <;> simp at h <;> obtain ⟨hz, rfl⟩ := h
+  · exact bv_mul.neg_aux hO (fun n h1 h2 => by simp [h1]) (of_decide_eq_false hz)
+  · rename_i x Tn z Tc
+    refine Refines.trans (Refines.comm' (.mul _) (fun w => ?_)) (bv_mul.neg_aux hO (T := Tn)
+      (fun n h1 h2 => by simp [h2]) (of_decide_eq_false hz))
+    obtain ⟨n, w1, w2, -⟩ := (WT_arith (.mul c)).1 w
+    have := w1.2.1; simp at this; simp [this]
+
+-- UNSOUND: the folded constant `n * m` may overflow as a signed product even when `(x * n) * m`
+-- does not. Take 8 bits, `checked = ckm = {signed := true, unsigned := false}`,
+-- v1 = Mul (ckm, x, 0x40), v2 = 2, with x = 0xff (-1) (take `O` returning the raw spec terms).
+-- Then x *s 64 = -64 and -64 *s 2 = -128 have no signed overflow, so the spec is `some 0x80`. The
+-- result is x *s 0x80 = (-1) *s (-128), whose signed overflow makes it poison.
 theorem bv_mul.r_mul_const.proof : bv_mul.r_mul_const.Stmt := by
   sorry
 

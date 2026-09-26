@@ -877,5 +877,17 @@ theorem smod_formula (a b : Int) :
     all_goals simp_all <;> omega
 
 
+theorem ne_intMin_of_toInt {w : Nat} {C : BitVec w} (hw : 0 < w) (h : C.toInt ≠ -2 ^ (w - 1)) :
+    C ≠ BitVec.intMin w := by
+  rintro rfl; exact h (BitVec.toInt_intMin_of_pos hw)
+
+theorem smul_neg_swap {w : Nat} {C X : BitVec w} (hC : C ≠ BitVec.intMin w)
+    (hX : X ≠ BitVec.intMin w) (h : C.smulOverflow (-X) = false) :
+    (-C).smulOverflow X = false := by
+  rw [smul_ok] at *
+  rw [BitVec.toInt_neg_of_ne_intMin hC]; rw [BitVec.toInt_neg_of_ne_intMin hX] at h
+  rw [Int.neg_mul]; rw [Int.mul_neg] at h; omega
+
+
 end ArithL
 end Bvr

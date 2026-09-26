@@ -687,7 +687,20 @@ theorem sem_eq.r_of_bool_const.proof : sem_eq.r_of_bool_const.Stmt := by
   · exact Refines.trans Refines.eq_symm (sem_eq.r_of_bool_const.aux hO)
 
 theorem sem_eq.r_msb.proof : sem_eq.r_msb.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [sem_eq.r_msb, Option.ite_none_right_eq_some, Option.some.injEq] at h
+  obtain ⟨hbv, rfl⟩ := h
+  simp only [Bool.and_eq_true] at hbv
+  split
+  · rename_i hc
+    simp only [Bool.and_eq_true, decide_eq_true_eq] at hc
+    refine Refines.trans ?_ (Refines.sem_eq hO (hO.bv_extract _ _ _) (hO.bv_extract _ _ _))
+    exact Refines.eq_low hc.1 (le_zmax_left _ _) (le_zmax_right _ _) hc.2 (is_bv_true hbv.1)
+  · simp only [mk_commut_binop]
+    split
+    · exact Refines.refl
+    · exact Refines.eq_eq (fun h a b => ⟨h.symm, b, a⟩)
+        (fun ρ x y _ _ _ hx hy => ⟨y, x, hy, hx, eq_comm⟩)
 
 theorem sem_eq.r_default.proof : sem_eq.r_default.Stmt := by
   intro FS O hO v1 v2 res h

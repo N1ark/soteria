@@ -362,3 +362,657 @@ theorem equal_iff {a b : Term} : equal a b = true ↔ a = b := by simp [equal]
 
 end BoolL
 end Bvr
+
+namespace Bvr
+namespace BoolL
+
+open Classical
+
+set_option linter.unusedSimpArgs false
+
+/-! ## Rule helpers -/
+
+/-- Clean up the hypothesis `h : rule = some res` after the rule's match was split. -/
+macro "bool_fire" h:ident : tactic => `(tactic| (
+  simp only [Option.some.injEq, reduceCtorEq, Option.ite_none_right_eq_some, equal_iff] at $h:ident <;>
+  first
+    | subst $h:ident
+    | (obtain ⟨he, hr⟩ := $h:ident; subst hr
+       try simp only [equal_iff, Bool.and_eq_true, decide_eq_true_eq] at he
+       try obtain ⟨⟨rfl, rfl⟩, rfl⟩ := he
+       try obtain ⟨rfl, rfl⟩ := he
+       try subst he)) <;>
+  (try simp only [equal_iff] at *) <;> try subst_vars)
+
+/-- Split a hypothesis `h : alt1 <|> alt2 <|> ... = some res` into one goal per alternative. -/
+macro "bool_alts" h:ident : tactic => `(tactic| repeat'
+  (have h' := orElse_eq_some $h:ident; clear $h:ident; rcases h' with $h:ident | $h:ident))
+
+/-- The syntactic part of a boolean rule. -/
+macro "bool_syn" : tactic => `(tactic| (
+  simp only [b_and.spec, b_or.spec, b_not.spec, WT_and', WT_or, WT_not, WT_ite, Term.ty_mk,
+    v_true_WT, v_false_WT, v_true_ty, v_false_ty] at * <;> grind))
+
+/-- The end of the semantic part of a boolean rule. -/
+macro "bool_fin" : tactic => `(tactic| (
+  simp only [evBinop, pand_eq_some, por_eq_some, evUnop_not_eq_some, eval_v_true,
+    eval_v_false] at * <;> grind))
+
+theorem pand_comm (a b : Option Val) : pand a b = pand b a := by
+  apply Option.ext; intro v; simp only [pand_eq_some]; grind
+
+theorem por_comm (a b : Option Val) : por a b = por b a := by
+  apply Option.ext; intro v; simp only [por_eq_some]; grind
+
+/-- `not (lt s a b)` is `leq s b a`, and `not (leq s a b)` is `lt s b a`. -/
+theorem Refines.not_cmp {FS : FloatSem} {s : Bool} {a b : Term} {op op' : Binop}
+    (hop : (op = .lt s ∧ op' = .leq s) ∨ (op = .leq s ∧ op' = .lt s)) {t : Ty} :
+    Refines FS (.mk (.unop .not_ (.mk (.binop op a b) t)) .bool) (.mk (.binop op' b a) .bool) := by
+  refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
+  · have ⟨h1, _, w1⟩ := WT_not.1 w
+    simp only [Term.ty_mk] at h1; subst h1
+    have hc : op = .lt s ∨ op = .leq s := by grind
+    have hc' : op' = .lt s ∨ op' = .leq s := by grind
+    obtain ⟨⟨n, hn, h2⟩, h3, -, wa, wb⟩ := (WT_cmp hc).1 w1
+    refine ⟨(WT_cmp hc').2 ⟨⟨n, hn, by rw [h3, h2]⟩, h3.symm, rfl, wb, wa⟩, rfl⟩
+  · have ⟨_, _, w1⟩ := WT_not.1 w
+    rw [eval_unop w, eval_binop w1] at e
+    rw [eval_binop w']
+    rw [evUnop_not_eq_some] at e
+    obtain ⟨c, e, rfl⟩ := e
+    rcases hop with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+    all_goals
+      simp only [evBinop] at e ⊢
+      rw [bvBin_eq_some] at e ⊢
+      obtain ⟨n, x, y, hx, hy, e⟩ := e
+      refine ⟨n, y, x, hy, hx, ?_⟩
+      simp only [lt_val, leq_val, Option.some.injEq, Val.bool.injEq] at e ⊢
+      subst e; by_cases hh : bz s x < bz s y <;> by_cases hh2 : bz s x ≤ bz s y <;> simp [hh, hh2] <;> omega
+
+/-- De Morgan, with the children of the result refined further. -/
+theorem Refines.not_andor {FS : FloatSem} {op op' : Binop} {a b a' b' : Term} {t : Ty}
+    (hop : (op = .or_ ∧ op' = .and_) ∨ (op = .and_ ∧ op' = .or_))
+    (ha : Refines FS (.mk (.unop .not_ a) .bool) a')
+    (hb : Refines FS (.mk (.unop .not_ b) .bool) b') :
+    Refines FS (.mk (.unop .not_ (.mk (.binop op a b) t)) .bool) (.mk (.binop op' a' b') .bool) := by
+  refine Refines.trans (b := .mk (.binop op' (.mk (.unop .not_ a) .bool)
+    (.mk (.unop .not_ b) .bool)) .bool) ?_ (Refines.binop ha hb (fun _ => rfl))
+  refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
+  · have ⟨h1, _, w1⟩ := WT_not.1 w
+    simp only [Term.ty_mk] at h1; subst h1
+    rcases hop with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+    · obtain ⟨h2, h3, -, wa, wb⟩ := WT_or.1 w1
+      exact ⟨WT_and'.2 ⟨rfl, rfl, rfl, WT_not.2 ⟨h2, rfl, wa⟩, WT_not.2 ⟨h3, rfl, wb⟩⟩, rfl⟩
+    · obtain ⟨h2, h3, -, wa, wb⟩ := WT_and'.1 w1
+      exact ⟨WT_or.2 ⟨rfl, rfl, rfl, WT_not.2 ⟨h2, rfl, wa⟩, WT_not.2 ⟨h3, rfl, wb⟩⟩, rfl⟩
+  · have ⟨_, _, w1⟩ := WT_not.1 w
+    have ⟨wa, wb⟩ : (Term.mk (.unop .not_ a) .bool).WT ∧ (Term.mk (.unop .not_ b) .bool).WT := by
+      rcases hop with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+      · exact ⟨(WT_and'.1 w').2.2.2.1, (WT_and'.1 w').2.2.2.2⟩
+      · exact ⟨(WT_or.1 w').2.2.2.1, (WT_or.1 w').2.2.2.2⟩
+    rw [eval_unop w, eval_binop w1] at e
+    rw [eval_binop w', eval_unop wa, eval_unop wb]
+    rcases hop with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> bool_fin
+
+theorem bitVec_one (y : BitVec 1) : y = 0#1 ∨ y = 1#1 := by revert y; decide
+
+/-- `not (c = v)` on one bit is `(1 - c) = v`. -/
+theorem Refines.not_eq_bit {FS : FloatSem} {c v : Term} {bv : Int} {t : Ty}
+    (hc : c = .mk (.bitVec bv) (.bitVector 1)) (hop : a = c ∧ b = v ∨ a = v ∧ b = c) :
+    Refines FS (.mk (.unop .not_ (.mk (.binop .eq a b) t)) .bool)
+      (.mk (.binop .eq (mk_bv 1 (1 - bv)) v) .bool) := by
+  subst hc
+  refine Refines.intro (fun w => ?_) (fun ρ x w w' e => ?_)
+  · have ⟨_, _, w1⟩ := WT_not.1 w
+    have ⟨h1, _, wa, wb⟩ := WT_eq.1 w1
+    refine ⟨WT_eq.2 ⟨?_, rfl, mk_masked_WT (by omega), ?_⟩, rfl⟩ <;>
+      rcases hop with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> simp_all [mk_bv, mk_masked]
+  · have ⟨_, _, w1⟩ := WT_not.1 w
+    have ⟨h1, _, wa, wb⟩ := WT_eq.1 w1
+    rw [eval_unop w, eval_binop w1] at e
+    rw [eval_binop w', mk_bv, eval_mk_masked (by omega)]
+    have wc : (Term.mk (.bitVec bv) (.bitVector 1)).WT := by
+      rcases hop with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> assumption
+    have hv : v.ty = .bitVector 1 := by
+      rcases hop with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> simp_all
+    obtain ⟨n, hn, hT, h0, h2⟩ := WT_bitVec.1 wc
+    simp at hT; obtain rfl : n = 1 := by omega
+    have hb : bv = 0 ∨ bv = 1 := by omega
+    have ec := eval_bitVec' (FS := FS) (ρ := ρ) (n := 1) wc (Or.inl rfl)
+    simp only [evUnop_not_eq_some] at e
+    obtain ⟨c, e, rfl⟩ := e
+    cases ev : eval FS ρ v with
+    | none =>
+      rcases hop with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> simp [ev, evBinop] at e
+    | some y =>
+      obtain ⟨-, y, rfl⟩ := eval_bv_of_sort ev (by simpa using hv)
+      rcases hop with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> rw [ec, ev] at e <;>
+        simp only [evBinop, Option.some.injEq, Val.bool.injEq, Val.bv.injEq] at e ⊢ <;>
+        subst e <;> simp only [heq_eq_eq, true_and] <;>
+        rcases hb with rfl | rfl <;> simp <;> rcases bitVec_one y with rfl | rfl <;> decide
+
+theorem eval_bool_lit {FS ρ b t} (w : (Term.mk (.bool b) t).WT) :
+    eval FS ρ (.mk (.bool b) t) = some (.bool b) := eval_bool (WT_bool.1 w)
+
+theorem eval_ite_eq_some {FS ρ g a b t v} (h : (Term.mk (.triop .ite g a b) t).WT) :
+    eval FS ρ (.mk (.triop .ite g a b) t) = some v ↔
+      (eval FS ρ g = some (.bool true) ∧ eval FS ρ a = some v) ∨
+        (eval FS ρ g = some (.bool false) ∧ eval FS ρ b = some v) := by
+  rw [eval_ite h]; split <;> simp_all
+
+/-- The syntactic part of an `ite` rule. -/
+macro "bool_isyn" : tactic => `(tactic| (
+  simp only [b_ite.spec, b_and.spec, b_or.spec, b_not.spec, WT_and', WT_or, WT_not, WT_ite,
+    WT_bool, Term.ty_mk, ty_eq] at * <;> grind))
+
+/-- `ite` on boolean branches, as a boolean formula. -/
+theorem Refines.ite_bool {FS : FloatSem} {g a b r : Term} {t : Ty} (ha : a.WT → a.ty = .bool)
+    (hr : ∀ ρ, g.ty = .bool → b.ty = .bool → g.WT → a.WT → b.WT →
+      r.WT ∧ r.ty = .bool ∧ ∀ v, (eval FS ρ g = some (.bool true) ∧ eval FS ρ a = some v) ∨
+        (eval FS ρ g = some (.bool false) ∧ eval FS ρ b = some v) → eval FS ρ r = some v) :
+    Refines FS (.mk (.triop .ite g a b) t) r := by
+  refine Refines.intro (fun w => ?_) (fun ρ v w _ e => ?_)
+  · obtain ⟨h1, h2, h3, wg, wa, wb⟩ := WT_ite.1 w
+    obtain ⟨wr, hrt, -⟩ := hr ⟨fun _ => none, fun _ _ => none⟩ h1 (h2.trans (ha wa)) wg wa wb
+    exact ⟨wr, by simp [hrt, h3, ha wa]⟩
+  · obtain ⟨h1, h2, h3, wg, wa, wb⟩ := WT_ite.1 w
+    rw [eval_ite_eq_some w] at e
+    exact (hr ρ h1 (h2.trans (ha wa)) wg wa wb).2.2 v e
+
+/-- An `ite` that refines another one, by their branch conditions. -/
+theorem Refines.ite_ite {FS : FloatSem} {g a b g' a' b' : Term} {t : Ty}
+    (hsyn : (Term.mk (.triop .ite g a b) t).WT →
+      (Term.mk (.triop .ite g' a' b') a'.ty).WT ∧ a'.ty = t)
+    (hsem : ∀ ρ v, (Term.mk (.triop .ite g a b) t).WT →
+      (Term.mk (.triop .ite g' a' b') a'.ty).WT →
+      (eval FS ρ g = some (.bool true) ∧ eval FS ρ a = some v) ∨
+        (eval FS ρ g = some (.bool false) ∧ eval FS ρ b = some v) →
+      (eval FS ρ g' = some (.bool true) ∧ eval FS ρ a' = some v) ∨
+        (eval FS ρ g' = some (.bool false) ∧ eval FS ρ b' = some v)) :
+    Refines FS (.mk (.triop .ite g a b) t) (.mk (.triop .ite g' a' b') a'.ty) := by
+  refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
+  · have := hsyn w; exact ⟨this.1, by simp [this.2]⟩
+  · rw [eval_ite_eq_some w] at e; rw [eval_ite_eq_some w']
+    exact hsem ρ v w w' e
+
+theorem is_bv_true {t : Ty} (h : is_bv t = true) : ∃ n, t = .bitVector n := by
+  cases t <;> simp [is_bv, firstSome] at h ⊢
+
+theorem two_pow_succ_int (n : Nat) : (2 : Int) ^ (n + 1) = 2 * 2 ^ n := by
+  rw [Int.pow_succ]; omega
+
+theorem bz_ofInt {s : Bool} {n : Nat} {c : Int} (hn : 0 < n) (h0 : 0 ≤ c) (h1 : c < 2 ^ n) :
+    bz s (BitVec.ofInt n c) = bv_to_z s n c := by
+  cases s
+  · simp only [bz, bv_to_z, Bool.false_eq_true, ↓reduceIte, BitVec.toNat_ofInt]
+    rw [Int.toNat_of_nonneg (by omega)]
+    push_cast
+    exact Int.emod_eq_of_lt h0 h1
+  · simp only [bz, bv_to_z, ↓reduceIte, BitVec.toInt_ofInt, signed_extract, zasr,
+      Int.toNat_natCast]
+    simp only [Int.toNat_zero, Int.pow_zero, Int.ediv_one]
+    rw [Int.emod_eq_of_lt h0 h1]
+    obtain ⟨m, rfl⟩ : ∃ m, n = m + 1 := ⟨n - 1, by omega⟩
+    simp only [Nat.add_sub_cancel]
+    have h2 := two_pow_succ_int m
+    have h3 : (0 : Int) < 2 ^ m := two_pow_pos' m
+    rw [Int.bmod_def]
+    push_cast
+    rw [Int.emod_eq_of_lt h0 h1]
+    rw [h2] at h1 ⊢
+    have : (2 * 2 ^ m + 1) / 2 = (2 : Int) ^ m := by omega
+    rw [this]
+    split <;> split <;> omega
+
+theorem getD_firstSome_orElse {α} {o : Option α} {l : List (Option α)} {d : α} :
+    (firstSome (o :: l)).getD d = match o with | some x => x | none => (firstSome l).getD d := by
+  cases o <;> simp [firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse]
+
+theorem as_upper_bound_cases {v : Term} {r : Term × Bool × Term × Int}
+    (h : as_upper_bound v = some r) :
+    (∃ s a c T T', v = .mk (.binop (.lt s) a (.mk (.bitVec c) T)) T' ∧
+      r = (a, s, v, bv_to_z s (size a) c - 1)) ∨
+    (∃ s a c T T', v = .mk (.binop (.leq s) a (.mk (.bitVec c) T)) T' ∧
+      r = (a, s, v, bv_to_z s (size a) c)) := by
+  unfold as_upper_bound at h
+  simp only [getD_firstSome_orElse, firstSome, Option.getD_none] at h
+  split at h
+  · left; simp at h; exact ⟨_, _, _, _, _, rfl, h.symm⟩
+  · split at h
+    · right; simp at h; exact ⟨_, _, _, _, _, rfl, h.symm⟩
+    · simp at h
+
+theorem as_lower_bound_cases {v : Term} {r : Term × Bool × Term × Int}
+    (h : as_lower_bound v = some r) :
+    (∃ s a c T T', v = .mk (.binop (.lt s) (.mk (.bitVec c) T) a) T' ∧
+      r = (a, s, v, bv_to_z s (size a) c + 1)) ∨
+    (∃ s a c T T', v = .mk (.binop (.leq s) (.mk (.bitVec c) T) a) T' ∧
+      r = (a, s, v, bv_to_z s (size a) c)) := by
+  unfold as_lower_bound at h
+  simp only [getD_firstSome_orElse, firstSome, Option.getD_none] at h
+  split at h
+  · left; simp at h; exact ⟨_, _, _, _, _, rfl, h.symm⟩
+  · split at h
+    · right; simp at h; exact ⟨_, _, _, _, _, rfl, h.symm⟩
+    · simp at h
+
+/-- [v] is a boolean condition [p] on the (signed or unsigned) value of the
+bit-vector [a], of width [n]. -/
+def BoundOn (FS : FloatSem) (v a : Term) (n : Nat) (s : Bool) (p : Int → Bool) : Prop :=
+  ∀ ρ, (∀ val, eval FS ρ v = some val →
+      ∃ x : BitVec n, eval FS ρ a = some (.bv n x) ∧ val = .bool (p (bz s x))) ∧
+    (∀ x : BitVec n, eval FS ρ a = some (.bv n x) → eval FS ρ v = some (.bool (p (bz s x))))
+
+theorem BoundOn.congr {FS v a n s p q} (h : BoundOn FS v a n s p) (hpq : ∀ z, p z = q z) :
+    BoundOn FS v a n s q := by
+  intro ρ
+  refine ⟨fun val e => ?_, fun x e => ?_⟩
+  · obtain ⟨x, hx, rfl⟩ := (h ρ).1 val e; exact ⟨x, hx, by rw [hpq]⟩
+  · rw [← hpq]; exact (h ρ).2 x e
+
+/-- The operator of a comparison, on integers. -/
+def cmpZ (op : Binop) (x y : Int) : Bool :=
+  match op with
+  | .lt _ => decide (x < y)
+  | _ => decide (x ≤ y)
+
+theorem cmp_val {FS : FloatSem} {op : Binop} {s : Bool} (hop : op = .lt s ∨ op = .leq s)
+    {n : Nat} (x y : BitVec n) :
+    evBinop FS op (some (.bv n x)) (some (.bv n y)) = some (.bool (cmpZ op (bz s x) (bz s y))) := by
+  rcases hop with rfl | rfl <;> simp [evBinop, bvBin, lt_val, leq_val, cmpZ]
+
+theorem WT_lit_of_ty {c : Int} {T : Ty} {m : Int} (w : (Term.mk (.bitVec c) T).WT)
+    (hT : T = .bitVector m) :
+    ∃ n : Nat, 0 < n ∧ m = n ∧ 0 ≤ c ∧ c < 2 ^ n := by
+  obtain ⟨n, hn, hT', h0, h1⟩ := WT_bitVec.1 w
+  subst hT
+  rcases hT' with h | h <;> simp at h
+  exact ⟨n, hn, h, h0, h1⟩
+
+/-- A comparison of [a] with a literal on the right. -/
+theorem cmp_right_sem {FS : FloatSem} {op : Binop} {s : Bool} {a : Term} {c : Int} {T T' : Ty}
+    (hop : op = .lt s ∨ op = .leq s)
+    (w : (Term.mk (.binop op a (.mk (.bitVec c) T)) T').WT) :
+    ∃ n : Nat, 0 < n ∧ a.ty = .bitVector n ∧ size a = n ∧
+      BoundOn FS (.mk (.binop op a (.mk (.bitVec c) T)) T') a n s
+        (fun z => cmpZ op z (bv_to_z s n c)) := by
+  obtain ⟨⟨m, hm, ha⟩, hc, -, wa, wc⟩ := (WT_cmp hop).1 w
+  simp only [Term.ty_mk] at hc
+  obtain ⟨n, hn, rfl, h0, h1⟩ := WT_lit_of_ty wc (hc.trans ha)
+  have ec : ∀ ρ, eval FS ρ (.mk (.bitVec c) T) = some (.bv n (BitVec.ofInt n c)) := fun ρ => by
+    have := eval_bitVec' (FS := FS) (ρ := ρ) (n := n) wc (Or.inl (hc.trans ha))
+    simpa using this
+  refine ⟨n, hn, ha, by simp [ha], fun ρ => ⟨fun val e => ?_, fun x e => ?_⟩⟩
+  · rw [eval_binop w, ec] at e
+    cases hA : eval FS ρ a with
+    | none => rw [hA] at e; rcases hop with rfl | rfl <;> simp [evBinop] at e
+    | some A =>
+      rw [hA] at e
+      obtain ⟨-, x, rfl⟩ := eval_bv_of_sort hA (by simpa using ha)
+      simp only [Int.toNat_natCast] at x e hA ⊢
+      rw [cmp_val hop] at e
+      refine ⟨x, rfl, ?_⟩
+      simp only [Option.some.injEq] at e
+      rw [← e, bz_ofInt hn h0 h1]
+  · rw [eval_binop w, ec, e, cmp_val hop, bz_ofInt hn h0 h1]
+
+/-- A comparison of [a] with a literal on the left. -/
+theorem cmp_left_sem {FS : FloatSem} {op : Binop} {s : Bool} {a : Term} {c : Int} {T T' : Ty}
+    (hop : op = .lt s ∨ op = .leq s)
+    (w : (Term.mk (.binop op (.mk (.bitVec c) T) a) T').WT) :
+    ∃ n : Nat, 0 < n ∧ a.ty = .bitVector n ∧ size a = n ∧
+      BoundOn FS (.mk (.binop op (.mk (.bitVec c) T) a) T') a n s
+        (fun z => cmpZ op (bv_to_z s n c) z) := by
+  obtain ⟨⟨m, hm, hT⟩, hc, -, wc, wa⟩ := (WT_cmp hop).1 w
+  simp only [Term.ty_mk] at hc hT
+  obtain ⟨n, hn, rfl, h0, h1⟩ := WT_lit_of_ty wc hT
+  have ha : a.ty = .bitVector n := hc.trans hT
+  have ec : ∀ ρ, eval FS ρ (.mk (.bitVec c) T) = some (.bv n (BitVec.ofInt n c)) := fun ρ => by
+    have := eval_bitVec' (FS := FS) (ρ := ρ) (n := n) wc (Or.inl hT)
+    simpa using this
+  refine ⟨n, hn, ha, by simp [ha], fun ρ => ⟨fun val e => ?_, fun x e => ?_⟩⟩
+  · rw [eval_binop w, ec] at e
+    cases hA : eval FS ρ a with
+    | none => rw [hA] at e; rcases hop with rfl | rfl <;> simp [evBinop] at e
+    | some A =>
+      rw [hA] at e
+      obtain ⟨-, x, rfl⟩ := eval_bv_of_sort hA (by simpa using ha)
+      simp only [Int.toNat_natCast] at x e hA ⊢
+      rw [cmp_val hop] at e
+      refine ⟨x, rfl, ?_⟩
+      simp only [Option.some.injEq] at e
+      rw [← e, bz_ofInt hn h0 h1]
+  · rw [eval_binop w, ec, e, cmp_val hop, bz_ofInt hn h0 h1]
+
+theorem upper_bound_sem {FS : FloatSem} {v a w : Term} {s : Bool} {u : Int}
+    (h : as_upper_bound v = some (a, s, w, u)) (wv : v.WT) :
+    w = v ∧ ∃ n : Nat, 0 < n ∧ a.ty = .bitVector n ∧ BoundOn FS v a n s (fun z => decide (z ≤ u)) := by
+  rcases as_upper_bound_cases h with ⟨s', a', c, T, T', rfl, hr⟩ | ⟨s', a', c, T, T', rfl, hr⟩ <;>
+    simp only [Prod.mk.injEq] at hr <;> obtain ⟨rfl, rfl, rfl, rfl⟩ := hr <;> refine ⟨rfl, ?_⟩
+  · obtain ⟨n, hn, ha, hs, hb⟩ := cmp_right_sem (FS := FS) (Or.inl rfl) wv
+    refine ⟨n, hn, ha, hb.congr fun z => ?_⟩
+    simp only [cmpZ, hs]; simp only [decide_eq_decide]; omega
+  · obtain ⟨n, hn, ha, hs, hb⟩ := cmp_right_sem (FS := FS) (Or.inr rfl) wv
+    exact ⟨n, hn, ha, hb.congr fun z => by simp [cmpZ, ha]⟩
+
+theorem lower_bound_sem {FS : FloatSem} {v a w : Term} {s : Bool} {l : Int}
+    (h : as_lower_bound v = some (a, s, w, l)) (wv : v.WT) :
+    w = v ∧ ∃ n : Nat, 0 < n ∧ a.ty = .bitVector n ∧ BoundOn FS v a n s (fun z => decide (l ≤ z)) := by
+  rcases as_lower_bound_cases h with ⟨s', a', c, T, T', rfl, hr⟩ | ⟨s', a', c, T, T', rfl, hr⟩ <;>
+    simp only [Prod.mk.injEq] at hr <;> obtain ⟨rfl, rfl, rfl, rfl⟩ := hr <;> refine ⟨rfl, ?_⟩
+  · obtain ⟨n, hn, ha, hs, hb⟩ := cmp_left_sem (FS := FS) (Or.inl rfl) wv
+    refine ⟨n, hn, ha, hb.congr fun z => ?_⟩
+    simp only [cmpZ, hs]; simp only [decide_eq_decide]; omega
+  · obtain ⟨n, hn, ha, hs, hb⟩ := cmp_left_sem (FS := FS) (Or.inr rfl) wv
+    exact ⟨n, hn, ha, hb.congr fun z => by simp [cmpZ, ha]⟩
+
+/-! ### Combining two bounds on the same bit-vector -/
+
+section
+variable {FS : FloatSem} {ρ : Env} {v1 v2 a : Term} {n : Nat} {s : Bool} {p1 p2 : Int → Bool}
+
+theorem pand_keep_left (hb1 : BoundOn FS v1 a n s p1) (hb2 : BoundOn FS v2 a n s p2)
+    (himp : ∀ z, p1 z = true → p2 z = true) {v : Val}
+    (e : pand (eval FS ρ v1) (eval FS ρ v2) = some v) : eval FS ρ v1 = some v := by
+  rw [pand_eq_some] at e
+  rcases e with ⟨h, rfl⟩ | ⟨h, rfl⟩ | ⟨h, -, rfl⟩
+  · exact h
+  · obtain ⟨x, hx, hv⟩ := (hb2 ρ).1 _ h
+    rw [(hb1 ρ).2 x hx]
+    cases h1 : p1 (bz s x)
+    · rfl
+    · simp [himp _ h1] at hv
+  · exact h
+
+theorem por_keep_left (hb1 : BoundOn FS v1 a n s p1) (hb2 : BoundOn FS v2 a n s p2)
+    (himp : ∀ z, p2 z = true → p1 z = true) {v : Val}
+    (e : por (eval FS ρ v1) (eval FS ρ v2) = some v) : eval FS ρ v1 = some v := by
+  rw [por_eq_some] at e
+  rcases e with ⟨h, rfl⟩ | ⟨h, rfl⟩ | ⟨h, -, rfl⟩
+  · exact h
+  · obtain ⟨x, hx, hv⟩ := (hb2 ρ).1 _ h
+    rw [(hb1 ρ).2 x hx]
+    cases h2 : p2 (bz s x)
+    · simp [h2] at hv
+    · simp [himp _ h2]
+  · exact h
+
+theorem por_all (hb1 : BoundOn FS v1 a n s p1) (hb2 : BoundOn FS v2 a n s p2)
+    (hall : ∀ z, p1 z = true ∨ p2 z = true) {v : Val}
+    (e : por (eval FS ρ v1) (eval FS ρ v2) = some v) : v = .bool true := by
+  rw [por_eq_some] at e
+  rcases e with ⟨h, rfl⟩ | ⟨h, rfl⟩ | ⟨h1, h2, rfl⟩
+  · rfl
+  · rfl
+  · obtain ⟨x, hx, hv1⟩ := (hb1 ρ).1 _ h1
+    have hv2 := (hb2 ρ).2 x hx
+    rw [h2] at hv2
+    simp only [Val.bool.injEq, Option.some.injEq] at hv1 hv2
+    rcases hall (bz s x) with h | h <;> simp_all
+
+end
+
+
+
+theorem pand_comm' (a b : Option Val) : pand a b = pand b a := by
+  apply Option.ext; intro v; simp only [pand_eq_some]; grind
+
+theorem por_comm' (a b : Option Val) : por a b = por b a := by
+  apply Option.ext; intro v; simp only [por_eq_some]; grind
+
+theorem width_unique {a : Term} {n m : Nat} (h1 : a.ty = .bitVector n) (h2 : a.ty = .bitVector m) :
+    n = m := by
+  rw [h1] at h2; simp at h2; omega
+
+/-- Two bounds of the same kind on the same bit-vector, with the conditions they stand for. -/
+theorem bounds_sem {FS : FloatSem} {v1 v2 a : Term} {s : Bool} {p1 p2 : Int → Bool}
+    (hb1 : v1.WT → ∃ n : Nat, 0 < n ∧ a.ty = .bitVector n ∧ BoundOn FS v1 a n s p1)
+    (hb2 : v2.WT → ∃ n : Nat, 0 < n ∧ a.ty = .bitVector n ∧ BoundOn FS v2 a n s p2)
+    (w1 : v1.WT) (w2 : v2.WT) :
+    ∃ n : Nat, BoundOn FS v1 a n s p1 ∧ BoundOn FS v2 a n s p2 := by
+  obtain ⟨n, -, ha, b1⟩ := hb1 w1
+  obtain ⟨m, -, ha', b2⟩ := hb2 w2
+  obtain rfl := width_unique ha ha'
+  exact ⟨n, b1, b2⟩
+
+/-- A conjunction of two bounds, one of which implies the other. -/
+theorem Refines.and_bounds {FS : FloatSem} {v1 v2 a : Term} {s : Bool} {p1 p2 : Int → Bool}
+    (c : Bool)
+    (hb1 : v1.WT → ∃ n : Nat, 0 < n ∧ a.ty = .bitVector n ∧ BoundOn FS v1 a n s p1)
+    (hb2 : v2.WT → ∃ n : Nat, 0 < n ∧ a.ty = .bitVector n ∧ BoundOn FS v2 a n s p2)
+    (h12 : c = true → ∀ z, p1 z = true → p2 z = true)
+    (h21 : c = false → ∀ z, p2 z = true → p1 z = true) :
+    Refines FS (b_and.spec v1 v2) (if c then v1 else v2) := by
+  refine Refines.intro (fun w => ?_) (fun ρ v w _ e => ?_)
+  · obtain ⟨h1, h2, -, w1, w2⟩ := WT_and'.1 w; split <;> simp_all [b_and.spec]
+  · simp only [b_and.spec] at w e
+    obtain ⟨-, -, -, w1, w2⟩ := WT_and'.1 w
+    obtain ⟨n, b1, b2⟩ := bounds_sem hb1 hb2 w1 w2
+    rw [eval_binop w] at e; simp only [evBinop] at e
+    cases c
+    · rw [pand_comm'] at e; exact pand_keep_left b2 b1 (h21 rfl) e
+    · exact pand_keep_left b1 b2 (h12 rfl) e
+
+/-- A disjunction of two bounds, one of which implies the other. -/
+theorem Refines.or_bounds {FS : FloatSem} {v1 v2 a : Term} {s : Bool} {p1 p2 : Int → Bool}
+    (c : Bool)
+    (hb1 : v1.WT → ∃ n : Nat, 0 < n ∧ a.ty = .bitVector n ∧ BoundOn FS v1 a n s p1)
+    (hb2 : v2.WT → ∃ n : Nat, 0 < n ∧ a.ty = .bitVector n ∧ BoundOn FS v2 a n s p2)
+    (h21 : c = true → ∀ z, p2 z = true → p1 z = true)
+    (h12 : c = false → ∀ z, p1 z = true → p2 z = true) :
+    Refines FS (b_or.spec v1 v2) (if c then v1 else v2) := by
+  refine Refines.intro (fun w => ?_) (fun ρ v w _ e => ?_)
+  · obtain ⟨h1, h2, -, w1, w2⟩ := WT_or.1 w; split <;> simp_all [b_or.spec]
+  · simp only [b_or.spec] at w e
+    obtain ⟨-, -, -, w1, w2⟩ := WT_or.1 w
+    obtain ⟨n, b1, b2⟩ := bounds_sem hb1 hb2 w1 w2
+    rw [eval_binop w] at e; simp only [evBinop] at e
+    cases c
+    · rw [por_comm'] at e; exact por_keep_left b2 b1 (h12 rfl) e
+    · exact por_keep_left b1 b2 (h21 rfl) e
+
+theorem combine_upper_bounds_eq {v1 v2 a1 a2 w1 w2 : Term} {s1 s2 k : Bool} {u1 u2 : Int}
+    (h1 : as_upper_bound v1 = some (a1, s1, w1, u1))
+    (h2 : as_upper_bound v2 = some (a2, s2, w2, u2)) :
+    combine_upper_bounds k v1 v2 = if decide (u1 ≤ u2) = k then v1 else v2 := by
+  simp [combine_upper_bounds, getD_firstSome_orElse, firstSome, h1, h2]
+
+theorem combine_lower_bounds_eq {v1 v2 a1 a2 w1 w2 : Term} {s1 s2 k : Bool} {l1 l2 : Int}
+    (h1 : as_lower_bound v1 = some (a1, s1, w1, l1))
+    (h2 : as_lower_bound v2 = some (a2, s2, w2, l2)) :
+    combine_lower_bounds k v1 v2 = if decide (l1 ≥ l2) = k then v1 else v2 := by
+  simp [combine_lower_bounds, getD_firstSome_orElse, firstSome, h1, h2]
+
+theorem Refines.and_upper_bounds {FS : FloatSem} {v1 v2 a w1 w2 : Term} {s : Bool} {u1 u2 : Int}
+    (h1 : as_upper_bound v1 = some (a, s, w1, u1))
+    (h2 : as_upper_bound v2 = some (a, s, w2, u2)) :
+    Refines FS (b_and.spec v1 v2) (combine_upper_bounds true v1 v2) := by
+  rw [combine_upper_bounds_eq h1 h2]
+  exact Refines.and_bounds _ (fun w => (upper_bound_sem h1 w).2) (fun w => (upper_bound_sem h2 w).2)
+    (fun hc z => by simp at hc ⊢; omega) (fun hc z => by simp at hc ⊢; omega)
+
+theorem Refines.or_upper_bounds {FS : FloatSem} {v1 v2 a w1 w2 : Term} {s : Bool} {u1 u2 : Int}
+    (h1 : as_upper_bound v1 = some (a, s, w1, u1))
+    (h2 : as_upper_bound v2 = some (a, s, w2, u2)) :
+    Refines FS (b_or.spec v1 v2) (combine_upper_bounds false v1 v2) := by
+  have : combine_upper_bounds false v1 v2 = if decide (u2 < u1) = true then v1 else v2 := by
+    rw [combine_upper_bounds_eq h1 h2]; by_cases h : u1 ≤ u2 <;> simp [h] <;> omega
+  rw [this]
+  exact Refines.or_bounds _ (fun w => (upper_bound_sem h1 w).2) (fun w => (upper_bound_sem h2 w).2)
+    (fun hc z => by simp at hc ⊢; omega) (fun hc z => by simp at hc ⊢; omega)
+
+theorem Refines.and_lower_bounds {FS : FloatSem} {v1 v2 a w1 w2 : Term} {s : Bool} {l1 l2 : Int}
+    (h1 : as_lower_bound v1 = some (a, s, w1, l1))
+    (h2 : as_lower_bound v2 = some (a, s, w2, l2)) :
+    Refines FS (b_and.spec v1 v2) (combine_lower_bounds true v1 v2) := by
+  rw [combine_lower_bounds_eq h1 h2]
+  exact Refines.and_bounds _ (fun w => (lower_bound_sem h1 w).2) (fun w => (lower_bound_sem h2 w).2)
+    (fun hc z => by simp at hc ⊢; omega) (fun hc z => by simp at hc ⊢; omega)
+
+theorem Refines.or_lower_bounds {FS : FloatSem} {v1 v2 a w1 w2 : Term} {s : Bool} {l1 l2 : Int}
+    (h1 : as_lower_bound v1 = some (a, s, w1, l1))
+    (h2 : as_lower_bound v2 = some (a, s, w2, l2)) :
+    Refines FS (b_or.spec v1 v2) (combine_lower_bounds false v1 v2) := by
+  have : combine_lower_bounds false v1 v2 = if decide (l1 < l2) = true then v1 else v2 := by
+    rw [combine_lower_bounds_eq h1 h2]; by_cases h : l1 < l2 <;> simp [h] <;> omega
+  rw [this]
+  exact Refines.or_bounds _ (fun w => (lower_bound_sem h1 w).2) (fun w => (lower_bound_sem h2 w).2)
+    (fun hc z => by simp at hc ⊢; omega) (fun hc z => by simp at hc ⊢; omega)
+
+theorem as_upper_bound_lt {s : Bool} {a : Term} {c : Int} {T T' : Ty} :
+    as_upper_bound (.mk (.binop (.lt s) a (.mk (.bitVec c) T)) T') =
+      some (a, s, .mk (.binop (.lt s) a (.mk (.bitVec c) T)) T', bv_to_z s (size a) c - 1) := by
+  simp [as_upper_bound, firstSome]
+
+theorem as_upper_bound_leq {s : Bool} {a : Term} {c : Int} {T T' : Ty} :
+    as_upper_bound (.mk (.binop (.leq s) a (.mk (.bitVec c) T)) T') =
+      some (a, s, .mk (.binop (.leq s) a (.mk (.bitVec c) T)) T', bv_to_z s (size a) c) := by
+  simp [as_upper_bound, firstSome]
+
+theorem as_lower_bound_lt {s : Bool} {a : Term} {c : Int} {T T' : Ty} :
+    as_lower_bound (.mk (.binop (.lt s) (.mk (.bitVec c) T) a) T') =
+      some (a, s, .mk (.binop (.lt s) (.mk (.bitVec c) T) a) T', bv_to_z s (size a) c + 1) := by
+  simp [as_lower_bound, firstSome]
+
+theorem as_lower_bound_leq {s : Bool} {a : Term} {c : Int} {T T' : Ty} :
+    as_lower_bound (.mk (.binop (.leq s) (.mk (.bitVec c) T) a) T') =
+      some (a, s, .mk (.binop (.leq s) (.mk (.bitVec c) T) a) T', bv_to_z s (size a) c) := by
+  simp [as_lower_bound, firstSome]
+
+theorem complementary_bounds_true {ub lb : Term} (h : complementary_bounds ub lb = true) :
+    ∃ a s w1 u w2 l, as_upper_bound ub = some (a, s, w1, u) ∧
+      as_lower_bound lb = some (a, s, w2, l) ∧ l ≤ u + 1 := by
+  unfold complementary_bounds at h
+  simp only [getD_firstSome_orElse, firstSome] at h
+  split at h
+  · rename_i a1 s1 w1 u a2 s2 w2 l h1 h2
+    simp [equal_iff] at h
+    obtain ⟨rfl, rfl, hl⟩ := h
+    exact ⟨_, _, _, _, _, _, h1, h2, hl⟩
+  · simp at h
+
+/-- A disjunction of two bounds that cover every value. -/
+theorem Refines.or_bounds_true {FS : FloatSem} {v1 v2 a : Term} {s : Bool} {p1 p2 : Int → Bool}
+    (hb1 : v1.WT → ∃ n : Nat, 0 < n ∧ a.ty = .bitVector n ∧ BoundOn FS v1 a n s p1)
+    (hb2 : v2.WT → ∃ n : Nat, 0 < n ∧ a.ty = .bitVector n ∧ BoundOn FS v2 a n s p2)
+    (hall : ∀ z, p1 z = true ∨ p2 z = true) :
+    Refines FS (b_or.spec v1 v2) v_true := by
+  refine Refines.intro (fun w => ?_) (fun ρ v w _ e => ?_)
+  · simp [b_or.spec]
+  · simp only [b_or.spec] at w e
+    obtain ⟨-, -, -, w1, w2⟩ := WT_or.1 w
+    obtain ⟨n, b1, b2⟩ := bounds_sem hb1 hb2 w1 w2
+    rw [eval_binop w] at e; simp only [evBinop] at e
+    rw [por_all b1 b2 hall e]; simp
+
+theorem Refines.or_complementary {FS : FloatSem} {v1 v2 : Term}
+    (h : (complementary_bounds v1 v2 || complementary_bounds v2 v1) = true) :
+    Refines FS (b_or.spec v1 v2) v_true := by
+  simp only [Bool.or_eq_true] at h
+  rcases h with h | h <;> obtain ⟨a, s, w1, u, w2, l, h1, h2, hl⟩ := complementary_bounds_true h
+  · exact Refines.or_bounds_true (p1 := fun z => decide (z ≤ u)) (p2 := fun z => decide (l ≤ z))
+      (fun w => (upper_bound_sem h1 w).2)
+      (fun w => (lower_bound_sem h2 w).2) (fun z => by simp; omega)
+  · exact Refines.or_bounds_true (p1 := fun z => decide (l ≤ z)) (p2 := fun z => decide (z ≤ u))
+      (fun w => (lower_bound_sem h2 w).2)
+      (fun w => (upper_bound_sem h1 w).2) (fun z => by simp; omega)
+
+/-- The bound that [a = k] implies. -/
+def BoundImplied (boundv a : Term) (k : Int) : Prop :=
+  (∃ s w u, as_upper_bound boundv = some (a, s, w, u) ∧ bv_to_z s (size a) k ≤ u) ∨
+    (∃ s w l, as_lower_bound boundv = some (a, s, w, l) ∧ l ≤ bv_to_z s (size a) k)
+
+set_option hygiene false in
+/-- Read a [BoundImplied] off the boolean that [bound_implied_by_eq] computes. -/
+macro "bool_bimp" : tactic => `(tactic| (
+  simp [firstSome] at h
+  rcases h with h | h
+  · left
+    cases hu : as_upper_bound boundv with
+    | none => simp [hu] at h
+    | some r =>
+      obtain ⟨ba, s, w, u⟩ := r
+      simp [hu, equal_iff] at h
+      obtain ⟨rfl, h⟩ := h
+      exact ⟨s, w, u, rfl, by first | exact h | exact of_decide_eq_true h⟩
+  · right
+    cases hu : as_lower_bound boundv with
+    | none => simp [hu] at h
+    | some r =>
+      obtain ⟨ba, s, w, l⟩ := r
+      simp [hu, equal_iff] at h
+      obtain ⟨rfl, h⟩ := h
+      exact ⟨s, w, l, rfl, by first | exact h | exact of_decide_eq_true h⟩))
+
+theorem bound_implied_by_eq_true {boundv eqv : Term} (h : bound_implied_by_eq boundv eqv = true) :
+    ∃ a k Tk Te, (eqv = .mk (.binop .eq a (.mk (.bitVec k) Tk)) Te ∨
+      eqv = .mk (.binop .eq (.mk (.bitVec k) Tk) a) Te) ∧ BoundImplied boundv a k := by
+  unfold bound_implied_by_eq at h
+  split at h
+  · refine ⟨_, _, _, _, Or.inl rfl, ?_⟩
+    bool_bimp
+  · split at h
+    · refine ⟨_, _, _, _, Or.inr rfl, ?_⟩
+      bool_bimp
+    · simp [firstSome] at h
+
+theorem BoundImplied.sem {FS : FloatSem} {v a : Term} {k : Int} (h : BoundImplied v a k)
+    (w : v.WT) : ∃ (n : Nat) (s : Bool) (p : Int → Bool), a.ty = .bitVector n ∧
+      BoundOn FS v a n s p ∧ p (bv_to_z s n k) = true := by
+  rcases h with ⟨s, w', u, h1, hk⟩ | ⟨s, w', l, h1, hk⟩
+  · obtain ⟨-, n, -, ha, hb⟩ := upper_bound_sem (FS := FS) h1 w
+    refine ⟨n, s, _, ha, hb, ?_⟩
+    simp only [size_eq, ha, size_of_ty_bitVector] at hk; simpa using hk
+  · obtain ⟨-, n, -, ha, hb⟩ := lower_bound_sem (FS := FS) h1 w
+    refine ⟨n, s, _, ha, hb, ?_⟩
+    simp only [size_eq, ha, size_of_ty_bitVector] at hk; simpa using hk
+
+theorem eval_eq_true {FS ρ a b t} (w : (Term.mk (.binop .eq a b) t).WT)
+    (e : eval FS ρ (.mk (.binop .eq a b) t) = some (.bool true)) :
+    ∃ x, eval FS ρ a = some x ∧ eval FS ρ b = some x := by
+  rw [eval_binop w, evBinop_eq] at e
+  split at e
+  · simp at e; subst e; exact ⟨_, by assumption, by assumption⟩
+  · simp at e
+
+theorem Refines.or_bound_eq {FS : FloatSem} {v1 v2 : Term}
+    (h : bound_implied_by_eq v1 v2 = true) : Refines FS (b_or.spec v1 v2) v1 := by
+  obtain ⟨a, k, Tk, Te, heq, hb⟩ := bound_implied_by_eq_true h
+  refine Refines.intro (fun w => ?_) (fun ρ v w _ e => ?_)
+  · obtain ⟨h1, -, -, w1, -⟩ := WT_or.1 w; simp_all [b_or.spec]
+  · simp only [b_or.spec] at w e
+    obtain ⟨-, -, -, w1, w2⟩ := WT_or.1 w
+    obtain ⟨n, s, p, ha, B, hp⟩ := hb.sem (FS := FS) w1
+    have hK : ∃ n' : Nat, 0 < n' ∧ (n : Int) = n' ∧ 0 ≤ k ∧ k < 2 ^ n' ∧
+        ∀ ρ, eval FS ρ (.mk (.bitVec k) Tk) = some (.bv n (BitVec.ofInt n k)) := by
+      have : (Term.mk (.bitVec k) Tk).WT ∧ Tk = a.ty := by
+        rcases heq with rfl | rfl <;> obtain ⟨h1, -, wa, wb⟩ := WT_eq.1 w2
+        · exact ⟨wb, h1.symm⟩
+        · exact ⟨wa, h1⟩
+      obtain ⟨n', hn', hn, h0, h1⟩ := WT_lit_of_ty this.1 (this.2.trans ha)
+      refine ⟨n', hn', hn, h0, h1, fun ρ => ?_⟩
+      have := eval_bitVec' (FS := FS) (ρ := ρ) (n := n) this.1 (Or.inl (this.2.trans ha))
+      simpa using this
+    obtain ⟨n', hn', hnn, h0, h1, ek⟩ := hK
+    obtain rfl : n = n' := by omega
+    rw [eval_binop w] at e; simp only [evBinop, por_eq_some] at e
+    rcases e with ⟨h, rfl⟩ | ⟨h, rfl⟩ | ⟨h, -, rfl⟩
+    · exact h
+    · have hx : eval FS ρ a = some (.bv n (BitVec.ofInt n k)) := by
+        rcases heq with rfl | rfl <;> obtain ⟨x, hx1, hx2⟩ := eval_eq_true w2 h
+        · rw [ek] at hx2; rw [hx1, hx2]
+        · rw [ek] at hx1; rw [hx2, hx1]
+      rw [(B ρ).2 _ hx, bz_ofInt hn' h0 h1, hp]
+    · exact h
+
+theorem Refines.or_comm {FS : FloatSem} {v1 v2 r : Term} (h : Refines FS (b_or.spec v2 v1) r) :
+    Refines FS (b_or.spec v1 v2) r := by
+  refine Refines.trans ?_ h
+  refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
+  · obtain ⟨h1, h2, -, w1, w2⟩ := WT_or.1 w; exact ⟨WT_or.2 ⟨h2, h1, rfl, w2, w1⟩, rfl⟩
+  · simp only [b_or.spec] at w w' e ⊢
+    rw [eval_binop w] at e; rw [eval_binop w']
+    simpa [evBinop, por_comm'] using e
+
+end BoolL
+end Bvr

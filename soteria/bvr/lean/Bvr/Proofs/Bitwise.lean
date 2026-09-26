@@ -224,7 +224,47 @@ theorem bv_and.r_ones_r.proof : bv_and.r_ones_r.Stmt := by
   simp [ofInt_two_pow_sub_one]
 
 theorem bv_and.r_lshr_mask.proof : bv_and.r_lshr_mask.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [bv_and.r_lshr_mask] at h
+  rcases orElse_eq_some h with h | h <;> split at h <;> simp at h <;> obtain ⟨hc, rfl⟩ := h
+  · rename_i X s T1 T mask T2
+    obtain ⟨s0, s1, hm⟩ := hc
+    refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+    · obtain ⟨n, hn, h1, h2, -, w1, w2⟩ := (BitOp.and (FS := FS)).WT.1 w
+      simp only [Term.ty_mk] at h1; subst h1
+      exact ⟨w1, by simp [bv_and.spec]⟩
+    · obtain ⟨n, hn, h1, h2, -, w1, w2⟩ := (BitOp.and (FS := FS)).WT.1 w
+      simp only [Term.ty_mk] at h1; subst h1
+      obtain ⟨k, b, eb, rfl, m0, m1⟩ := BitOp.and.eval_lit_r e
+      obtain ⟨k', Y, ey, hb, -, -⟩ := BitOp.lshr.eval_lit_r eb
+      obtain ⟨rfl, rfl⟩ := Val.bv_inj hb
+      obtain ⟨Y', hY⟩ := eval_bv eb (show (Term.mk _ (Ty.bitVector n)).ty = _ from rfl)
+      have hk : n = k := by obtain ⟨h, -⟩ := Val.bv_inj hY; omega
+      have s1' : s < n := by have := of_decide_eq_true s1; simpa using this
+      have sk : s < 2 ^ k := by
+        have := Nat.lt_two_pow_self (n := k); have := int_two_pow_cast k; omega
+      simp only [size_of_ty_bitVector]
+      rw [eb, BitVec.ushiftRight_eq', toNat_ofInt_lit s0 sk,
+        lshr_mask_bits s0 m0 hk (of_decide_eq_true hm)]
+  · rename_i mask T2 X s T1 T
+    obtain ⟨s0, s1, hm⟩ := hc
+    refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+    · obtain ⟨n, hn, h1, h2, -, w1, w2⟩ := (BitOp.and (FS := FS)).WT.1 w
+      simp only [Term.ty_mk] at h1 h2; subst h1 h2
+      exact ⟨w2, by simp [bv_and.spec]⟩
+    · obtain ⟨n, hn, h1, h2, -, w1, w2⟩ := (BitOp.and (FS := FS)).WT.1 w
+      simp only [Term.ty_mk] at h1 h2; subst h1 h2
+      obtain ⟨k, b, eb, rfl, m0, m1⟩ := BitOp.and.eval_lit_l e
+      obtain ⟨k', Y, ey, hb, -, -⟩ := BitOp.lshr.eval_lit_r eb
+      obtain ⟨rfl, rfl⟩ := Val.bv_inj hb
+      obtain ⟨Y', hY⟩ := eval_bv eb (show (Term.mk _ (Ty.bitVector n)).ty = _ from rfl)
+      have hk : n = k := by obtain ⟨h, -⟩ := Val.bv_inj hY; omega
+      have s1' : s < n := by have := of_decide_eq_true s1; simpa using this
+      have sk : s < 2 ^ k := by
+        have := Nat.lt_two_pow_self (n := k); have := int_two_pow_cast k; omega
+      simp only [size_of_ty_bitVector]
+      rw [eb, BitVec.ushiftRight_eq', toNat_ofInt_lit s0 sk, BitVec.and_comm,
+        lshr_mask_bits s0 m0 hk (of_decide_eq_true hm)]
 
 theorem bv_and.r_ite_r.proof : bv_and.r_ite_r.Stmt := by
   intro FS O hO v1 v2 res h
@@ -384,6 +424,12 @@ theorem bv_or.r_masks.proof : bv_or.r_masks.Stmt := by
           (fun k c10 c20 => ofInt_zlor c10 c20)))
 
 theorem bv_or.r_extend_shl.proof : bv_or.r_extend_shl.Stmt := by
+  -- UNSOUND: when `nx = 0` (an extension by zero bits, which is well-typed), the last branch
+  -- builds `O.bv_extract 0 (-1) tail`, which is ill-typed. With `base` and `tail` variables of
+  -- type `bitVector 1` both valued `1#1` and `shift = 1`, the spec
+  -- `(zext 0 base) ||| ((zext 0 tail) <<< 1)` evaluates to `1#1`, but for `O` the specs
+  -- themselves (a sound `O`) the result `bv_concat.spec (bv_extract.spec 0 (-1) tail) base` is
+  -- ill-typed, hence poison.
   sorry
 
 theorem bv_or.r_of_bools.proof : bv_or.r_of_bools.Stmt := by

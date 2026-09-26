@@ -1268,5 +1268,22 @@ theorem concat_assoc_r {FS a b c T1 T} :
       · bitw_simp; (try rw [e1]); (try bitw_simp); (try (congr 1; omega))
       · bitw_simp; (try rw [e1]); (try bitw_simp); (try (congr 1; omega))
 
+theorem lshr_mask_bits {k : Nat} {n s mask : Int} (s0 : 0 ≤ s) (m0 : 0 ≤ mask) (hk : n = k)
+    (hm : zland mask (zshiftl 1 (n - s) - 1) = zshiftl 1 (n - s) - 1)
+    (X : BitVec k) : X >>> s.toNat &&& BitVec.ofInt k mask = X >>> s.toNat := by
+  have l0 : 0 ≤ zshiftl 1 (n - s) - 1 := by
+    simp only [zshiftl, Int.one_mul]; have := two_pow_pos' (n - s).toNat; omega
+  have hb := congrArg (fun v => v.getLsbD) (ofInt_zland (w := k) m0 l0)
+  simp only [hm] at hb
+  ext i hi
+  simp only [BitVec.getElem_and, BitVec.getElem_ushiftRight]
+  by_cases h : i < (n - s).toNat
+  · have := congrFun hb i
+    simp only [BitVec.getLsbD_and, getLsbD_ofInt_lowmask, decide_eq_true hi, decide_eq_true h,
+      Bool.and_true] at this
+    rw [BitVec.getElem_eq_testBit_toNat, ← BitVec.getLsbD, ← this]; simp
+  · rw [BitVec.getElem_eq_testBit_toNat, ← BitVec.getLsbD, BitVec.getLsbD_of_ge _ _ (by omega)]
+    simp
+
 end BitwiseL
 end Bvr

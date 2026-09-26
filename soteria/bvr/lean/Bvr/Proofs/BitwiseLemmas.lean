@@ -1118,6 +1118,25 @@ theorem ofInt_zasr_signed {k : Nat} {l r : Int} (hk : 0 < k) (h0 : 0 ≤ l) (h1 
     ← int_two_pow_cast, ← Int.shiftRight_eq_div_pow, ← BitVec.toInt_sshiftRight,
     BitVec.ofInt_toInt]
 
+theorem ofInt_concat_lits {n1 n2 : Nat} {l r : Int} (l0 : 0 ≤ l) (l1 : l < 2 ^ n1) (r0 : 0 ≤ r)
+    (r1 : r < 2 ^ n2) :
+    BitVec.ofInt (n1 + n2) (r + zshiftl l n2) = BitVec.ofInt n1 l ++ BitVec.ofInt n2 r := by
+  obtain ⟨a, rfl⟩ := Int.eq_ofNat_of_zero_le l0
+  obtain ⟨b, rfl⟩ := Int.eq_ofNat_of_zero_le r0
+  rw [← int_two_pow_cast] at l1 r1
+  have ha : a < 2 ^ n1 := by omega
+  have hb : b < 2 ^ n2 := by omega
+  apply BitVec.eq_of_toNat_eq
+  rw [zshiftl, Int.toNat_natCast, ← int_two_pow_cast, ← Int.natCast_mul, ← Int.natCast_add,
+    BitVec.ofInt_natCast, BitVec.toNat_append, BitVec.ofInt_natCast, BitVec.ofInt_natCast,
+    BitVec.toNat_ofNat, BitVec.toNat_ofNat, BitVec.toNat_ofNat, Nat.mod_eq_of_lt ha,
+    Nat.mod_eq_of_lt hb, ← Nat.shiftLeft_add_eq_or_of_lt hb, Nat.shiftLeft_eq, Nat.add_comm]
+  apply Nat.mod_eq_of_lt
+  rw [Nat.pow_add]
+  have := Nat.mul_le_mul_right (2 ^ n2) (show a + 1 ≤ 2 ^ n1 by omega)
+  rw [Nat.add_mul, Nat.one_mul] at this
+  omega
+
 /-- A binary operation on literals is folded (at the width of the operation). -/
 theorem BitOp.lits' {FS op f} (H : BitOp FS op f) {l r z : Int} {T1 T2 t} {N : Int}
     (hN : ∀ n : Int, T1 = .bitVector n → N = n)
@@ -1196,6 +1215,58 @@ macro "bitw_simp" : tactic => `(tactic| simp (disch := omega) only [BitVec.getLs
   BitVec.getLsbD_sshiftRight, BitVec.msb_eq_getLsbD_last, Bool.not_and, Bool.not_not, Bool.false_eq_true,
   Bool.true_eq_false, ↓reduceIte, BitVec.getLsbD_not, getLsbD_ofInt_lowmask,
   BitVec.ofInt_zlognot, getLsbD_one'])
+
+theorem concat_assoc_l {FS a b c T2 T} :
+    Refines FS (.mk (.binop .bvConcat a (.mk (.binop .bvConcat b c) T2)) T)
+      (bv_concat.spec (bv_concat.spec a b) c) := by
+  refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+  · obtain ⟨n, m, hn, hm, h1, h2, hT, w1, w2⟩ := WT_concat.1 w
+    obtain ⟨p, q, hp, hq, h3, h4, hT2, w3, w4⟩ := WT_concat.1 w2
+    simp only [Term.ty_mk] at h2; subst hT2; simp only [Ty.bitVector.injEq] at h2; subst h2 hT
+    refine ⟨WT_concat.2 ⟨n + p, q, by omega, hq, by simp [bv_concat.spec, h1, h3], h4,
+      by simp [bv_concat.spec, h1, h3, h4], WT_concat.2 ⟨n, p, hn, hp, h1, h3, by simp [h1, h3],
+      w1, w3⟩, w4⟩, ?_⟩
+    simp [bv_concat.spec, h1, h3, h4]; omega
+  · obtain ⟨n, m, x, y, hn, hm, h1, h2, hT, ex, ey, rfl⟩ := eval_concat e
+    obtain ⟨p, q, y1, y2, hp, hq, h3, h4, hT2, ey1, ey2, hy⟩ := eval_concat ey
+    obtain ⟨_, w1, w2⟩ := WT_binop.1 w'
+    simp only [bv_concat.spec] at w1 w' ⊢
+    rw [eval_concat_of w' (eval_concat_of w1 ex ey1) ey2]; congr 1
+    simp only [Term.ty_mk] at h2; subst hT2; simp only [Ty.bitVector.injEq] at h2; subst h2
+    apply Val.bv_ext (by omega)
+    intro t ht
+    have e1 := Val.bv_getLsbD hy
+    by_cases h5 : t < q.toNat
+    · bitw_simp; (try rw [e1]); (try bitw_simp); (try (congr 1; omega))
+    · by_cases h6 : t < (p + q).toNat
+      · bitw_simp; (try rw [e1]); (try bitw_simp); (try (congr 1; omega))
+      · bitw_simp; (try rw [e1]); (try bitw_simp); (try (congr 1; omega))
+
+theorem concat_assoc_r {FS a b c T1 T} :
+    Refines FS (.mk (.binop .bvConcat (.mk (.binop .bvConcat a b) T1) c) T)
+      (bv_concat.spec a (bv_concat.spec b c)) := by
+  refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+  · obtain ⟨n, m, hn, hm, h1, h2, hT, w1, w2⟩ := WT_concat.1 w
+    obtain ⟨p, q, hp, hq, h3, h4, hT1, w3, w4⟩ := WT_concat.1 w1
+    simp only [Term.ty_mk] at h1; subst hT1; simp only [Ty.bitVector.injEq] at h1; subst h1 hT
+    refine ⟨WT_concat.2 ⟨p, q + m, hp, by omega, h3, by simp [bv_concat.spec, h2, h4],
+      by simp [bv_concat.spec, h2, h3, h4], w3, WT_concat.2 ⟨q, m, hq, hm, h4, h2, by simp [h4, h2],
+      w4, w2⟩⟩, ?_⟩
+    simp [bv_concat.spec, h2, h3, h4]; omega
+  · obtain ⟨n, m, x, y, hn, hm, h1, h2, hT, ex, ey, rfl⟩ := eval_concat e
+    obtain ⟨p, q, x1, x2, hp, hq, h3, h4, hT1, ex1, ex2, hx⟩ := eval_concat ex
+    obtain ⟨_, w1, w2⟩ := WT_binop.1 w'
+    simp only [bv_concat.spec] at w2 w' ⊢
+    rw [eval_concat_of w' ex1 (eval_concat_of w2 ex2 ey)]; congr 1
+    simp only [Term.ty_mk] at h1; subst hT1; simp only [Ty.bitVector.injEq] at h1; subst h1
+    apply Val.bv_ext (by omega)
+    intro t ht
+    have e1 := Val.bv_getLsbD hx
+    by_cases h5 : t < m.toNat
+    · bitw_simp
+    · by_cases h6 : t < (q + m).toNat
+      · bitw_simp; (try rw [e1]); (try bitw_simp); (try (congr 1; omega))
+      · bitw_simp; (try rw [e1]); (try bitw_simp); (try (congr 1; omega))
 
 end BitwiseL
 end Bvr

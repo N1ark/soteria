@@ -1198,10 +1198,63 @@ theorem bv_extend.r_default.proof : bv_extend.r_default.Stmt := by
   simp [bv_extend.r_default] at h; subst h; exact Refines.refl
 
 theorem bv_concat.r_lits.proof : bv_concat.r_lits.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [bv_concat.r_lits] at h
+  split at h
+  case h_2 => simp at h
+  simp only [Option.some.injEq] at h; subst h
+  rename_i l T1 r T2
+  refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+  · obtain ⟨n, m, hn, hm, h1, h2, -, -, -⟩ := WT_concat.1 w
+    simp only [Term.ty_mk] at h1 h2; subst h1 h2
+    exact ⟨mk_masked_WT (by simp; omega), rfl⟩
+  · obtain ⟨n, m, x, y, hn, hm, h1, h2, -, ex, ey, rfl⟩ := eval_concat e
+    simp only [Term.ty_mk] at h1 h2; subst h1 h2
+    obtain ⟨rfl, l0, l1⟩ := lit_val₀ ex
+    obtain ⟨rfl, r0, r1⟩ := lit_val₀ ey
+    simp only [size_eq, Term.ty_mk, size_of_ty_bitVector]
+    rw [eval_mk_masked (by omega)]; congr 1
+    have hm' : zshiftl l m = zshiftl l (m.toNat : Int) := by rw [zshiftl, zshiftl, Int.toNat_natCast]
+    rw [hm', ← ofInt_concat_lits l0 l1 r0 r1]
+    apply Val.bv_ext_toNat (by omega)
+    simp only [BitVec.toNat_ofInt]
+    rw [show (n + m).toNat = n.toNat + m.toNat by omega]
 
 theorem bv_concat.r_extracts.proof : bv_concat.r_extracts.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [bv_concat.r_extracts] at h
+  split at h
+  case h_2 => simp at h
+  split at h
+  case isFalse => simp at h
+  simp only [Option.some.injEq] at h; subst h
+  rename_i f1 t1 a T1 f2 t2 a' T2 hc
+  simp only [Bool.and_eq_true, equal, decide_eq_true_eq] at hc
+  obtain ⟨rfl, hc⟩ := hc
+  refine Refines.trans ?_ (hO.bv_extract _ _ _)
+  refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+  · obtain ⟨n, m, hn, hm, h1, h2, hT, w1, w2⟩ := WT_concat.1 w
+    obtain ⟨k, ha, a0, a1, a2, hT1, wa⟩ := WT_extract.1 w1
+    obtain ⟨k', ha', b0, b1, b2, hT2, -⟩ := WT_extract.1 w2
+    simp only [Term.ty_mk] at h1 h2; subst h1 h2
+    rw [ha] at ha'; simp only [Ty.bitVector.injEq] at ha' hT1 hT2; subst ha'
+    refine ⟨WT_extract.2 ⟨k, ha, by omega, by omega, by omega, rfl, wa⟩, ?_⟩
+    simp [bv_extract.spec, bv_concat.spec]; omega
+  · obtain ⟨n, m, x, y, hn, hm, h1, h2, -, ex, ey, rfl⟩ := eval_concat e
+    obtain ⟨k, X, ha, a0, a1, a2, hT1, ea, hx⟩ := eval_extract ex
+    obtain ⟨k', Y, ha', b0, b1, b2, hT2, ea', hy⟩ := eval_extract ey
+    simp only [Term.ty_mk] at h1 h2; subst h1 h2
+    rw [ha] at ha'; simp only [Ty.bitVector.injEq] at ha' hT1 hT2; subst ha'
+    have e3 := Val.bv_getLsbD (Option.some.inj (ea.symm.trans ea'))
+    simp only [bv_extract.spec] at w' ⊢
+    rw [eval_extract_of w' ea]; congr 1
+    apply Val.bv_ext (by omega)
+    intro t ht
+    have e1 := Val.bv_getLsbD hx
+    have e2 := Val.bv_getLsbD hy
+    by_cases hts : t < m.toNat
+    · bitw_simp; rw [e2]; bitw_simp; rw [← e3]
+    · bitw_simp; rw [e1]; bitw_simp; congr 1; omega
 
 theorem bv_concat.r_extract_extracts.proof : bv_concat.r_extract_extracts.Stmt := by
   intro FS O hO v1 v2 res h
@@ -1209,13 +1262,62 @@ theorem bv_concat.r_extract_extracts.proof : bv_concat.r_extract_extracts.Stmt :
   split at h <;> simp at h; subst h; exact Refines.refl
 
 theorem bv_concat.r_assoc_l.proof : bv_concat.r_assoc_l.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [bv_concat.r_assoc_l] at h
+  split at h
+  case h_2 => simp at h
+  split at h
+  case isFalse => simp at h
+  simp only [Option.some.injEq] at h; subst h
+  refine Refines.trans concat_assoc_l (Refines.trans (Refines.binop_ty2
+    (fun x y => .bitVector (size x + size y)) (fun x x' y y' h1 h2 => by simp [h1, h2])
+    (hO.bv_concat _ _) Refines.refl) (hO.bv_concat _ _))
 
 theorem bv_concat.r_assoc_r.proof : bv_concat.r_assoc_r.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [bv_concat.r_assoc_r] at h
+  split at h
+  case h_2 => simp at h
+  split at h
+  case isFalse => simp at h
+  simp only [Option.some.injEq] at h; subst h
+  refine Refines.trans concat_assoc_r (Refines.trans (Refines.binop_ty2
+    (fun x y => .bitVector (size x + size y)) (fun x x' y y' h1 h2 => by simp [h1, h2])
+    Refines.refl (hO.bv_concat _ _)) (hO.bv_concat _ _))
 
 theorem bv_concat.r_ites.proof : bv_concat.r_ites.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [bv_concat.r_ites] at h
+  split at h
+  case h_2 => simp at h
+  split at h
+  case isFalse => simp at h
+  simp only [Option.some.injEq] at h; subst h
+  rename_i g l1 r1 T1 g' l2 r2 T2 hc
+  simp only [equal, decide_eq_true_eq] at hc; subst hc
+  refine Refines.trans ?_ (Refines.ite_O hO (t := .bitVector
+    (size (Term.mk (.triop .ite g l1 r1) T1) + size (Term.mk (.triop .ite g l2 r2) T2)))
+    (hO.bv_concat _ _) (hO.bv_concat _ _))
+  refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+  · obtain ⟨n, m, hn, hm, h1, h2, hT, w1, w2⟩ := WT_concat.1 w
+    obtain ⟨hg, hr1, hl1, wg, wl1, wr1⟩ := WT_ite.1 w1
+    obtain ⟨-, hr2, hl2, -, wl2, wr2⟩ := WT_ite.1 w2
+    simp only [Term.ty_mk] at h1 h2; subst h1 h2
+    refine ⟨WT_ite.2 ⟨hg, ?_, ?_, wg, WT_concat.2 ⟨n, m, hn, hm, hl1.symm, hl2.symm, ?_, wl1, wl2⟩,
+      WT_concat.2 ⟨n, m, hn, hm, hr1.trans hl1.symm, hr2.trans hl2.symm, ?_, wr1, wr2⟩⟩, rfl⟩ <;>
+      simp [bv_concat.spec, ← hl1, ← hl2, hr1, hr2]
+  · obtain ⟨n, m, x, y, hn, hm, h1, h2, -, ex, ey, rfl⟩ := eval_concat e
+    obtain ⟨-, -, -, -, wc1, wc2⟩ := WT_ite.1 w'
+    obtain ⟨hg, hr1, hl1, wg, wl1, wr1⟩ := WT_ite.1 (eval_WT ex)
+    rw [eval_ite w']
+    rw [eval_ite (eval_WT ex)] at ex
+    rw [eval_ite (eval_WT ey)] at ey
+    simp only [bv_concat.spec] at wc1 wc2 ⊢
+    rcases eg : eval FS ρ g with _ | ⟨c | _ | _ | _ | _ | _⟩ <;> simp only [eg] at ex ey ⊢ <;>
+      (try simp at ex)
+    cases c
+    · simp only at ex ey ⊢; rw [eval_concat_of wc2 ex ey]
+    · simp only at ex ey ⊢; rw [eval_concat_of wc1 ex ey]
 
 theorem bv_concat.r_default.proof : bv_concat.r_default.Stmt := by
   intro FS O hO v1 v2 res h

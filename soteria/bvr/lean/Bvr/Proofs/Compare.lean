@@ -91,7 +91,7 @@ theorem bv_lt.r_const_add.proof : bv_lt.r_const_add.Stmt := by
       obtain ⟨xa, xb, ea, eb, hy, -⟩ := eval_add_inv s hc e2
       rsz h1 at hov
       rw [overflows_sub_false, lit_val' s h1 e1, lit_val' s (TB_add_inv h2).2.1 ea] at hov
-      obtain ⟨r', er', hr'⟩ := eval_O_sub_rng hO hN h1 (TB_add_inv h2).2.1 e1 ea hov.1 hov.2
+      obtain ⟨r', er', hr'⟩ := eval_O_sub_rng (s := s) hO hN h1 (TB_add_inv h2).2.1 e1 ea hov.1 hov.2
       rw [eval_O_lt hO hN (TB_O_sub hO hN h1 (TB_add_inv h2).2.1) (TB_add_inv h2).2.2 er' eb, hr', hy]
       simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
   · refine Refines.ite_split (fun hlt => ?_)
@@ -112,7 +112,7 @@ theorem bv_lt.r_const_add.proof : bv_lt.r_const_add.Stmt := by
       obtain ⟨xa, xb, ea, eb, hy, -⟩ := eval_add_inv s hc e2
       rsz h1 at hov
       rw [overflows_sub_false, lit_val' s h1 e1, lit_val' s (TB_add_inv h2).2.2 eb] at hov
-      obtain ⟨r', er', hr'⟩ := eval_O_sub_rng hO hN h1 (TB_add_inv h2).2.2 e1 eb hov.1 hov.2
+      obtain ⟨r', er', hr'⟩ := eval_O_sub_rng (s := s) hO hN h1 (TB_add_inv h2).2.2 e1 eb hov.1 hov.2
       rw [eval_O_lt hO hN (TB_O_sub hO hN h1 (TB_add_inv h2).2.2) (TB_add_inv h2).2.1 er' ea, hr', hy]
       simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
@@ -139,7 +139,7 @@ theorem bv_lt.r_add_const.proof : bv_lt.r_add_const.Stmt := by
       obtain ⟨xa, xb, ea, eb, hy, -⟩ := eval_add_inv s hc e1
       rsz h1 at hov
       rw [overflows_sub_false, lit_val' s h2 e2, lit_val' s (TB_add_inv h1).2.1 ea] at hov
-      obtain ⟨r', er', hr'⟩ := eval_O_sub_rng hO hN h2 (TB_add_inv h1).2.1 e2 ea hov.1 hov.2
+      obtain ⟨r', er', hr'⟩ := eval_O_sub_rng (s := s) hO hN h2 (TB_add_inv h1).2.1 e2 ea hov.1 hov.2
       rw [eval_O_lt hO hN (TB_add_inv h1).2.2 (TB_O_sub hO hN h2 (TB_add_inv h1).2.1) eb er', hr', hy]
       simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
   · refine Refines.ite_split (fun hlt => ?_)
@@ -160,7 +160,7 @@ theorem bv_lt.r_add_const.proof : bv_lt.r_add_const.Stmt := by
       obtain ⟨xa, xb, ea, eb, hy, -⟩ := eval_add_inv s hc e1
       rsz h1 at hov
       rw [overflows_sub_false, lit_val' s h2 e2, lit_val' s (TB_add_inv h1).2.2 eb] at hov
-      obtain ⟨r', er', hr'⟩ := eval_O_sub_rng hO hN h2 (TB_add_inv h1).2.2 e2 eb hov.1 hov.2
+      obtain ⟨r', er', hr'⟩ := eval_O_sub_rng (s := s) hO hN h2 (TB_add_inv h1).2.2 e2 eb hov.1 hov.2
       rw [eval_O_lt hO hN (TB_add_inv h1).2.1 (TB_O_sub hO hN h2 (TB_add_inv h1).2.2) ea er', hr', hy]
       simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
@@ -211,7 +211,165 @@ theorem bv_lt.r_self_add_l.proof : bv_lt.r_self_add_l.Stmt := by
     simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
 theorem bv_lt.r_add_add.proof : bv_lt.r_add_add.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_lt.r_add_add] at h
+  replace h := orElse_eq_some h
+  rcases h with h | h <;> (try replace h := orElse_eq_some h) <;> (try rcases h with h | h) <;>
+    (try replace h := orElse_eq_some h) <;> (try rcases h with h | h) <;>
+    split at h <;> (try split at h) <;> simp at h <;> rename_i hc <;> rw [Bool.and_eq_true] at hc <;> obtain ⟨hcl, hcr⟩ := hc <;>
+    subst h
+  · refine Refines.ite_split (fun hk => ?_)
+      (fun _ => Refines.ite_split (fun hk => ?_) (fun _ => Refines.refl))
+    · refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_lt hO hN
+          (TB_O_add hO hN (TB_add_inv h1).2.2 (TB_O_sub hO hN (TB_add_inv h1).2.1 (TB_add_inv h2).2.1)) (TB_add_inv h2).2.2)
+        (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xa, xb, ea, eb, hy, hr1, hr2⟩ := eval_add_inv s hcl e1
+      obtain ⟨ya, yb, fa, fb, hy', hr1', hr2'⟩ := eval_add_inv s hcr e2
+      rw [const_keeps_iff] at hk
+      rsz h1 at hk
+      rw [lit_val' s (TB_add_inv h1).2.1 ea, lit_val' s (TB_add_inv h2).2.1 fa] at hk
+      have := bvz_range hn0 s xa; have := bvz_range hn0 s xb
+      have := bvz_range hn0 s ya; have := bvz_range hn0 s yb
+      have := min_for_nonpos (N := n) s; have := max_for_nonneg hn0 s
+      obtain ⟨d, ed, hd⟩ := eval_O_sub_rng (s := s) hO hN (TB_add_inv h1).2.1 (TB_add_inv h2).2.1 ea fa (by omega) (by omega)
+      obtain ⟨t, et, ht⟩ := eval_O_add_rng (s := s) hO hN (TB_add_inv h1).2.2 (TB_O_sub hO hN (TB_add_inv h1).2.1 (TB_add_inv h2).2.1) eb ed
+        (by omega) (by omega)
+      rw [eval_O_lt hO hN (TB_O_add hO hN (TB_add_inv h1).2.2 (TB_O_sub hO hN (TB_add_inv h1).2.1 (TB_add_inv h2).2.1)) (TB_add_inv h2).2.2 et fb, ht, hd,
+        hy, hy']
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
+    · refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_lt hO hN (TB_add_inv h1).2.2
+          (TB_O_add hO hN (TB_add_inv h2).2.2 (TB_O_sub hO hN (TB_add_inv h2).2.1 (TB_add_inv h1).2.1)))
+        (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xa, xb, ea, eb, hy, hr1, hr2⟩ := eval_add_inv s hcl e1
+      obtain ⟨ya, yb, fa, fb, hy', hr1', hr2'⟩ := eval_add_inv s hcr e2
+      rw [const_keeps_iff] at hk
+      rsz h1 at hk
+      rw [lit_val' s (TB_add_inv h1).2.1 ea, lit_val' s (TB_add_inv h2).2.1 fa] at hk
+      have := bvz_range hn0 s xa; have := bvz_range hn0 s xb
+      have := bvz_range hn0 s ya; have := bvz_range hn0 s yb
+      have := min_for_nonpos (N := n) s; have := max_for_nonneg hn0 s
+      obtain ⟨d, ed, hd⟩ := eval_O_sub_rng (s := s) hO hN (TB_add_inv h2).2.1 (TB_add_inv h1).2.1 fa ea (by omega) (by omega)
+      obtain ⟨t, et, ht⟩ := eval_O_add_rng (s := s) hO hN (TB_add_inv h2).2.2 (TB_O_sub hO hN (TB_add_inv h2).2.1 (TB_add_inv h1).2.1) fb ed
+        (by omega) (by omega)
+      rw [eval_O_lt hO hN (TB_add_inv h1).2.2 (TB_O_add hO hN (TB_add_inv h2).2.2 (TB_O_sub hO hN (TB_add_inv h2).2.1 (TB_add_inv h1).2.1)) eb et, ht, hd,
+        hy, hy']
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
+  · refine Refines.ite_split (fun hk => ?_)
+      (fun _ => Refines.ite_split (fun hk => ?_) (fun _ => Refines.refl))
+    · refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_lt hO hN
+          (TB_O_add hO hN (TB_add_inv h1).2.2 (TB_O_sub hO hN (TB_add_inv h1).2.1 (TB_add_inv h2).2.2)) (TB_add_inv h2).2.1)
+        (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xa, xb, ea, eb, hy, hr1, hr2⟩ := eval_add_inv s hcl e1
+      obtain ⟨ya, yb, fa, fb, hy', hr1', hr2'⟩ := eval_add_inv s hcr e2
+      rw [const_keeps_iff] at hk
+      rsz h1 at hk
+      rw [lit_val' s (TB_add_inv h1).2.1 ea, lit_val' s (TB_add_inv h2).2.2 fb] at hk
+      have := bvz_range hn0 s xa; have := bvz_range hn0 s xb
+      have := bvz_range hn0 s ya; have := bvz_range hn0 s yb
+      have := min_for_nonpos (N := n) s; have := max_for_nonneg hn0 s
+      obtain ⟨d, ed, hd⟩ := eval_O_sub_rng (s := s) hO hN (TB_add_inv h1).2.1 (TB_add_inv h2).2.2 ea fb (by omega) (by omega)
+      obtain ⟨t, et, ht⟩ := eval_O_add_rng (s := s) hO hN (TB_add_inv h1).2.2 (TB_O_sub hO hN (TB_add_inv h1).2.1 (TB_add_inv h2).2.2) eb ed
+        (by omega) (by omega)
+      rw [eval_O_lt hO hN (TB_O_add hO hN (TB_add_inv h1).2.2 (TB_O_sub hO hN (TB_add_inv h1).2.1 (TB_add_inv h2).2.2)) (TB_add_inv h2).2.1 et fa, ht, hd,
+        hy, hy']
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
+    · refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_lt hO hN (TB_add_inv h1).2.2
+          (TB_O_add hO hN (TB_add_inv h2).2.1 (TB_O_sub hO hN (TB_add_inv h2).2.2 (TB_add_inv h1).2.1)))
+        (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xa, xb, ea, eb, hy, hr1, hr2⟩ := eval_add_inv s hcl e1
+      obtain ⟨ya, yb, fa, fb, hy', hr1', hr2'⟩ := eval_add_inv s hcr e2
+      rw [const_keeps_iff] at hk
+      rsz h1 at hk
+      rw [lit_val' s (TB_add_inv h1).2.1 ea, lit_val' s (TB_add_inv h2).2.2 fb] at hk
+      have := bvz_range hn0 s xa; have := bvz_range hn0 s xb
+      have := bvz_range hn0 s ya; have := bvz_range hn0 s yb
+      have := min_for_nonpos (N := n) s; have := max_for_nonneg hn0 s
+      obtain ⟨d, ed, hd⟩ := eval_O_sub_rng (s := s) hO hN (TB_add_inv h2).2.2 (TB_add_inv h1).2.1 fb ea (by omega) (by omega)
+      obtain ⟨t, et, ht⟩ := eval_O_add_rng (s := s) hO hN (TB_add_inv h2).2.1 (TB_O_sub hO hN (TB_add_inv h2).2.2 (TB_add_inv h1).2.1) fa ed
+        (by omega) (by omega)
+      rw [eval_O_lt hO hN (TB_add_inv h1).2.2 (TB_O_add hO hN (TB_add_inv h2).2.1 (TB_O_sub hO hN (TB_add_inv h2).2.2 (TB_add_inv h1).2.1)) eb et, ht, hd,
+        hy, hy']
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
+  · refine Refines.ite_split (fun hk => ?_)
+      (fun _ => Refines.ite_split (fun hk => ?_) (fun _ => Refines.refl))
+    · refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_lt hO hN
+          (TB_O_add hO hN (TB_add_inv h1).2.1 (TB_O_sub hO hN (TB_add_inv h1).2.2 (TB_add_inv h2).2.1)) (TB_add_inv h2).2.2)
+        (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xa, xb, ea, eb, hy, hr1, hr2⟩ := eval_add_inv s hcl e1
+      obtain ⟨ya, yb, fa, fb, hy', hr1', hr2'⟩ := eval_add_inv s hcr e2
+      rw [const_keeps_iff] at hk
+      rsz h1 at hk
+      rw [lit_val' s (TB_add_inv h1).2.2 eb, lit_val' s (TB_add_inv h2).2.1 fa] at hk
+      have := bvz_range hn0 s xa; have := bvz_range hn0 s xb
+      have := bvz_range hn0 s ya; have := bvz_range hn0 s yb
+      have := min_for_nonpos (N := n) s; have := max_for_nonneg hn0 s
+      obtain ⟨d, ed, hd⟩ := eval_O_sub_rng (s := s) hO hN (TB_add_inv h1).2.2 (TB_add_inv h2).2.1 eb fa (by omega) (by omega)
+      obtain ⟨t, et, ht⟩ := eval_O_add_rng (s := s) hO hN (TB_add_inv h1).2.1 (TB_O_sub hO hN (TB_add_inv h1).2.2 (TB_add_inv h2).2.1) ea ed
+        (by omega) (by omega)
+      rw [eval_O_lt hO hN (TB_O_add hO hN (TB_add_inv h1).2.1 (TB_O_sub hO hN (TB_add_inv h1).2.2 (TB_add_inv h2).2.1)) (TB_add_inv h2).2.2 et fb, ht, hd,
+        hy, hy']
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
+    · refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_lt hO hN (TB_add_inv h1).2.1
+          (TB_O_add hO hN (TB_add_inv h2).2.2 (TB_O_sub hO hN (TB_add_inv h2).2.1 (TB_add_inv h1).2.2)))
+        (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xa, xb, ea, eb, hy, hr1, hr2⟩ := eval_add_inv s hcl e1
+      obtain ⟨ya, yb, fa, fb, hy', hr1', hr2'⟩ := eval_add_inv s hcr e2
+      rw [const_keeps_iff] at hk
+      rsz h1 at hk
+      rw [lit_val' s (TB_add_inv h1).2.2 eb, lit_val' s (TB_add_inv h2).2.1 fa] at hk
+      have := bvz_range hn0 s xa; have := bvz_range hn0 s xb
+      have := bvz_range hn0 s ya; have := bvz_range hn0 s yb
+      have := min_for_nonpos (N := n) s; have := max_for_nonneg hn0 s
+      obtain ⟨d, ed, hd⟩ := eval_O_sub_rng (s := s) hO hN (TB_add_inv h2).2.1 (TB_add_inv h1).2.2 fa eb (by omega) (by omega)
+      obtain ⟨t, et, ht⟩ := eval_O_add_rng (s := s) hO hN (TB_add_inv h2).2.2 (TB_O_sub hO hN (TB_add_inv h2).2.1 (TB_add_inv h1).2.2) fb ed
+        (by omega) (by omega)
+      rw [eval_O_lt hO hN (TB_add_inv h1).2.1 (TB_O_add hO hN (TB_add_inv h2).2.2 (TB_O_sub hO hN (TB_add_inv h2).2.1 (TB_add_inv h1).2.2)) ea et, ht, hd,
+        hy, hy']
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
+  · refine Refines.ite_split (fun hk => ?_)
+      (fun _ => Refines.ite_split (fun hk => ?_) (fun _ => Refines.refl))
+    · refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_lt hO hN
+          (TB_O_add hO hN (TB_add_inv h1).2.1 (TB_O_sub hO hN (TB_add_inv h1).2.2 (TB_add_inv h2).2.2)) (TB_add_inv h2).2.1)
+        (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xa, xb, ea, eb, hy, hr1, hr2⟩ := eval_add_inv s hcl e1
+      obtain ⟨ya, yb, fa, fb, hy', hr1', hr2'⟩ := eval_add_inv s hcr e2
+      rw [const_keeps_iff] at hk
+      rsz h1 at hk
+      rw [lit_val' s (TB_add_inv h1).2.2 eb, lit_val' s (TB_add_inv h2).2.2 fb] at hk
+      have := bvz_range hn0 s xa; have := bvz_range hn0 s xb
+      have := bvz_range hn0 s ya; have := bvz_range hn0 s yb
+      have := min_for_nonpos (N := n) s; have := max_for_nonneg hn0 s
+      obtain ⟨d, ed, hd⟩ := eval_O_sub_rng (s := s) hO hN (TB_add_inv h1).2.2 (TB_add_inv h2).2.2 eb fb (by omega) (by omega)
+      obtain ⟨t, et, ht⟩ := eval_O_add_rng (s := s) hO hN (TB_add_inv h1).2.1 (TB_O_sub hO hN (TB_add_inv h1).2.2 (TB_add_inv h2).2.2) ea ed
+        (by omega) (by omega)
+      rw [eval_O_lt hO hN (TB_O_add hO hN (TB_add_inv h1).2.1 (TB_O_sub hO hN (TB_add_inv h1).2.2 (TB_add_inv h2).2.2)) (TB_add_inv h2).2.1 et fa, ht, hd,
+        hy, hy']
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
+    · refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_lt hO hN (TB_add_inv h1).2.1
+          (TB_O_add hO hN (TB_add_inv h2).2.1 (TB_O_sub hO hN (TB_add_inv h2).2.2 (TB_add_inv h1).2.2)))
+        (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xa, xb, ea, eb, hy, hr1, hr2⟩ := eval_add_inv s hcl e1
+      obtain ⟨ya, yb, fa, fb, hy', hr1', hr2'⟩ := eval_add_inv s hcr e2
+      rw [const_keeps_iff] at hk
+      rsz h1 at hk
+      rw [lit_val' s (TB_add_inv h1).2.2 eb, lit_val' s (TB_add_inv h2).2.2 fb] at hk
+      have := bvz_range hn0 s xa; have := bvz_range hn0 s xb
+      have := bvz_range hn0 s ya; have := bvz_range hn0 s yb
+      have := min_for_nonpos (N := n) s; have := max_for_nonneg hn0 s
+      obtain ⟨d, ed, hd⟩ := eval_O_sub_rng (s := s) hO hN (TB_add_inv h2).2.2 (TB_add_inv h1).2.2 fb eb (by omega) (by omega)
+      obtain ⟨t, et, ht⟩ := eval_O_add_rng (s := s) hO hN (TB_add_inv h2).2.1 (TB_O_sub hO hN (TB_add_inv h2).2.2 (TB_add_inv h1).2.2) fa ed
+        (by omega) (by omega)
+      rw [eval_O_lt hO hN (TB_add_inv h1).2.1 (TB_O_add hO hN (TB_add_inv h2).2.1 (TB_O_sub hO hN (TB_add_inv h2).2.2 (TB_add_inv h1).2.2)) ea et, ht, hd,
+        hy, hy']
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
 theorem bv_lt.r_one.proof : bv_lt.r_one.Stmt := by
   intro FS O hO s v1 v2 res h
@@ -380,7 +538,7 @@ theorem bv_lt.r_const_sub1.proof : bv_lt.r_const_sub1.Stmt := by
     obtain ⟨xa, xb, ea, eb, hy, -⟩ := eval_sub_inv s hc e2
     rsz h1 at hov
     rw [overflows_add_false, lit_val' s h1 e1, lit_val' s (TB_sub_inv h2).2.2 eb] at hov
-    obtain ⟨r', er', hr'⟩ := eval_O_add_rng hO hN h1 (TB_sub_inv h2).2.2 e1 eb hov.1 hov.2
+    obtain ⟨r', er', hr'⟩ := eval_O_add_rng (s := s) hO hN h1 (TB_sub_inv h2).2.2 e1 eb hov.1 hov.2
     rw [eval_O_lt hO hN (TB_O_add hO hN h1 (TB_sub_inv h2).2.2) (TB_sub_inv h2).2.1 er' ea, hr', hy]
     simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
@@ -409,7 +567,7 @@ theorem bv_lt.r_const_sub2.proof : bv_lt.r_const_sub2.Stmt := by
     obtain ⟨xa, xb, ea, eb, hy, -⟩ := eval_sub_inv s hc e2
     rsz h1 at hov
     rw [overflows_sub_false, lit_val' s (TB_sub_inv h2).2.1 ea, lit_val' s h1 e1] at hov
-    obtain ⟨r', er', hr'⟩ := eval_O_sub_rng hO hN (TB_sub_inv h2).2.1 h1 ea e1 hov.1 hov.2
+    obtain ⟨r', er', hr'⟩ := eval_O_sub_rng (s := s) hO hN (TB_sub_inv h2).2.1 h1 ea e1 hov.1 hov.2
     rw [eval_O_lt hO hN (TB_sub_inv h2).2.2 (TB_O_sub hO hN (TB_sub_inv h2).2.1 h1) eb er', hr', hy]
     simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
@@ -438,7 +596,7 @@ theorem bv_lt.r_sub_const1.proof : bv_lt.r_sub_const1.Stmt := by
     obtain ⟨xa, xb, ea, eb, hy, -⟩ := eval_sub_inv s hc e1
     rsz h1 at hov
     rw [overflows_add_false, lit_val' s h2 e2, lit_val' s (TB_sub_inv h1).2.2 eb] at hov
-    obtain ⟨r', er', hr'⟩ := eval_O_add_rng hO hN h2 (TB_sub_inv h1).2.2 e2 eb hov.1 hov.2
+    obtain ⟨r', er', hr'⟩ := eval_O_add_rng (s := s) hO hN h2 (TB_sub_inv h1).2.2 e2 eb hov.1 hov.2
     rw [eval_O_lt hO hN (TB_sub_inv h1).2.1 (TB_O_add hO hN h2 (TB_sub_inv h1).2.2) ea er', hr', hy]
     simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
@@ -467,7 +625,7 @@ theorem bv_lt.r_sub_const2.proof : bv_lt.r_sub_const2.Stmt := by
     obtain ⟨xa, xb, ea, eb, hy, -⟩ := eval_sub_inv s hc e1
     rsz h1 at hov
     rw [overflows_sub_false, lit_val' s (TB_sub_inv h1).2.1 ea, lit_val' s h2 e2] at hov
-    obtain ⟨r', er', hr'⟩ := eval_O_sub_rng hO hN (TB_sub_inv h1).2.1 h2 ea e2 hov.1 hov.2
+    obtain ⟨r', er', hr'⟩ := eval_O_sub_rng (s := s) hO hN (TB_sub_inv h1).2.1 h2 ea e2 hov.1 hov.2
     rw [eval_O_lt hO hN (TB_O_sub hO hN (TB_sub_inv h1).2.1 h2) (TB_sub_inv h1).2.2 er' eb, hr', hy]
     simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
@@ -573,7 +731,7 @@ theorem bv_leq.r_const_add.proof : bv_leq.r_const_add.Stmt := by
       obtain ⟨xa, xb, ea, eb, hy, -⟩ := eval_add_inv s hc e2
       rsz h1 at hov
       rw [overflows_sub_false, lit_val' s h1 e1, lit_val' s (TB_add_inv h2).2.1 ea] at hov
-      obtain ⟨r', er', hr'⟩ := eval_O_sub_rng hO hN h1 (TB_add_inv h2).2.1 e1 ea hov.1 hov.2
+      obtain ⟨r', er', hr'⟩ := eval_O_sub_rng (s := s) hO hN h1 (TB_add_inv h2).2.1 e1 ea hov.1 hov.2
       rw [eval_O_leq hO hN (TB_O_sub hO hN h1 (TB_add_inv h2).2.1) (TB_add_inv h2).2.2 er' eb, hr', hy]
       simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
   · refine Refines.ite_split (fun hlt => ?_)
@@ -594,7 +752,7 @@ theorem bv_leq.r_const_add.proof : bv_leq.r_const_add.Stmt := by
       obtain ⟨xa, xb, ea, eb, hy, -⟩ := eval_add_inv s hc e2
       rsz h1 at hov
       rw [overflows_sub_false, lit_val' s h1 e1, lit_val' s (TB_add_inv h2).2.2 eb] at hov
-      obtain ⟨r', er', hr'⟩ := eval_O_sub_rng hO hN h1 (TB_add_inv h2).2.2 e1 eb hov.1 hov.2
+      obtain ⟨r', er', hr'⟩ := eval_O_sub_rng (s := s) hO hN h1 (TB_add_inv h2).2.2 e1 eb hov.1 hov.2
       rw [eval_O_leq hO hN (TB_O_sub hO hN h1 (TB_add_inv h2).2.2) (TB_add_inv h2).2.1 er' ea, hr', hy]
       simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
@@ -621,7 +779,7 @@ theorem bv_leq.r_add_const.proof : bv_leq.r_add_const.Stmt := by
       obtain ⟨xa, xb, ea, eb, hy, -⟩ := eval_add_inv s hc e1
       rsz h1 at hov
       rw [overflows_sub_false, lit_val' s h2 e2, lit_val' s (TB_add_inv h1).2.1 ea] at hov
-      obtain ⟨r', er', hr'⟩ := eval_O_sub_rng hO hN h2 (TB_add_inv h1).2.1 e2 ea hov.1 hov.2
+      obtain ⟨r', er', hr'⟩ := eval_O_sub_rng (s := s) hO hN h2 (TB_add_inv h1).2.1 e2 ea hov.1 hov.2
       rw [eval_O_leq hO hN (TB_add_inv h1).2.2 (TB_O_sub hO hN h2 (TB_add_inv h1).2.1) eb er', hr', hy]
       simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
   · refine Refines.ite_split (fun hlt => ?_)
@@ -642,12 +800,170 @@ theorem bv_leq.r_add_const.proof : bv_leq.r_add_const.Stmt := by
       obtain ⟨xa, xb, ea, eb, hy, -⟩ := eval_add_inv s hc e1
       rsz h1 at hov
       rw [overflows_sub_false, lit_val' s h2 e2, lit_val' s (TB_add_inv h1).2.2 eb] at hov
-      obtain ⟨r', er', hr'⟩ := eval_O_sub_rng hO hN h2 (TB_add_inv h1).2.2 e2 eb hov.1 hov.2
+      obtain ⟨r', er', hr'⟩ := eval_O_sub_rng (s := s) hO hN h2 (TB_add_inv h1).2.2 e2 eb hov.1 hov.2
       rw [eval_O_leq hO hN (TB_add_inv h1).2.1 (TB_O_sub hO hN h2 (TB_add_inv h1).2.2) ea er', hr', hy]
       simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
 theorem bv_leq.r_add_add.proof : bv_leq.r_add_add.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_leq.r_add_add] at h
+  replace h := orElse_eq_some h
+  rcases h with h | h <;> (try replace h := orElse_eq_some h) <;> (try rcases h with h | h) <;>
+    (try replace h := orElse_eq_some h) <;> (try rcases h with h | h) <;>
+    split at h <;> (try split at h) <;> simp at h <;> rename_i hc <;> rw [Bool.and_eq_true] at hc <;> obtain ⟨hcl, hcr⟩ := hc <;>
+    subst h
+  · refine Refines.ite_split (fun hk => ?_)
+      (fun _ => Refines.ite_split (fun hk => ?_) (fun _ => Refines.refl))
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_leq hO hN
+          (TB_O_add hO hN (TB_add_inv h1).2.2 (TB_O_sub hO hN (TB_add_inv h1).2.1 (TB_add_inv h2).2.1)) (TB_add_inv h2).2.2)
+        (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xa, xb, ea, eb, hy, hr1, hr2⟩ := eval_add_inv s hcl e1
+      obtain ⟨ya, yb, fa, fb, hy', hr1', hr2'⟩ := eval_add_inv s hcr e2
+      rw [const_keeps_iff] at hk
+      rsz h1 at hk
+      rw [lit_val' s (TB_add_inv h1).2.1 ea, lit_val' s (TB_add_inv h2).2.1 fa] at hk
+      have := bvz_range hn0 s xa; have := bvz_range hn0 s xb
+      have := bvz_range hn0 s ya; have := bvz_range hn0 s yb
+      have := min_for_nonpos (N := n) s; have := max_for_nonneg hn0 s
+      obtain ⟨d, ed, hd⟩ := eval_O_sub_rng (s := s) hO hN (TB_add_inv h1).2.1 (TB_add_inv h2).2.1 ea fa (by omega) (by omega)
+      obtain ⟨t, et, ht⟩ := eval_O_add_rng (s := s) hO hN (TB_add_inv h1).2.2 (TB_O_sub hO hN (TB_add_inv h1).2.1 (TB_add_inv h2).2.1) eb ed
+        (by omega) (by omega)
+      rw [eval_O_leq hO hN (TB_O_add hO hN (TB_add_inv h1).2.2 (TB_O_sub hO hN (TB_add_inv h1).2.1 (TB_add_inv h2).2.1)) (TB_add_inv h2).2.2 et fb, ht, hd,
+        hy, hy']
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_leq hO hN (TB_add_inv h1).2.2
+          (TB_O_add hO hN (TB_add_inv h2).2.2 (TB_O_sub hO hN (TB_add_inv h2).2.1 (TB_add_inv h1).2.1)))
+        (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xa, xb, ea, eb, hy, hr1, hr2⟩ := eval_add_inv s hcl e1
+      obtain ⟨ya, yb, fa, fb, hy', hr1', hr2'⟩ := eval_add_inv s hcr e2
+      rw [const_keeps_iff] at hk
+      rsz h1 at hk
+      rw [lit_val' s (TB_add_inv h1).2.1 ea, lit_val' s (TB_add_inv h2).2.1 fa] at hk
+      have := bvz_range hn0 s xa; have := bvz_range hn0 s xb
+      have := bvz_range hn0 s ya; have := bvz_range hn0 s yb
+      have := min_for_nonpos (N := n) s; have := max_for_nonneg hn0 s
+      obtain ⟨d, ed, hd⟩ := eval_O_sub_rng (s := s) hO hN (TB_add_inv h2).2.1 (TB_add_inv h1).2.1 fa ea (by omega) (by omega)
+      obtain ⟨t, et, ht⟩ := eval_O_add_rng (s := s) hO hN (TB_add_inv h2).2.2 (TB_O_sub hO hN (TB_add_inv h2).2.1 (TB_add_inv h1).2.1) fb ed
+        (by omega) (by omega)
+      rw [eval_O_leq hO hN (TB_add_inv h1).2.2 (TB_O_add hO hN (TB_add_inv h2).2.2 (TB_O_sub hO hN (TB_add_inv h2).2.1 (TB_add_inv h1).2.1)) eb et, ht, hd,
+        hy, hy']
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
+  · refine Refines.ite_split (fun hk => ?_)
+      (fun _ => Refines.ite_split (fun hk => ?_) (fun _ => Refines.refl))
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_leq hO hN
+          (TB_O_add hO hN (TB_add_inv h1).2.2 (TB_O_sub hO hN (TB_add_inv h1).2.1 (TB_add_inv h2).2.2)) (TB_add_inv h2).2.1)
+        (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xa, xb, ea, eb, hy, hr1, hr2⟩ := eval_add_inv s hcl e1
+      obtain ⟨ya, yb, fa, fb, hy', hr1', hr2'⟩ := eval_add_inv s hcr e2
+      rw [const_keeps_iff] at hk
+      rsz h1 at hk
+      rw [lit_val' s (TB_add_inv h1).2.1 ea, lit_val' s (TB_add_inv h2).2.2 fb] at hk
+      have := bvz_range hn0 s xa; have := bvz_range hn0 s xb
+      have := bvz_range hn0 s ya; have := bvz_range hn0 s yb
+      have := min_for_nonpos (N := n) s; have := max_for_nonneg hn0 s
+      obtain ⟨d, ed, hd⟩ := eval_O_sub_rng (s := s) hO hN (TB_add_inv h1).2.1 (TB_add_inv h2).2.2 ea fb (by omega) (by omega)
+      obtain ⟨t, et, ht⟩ := eval_O_add_rng (s := s) hO hN (TB_add_inv h1).2.2 (TB_O_sub hO hN (TB_add_inv h1).2.1 (TB_add_inv h2).2.2) eb ed
+        (by omega) (by omega)
+      rw [eval_O_leq hO hN (TB_O_add hO hN (TB_add_inv h1).2.2 (TB_O_sub hO hN (TB_add_inv h1).2.1 (TB_add_inv h2).2.2)) (TB_add_inv h2).2.1 et fa, ht, hd,
+        hy, hy']
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_leq hO hN (TB_add_inv h1).2.2
+          (TB_O_add hO hN (TB_add_inv h2).2.1 (TB_O_sub hO hN (TB_add_inv h2).2.2 (TB_add_inv h1).2.1)))
+        (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xa, xb, ea, eb, hy, hr1, hr2⟩ := eval_add_inv s hcl e1
+      obtain ⟨ya, yb, fa, fb, hy', hr1', hr2'⟩ := eval_add_inv s hcr e2
+      rw [const_keeps_iff] at hk
+      rsz h1 at hk
+      rw [lit_val' s (TB_add_inv h1).2.1 ea, lit_val' s (TB_add_inv h2).2.2 fb] at hk
+      have := bvz_range hn0 s xa; have := bvz_range hn0 s xb
+      have := bvz_range hn0 s ya; have := bvz_range hn0 s yb
+      have := min_for_nonpos (N := n) s; have := max_for_nonneg hn0 s
+      obtain ⟨d, ed, hd⟩ := eval_O_sub_rng (s := s) hO hN (TB_add_inv h2).2.2 (TB_add_inv h1).2.1 fb ea (by omega) (by omega)
+      obtain ⟨t, et, ht⟩ := eval_O_add_rng (s := s) hO hN (TB_add_inv h2).2.1 (TB_O_sub hO hN (TB_add_inv h2).2.2 (TB_add_inv h1).2.1) fa ed
+        (by omega) (by omega)
+      rw [eval_O_leq hO hN (TB_add_inv h1).2.2 (TB_O_add hO hN (TB_add_inv h2).2.1 (TB_O_sub hO hN (TB_add_inv h2).2.2 (TB_add_inv h1).2.1)) eb et, ht, hd,
+        hy, hy']
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
+  · refine Refines.ite_split (fun hk => ?_)
+      (fun _ => Refines.ite_split (fun hk => ?_) (fun _ => Refines.refl))
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_leq hO hN
+          (TB_O_add hO hN (TB_add_inv h1).2.1 (TB_O_sub hO hN (TB_add_inv h1).2.2 (TB_add_inv h2).2.1)) (TB_add_inv h2).2.2)
+        (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xa, xb, ea, eb, hy, hr1, hr2⟩ := eval_add_inv s hcl e1
+      obtain ⟨ya, yb, fa, fb, hy', hr1', hr2'⟩ := eval_add_inv s hcr e2
+      rw [const_keeps_iff] at hk
+      rsz h1 at hk
+      rw [lit_val' s (TB_add_inv h1).2.2 eb, lit_val' s (TB_add_inv h2).2.1 fa] at hk
+      have := bvz_range hn0 s xa; have := bvz_range hn0 s xb
+      have := bvz_range hn0 s ya; have := bvz_range hn0 s yb
+      have := min_for_nonpos (N := n) s; have := max_for_nonneg hn0 s
+      obtain ⟨d, ed, hd⟩ := eval_O_sub_rng (s := s) hO hN (TB_add_inv h1).2.2 (TB_add_inv h2).2.1 eb fa (by omega) (by omega)
+      obtain ⟨t, et, ht⟩ := eval_O_add_rng (s := s) hO hN (TB_add_inv h1).2.1 (TB_O_sub hO hN (TB_add_inv h1).2.2 (TB_add_inv h2).2.1) ea ed
+        (by omega) (by omega)
+      rw [eval_O_leq hO hN (TB_O_add hO hN (TB_add_inv h1).2.1 (TB_O_sub hO hN (TB_add_inv h1).2.2 (TB_add_inv h2).2.1)) (TB_add_inv h2).2.2 et fb, ht, hd,
+        hy, hy']
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_leq hO hN (TB_add_inv h1).2.1
+          (TB_O_add hO hN (TB_add_inv h2).2.2 (TB_O_sub hO hN (TB_add_inv h2).2.1 (TB_add_inv h1).2.2)))
+        (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xa, xb, ea, eb, hy, hr1, hr2⟩ := eval_add_inv s hcl e1
+      obtain ⟨ya, yb, fa, fb, hy', hr1', hr2'⟩ := eval_add_inv s hcr e2
+      rw [const_keeps_iff] at hk
+      rsz h1 at hk
+      rw [lit_val' s (TB_add_inv h1).2.2 eb, lit_val' s (TB_add_inv h2).2.1 fa] at hk
+      have := bvz_range hn0 s xa; have := bvz_range hn0 s xb
+      have := bvz_range hn0 s ya; have := bvz_range hn0 s yb
+      have := min_for_nonpos (N := n) s; have := max_for_nonneg hn0 s
+      obtain ⟨d, ed, hd⟩ := eval_O_sub_rng (s := s) hO hN (TB_add_inv h2).2.1 (TB_add_inv h1).2.2 fa eb (by omega) (by omega)
+      obtain ⟨t, et, ht⟩ := eval_O_add_rng (s := s) hO hN (TB_add_inv h2).2.2 (TB_O_sub hO hN (TB_add_inv h2).2.1 (TB_add_inv h1).2.2) fb ed
+        (by omega) (by omega)
+      rw [eval_O_leq hO hN (TB_add_inv h1).2.1 (TB_O_add hO hN (TB_add_inv h2).2.2 (TB_O_sub hO hN (TB_add_inv h2).2.1 (TB_add_inv h1).2.2)) ea et, ht, hd,
+        hy, hy']
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
+  · refine Refines.ite_split (fun hk => ?_)
+      (fun _ => Refines.ite_split (fun hk => ?_) (fun _ => Refines.refl))
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_leq hO hN
+          (TB_O_add hO hN (TB_add_inv h1).2.1 (TB_O_sub hO hN (TB_add_inv h1).2.2 (TB_add_inv h2).2.2)) (TB_add_inv h2).2.1)
+        (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xa, xb, ea, eb, hy, hr1, hr2⟩ := eval_add_inv s hcl e1
+      obtain ⟨ya, yb, fa, fb, hy', hr1', hr2'⟩ := eval_add_inv s hcr e2
+      rw [const_keeps_iff] at hk
+      rsz h1 at hk
+      rw [lit_val' s (TB_add_inv h1).2.2 eb, lit_val' s (TB_add_inv h2).2.2 fb] at hk
+      have := bvz_range hn0 s xa; have := bvz_range hn0 s xb
+      have := bvz_range hn0 s ya; have := bvz_range hn0 s yb
+      have := min_for_nonpos (N := n) s; have := max_for_nonneg hn0 s
+      obtain ⟨d, ed, hd⟩ := eval_O_sub_rng (s := s) hO hN (TB_add_inv h1).2.2 (TB_add_inv h2).2.2 eb fb (by omega) (by omega)
+      obtain ⟨t, et, ht⟩ := eval_O_add_rng (s := s) hO hN (TB_add_inv h1).2.1 (TB_O_sub hO hN (TB_add_inv h1).2.2 (TB_add_inv h2).2.2) ea ed
+        (by omega) (by omega)
+      rw [eval_O_leq hO hN (TB_O_add hO hN (TB_add_inv h1).2.1 (TB_O_sub hO hN (TB_add_inv h1).2.2 (TB_add_inv h2).2.2)) (TB_add_inv h2).2.1 et fa, ht, hd,
+        hy, hy']
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_leq hO hN (TB_add_inv h1).2.1
+          (TB_O_add hO hN (TB_add_inv h2).2.1 (TB_O_sub hO hN (TB_add_inv h2).2.2 (TB_add_inv h1).2.2)))
+        (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xa, xb, ea, eb, hy, hr1, hr2⟩ := eval_add_inv s hcl e1
+      obtain ⟨ya, yb, fa, fb, hy', hr1', hr2'⟩ := eval_add_inv s hcr e2
+      rw [const_keeps_iff] at hk
+      rsz h1 at hk
+      rw [lit_val' s (TB_add_inv h1).2.2 eb, lit_val' s (TB_add_inv h2).2.2 fb] at hk
+      have := bvz_range hn0 s xa; have := bvz_range hn0 s xb
+      have := bvz_range hn0 s ya; have := bvz_range hn0 s yb
+      have := min_for_nonpos (N := n) s; have := max_for_nonneg hn0 s
+      obtain ⟨d, ed, hd⟩ := eval_O_sub_rng (s := s) hO hN (TB_add_inv h2).2.2 (TB_add_inv h1).2.2 fb eb (by omega) (by omega)
+      obtain ⟨t, et, ht⟩ := eval_O_add_rng (s := s) hO hN (TB_add_inv h2).2.1 (TB_O_sub hO hN (TB_add_inv h2).2.2 (TB_add_inv h1).2.2) fa ed
+        (by omega) (by omega)
+      rw [eval_O_leq hO hN (TB_add_inv h1).2.1 (TB_O_add hO hN (TB_add_inv h2).2.1 (TB_O_sub hO hN (TB_add_inv h2).2.2 (TB_add_inv h1).2.2)) ea et, ht, hd,
+        hy, hy']
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
 theorem bv_leq.r_self_add_r.proof : bv_leq.r_self_add_r.Stmt := by
   intro FS O hO s v1 v2 res h
@@ -784,7 +1100,7 @@ theorem bv_leq.r_const_sub1.proof : bv_leq.r_const_sub1.Stmt := by
     obtain ⟨xa, xb, ea, eb, hy, -⟩ := eval_sub_inv s hc e2
     rsz h1 at hov
     rw [overflows_add_false, lit_val' s h1 e1, lit_val' s (TB_sub_inv h2).2.2 eb] at hov
-    obtain ⟨r', er', hr'⟩ := eval_O_add_rng hO hN h1 (TB_sub_inv h2).2.2 e1 eb hov.1 hov.2
+    obtain ⟨r', er', hr'⟩ := eval_O_add_rng (s := s) hO hN h1 (TB_sub_inv h2).2.2 e1 eb hov.1 hov.2
     rw [eval_O_leq hO hN (TB_O_add hO hN h1 (TB_sub_inv h2).2.2) (TB_sub_inv h2).2.1 er' ea, hr', hy]
     simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
@@ -813,7 +1129,7 @@ theorem bv_leq.r_const_sub2.proof : bv_leq.r_const_sub2.Stmt := by
     obtain ⟨xa, xb, ea, eb, hy, -⟩ := eval_sub_inv s hc e2
     rsz h1 at hov
     rw [overflows_sub_false, lit_val' s (TB_sub_inv h2).2.1 ea, lit_val' s h1 e1] at hov
-    obtain ⟨r', er', hr'⟩ := eval_O_sub_rng hO hN (TB_sub_inv h2).2.1 h1 ea e1 hov.1 hov.2
+    obtain ⟨r', er', hr'⟩ := eval_O_sub_rng (s := s) hO hN (TB_sub_inv h2).2.1 h1 ea e1 hov.1 hov.2
     rw [eval_O_leq hO hN (TB_sub_inv h2).2.2 (TB_O_sub hO hN (TB_sub_inv h2).2.1 h1) eb er', hr', hy]
     simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
@@ -842,7 +1158,7 @@ theorem bv_leq.r_sub_const1.proof : bv_leq.r_sub_const1.Stmt := by
     obtain ⟨xa, xb, ea, eb, hy, -⟩ := eval_sub_inv s hc e1
     rsz h1 at hov
     rw [overflows_add_false, lit_val' s h2 e2, lit_val' s (TB_sub_inv h1).2.2 eb] at hov
-    obtain ⟨r', er', hr'⟩ := eval_O_add_rng hO hN h2 (TB_sub_inv h1).2.2 e2 eb hov.1 hov.2
+    obtain ⟨r', er', hr'⟩ := eval_O_add_rng (s := s) hO hN h2 (TB_sub_inv h1).2.2 e2 eb hov.1 hov.2
     rw [eval_O_leq hO hN (TB_sub_inv h1).2.1 (TB_O_add hO hN h2 (TB_sub_inv h1).2.2) ea er', hr', hy]
     simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
@@ -871,7 +1187,7 @@ theorem bv_leq.r_sub_const2.proof : bv_leq.r_sub_const2.Stmt := by
     obtain ⟨xa, xb, ea, eb, hy, -⟩ := eval_sub_inv s hc e1
     rsz h1 at hov
     rw [overflows_sub_false, lit_val' s (TB_sub_inv h1).2.1 ea, lit_val' s h2 e2] at hov
-    obtain ⟨r', er', hr'⟩ := eval_O_sub_rng hO hN (TB_sub_inv h1).2.1 h2 ea e2 hov.1 hov.2
+    obtain ⟨r', er', hr'⟩ := eval_O_sub_rng (s := s) hO hN (TB_sub_inv h1).2.1 h2 ea e2 hov.1 hov.2
     rw [eval_O_leq hO hN (TB_O_sub hO hN (TB_sub_inv h1).2.1 h2) (TB_sub_inv h1).2.2 er' eb, hr', hy]
     simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 

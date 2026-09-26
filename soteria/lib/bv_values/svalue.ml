@@ -2387,7 +2387,9 @@ module Make (V : Value_ext) () = struct
           let c1 = bv_to_z signed bits c1 in
           let c2 = bv_to_z signed bits c2 in
           (* be careful bc c1 = v2 and c2 = v1 in this case *)
-          if Z.divisible c2 c1 || Z.geq c2 Z.zero then
+          if Z.equal c1 Z.zero then (* the product is 0 *)
+            Bool.of_bool (Z.lt c2 Z.zero)
+          else if Z.divisible c2 c1 || Z.geq c2 Z.zero then
             if Z.lt c1 Z.zero then
               if
                 signed
@@ -2424,7 +2426,9 @@ module Make (V : Value_ext) () = struct
            *             (bvsle x (bvsdiv c2 c1))))))))) *)
           let c1 = bv_to_z signed bits c1 in
           let c2 = bv_to_z signed bits c2 in
-          if Z.divisible c2 c1 || Z.lt c2 Z.zero then
+          (* the product is 0 *)
+          if Z.equal c1 Z.zero then Bool.of_bool (Z.gt c2 Z.zero)
+          else if Z.divisible c2 c1 || Z.lt c2 Z.zero then
             if Z.lt c1 Z.zero then
               if
                 signed
@@ -2437,8 +2441,15 @@ module Make (V : Value_ext) () = struct
           else leq ~signed x (div ~signed v2 v1)
       | Binop (Mul checked_l, l1, r1), Binop (Mul checked_r, l2, r2)
         when checked_has ~signed checked_l && checked_has ~signed checked_r ->
-          (* Can only cancel common factor if it's provably non-zero *)
-          let is_nonzero v = sure_neq v (zero (size_of v.node.ty)) in
+          (* Can only cancel common factor if it's provably non-zero, and
+             positive if signed *)
+          let is_nonzero v =
+            if signed then
+              match v.node.kind with
+              | BitVec x -> Z.gt (bv_to_z true bits x) Z.zero
+              | _ -> false
+            else sure_neq v (zero (size_of v.node.ty))
+          in
           if equal l1 l2 && is_nonzero l1 then lt ~signed r1 r2
           else if equal l1 r2 && is_nonzero l1 then lt ~signed r1 l2
           else if equal r1 l2 && is_nonzero r1 then lt ~signed l1 r2
@@ -2601,7 +2612,9 @@ module Make (V : Value_ext) () = struct
           let c1 = bv_to_z signed bits c1 in
           let c2 = bv_to_z signed bits c2 in
           (* be careful bc c1 = v2 and c2 = v1 in this case *)
-          if Z.divisible c2 c1 then
+          if Z.equal c1 Z.zero then (* the product is 0 *)
+            Bool.of_bool (Z.leq c2 Z.zero)
+          else if Z.divisible c2 c1 then
             if Z.lt c1 Z.zero then
               if
                 signed
@@ -2645,7 +2658,9 @@ module Make (V : Value_ext) () = struct
            *               (bvsle x (bvsdiv c2 c1)))))))))) *)
           let c1 = bv_to_z signed bits c1 in
           let c2 = bv_to_z signed bits c2 in
-          if Z.divisible c2 c1 then
+          (* the product is 0 *)
+          if Z.equal c1 Z.zero then Bool.of_bool (Z.geq c2 Z.zero)
+          else if Z.divisible c2 c1 then
             if Z.lt c1 Z.zero then
               if
                 signed
@@ -2661,8 +2676,15 @@ module Make (V : Value_ext) () = struct
           else leq ~signed x (div ~signed v2 v1)
       | Binop (Mul checked_l, l1, r1), Binop (Mul checked_r, l2, r2)
         when checked_has ~signed checked_l && checked_has ~signed checked_r ->
-          (* Can only cancel common factor if it's provably non-zero *)
-          let is_nonzero v = sure_neq v (zero (size_of v.node.ty)) in
+          (* Can only cancel common factor if it's provably non-zero, and
+             positive if signed *)
+          let is_nonzero v =
+            if signed then
+              match v.node.kind with
+              | BitVec x -> Z.gt (bv_to_z true bits x) Z.zero
+              | _ -> false
+            else sure_neq v (zero (size_of v.node.ty))
+          in
           if equal l1 l2 && is_nonzero l1 then leq ~signed r1 r2
           else if equal l1 r2 && is_nonzero l1 then leq ~signed r1 l2
           else if equal r1 l2 && is_nonzero r1 then leq ~signed l1 r2

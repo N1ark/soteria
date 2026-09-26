@@ -1,0 +1,5 @@
+name = "bvr"
+defaultTargets = ["Bvr"]
+
+[[lean_lib]]
+name = "Bvr"

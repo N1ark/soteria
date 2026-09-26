@@ -1,0 +1,48 @@
+; The Lean model, statements and assembly proof are generated from the rules;
+; `dune test` checks that the committed files are up to date (run `dune
+; promote` after changing the rules), and CI checks them with `lake build`.
+
+(rule
+ (deps
+  (glob_files %{project_root}/soteria/lib/bv_values/rules/*.bvr))
+ (targets Model.lean.gen Statements.lean.gen Soundness.lean.gen)
+ (action
+  (progn
+   (with-stdout-to
+    Model.lean.gen
+    (run
+     %{exe:../../main.exe}
+     lean-model
+     %{project_root}/soteria/lib/bv_values/rules/prelude.bvr
+     %{project_root}/soteria/lib/bv_values/rules/bool.bvr
+     %{project_root}/soteria/lib/bv_values/rules/bitvec.bvr
+     %{project_root}/soteria/lib/bv_values/rules/float.bvr
+     %{project_root}/soteria/lib/bv_values/rules/ptr.bvr))
+   (with-stdout-to
+    Statements.lean.gen
+    (run
+     %{exe:../../main.exe}
+     lean-statements
+     %{project_root}/soteria/lib/bv_values/rules/prelude.bvr
+     %{project_root}/soteria/lib/bv_values/rules/bool.bvr
+     %{project_root}/soteria/lib/bv_values/rules/bitvec.bvr
+     %{project_root}/soteria/lib/bv_values/rules/float.bvr
+     %{project_root}/soteria/lib/bv_values/rules/ptr.bvr))
+   (with-stdout-to
+    Soundness.lean.gen
+    (run
+     %{exe:../../main.exe}
+     lean-soundness
+     %{project_root}/soteria/lib/bv_values/rules/prelude.bvr
+     %{project_root}/soteria/lib/bv_values/rules/bool.bvr
+     %{project_root}/soteria/lib/bv_values/rules/bitvec.bvr
+     %{project_root}/soteria/lib/bv_values/rules/float.bvr
+     %{project_root}/soteria/lib/bv_values/rules/ptr.bvr)))))
+
+(rule
+ (alias runtest)
+ (action
+  (progn
+   (diff Model.lean Model.lean.gen)
+   (diff Statements.lean Statements.lean.gen)
+   (diff Soundness.lean Soundness.lean.gen))))

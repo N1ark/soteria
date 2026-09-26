@@ -1084,10 +1084,75 @@ theorem bv_extract.r_default.proof : bv_extract.r_default.Stmt := by
   simp [bv_extract.r_default] at h; subst h; exact Refines.refl
 
 theorem bv_extend.r_lit.proof : bv_extend.r_lit.Stmt := by
-  sorry
+  intro FS O hO s k v res h
+  simp only [bv_extend.r_lit] at h
+  split at h
+  case h_2 => simp at h
+  simp only [Option.some.injEq] at h; subst h
+  rename_i z T
+  have key : (bv_extend.spec s k (.mk (.bitVec z) T)).WT → ∃ n : Int, 0 < n ∧
+      T = .bitVector n ∧ 0 ≤ k ∧ 0 ≤ z ∧ z < 2 ^ n.toNat := by
+    intro w
+    obtain ⟨n, hn, h1, hk, -, w1⟩ := WT_extend.1 w
+    simp only [Term.ty_mk] at h1
+    exact ⟨n, hn, h1, hk, (lit_inv w1 n h1).2⟩
+  refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+  · obtain ⟨n, hn, rfl, hk, z0, z1⟩ := key w
+    cases s <;> exact ⟨mk_masked_WT (by simp; omega), rfl⟩
+  · obtain ⟨n, hn, rfl, hk, z0, z1⟩ := key w
+    obtain ⟨m, x, hm, h1, -, -, ex, rfl⟩ := eval_extend e
+    simp only [Term.ty_mk, Ty.bitVector.injEq] at h1; subst h1
+    obtain ⟨rfl, -, -⟩ := lit_val₀ ex
+    simp only [size_eq, Term.ty_mk, size_of_ty_bitVector]
+    cases s
+    · simp only [mk_bv, Bool.false_eq_true, ↓reduceIte]
+      rw [eval_mk_masked (by omega)]; congr 1
+      apply Val.bv_ext_toNat (by omega)
+      have z2 := two_pow_mono z1 (show n.toNat ≤ (n + k).toNat by omega)
+      have z3 := two_pow_mono z1 (show n.toNat ≤ n.toNat + k.toNat by omega)
+      have := int_two_pow_cast (n.toNat + k.toNat)
+      rw [BitVec.toNat_setWidth, toNat_ofInt_lit z0 z1, toNat_ofInt_lit z0 z2,
+        Nat.mod_eq_of_lt (by omega)]
+    · simp only [↓reduceIte]
+      rw [eval_mk_masked (by omega)]; congr 1
+      rw [signed_extract_eq_toInt' hn z0 z1]
+      apply Val.bv_ext_toNat (by omega)
+      simp only [BitVec.signExtend, BitVec.toNat_ofInt]
+      rw [show (n + k).toNat = n.toNat + k.toNat by omega]
 
 theorem bv_extend.r_extend.proof : bv_extend.r_extend.Stmt := by
-  sorry
+  intro FS O hO s k v res h
+  simp only [bv_extend.r_extend] at h
+  split at h
+  case h_2 => simp at h
+  split at h
+  case isFalse => simp at h
+  simp only [Option.some.injEq] at h; subst h
+  rename_i s' p a T hs
+  simp only [decide_eq_true_eq] at hs; subst hs
+  refine Refines.trans ?_ (hO.bv_extend _ _ _)
+  refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+  · obtain ⟨n, hn, h1, hk, -, w1⟩ := WT_extend.1 w
+    obtain ⟨m, hm, ha, hp, hT, wa⟩ := WT_extend.1 w1
+    simp only [Term.ty_mk] at h1; subst hT; simp only [Ty.bitVector.injEq] at h1; subst h1
+    refine ⟨WT_extend.2 ⟨m, hm, ha, by omega, by simp [ha], wa⟩, ?_⟩
+    simp [bv_extend.spec, ha]; omega
+  · obtain ⟨n, x, hn, h1, hk, -, ex, rfl⟩ := eval_extend e
+    obtain ⟨m, y, hm, ha, hp, hT, ey, hx⟩ := eval_extend ex
+    simp only [Term.ty_mk] at h1; subst hT; simp only [Ty.bitVector.injEq] at h1; subst h1
+    simp only [bv_extend.spec] at w' ⊢
+    rw [eval_extend_of w' ey]; congr 1
+    apply Val.bv_ext (by omega)
+    intro t ht
+    have hb := Val.bv_getLsbD hx
+    cases s'
+    · simp only [Bool.false_eq_true, ↓reduceIte] at hb ⊢
+      (try bitw_simp); (try simp only [hb])
+      by_cases h1 : t < m.toNat <;> by_cases h2 : t < (m + p).toNat <;> bitw_simp
+    · simp only [↓reduceIte] at hb ⊢
+      (try bitw_simp); (try simp only [hb])
+      by_cases h1 : t < m.toNat <;> by_cases h2 : t < (m + p).toNat <;>
+        by_cases h3 : p = 0 <;> bitw_simp <;> congr 1 <;> omega
 
 theorem bv_extend.r_ite.proof : bv_extend.r_ite.Stmt := by
   intro FS O hO s k v res h
@@ -1099,7 +1164,34 @@ theorem bv_extend.r_ite.proof : bv_extend.r_ite.Stmt := by
   exact Refines.trans Refines.unop_ite (Refines.ite_O hO rt rt)
 
 theorem bv_extend.r_of_bool.proof : bv_extend.r_of_bool.Stmt := by
-  sorry
+  intro FS O hO s k v res h
+  simp only [bv_extend.r_of_bool] at h
+  split at h
+  case h_2 => simp at h
+  split at h
+  case isFalse => simp at h
+  simp only [Option.some.injEq] at h; subst h
+  rename_i m b T hs
+  simp only [Bool.or_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true, decide_eq_true_eq] at hs
+  refine Refines.trans ?_ (hO.bv_of_bool _ _)
+  refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+  · obtain ⟨n, hn, h1, hk, -, w1⟩ := WT_extend.1 w
+    obtain ⟨hm, hb, hT, wb⟩ := WT_bvOfBool.1 w1
+    simp only [Term.ty_mk] at h1; subst hT; simp only [Ty.bitVector.injEq] at h1; subst h1
+    exact ⟨WT_bvOfBool.2 ⟨by simp; omega, hb, rfl, wb⟩, rfl⟩
+  · obtain ⟨n, x, hn, h1, hk, -, ex, rfl⟩ := eval_extend e
+    obtain ⟨hm, hb, hT, wb⟩ := WT_bvOfBool.1 (eval_WT ex)
+    simp only [Term.ty_mk] at h1; subst hT; simp only [Ty.bitVector.injEq] at h1; subst h1
+    obtain ⟨c, ec, hx⟩ := eval_bvOfBool ex
+    simp only [bv_of_bool.spec] at w' ⊢
+    rw [eval_bvOfBool' w' ec]; congr 1
+    apply Val.bv_ext (by simp; omega)
+    intro t ht
+    have hb := Val.bv_getLsbD hx
+    have hsz : size (Term.mk (.unop (.bvOfBool m) b) (.bitVector m)) = m := by simp
+    cases s <;> cases c <;> (try simp at hs) <;> simp only [↓reduceIte, Bool.false_eq_true] at hb ⊢ <;>
+      bitw_simp <;> simp only [hb, getLsbD_zero', getLsbD_one'] <;>
+      by_cases h1 : t < m.toNat <;> by_cases h2 : t = 0 <;> bitw_simp
 
 theorem bv_extend.r_default.proof : bv_extend.r_default.Stmt := by
   intro FS O hO s k v res h
@@ -1173,6 +1265,10 @@ theorem bv_shl.r_big.proof : bv_shl.r_big.Stmt := by
     bitw_simp
 
 theorem bv_shl.r_shl.proof : bv_shl.r_shl.Stmt := by
+  -- UNSOUND: the shift amounts are added modulo 2^n. With n = 1, `v` a variable of type
+  -- `bitVector 1` valued `1#1` and `s1 = s2 = 1`, the spec `(v <<< 1) <<< 1` evaluates to `0#1`,
+  -- but the result is `O.bv_shl v (mk_bv 1 2)`, where `mk_bv 1 2` is the literal `0#1`, and it
+  -- refines `v <<< 0`, which evaluates to `1#1`.
   sorry
 
 theorem bv_shl.r_lshr.proof : bv_shl.r_lshr.Stmt := by
@@ -1361,6 +1457,10 @@ theorem bv_lshr.r_big.proof : bv_lshr.r_big.Stmt := by
     bitw_simp
 
 theorem bv_lshr.r_lshr.proof : bv_lshr.r_lshr.Stmt := by
+  -- UNSOUND: the shift amounts are added modulo 2^n. With n = 1, `v` a variable of type
+  -- `bitVector 1` valued `1#1` and `s1 = s2 = 1`, the spec `(v >>> 1) >>> 1` evaluates to `0#1`,
+  -- but the result is `O.bv_lshr v (mk_bv 1 2)`, where `mk_bv 1 2` is the literal `0#1`, and it
+  -- refines `v >>> 0`, which evaluates to `1#1`.
   sorry
 
 theorem bv_lshr.r_and_mask.proof : bv_lshr.r_and_mask.Stmt := by
@@ -1485,6 +1585,10 @@ theorem bv_ashr.r_big.proof : bv_ashr.r_big.Stmt := by
     · bitw_simp
 
 theorem bv_ashr.r_ashr.proof : bv_ashr.r_ashr.Stmt := by
+  -- UNSOUND: the shift amounts are added modulo 2^n. With n = 2, `v` a variable of type
+  -- `bitVector 2` valued `1#2` and `s1 = s2 = 2`, the spec `ashr (ashr v 2) 2` evaluates to
+  -- `0#2`, but the result is `O.bv_ashr v (mk_bv 2 4)`, where `mk_bv 2 4` is the literal `0#2`,
+  -- and it refines `ashr v 0`, which evaluates to `1#2`.
   sorry
 
 theorem bv_ashr.r_default.proof : bv_ashr.r_default.Stmt := by

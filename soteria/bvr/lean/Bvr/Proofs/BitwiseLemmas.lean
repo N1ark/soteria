@@ -1100,6 +1100,16 @@ theorem signed_extract_eq_toInt {k : Nat} {l : Int} (hk : 0 < k) (h0 : 0 ≤ l) 
     rw [← Nat.pow_succ']; congr 1; omega
   split <;> split <;> omega
 
+theorem signed_extract_eq_toInt' {n : Int} {l : Int} (hn : 0 < n) (h0 : 0 ≤ l)
+    (h1 : l < 2 ^ n.toNat) : signed_extract l 0 n = (BitVec.ofInt n.toNat l).toInt := by
+  have := signed_extract_eq_toInt (k := n.toNat) (by omega) h0 h1
+  rwa [Int.toNat_of_nonneg (by omega)] at this
+
+theorem two_pow_mono {z : Int} {a b : Nat} (h : z < 2 ^ a) (hab : a ≤ b) : z < 2 ^ b := by
+  rw [← int_two_pow_cast] at h ⊢
+  have := Nat.pow_le_pow_right (n := 2) (by omega) hab
+  omega
+
 theorem ofInt_zasr_signed {k : Nat} {l r : Int} (hk : 0 < k) (h0 : 0 ≤ l) (h1 : l < 2 ^ k)
     (r0 : 0 ≤ r) (r1 : r < 2 ^ k) :
     BitVec.ofInt k (zasr (signed_extract l 0 k) r) =
@@ -1172,6 +1182,8 @@ theorem ite_pos' {c : Prop} [Decidable c] {α} {a b : α} (h : c) : (if c then a
 theorem ite_neg' {c : Prop} [Decidable c] {α} {a b : α} (h : ¬c) : (if c then a else b) = b :=
   by simp [h]
 @[simp] theorem getLsbD_zero' {w i : Nat} : (0 : BitVec w).getLsbD i = false := by simp
+theorem getLsbD_one' {w i : Nat} : (1 : BitVec w).getLsbD i = (decide (0 < w) && decide (i = 0)) :=
+  by simp
 
 /-- Simplifies the bits of bit-vector expressions, deciding index conditions with omega. -/
 macro "bitw_simp" : tactic => `(tactic| simp (disch := omega) only [BitVec.getLsbD_extractLsb',
@@ -1183,7 +1195,7 @@ macro "bitw_simp" : tactic => `(tactic| simp (disch := omega) only [BitVec.getLs
   Nat.add_zero, Int.toNat_zero, BitVec.getLsbD_of_ge, BitVec.getLsbD_signExtend,
   BitVec.getLsbD_sshiftRight, BitVec.msb_eq_getLsbD_last, Bool.not_and, Bool.not_not, Bool.false_eq_true,
   Bool.true_eq_false, ↓reduceIte, BitVec.getLsbD_not, getLsbD_ofInt_lowmask,
-  BitVec.ofInt_zlognot])
+  BitVec.ofInt_zlognot, getLsbD_one'])
 
 end BitwiseL
 end Bvr

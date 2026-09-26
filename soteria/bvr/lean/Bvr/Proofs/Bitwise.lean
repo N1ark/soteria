@@ -1475,11 +1475,12 @@ theorem bv_shl.r_big.proof : bv_shl.r_big.Stmt := by
     bitw_simp
 
 theorem bv_shl.r_shl.proof : bv_shl.r_shl.Stmt := by
-  -- UNSOUND: the shift amounts are added modulo 2^n. With n = 1, `v` a variable of type
-  -- `bitVector 1` valued `1#1` and `s1 = s2 = 1`, the spec `(v <<< 1) <<< 1` evaluates to `0#1`,
-  -- but the result is `O.bv_shl v (mk_bv 1 2)`, where `mk_bv 1 2` is the literal `0#1`, and it
-  -- refines `v <<< 0`, which evaluates to `1#1`.
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [bv_shl.r_shl] at h
+  split at h <;> simp at h; subst h
+  rename_i v s1 T1 T2 s2 T3
+  exact Refines.trans (BitOp.shl.shift_shift (g := fun N => zmin (s1 + s2) N)
+    (fun k _ x s10 s11 s20 s21 => shl_shl_lits x s10 s11 s20 s21)) (hO.bv_shl _ _)
 
 theorem bv_shl.r_lshr.proof : bv_shl.r_lshr.Stmt := by
   intro FS O hO v1 v2 res h
@@ -1667,11 +1668,12 @@ theorem bv_lshr.r_big.proof : bv_lshr.r_big.Stmt := by
     bitw_simp
 
 theorem bv_lshr.r_lshr.proof : bv_lshr.r_lshr.Stmt := by
-  -- UNSOUND: the shift amounts are added modulo 2^n. With n = 1, `v` a variable of type
-  -- `bitVector 1` valued `1#1` and `s1 = s2 = 1`, the spec `(v >>> 1) >>> 1` evaluates to `0#1`,
-  -- but the result is `O.bv_lshr v (mk_bv 1 2)`, where `mk_bv 1 2` is the literal `0#1`, and it
-  -- refines `v >>> 0`, which evaluates to `1#1`.
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [bv_lshr.r_lshr] at h
+  split at h <;> simp at h; subst h
+  rename_i v s1 T1 T2 s2 T3
+  exact Refines.trans (BitOp.lshr.shift_shift (g := fun N => zmin (s1 + s2) N)
+    (fun k _ x s10 s11 s20 s21 => lshr_lshr_lits x s10 s11 s20 s21)) (hO.bv_lshr _ _)
 
 theorem bv_lshr.r_and_mask.proof : bv_lshr.r_and_mask.Stmt := by
   intro FS O hO v1 v2 res h
@@ -1795,11 +1797,12 @@ theorem bv_ashr.r_big.proof : bv_ashr.r_big.Stmt := by
     · bitw_simp
 
 theorem bv_ashr.r_ashr.proof : bv_ashr.r_ashr.Stmt := by
-  -- UNSOUND: the shift amounts are added modulo 2^n. With n = 2, `v` a variable of type
-  -- `bitVector 2` valued `1#2` and `s1 = s2 = 2`, the spec `ashr (ashr v 2) 2` evaluates to
-  -- `0#2`, but the result is `O.bv_ashr v (mk_bv 2 4)`, where `mk_bv 2 4` is the literal `0#2`,
-  -- and it refines `ashr v 0`, which evaluates to `1#2`.
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [bv_ashr.r_ashr] at h
+  split at h <;> simp at h; subst h
+  rename_i v s1 T1 T2 s2 T3
+  exact Refines.trans (BitOp.ashr.shift_shift (g := fun N => zmin (s1 + s2) (N - 1))
+    (fun k hk x s10 s11 s20 s21 => ashr_ashr_lits hk x s10 s11 s20 s21)) (hO.bv_ashr _ _)
 
 theorem bv_ashr.r_default.proof : bv_ashr.r_default.Stmt := by
   intro FS O hO v1 v2 res h

@@ -1549,13 +1549,32 @@ theorem bv_add_overflows.r_of_bools.proof : bv_add_overflows.r_of_bools.Stmt := 
       have hs' : s = true → ¬m2 = 2 := by simpa using hs
       rw [eval_v_false, ofBools_addOvf (by omega) s b1 b2 (fun h => hs' h.1 (by omega))]
 
--- UNSOUND: for one-bit vectors, `BvOfBool (1, true)` is -1 as a signed number, not 1. Take
--- `signed = true`, v1 = BvOfBool (1, b), v2 = the literal 0 (of 1 bit), with b = true (take `O`
--- returning the raw spec terms). The spec is `saddOverflow 1 0 = some false` (-1 + 0 = -1), but
--- `max_for true 1 = 0`, so the result is `b && (0 = 0) = some true`. In `bv_add_overflows.step`,
--- `r_size1` fires first on one-bit vectors.
+theorem bv_add_overflows.of_bool_aux {FS : FloatSem} {O : Ops} (hO : O.Sound FS)
+    {s m g T other N} (hN : ∀ n, T = .bitVector n → other.ty = .bitVector n → N = n)
+    (h1 : 1 < N) :
+    Refines FS (.mk (.binop (.addOvf s) (.mk (.unop (.bvOfBool m) g) T) other) .bool)
+      (O.b_and g (O.sem_eq (.mk other.kind (.bitVector N)) (mk_bv N (max_for s N)))) := by
+  refine Refines.cmp_intro (.addOvf s) (fun n wa wb hT => ?_)
+    (fun n wa wb hT ρ x y v hx hy e => ?_)
+  all_goals obtain ⟨rfl, wg, hg, hT'⟩ := BV_ofBool_inv wa
+  all_goals obtain rfl := hN _ hT' wb.2.1
+  all_goals rw [Term.mk_kind_of_ty wb.2.1]
+  all_goals have hq := O_sem_eq hO wb (BV_mk_bv (z := max_for s N) wb.2.2)
+  all_goals have hr := O_b_and hO ⟨wg, hg⟩ hq.1
+  · exact hr.1
+  · obtain ⟨b, hb, rfl⟩ := eval_ofBool_inv wa hx
+    simp [evBinop, bvBin] at e; subst e
+    rw [hr.2 ρ b _ hb (hq.2 ρ y _ hy (by rw [mk_bv, eval_mk_masked wb.2.2])),
+      ofBool_addOvf (by omega), max_for_eq wb.2.2]
+
 theorem bv_add_overflows.r_of_bool.proof : bv_add_overflows.r_of_bool.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_add_overflows.r_of_bool] at h
+  rcases orElse_eq_some h with h | h <;> split at h <;> simp at h <;> obtain ⟨hn, rfl⟩ := h <;>
+    simp only [bv_add_overflows.spec]
+  · exact bv_add_overflows.of_bool_aux hO (fun n h _ => by simp [h]) hn
+  · exact Refines.trans (Refines.comm (.addOvf s))
+      (bv_add_overflows.of_bool_aux hO (fun n _ h => by simp [h]) hn)
 
 theorem bv_add_overflows.r_default.proof : bv_add_overflows.r_default.Stmt := by
   intro FS O hO s v1 v2 res h

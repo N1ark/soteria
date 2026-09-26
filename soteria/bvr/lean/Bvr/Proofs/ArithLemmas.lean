@@ -1470,5 +1470,33 @@ theorem ofBools_addOvf {w : Nat} (hw : 1 < w) (s b1 b2 : Bool) (hs : ¬ (s = tru
     have : (4 : Int) ≤ 2 ^ (w - 1) := by exact_mod_cast h4
     split <;> split <;> omega
 
+theorem ofBool_addOvf {w : Nat} (hw : 1 < w) (s b : Bool) (Y : BitVec w) :
+    (if s then (if b = true then 1#w else 0#w).saddOverflow Y
+      else (if b = true then 1#w else 0#w).uaddOverflow Y) =
+      (b && decide (Y = BitVec.ofInt w (if s then 2 ^ (w - 1) - 1 else 2 ^ w - 1))) := by
+  cases b
+  · cases s <;> simp [saddOverflow_zero_left, uaddOverflow_zero_left]
+  · have h1 := ofBool_toNat hw true
+    have h2 := ofBool_toInt hw true
+    simp only [↓reduceIte] at h1 h2
+    have hp := natCast_two_pow w
+    have hp' := two_pow_pred (w := w) (by omega)
+    cases s
+    · simp only [Bool.false_eq_true, ↓reduceIte, Bool.true_and]
+      have := lit_toNat (w := w) (z := 2 ^ w - 1) (by omega) (by omega)
+      rw [Bool.eq_iff_iff, decide_eq_true_iff, ← BitVec.toNat_inj, this]
+      simp only [BitVec.uaddOverflow, h1, decide_eq_true_eq]
+      have := Y.isLt
+      omega
+    · simp only [↓reduceIte, Bool.true_and]
+      have := toInt_ofInt_signed (w := w) (v := 2 ^ (w - 1) - 1) (by omega) (by omega) (by omega)
+      rw [Bool.eq_iff_iff, decide_eq_true_iff, ← BitVec.toInt_inj, this]
+      have := BitVec.toInt_lt (x := Y); have := BitVec.le_toInt Y
+      simp only [BitVec.saddOverflow, h2, Bool.or_eq_true, decide_eq_true_eq]
+      omega
+
+theorem Term.mk_kind_of_ty {t : Term} {T : Ty} (h : t.ty = T) : Term.mk t.kind T = t := by
+  cases t; simp_all
+
 end ArithL
 end Bvr

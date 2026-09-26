@@ -1242,7 +1242,7 @@ module Make (P : PRIMS) = struct
         (bv_or x (P.mk_bv (size v1) (Z.logor m1 m2)))
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Unop ((Svalue_ast.Unop.BvExtend (false, nx)), base); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Shl), { Hc.node = { Svalue_ast.kind = Svalue_ast.Unop ((Svalue_ast.Unop.BvExtend (false, _)), tail); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (shift); _ }; _ }); _ }; _ })
         when (let nx = Z.of_int nx in
-        ((Z.equal shift (size base)))) ->
+        (((Z.equal shift (size base))) && (Z.gt nx Z.zero))) ->
         let nx = Z.of_int nx in
         (let tail_size = (size tail) in
         (if ((Z.equal nx tail_size))
@@ -2121,7 +2121,7 @@ module Make (P : PRIMS) = struct
         when ((Z.geq s (size v1))) ->
         (P.bv_zero (size v1))
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.LShr), v, { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (s1); _ }; _ }); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (s2); _ }; _ }) ->
-        (bv_lshr v (P.mk_bv (size v1) (Z.add s1 s2)))
+        (bv_lshr v (P.mk_bv (size v1) (zmin (Z.add s1 s2) (size v1))))
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.BitAnd), x, { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (mask); _ }; _ }); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (s); _ }; _ }) ->
         (bv_and (bv_lshr x v2) (P.mk_bv (size v1) (Z.shift_right mask (Z.to_int s))))
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.BitAnd), { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (mask); _ }; _ }, x); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (s); _ }; _ }) ->
@@ -2145,7 +2145,7 @@ module Make (P : PRIMS) = struct
         when ((Z.geq s (size v1))) ->
         (P.bv_zero (size v1))
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Shl), v, { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (s1); _ }; _ }); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (s2); _ }; _ }) ->
-        (bv_shl v (P.mk_bv (size v1) (Z.add s1 s2)))
+        (bv_shl v (P.mk_bv (size v1) (zmin (Z.add s1 s2) (size v1))))
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.LShr), x, { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (sr); _ }; _ }); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (sl); _ }; _ }) ->
         (let n = (size v1) in
         (if (Z.leq sl sr)
@@ -2177,7 +2177,7 @@ module Make (P : PRIMS) = struct
         when ((Z.geq s sz)) ->
         (bv_ashr v1 (P.mk_masked sz (Z.sub sz Z.one)))
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.AShr), v, { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (s1); _ }; _ }); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (s2); _ }; _ }) ->
-        (bv_ashr v (P.mk_bv sz (Z.add s1 s2)))
+        (bv_ashr v (P.mk_bv sz (zmin (Z.add s1 s2) (Z.sub sz Z.one))))
       | _ ->
         (P.node (Svalue_ast.Binop (Svalue_ast.Binop.AShr, v1, v2)) (P.ty v1))
       ))

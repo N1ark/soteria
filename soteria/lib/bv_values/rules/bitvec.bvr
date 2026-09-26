@@ -278,7 +278,7 @@ let[@spec BitOr (v1, v2) <| ty v1] bv_or (v1 : t) (v2 : t) : t =
   (* 0x0..0X..X | (0x0..0Y..Y << N) when N = |X..X| ==> 0x0..0Y..YX..X *)
   | ( BvExtend (false, nx, base),
       Shl (BvExtend (false, _, tail), BitVec shift) ) [@r extend_shl]
-    when shift = size base ->
+    when shift = size base && nx > 0 ->
       let tail_size = size tail in
       if nx = tail_size then bv_concat tail base
       else if nx > tail_size then
@@ -452,7 +452,7 @@ let[@spec Shl (v1, v2) <| ty v1] bv_shl (v1 : t) (v2 : t) : t =
   | _, 0 [@r zero] -> v1
   | _, BitVec s [@r big] when s >= size v1 -> bv_zero (size v1)
   | Shl (v, BitVec s1), BitVec s2 [@r shl] ->
-      bv_shl v (mk_bv (size v1) (s1 + s2))
+      bv_shl v (mk_bv (size v1) (zmin (s1 + s2) (size v1)))
   | LShr (x, BitVec sr), BitVec sl [@r lshr] ->
       let n = size v1 in
       if sl <= sr then
@@ -479,7 +479,7 @@ let[@spec LShr (v1, v2) <| ty v1] bv_lshr (v1 : t) (v2 : t) : t =
   | _, 0 [@r zero] -> v1
   | _, BitVec s [@r big] when s >= size v1 -> bv_zero (size v1)
   | LShr (v, BitVec s1), BitVec s2 [@r lshr] ->
-      bv_lshr v (mk_bv (size v1) (s1 + s2))
+      bv_lshr v (mk_bv (size v1) (zmin (s1 + s2) (size v1)))
   (* (x & mask) >> s = (x >> s) & (mask >> s) *)
   | BitAnd (x, BitVec mask) [@comm], BitVec s [@r and_mask] ->
       bv_and (bv_lshr x v2) (mk_bv (size v1) (mask asr s))
@@ -495,7 +495,8 @@ let[@spec AShr (v1, v2) <| ty v1] bv_ashr (v1 : t) (v2 : t) : t =
       mk_masked sz (signed_extract l 0 sz asr r)
   | _, 0 [@r zero] -> v1
   | _, BitVec s [@r big] when s >= sz -> bv_ashr v1 (mk_masked sz (sz - 1))
-  | AShr (v, BitVec s1), BitVec s2 [@r ashr] -> bv_ashr v (mk_bv sz (s1 + s2))
+  | AShr (v, BitVec s1), BitVec s2 [@r ashr] ->
+      bv_ashr v (mk_bv sz (zmin (s1 + s2) (sz - 1)))
   | _ [@r default] -> AShr (v1, v2) <| ty v1
 
 let[@spec Mul (checked, v1, v2) <| ty v1] bv_mul (checked : checked) (v1 : t)

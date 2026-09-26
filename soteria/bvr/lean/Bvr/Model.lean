@@ -2604,7 +2604,7 @@ def bv_or.r_masks (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 def bv_or.r_extend_shl (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | (Term.mk (Kind.unop (Unop.bvExtend false nx) base) _), (Term.mk (Kind.binop Binop.shl (Term.mk (Kind.unop (Unop.bvExtend false _) tail) _) (Term.mk (Kind.bitVec shift) _)) _) =>
-    (if (decide (shift = (size base)))
+    (if ((decide (shift = (size base))) && (decide (nx > (0 : Int))))
     then some ((let tail_size := (size tail);
                (if (decide (nx = tail_size))
                then (O.bv_concat tail base)
@@ -3008,7 +3008,7 @@ def bv_shl.r_big (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 def bv_shl.r_shl (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | (Term.mk (Kind.binop Binop.shl v (Term.mk (Kind.bitVec s1) _)) _), (Term.mk (Kind.bitVec s2) _) =>
-    some ((O.bv_shl v (mk_bv (size v1) (s1 + s2))))
+    some ((O.bv_shl v (mk_bv (size v1) (zmin (s1 + s2) (size v1)))))
     | _, _ => none)
 
 def bv_shl.r_lshr (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
@@ -3071,7 +3071,7 @@ def bv_lshr.r_big (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 def bv_lshr.r_lshr (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | (Term.mk (Kind.binop Binop.lShr v (Term.mk (Kind.bitVec s1) _)) _), (Term.mk (Kind.bitVec s2) _) =>
-    some ((O.bv_lshr v (mk_bv (size v1) (s1 + s2))))
+    some ((O.bv_lshr v (mk_bv (size v1) (zmin (s1 + s2) (size v1)))))
     | _, _ => none)
 
 def bv_lshr.r_and_mask (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
@@ -3129,7 +3129,7 @@ def bv_ashr.r_ashr (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   let sz := (size v1);
   (match v1, v2 with
     | (Term.mk (Kind.binop Binop.aShr v (Term.mk (Kind.bitVec s1) _)) _), (Term.mk (Kind.bitVec s2) _) =>
-    some ((O.bv_ashr v (mk_bv sz (s1 + s2))))
+    some ((O.bv_ashr v (mk_bv sz (zmin (s1 + s2) (sz - (1 : Int))))))
     | _, _ => none)
 
 def bv_ashr.r_default (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=

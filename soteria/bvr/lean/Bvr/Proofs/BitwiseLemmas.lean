@@ -1338,5 +1338,11 @@ theorem and_mask_and {FS : FloatSem} {c : Int} {l r A B : Term} {T1 T2 T : Ty} {
       rw [BitOp.and.eval_of w' (BitOp.and.eval_of w1 em el) (BitOp.and.eval_of w2 em er)]
       rw [BitVec.and_comm (L &&& R), and_distrib_self (BitVec.ofInt _ c) L R]
 
+theorem eval_ite_eq_some {FS ρ g a b t v} (e : eval FS ρ (.mk (.triop .ite g a b) t) = some v) :
+    ∃ c, eval FS ρ g = some (.bool c) ∧ eval FS ρ (if c then a else b) = some v := by
+  rw [eval_ite (eval_WT e)] at e
+  rcases eg : eval FS ρ g with _ | ⟨c | _ | _ | _ | _ | _⟩ <;> rw [eg] at e <;> (try simp at e)
+  exact ⟨c, rfl, by cases c <;> simpa using e⟩
+
 end BitwiseL
 end Bvr

@@ -349,7 +349,61 @@ theorem bv_and.r_of_bools.proof : bv_and.r_of_bools.Stmt := by
   cases x1 <;> cases x2 <;> rfl
 
 theorem bv_and.r_ites.proof : bv_and.r_ites.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [bv_and.r_ites] at h
+  split at h
+  case h_2 => simp at h
+  split at h
+  case isFalse => simp at h
+  simp only [Option.some.injEq] at h; subst h
+  rename_i b1 l1 z1 T3 T1 b2 l2 z2 T4 T2 hz
+  simp only [Bool.and_eq_true, decide_eq_true_eq] at hz
+  obtain ⟨rfl, rfl⟩ := hz
+  have chain : Refines FS (b_ite.spec (b_and.spec b1 b2) (bv_and.spec l1 l2)
+      (bv_zero (size (Term.mk (.triop .ite b1 l1 (.mk (.bitVec 0) T3)) T1))))
+      (O.b_ite (O.b_and b1 b2) (O.bv_and l1 l2)
+        (bv_zero (size (Term.mk (.triop .ite b1 l1 (.mk (.bitVec 0) T3)) T1)))) :=
+    Refines.trans (Refines.ite (hO.b_and _ _) (hO.bv_and _ _) Refines.refl
+      (t' := ty (O.bv_and l1 l2)) (fun w => by
+        have := ty_of_refines (hO.bv_and l1 l2) (WT_triop.1 w).2.2.1; simp [this]))
+      (hO.b_ite _ _ _)
+  refine Refines.trans ?_ chain
+  have key : (bv_and.spec (.mk (.triop .ite b1 l1 (.mk (.bitVec 0) T3)) T1)
+      (.mk (.triop .ite b2 l2 (.mk (.bitVec 0) T4)) T2)).WT → ∃ n : Int, 0 < n ∧
+      T1 = .bitVector n ∧ T2 = .bitVector n ∧ T3 = .bitVector n ∧ T4 = .bitVector n ∧
+      l1.ty = .bitVector n ∧ l2.ty = .bitVector n ∧ b1.ty = .bool ∧ b2.ty = .bool ∧
+      b1.WT ∧ b2.WT ∧ l1.WT ∧ l2.WT := by
+    intro w
+    obtain ⟨n, hn, h1, h2, -, w1, w2⟩ := (BitOp.and (FS := FS)).WT.1 w
+    obtain ⟨g1, r1, t1, wg1, wl1, -⟩ := WT_ite.1 w1
+    obtain ⟨g2, r2, t2, wg2, wl2, -⟩ := WT_ite.1 w2
+    simp only [Term.ty_mk] at h1 h2 r1 r2; subst h1 h2
+    exact ⟨n, hn, rfl, rfl, r1.trans t1.symm, r2.trans t2.symm, t1.symm, t2.symm, g1, g2, wg1, wg2,
+      wl1, wl2⟩
+  refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+  · obtain ⟨n, hn, rfl, rfl, rfl, rfl, hl1, hl2, g1, g2, wg1, wg2, wl1, wl2⟩ := key w
+    refine ⟨WT_ite.2 ⟨by simp [b_and.spec], by simp [bv_and.spec, hl1], by simp [b_ite.spec],
+      WT_and.2 ⟨g1, g2, rfl, wg1, wg2⟩,
+      (BitOp.and (FS := FS)).WT.2 ⟨n, hn, hl1, hl2, by simp [hl1], wl1, wl2⟩,
+      bv_zero_WT (by simp; omega)⟩, by simp [b_ite.spec, bv_and.spec, hl1]⟩
+  · obtain ⟨n, hn, rfl, rfl, rfl, rfl, hl1, hl2, g1, g2, wg1, wg2, wl1, wl2⟩ := key w
+    obtain ⟨k, x, y, ex, ey, rfl⟩ := BitOp.and.eval_eq_some e
+    obtain ⟨c1, ec1, ex'⟩ := eval_ite_eq_some ex
+    obtain ⟨c2, ec2, ey'⟩ := eval_ite_eq_some ey
+    obtain ⟨-, wc, wa, wz⟩ := WT_triop.1 w'
+    simp only [b_ite.spec] at w' ⊢
+    rw [eval_ite w', b_and.spec, eval_binop wc, ec1, ec2]
+    have hz : ∀ {T : Ty} {k : Nat} {x : BitVec k}, T = .bitVector n →
+        eval FS ρ (.mk (.bitVec 0) T) = some (.bv k x) → x = 0 := by
+      intro T k x hT e0; obtain ⟨rfl, rfl⟩ := lit_val e0 hT; simp
+    obtain ⟨z0, hz0⟩ := eval_bv ex rfl
+    obtain ⟨rfl, rfl⟩ := Val.bv_inj hz0
+    cases c1 <;> cases c2 <;> simp only [evBinop, pand, ↓reduceIte, Bool.false_eq_true] at ex' ey' ⊢
+    · rw [hz rfl ex', eval_bv_zero (by simp; omega)]; simp
+    · rw [hz rfl ex', eval_bv_zero (by simp; omega)]; simp
+    · rw [hz rfl ey', eval_bv_zero (by simp; omega)]; simp
+    · simp only [bv_and.spec] at wa ⊢
+      rw [BitOp.and.eval_of wa ex' ey']
 
 theorem bv_and.r_default.proof : bv_and.r_default.Stmt := by
   intro FS O hO v1 v2 res h

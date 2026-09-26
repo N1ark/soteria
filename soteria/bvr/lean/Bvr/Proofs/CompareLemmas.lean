@@ -969,5 +969,30 @@ theorem ite_inv {FS ρ g a b t v} (h : eval FS ρ (.mk (.triop .ite g a b) t) = 
   · exact Or.inr ⟨‹_›, h⟩
   · simp at h
 
+@[simp] theorem bvz_zero {n : Nat} (s : Bool) : bvz s (0 : BitVec n) = 0 := by
+  cases s <;> simp [bvz]
+
+theorem eval_val_inj {FS ρ t n m} {x : BitVec n} {y : BitVec m}
+    (h1 : eval FS ρ t = some (.bv n x)) (h2 : eval FS ρ t = some (.bv m y)) :
+    n = m ∧ HEq x y := by
+  rw [h1] at h2; simpa using h2
+
+theorem eval_val_eq {FS ρ t n} {x y : BitVec n}
+    (h1 : eval FS ρ t = some (.bv n x)) (h2 : eval FS ρ t = some (.bv n y)) : x = y := by
+  rw [h1] at h2; simpa using h2
+
+theorem TB_add_inv {c a b t n} (h : TB (.mk (.binop (.add c) a b) t) n) : 0 < n ∧ TB a n ∧ TB b n :=
+  TB_arith_inv (op := .add c) trivial h
+theorem TB_sub_inv {c a b t n} (h : TB (.mk (.binop (.sub c) a b) t) n) : 0 < n ∧ TB a n ∧ TB b n :=
+  TB_arith_inv (op := .sub c) trivial h
+theorem TB_mul_inv {c a b t n} (h : TB (.mk (.binop (.mul c) a b) t) n) : 0 < n ∧ TB a n ∧ TB b n :=
+  TB_arith_inv (op := .mul c) trivial h
+theorem TB_div_inv {s a b t n} (h : TB (.mk (.binop (.div s) a b) t) n) : 0 < n ∧ TB a n ∧ TB b n :=
+  TB_arith_inv (op := .div s) trivial h
+
+/-- Rewrites the size of a term of known width. -/
+macro "rsz " h:term : tactic =>
+  `(tactic| ((try rw [TB_size $h]); (try rw [TB_mk_size $h]); (try rw [TB_sz $h])))
+
 end CompareL
 end Bvr

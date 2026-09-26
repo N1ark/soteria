@@ -75,10 +75,50 @@ theorem bv_lt.r_add_const.proof : bv_lt.r_add_const.Stmt := by
   sorry
 
 theorem bv_lt.r_self_add_r.proof : bv_lt.r_self_add_r.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_lt.r_self_add_r] at h
+  replace h := orElse_eq_some h
+  rcases h with h | h <;> split at h <;> (try split at h) <;> simp at h <;>
+    rename_i hc <;> simp [equal] at hc <;> obtain ⟨rfl, hc⟩ := hc <;> subst h
+  · refine cmp_refines_lt (fun N hN h1 h2 => by
+        rsz h1; exact TBool_O_lt hO hN (TB_zero hN) (TB_add_inv h2).2.2)
+      (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+    subst hn
+    obtain ⟨xa, xb, ea, eb, hy, -⟩ := eval_add_inv s hc e2
+    cases eval_val_eq e1 ea
+    rsz h1; rw [eval_O_lt hO hN (TB_zero hN) (TB_add_inv h2).2.2 (eval_zero hn0) eb, hy, bvz_zero]
+    simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
+  · refine cmp_refines_lt (fun N hN h1 h2 => by
+        rsz h1; exact TBool_O_lt hO hN (TB_zero hN) (TB_add_inv h2).2.1)
+      (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+    subst hn
+    obtain ⟨xa, xb, ea, eb, hy, -⟩ := eval_add_inv s hc e2
+    cases eval_val_eq e1 eb
+    rsz h1; rw [eval_O_lt hO hN (TB_zero hN) (TB_add_inv h2).2.1 (eval_zero hn0) ea, hy, bvz_zero]
+    simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
 theorem bv_lt.r_self_add_l.proof : bv_lt.r_self_add_l.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_lt.r_self_add_l] at h
+  replace h := orElse_eq_some h
+  rcases h with h | h <;> split at h <;> (try split at h) <;> simp at h <;>
+    rename_i hc <;> simp [equal] at hc <;> obtain ⟨rfl, hc⟩ := hc <;> subst h
+  · refine cmp_refines_lt (fun N hN h1 h2 => by
+        rsz h1; exact TBool_O_lt hO hN (TB_add_inv h1).2.2 (TB_zero hN))
+      (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+    subst hn
+    obtain ⟨xa, xb, ea, eb, hy, -⟩ := eval_add_inv s hc e1
+    cases eval_val_eq e2 ea
+    rsz h1; rw [eval_O_lt hO hN (TB_add_inv h1).2.2 (TB_zero hN) eb (eval_zero hn0), hy, bvz_zero]
+    simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
+  · refine cmp_refines_lt (fun N hN h1 h2 => by
+        rsz h1; exact TBool_O_lt hO hN (TB_add_inv h1).2.1 (TB_zero hN))
+      (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+    subst hn
+    obtain ⟨xa, xb, ea, eb, hy, -⟩ := eval_add_inv s hc e1
+    cases eval_val_eq e2 eb
+    rsz h1; rw [eval_O_lt hO hN (TB_add_inv h1).2.1 (TB_zero hN) ea (eval_zero hn0), hy, bvz_zero]
+    simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
 theorem bv_lt.r_add_add.proof : bv_lt.r_add_add.Stmt := by
   sorry
@@ -288,10 +328,50 @@ theorem bv_leq.r_add_add.proof : bv_leq.r_add_add.Stmt := by
   sorry
 
 theorem bv_leq.r_self_add_r.proof : bv_leq.r_self_add_r.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_leq.r_self_add_r] at h
+  replace h := orElse_eq_some h
+  rcases h with h | h <;> split at h <;> (try split at h) <;> simp at h <;>
+    rename_i hc <;> simp [equal] at hc <;> obtain ⟨rfl, hc⟩ := hc <;> subst h
+  · refine cmp_refines_leq (fun N hN h1 h2 => by
+        rsz h1; exact TBool_O_leq hO hN (TB_zero hN) (TB_add_inv h2).2.2)
+      (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+    subst hn
+    obtain ⟨xa, xb, ea, eb, hy, -⟩ := eval_add_inv s hc e2
+    cases eval_val_eq e1 ea
+    rsz h1; rw [eval_O_leq hO hN (TB_zero hN) (TB_add_inv h2).2.2 (eval_zero hn0) eb, hy, bvz_zero]
+    simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
+  · refine cmp_refines_leq (fun N hN h1 h2 => by
+        rsz h1; exact TBool_O_leq hO hN (TB_zero hN) (TB_add_inv h2).2.1)
+      (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+    subst hn
+    obtain ⟨xa, xb, ea, eb, hy, -⟩ := eval_add_inv s hc e2
+    cases eval_val_eq e1 eb
+    rsz h1; rw [eval_O_leq hO hN (TB_zero hN) (TB_add_inv h2).2.1 (eval_zero hn0) ea, hy, bvz_zero]
+    simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
 theorem bv_leq.r_self_add_l.proof : bv_leq.r_self_add_l.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_leq.r_self_add_l] at h
+  replace h := orElse_eq_some h
+  rcases h with h | h <;> split at h <;> (try split at h) <;> simp at h <;>
+    rename_i hc <;> simp [equal] at hc <;> obtain ⟨rfl, hc⟩ := hc <;> subst h
+  · refine cmp_refines_leq (fun N hN h1 h2 => by
+        rsz h1; exact TBool_O_leq hO hN (TB_add_inv h1).2.2 (TB_zero hN))
+      (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+    subst hn
+    obtain ⟨xa, xb, ea, eb, hy, -⟩ := eval_add_inv s hc e1
+    cases eval_val_eq e2 ea
+    rsz h1; rw [eval_O_leq hO hN (TB_add_inv h1).2.2 (TB_zero hN) eb (eval_zero hn0), hy, bvz_zero]
+    simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
+  · refine cmp_refines_leq (fun N hN h1 h2 => by
+        rsz h1; exact TBool_O_leq hO hN (TB_add_inv h1).2.1 (TB_zero hN))
+      (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+    subst hn
+    obtain ⟨xa, xb, ea, eb, hy, -⟩ := eval_add_inv s hc e1
+    cases eval_val_eq e2 eb
+    rsz h1; rw [eval_O_leq hO hN (TB_add_inv h1).2.1 (TB_zero hN) ea (eval_zero hn0), hy, bvz_zero]
+    simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
 theorem bv_leq.r_min_l.proof : bv_leq.r_min_l.Stmt := by
   intro FS O hO s v1 v2 res h

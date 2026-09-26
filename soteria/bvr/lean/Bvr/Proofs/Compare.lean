@@ -648,10 +648,18 @@ theorem bv_lt.r_ub_l.proof : bv_lt.r_ub_l.Stmt := by
   sorry
 
 theorem bv_lt.r_to_unsigned_l.proof : bv_lt.r_to_unsigned_l.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_lt.r_to_unsigned_l] at h
+  split at h <;> (try split at h) <;> simp at h
+  rename_i hc; simp at hc; obtain ⟨rfl, -⟩ := hc; subst h
+  exact signed_to_unsigned_left hO false _ _ v2
 
 theorem bv_lt.r_to_unsigned_r.proof : bv_lt.r_to_unsigned_r.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_lt.r_to_unsigned_r] at h
+  split at h <;> (try split at h) <;> simp at h
+  rename_i hc; simp at hc; obtain ⟨rfl, -⟩ := hc; subst h
+  exact signed_to_unsigned_right hO false _ _ v1
 
 theorem bv_lt.r_default.proof : bv_lt.r_default.Stmt := by
   intro FS O hO s v1 v2 res h
@@ -1248,10 +1256,18 @@ theorem bv_leq.r_ub_l.proof : bv_leq.r_ub_l.Stmt := by
   sorry
 
 theorem bv_leq.r_to_unsigned_l.proof : bv_leq.r_to_unsigned_l.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_leq.r_to_unsigned_l] at h
+  split at h <;> (try split at h) <;> simp at h
+  rename_i hc; simp at hc; obtain ⟨rfl, -⟩ := hc; subst h
+  exact signed_to_unsigned_left hO true _ _ v2
 
 theorem bv_leq.r_to_unsigned_r.proof : bv_leq.r_to_unsigned_r.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_leq.r_to_unsigned_r] at h
+  split at h <;> (try split at h) <;> simp at h
+  rename_i hc; simp at hc; obtain ⟨rfl, -⟩ := hc; subst h
+  exact signed_to_unsigned_right hO true _ _ v1
 
 theorem bv_leq.r_default.proof : bv_leq.r_default.Stmt := by
   intro FS O hO s v1 v2 res h

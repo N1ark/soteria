@@ -1013,5 +1013,95 @@ theorem Refines.ite_split {FS : FloatSem} {spec a b : Term} {c : Prop} [Decidabl
 theorem max_for_false (n : Nat) : max_for false n = 2 ^ n - 1 := by rw [max_for_eq]; simp
 theorem min_for_false (n : Nat) : min_for false n = 0 := by simp [min_for]
 
+/-! ## Signed comparisons with an unsigned-checked operand -/
+
+theorem TBool_O_cmp {FS : FloatSem} {O : Ops} (hO : O.Sound FS) (le s : Bool) {a b N} (hN : 0 < N) (ha : TB a N)
+    (hb : TB b N) : TBool (if le then O.bv_leq s a b else O.bv_lt s a b) := by
+  cases le
+  · exact TBool_O_lt hO hN ha hb
+  · exact TBool_O_leq hO hN ha hb
+
+theorem eval_O_cmp {FS : FloatSem} {O : Ops} {ρ : Env} (hO : O.Sound FS) (le s : Bool) {a b N n} {x y : BitVec n}
+    (hN : 0 < N) (ha : TB a N) (hb : TB b N)
+    (ea : eval FS ρ a = some (.bv n x)) (eb : eval FS ρ b = some (.bv n y)) :
+    eval FS ρ (if le then O.bv_leq s a b else O.bv_lt s a b) = some (.bool (cmpv le s x y)) := by
+  cases le
+  · simp only [Bool.false_eq_true, ite_false, cmpv]; exact eval_O_lt hO hN ha hb ea eb
+  · simp only [ite_true, cmpv]; exact eval_O_leq hO hN ha hb ea eb
+
+theorem TB_sign_bit {N : Int} (hN : 0 < N) : TB (mk_bv N (zshiftl 1 (N - 1))) N := TB_masked hN
+
+theorem signed_to_unsigned_left {FS : FloatSem} {O : Ops} (hO : O.Sound FS) (le : Bool) (c : Int) (T : Ty)
+    (v2 : Term) :
+    Refines FS (.mk (.binop (cmpOp le true) (.mk (.bitVec c) T) v2) .bool)
+      (signed_to_unsigned_cmp O le true c (.mk (.bitVec c) T) v2) := by
+  refine cmp_refines (fun N hN h1 h2 => ?_) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+  · simp only [signed_to_unsigned_cmp, TB_size h1, ite_true]
+    have hc := TBool_O_cmp hO le false hN h1 h2
+    split
+    · exact TBool_O_and hO hc (TBool_O_lt hO hN h2 (TB_sign_bit hN))
+    · exact TBool_O_or hO (TBool_O_lt hO hN h2 (TB_sign_bit hN)) hc
+  · subst hn
+    simp only [signed_to_unsigned_cmp, TB_size h1, ite_true]
+    have hsb := TB_sign_bit hN
+    have esb : eval FS ρ (mk_bv (↑n) (zshiftl 1 (↑n - 1))) =
+        some (.bv n (BitVec.ofInt n (2 ^ (n - 1)))) := eval_sign_bit hn0
+    have ein := eval_O_lt (s := false) hO hN h2 hsb e2 esb
+    rw [bvz_sign_bit hn0] at ein
+    have ecmp := eval_O_cmp hO le false hN h1 h2 e1 e2
+    have hcv := lit_val' true h1 e1
+    have hx := bvz_true_cases hn0 x; have hy := bvz_true_cases hn0 y
+    have := two_pow_succ_pred (N := n) hn0
+    have := bvz_false_range x; have := bvz_false_range y
+    by_cases hnn : bv_to_z true ↑n c ≥ 0
+    · simp only [hnn, decide_true, ite_true]
+      refine eval_O_and hO (TBool_O_cmp hO le false hN h1 h2) (TBool_O_lt hO hN h2 hsb) _ ?_
+      rw [ecmp, ein, pand_bool]
+      cases le <;> simp only [cmpv, Bool.false_eq_true, ite_false, ite_true, Option.some.injEq,
+        Val.bool.injEq] <;> rw [Bool.eq_iff_iff] <;>
+        simp only [Bool.and_eq_true, Bool.or_eq_true, decide_eq_true_eq] <;> omega
+    · simp only [hnn, decide_false, Bool.false_eq_true, ite_false]
+      refine eval_O_or hO (TBool_O_lt hO hN h2 hsb) (TBool_O_cmp hO le false hN h1 h2) _ ?_
+      rw [ecmp, ein, por_bool]
+      cases le <;> simp only [cmpv, Bool.false_eq_true, ite_false, ite_true, Option.some.injEq,
+        Val.bool.injEq] <;> rw [Bool.eq_iff_iff] <;>
+        simp only [Bool.and_eq_true, Bool.or_eq_true, decide_eq_true_eq] <;> omega
+
+theorem signed_to_unsigned_right {FS : FloatSem} {O : Ops} (hO : O.Sound FS) (le : Bool) (c : Int) (T : Ty)
+    (v2 : Term) :
+    Refines FS (.mk (.binop (cmpOp le true) v2 (.mk (.bitVec c) T)) .bool)
+      (signed_to_unsigned_cmp O le false c v2 (.mk (.bitVec c) T)) := by
+  refine cmp_refines (fun N hN h1 h2 => ?_) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+  · simp only [signed_to_unsigned_cmp, TB_size h1, Bool.false_eq_true, ite_false]
+    have hc := TBool_O_cmp hO le false hN h1 h2
+    split
+    · exact TBool_O_or hO hc (TBool_O_leq hO hN (TB_sign_bit hN) h1)
+    · exact TBool_O_and hO (TBool_O_leq hO hN (TB_sign_bit hN) h1) hc
+  · subst hn
+    simp only [signed_to_unsigned_cmp, TB_size h1, Bool.false_eq_true, ite_false]
+    have hsb := TB_sign_bit hN
+    have esb : eval FS ρ (mk_bv (↑n) (zshiftl 1 (↑n - 1))) =
+        some (.bv n (BitVec.ofInt n (2 ^ (n - 1)))) := eval_sign_bit hn0
+    have ein := eval_O_leq (s := false) hO hN hsb h1 esb e1
+    rw [bvz_sign_bit hn0] at ein
+    have ecmp := eval_O_cmp hO le false hN h1 h2 e1 e2
+    have hcv := lit_val' true h2 e2
+    have hx := bvz_true_cases hn0 x; have hy := bvz_true_cases hn0 y
+    have := two_pow_succ_pred (N := n) hn0
+    have := bvz_false_range x; have := bvz_false_range y
+    by_cases hnn : bv_to_z true ↑n c ≥ 0
+    · simp only [hnn, decide_true, ite_true]
+      refine eval_O_or hO (TBool_O_cmp hO le false hN h1 h2) (TBool_O_leq hO hN hsb h1) _ ?_
+      rw [ecmp, ein, por_bool]
+      cases le <;> simp only [cmpv, Bool.false_eq_true, ite_false, ite_true, Option.some.injEq,
+        Val.bool.injEq] <;> rw [Bool.eq_iff_iff] <;>
+        simp only [Bool.and_eq_true, Bool.or_eq_true, decide_eq_true_eq] <;> omega
+    · simp only [hnn, decide_false, Bool.false_eq_true, ite_false]
+      refine eval_O_and hO (TBool_O_leq hO hN hsb h1) (TBool_O_cmp hO le false hN h1 h2) _ ?_
+      rw [ein, ecmp, pand_bool]
+      cases le <;> simp only [cmpv, Bool.false_eq_true, ite_false, ite_true, Option.some.injEq,
+        Val.bool.injEq] <;> rw [Bool.eq_iff_iff] <;>
+        simp only [Bool.and_eq_true, Bool.or_eq_true, decide_eq_true_eq] <;> omega
+
 end CompareL
 end Bvr

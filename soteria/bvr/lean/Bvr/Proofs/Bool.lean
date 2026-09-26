@@ -779,6 +779,45 @@ theorem b_distinct.r_small.proof : b_distinct.r_small.Stmt := by
     · simp at e
 
 theorem b_distinct.r_default.proof : b_distinct.r_default.Stmt := by
-  sorry
+  intro FS O hO l res h
+  simp only [b_distinct.r_default, Option.some.injEq] at h
+  subst h
+  cases hc : distinct_check l with
+  | some b =>
+    cases b
+    · simp only [firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse, Option.getD_some]
+      refine Refines.intro (fun w => by simp [b_distinct.spec]) (fun ρ v w _ e => ?_)
+      obtain ⟨-, -, rfl⟩ := eval_distinct_eq_some e
+      have := distinct_check_false hc
+      have : ¬ (l.map (evD FS ρ)).Nodup := fun h => this (List.Pairwise.of_map _ (fun a b hne he => hne (he ▸ rfl)) h)
+      simp [this]
+    · simp only [firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse, Option.getD_some]
+      refine Refines.intro (fun w => by simp [b_distinct.spec]) (fun ρ v w _ e => ?_)
+      obtain ⟨⟨E, hE⟩, hall, rfl⟩ := eval_distinct_eq_some e
+      have hp := distinct_check_true hc
+      have : (l.map (evD FS ρ)).Nodup := by
+        refine List.pairwise_map.2 (hp.imp_of_mem fun {a b} ha hb hs heq => ?_)
+        obtain ⟨u, hu⟩ := hall a ha
+        obtain ⟨u', hu'⟩ := hall b hb
+        have ea : eval FS ρ a = some u := by rw [eval_eq_ev (hE a ha).2, hu]
+        have eb : eval FS ρ b = some u := by
+          rw [eval_eq_ev (hE b hb).2, hu']
+          simp only [evD, hu, hu', Option.getD_some] at heq; rw [heq]
+        exact sure_neq_sound hs ((hE a ha).1.trans (hE b hb).1.symm) ea eb
+      simp [this]
+  | none =>
+    simp only [firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse, Option.getD_some]
+    have hp := hO.orc.sort_by_tag l
+    refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
+    · simp only [b_distinct.spec, Term.WT] at w
+      obtain ⟨-, E, wl⟩ := w
+      refine ⟨?_, rfl⟩
+      simp only [Term.WT]
+      exact ⟨by simp, E, WTList_iff.2 fun t ht => WTList_iff.1 wl t (hp.mem_iff.1 ht)⟩
+    · obtain ⟨-, hall, rfl⟩ := eval_distinct_eq_some e
+      rw [eval_eq_ev w']
+      simp only [ev]
+      rw [evList_eq_some.2 ⟨fun t ht => hall t (hp.mem_iff.1 ht), rfl⟩]
+      simp [(hp.map (evD FS ρ)).nodup_iff]
 
 end Bvr

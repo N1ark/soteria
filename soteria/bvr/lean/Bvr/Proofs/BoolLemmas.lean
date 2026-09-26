@@ -1183,5 +1183,108 @@ theorem Refines.or_lt_leq {FS : FloatSem} {s : Bool} {a b : Term} {T1 T2 : Ty} :
     simp [cmpZ] at hv hv'
     omega
 
+theorem WTList_iff {e : Ty} : ∀ {l : List Term}, Term.WTList e l ↔ ∀ t ∈ l, t.ty = e ∧ t.WT
+  | [] => by simp [Term.WTList]
+  | t :: ts => by simp [Term.WTList, WTList_iff (l := ts), and_assoc]
+
+/-- The value of a term that evaluates (a default otherwise). -/
+noncomputable def evD (FS : FloatSem) (ρ : Env) (t : Term) : Val := (ev FS ρ t).getD (.bool false)
+
+theorem evList_eq_some {FS : FloatSem} {ρ : Env} : ∀ {l : List Term} {vs : List Val},
+    evList FS ρ l = some vs ↔ (∀ t ∈ l, ∃ v, ev FS ρ t = some v) ∧ vs = l.map (evD FS ρ)
+  | [], vs => by simp [evList]
+  | t :: ts, vs => by
+    simp only [evList]
+    constructor
+    · intro h
+      split at h
+      · rename_i v vs' hv hvs
+        cases h
+        obtain ⟨h1, h2⟩ := evList_eq_some.1 hvs
+        refine ⟨?_, ?_⟩
+        · intro t' ht'
+          rcases List.mem_cons.1 ht' with rfl | ht'
+          · exact ⟨v, hv⟩
+          · exact h1 t' ht'
+        · simp [h2, evD, hv]
+      · cases h
+    · rintro ⟨h1, rfl⟩
+      obtain ⟨v, hv⟩ := h1 t (by simp)
+      have := evList_eq_some (l := ts) (vs := ts.map (evD FS ρ)) |>.2
+        ⟨fun t' ht' => h1 t' (by simp [ht']), rfl⟩
+      rw [hv, this]; simp [evD, hv]
+
+theorem distinct_check_one_true {a : Term} : ∀ {rest : List Term},
+    distinct_check_one a rest = some true → ∀ b ∈ rest, sure_neq a b = true
+  | [], _ => by simp
+  | b :: rest, h => by
+    rw [distinct_check_one] at h
+    simp only [firstSome, Option.getD_some, HOrElse.hOrElse, OrElse.orElse, Option.orElse] at h
+    split at h
+    · simp at h
+    · split at h
+      · rename_i hs
+        intro c hc
+        rcases List.mem_cons.1 hc with rfl | hc
+        · exact hs
+        · exact distinct_check_one_true h c hc
+      · simp at h
+
+theorem distinct_check_one_false {a : Term} : ∀ {rest : List Term},
+    distinct_check_one a rest = some false → a ∈ rest
+  | [], h => by rw [distinct_check_one] at h; simp [firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse] at h
+  | b :: rest, h => by
+    rw [distinct_check_one] at h
+    simp only [firstSome, Option.getD_some, HOrElse.hOrElse, OrElse.orElse, Option.orElse] at h
+    split at h
+    · rename_i he; simp [equal_iff] at he; simp [he]
+    · split at h
+      · exact List.mem_cons_of_mem _ (distinct_check_one_false h)
+      · simp at h
+
+theorem distinct_check_true : ∀ {l : List Term},
+    distinct_check l = some true → l.Pairwise (fun a b => sure_neq a b = true)
+  | [], _ => by simp
+  | a :: rest, h => by
+    rw [distinct_check] at h
+    simp only [firstSome, Option.getD_some, HOrElse.hOrElse, OrElse.orElse, Option.orElse] at h
+    cases h1 : distinct_check_one a rest with
+    | none => simp [h1] at h
+    | some b =>
+      cases b
+      · simp [h1] at h
+      · simp only [h1] at h
+        exact List.Pairwise.cons (distinct_check_one_true h1) (distinct_check_true h)
+
+theorem distinct_check_false : ∀ {l : List Term}, distinct_check l = some false → ¬ l.Nodup
+  | [], h => by rw [distinct_check] at h; simp [firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse] at h
+  | a :: rest, h => by
+    rw [distinct_check] at h
+    simp only [firstSome, Option.getD_some, HOrElse.hOrElse, OrElse.orElse, Option.orElse] at h
+    cases h1 : distinct_check_one a rest with
+    | none => simp [h1] at h
+    | some b =>
+      cases b
+      · have := distinct_check_one_false h1
+        simp [this]
+      · simp only [h1] at h
+        have := distinct_check_false h
+        simp [this]
+
+theorem eval_distinct_eq_some {FS ρ l v} (e : eval FS ρ (b_distinct.spec l) = some v) :
+    (∃ E, ∀ t ∈ l, t.ty = E ∧ t.WT) ∧ (∀ t ∈ l, ∃ v, ev FS ρ t = some v) ∧
+      v = .bool (decide (l.map (evD FS ρ)).Nodup) := by
+  have w := eval_WT e
+  rw [eval_eq_ev w] at e
+  simp only [b_distinct.spec, Term.WT] at w
+  obtain ⟨-, E, wl⟩ := w
+  simp only [b_distinct.spec, ev] at e
+  cases hv : evList FS ρ l with
+  | none => simp [hv] at e
+  | some vs =>
+    obtain ⟨hall, rfl⟩ := evList_eq_some.1 hv
+    simp [hv] at e
+    exact ⟨⟨E, WTList_iff.1 wl⟩, hall, e.symm⟩
+
 end BoolL
 end Bvr

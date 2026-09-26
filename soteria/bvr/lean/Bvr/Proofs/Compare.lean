@@ -642,10 +642,24 @@ theorem bv_lt.r_sub_const2.proof : bv_lt.r_sub_const2.Stmt := by
     simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
 theorem bv_lt.r_ub_r.proof : bv_lt.r_ub_r.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_lt.r_ub_r] at h
+  split at h <;> (try split at h) <;> simp at h
+  rename_i hc; simp at hc; obtain ⟨rfl, hc⟩ := hc; subst h
+  refine cmp_refines_lt (fun _ _ _ _ => TBool_true) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+  have := le_unsigned_ub h1 e1; have := lit_val' false h2 e2
+  simp only [bv_to_z_false] at *
+  simp; omega
 
 theorem bv_lt.r_ub_l.proof : bv_lt.r_ub_l.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_lt.r_ub_l] at h
+  split at h <;> (try split at h) <;> simp at h
+  rename_i hc; simp at hc; obtain ⟨rfl, hc⟩ := hc; subst h
+  refine cmp_refines_lt (fun _ _ _ _ => TBool_false) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+  have := le_unsigned_ub h2 e2; have := lit_val' false h1 e1
+  simp only [bv_to_z_false] at *
+  simp; omega
 
 theorem bv_lt.r_to_unsigned_l.proof : bv_lt.r_to_unsigned_l.Stmt := by
   intro FS O hO s v1 v2 res h
@@ -1250,10 +1264,24 @@ theorem bv_leq.r_sub_const2.proof : bv_leq.r_sub_const2.Stmt := by
     simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
 theorem bv_leq.r_ub_r.proof : bv_leq.r_ub_r.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_leq.r_ub_r] at h
+  split at h <;> (try split at h) <;> simp at h
+  rename_i hc; simp at hc; obtain ⟨rfl, hc⟩ := hc; subst h
+  refine cmp_refines_leq (fun _ _ _ _ => TBool_true) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+  have := le_unsigned_ub h1 e1; have := lit_val' false h2 e2
+  simp only [bv_to_z_false] at *
+  simp; omega
 
 theorem bv_leq.r_ub_l.proof : bv_leq.r_ub_l.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_leq.r_ub_l] at h
+  split at h <;> (try split at h) <;> simp at h
+  rename_i hc; simp at hc; obtain ⟨rfl, hc⟩ := hc; subst h
+  refine cmp_refines_leq (fun _ _ _ _ => TBool_false) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+  have := le_unsigned_ub h2 e2; have := lit_val' false h1 e1
+  simp only [bv_to_z_false] at *
+  simp; omega
 
 theorem bv_leq.r_to_unsigned_l.proof : bv_leq.r_to_unsigned_l.Stmt := by
   intro FS O hO s v1 v2 res h

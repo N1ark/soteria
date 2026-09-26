@@ -1103,5 +1103,133 @@ theorem signed_to_unsigned_right {FS : FloatSem} {O : Ops} (hO : O.Sound FS) (le
         Val.bool.injEq] <;> rw [Bool.eq_iff_iff] <;>
         simp only [Bool.and_eq_true, Bool.or_eq_true, decide_eq_true_eq] <;> omega
 
+/-! ## Upper bounds of unsigned values -/
+
+@[simp] theorem none_orElse' {α} (b : Option α) : (none <|> b) = b := rfl
+@[simp] theorem some_orElse' {α} (a : α) (b : Option α) : (some a <|> b) = some a := rfl
+
+theorem two_pow_mono {a b : Nat} (h : a ≤ b) : (2 : Int) ^ a ≤ 2 ^ b := by
+  exact_mod_cast Nat.pow_le_pow_right (by omega) h
+
+theorem toNat_lt_pow_of {n : Nat} {x : BitVec n} {k : Int} (h : (n : Int) ≤ k) :
+    (x.toNat : Int) < 2 ^ k.toNat := by
+  have := toNat_lt' x
+  have : (2 : Int) ^ n ≤ 2 ^ k.toNat := two_pow_mono (by omega)
+  omega
+
+theorem eval_bitAnd_inv {FS ρ a b t n} {x : BitVec n}
+    (h : eval FS ρ (.mk (.binop .bitAnd a b) t) = some (.bv n x)) :
+    ∃ xa xb, eval FS ρ a = some (.bv n xa) ∧ eval FS ρ b = some (.bv n xb) ∧ x = xa &&& xb := by
+  rw [eval_binop (eval_WT h)] at h; simp only [evBinop] at h
+  obtain ⟨m, xa, xb, ea, eb, e⟩ := bvBin_eq_some.1 h
+  simp at e; obtain ⟨rfl, e⟩ := e; cases e
+  exact ⟨xa, xb, ea, eb, rfl⟩
+
+theorem eval_zext_inv {FS ρ k a t n} {x : BitVec n}
+    (h : eval FS ρ (.mk (.unop (.bvExtend false k) a) t) = some (.bv n x)) :
+    ∃ m xa, eval FS ρ a = some (.bv m xa) ∧ x.toNat = xa.toNat := by
+  rw [eval_unop (eval_WT h)] at h
+  revert h
+  rcases eval FS ρ a with _ | ⟨_ | ⟨m, xa⟩ | _ | _ | _ | _⟩ <;> simp [evUnop]
+  intro h1 h2; subst h1
+  refine ⟨m, xa, by simp, ?_⟩
+  cases eq_of_heq h2
+  simp only [BitVec.toNat_setWidth]
+  exact Nat.mod_eq_of_lt (Nat.lt_of_lt_of_le xa.isLt (Nat.pow_le_pow_right (by omega) (by omega)))
+
+theorem TB_zext_inv {k a t n} (h : TB (.mk (.unop (.bvExtend false k) a) t) n) :
+    ∃ m, TB a m := by
+  have ⟨w1, w2⟩ := WT_unop.1 h.1
+  simp only [Unop.WT] at w1
+  obtain ⟨m, _, ha, _⟩ := w1
+  exact ⟨m, w2, ha⟩
+
+theorem msb_bound_aux {FS : FloatSem} {ρ : Env} (K : Nat) : ∀ (v : Term), sizeOf v < K →
+    ∀ {n : Nat} {x : BitVec n} {N : Int}, TB v N → eval FS ρ v = some (.bv n x) →
+    (x.toNat : Int) < 2 ^ (msb_of v + 1).toNat := by
+  induction K with
+  | zero => intro v h; omega
+  | succ K ih =>
+  intro v hK n x N hv ev
+  have hw := eval_bv_width hv.2 ev
+  have hdef : (x.toNat : Int) < 2 ^ (size v - 1 + 1).toNat := by
+    rw [TB_size hv]; exact toNat_lt_pow_of (by omega)
+  rw [msb_of.eq_def]
+  rcases v with ⟨k, T⟩
+  cases k
+  all_goals try (simp only [firstSome]; exact hdef)
+  case bitVec z =>
+    obtain ⟨-, -, -, h0, h1, rfl, -⟩ := lit_val hv ev
+    by_cases hz : z > 0
+    · simp only [firstSome, hz, decide_true, ite_true, some_orElse', Option.getD_some]
+      have : (log2 z + 1).toNat = Nat.log2 z.toNat + 1 := by simp [log2] <;> omega
+      rw [this]
+      have := Nat.lt_log2_self (n := z.toNat)
+      simp only [BitVec.toNat_ofInt]
+      have e : z % ((2 ^ n : Nat) : Int) = z := Int.emod_eq_of_lt h0 (by push_cast; exact h1)
+      rw [e]
+      have : ((z.toNat : Nat) : Int) = z := by omega
+      rw [Int.toNat_of_nonneg h0]; rw [← this]; exact_mod_cast Nat.lt_log2_self
+    · simp only [firstSome, hz, decide_false, Bool.false_eq_true, ite_false]
+      by_cases hz0 : z = 0
+      · simp only [hz0, decide_true, ite_true, none_orElse', some_orElse',
+          Option.getD_some]
+        subst hz0; exact hdef
+      · simp only [hz0, decide_false, Bool.false_eq_true, ite_false, none_orElse']
+        exact hdef
+  case unop op a =>
+    cases op
+    all_goals try (simp only [firstSome]; exact hdef)
+    case bvExtend s k =>
+      cases s
+      · simp only [firstSome, none_orElse', some_orElse', Option.getD_some]
+        obtain ⟨m, xa, ea, hx⟩ := eval_zext_inv ev
+        obtain ⟨M, hM⟩ := TB_zext_inv hv
+        rw [hx]; exact ih a (by simp at hK ⊢; omega) hM ea
+      · simp only [firstSome]; exact hdef
+  case binop op a b =>
+    cases op
+    all_goals try (simp only [firstSome]; exact hdef)
+    case bitAnd =>
+      simp only [firstSome, none_orElse', some_orElse', Option.getD_some]
+      obtain ⟨xa, xb, ea, eb, rfl⟩ := eval_bitAnd_inv ev
+      obtain ⟨-, ha, hb⟩ := TB_arith_inv (op := .bitAnd) trivial hv
+      have b1 := ih a (by simp at hK ⊢; omega) ha ea
+      have b2 := ih b (by simp at hK ⊢; omega) hb eb
+      have l1 : (xa &&& xb).toNat ≤ xa.toNat := by rw [BitVec.toNat_and]; exact Nat.and_le_left
+      have l2 : (xa &&& xb).toNat ≤ xb.toNat := by rw [BitVec.toNat_and]; exact Nat.and_le_right
+      by_cases hm : msb_of a ≤ msb_of b <;> simp only [zmin, hm, decide_true, decide_false,
+        ite_true, Bool.false_eq_true, ite_false] <;> omega
+  case triop op a b c =>
+    cases op
+    all_goals try (simp only [firstSome]; exact hdef)
+    case ite =>
+      simp only [firstSome, none_orElse', some_orElse', Option.getD_some]
+      obtain ⟨-, hb, hc⟩ := TB_ite_inv hv
+      have m1 := two_pow_mono (a := (msb_of c + 1).toNat) (b := (msb_of b + 1).toNat)
+      have m2 := two_pow_mono (a := (msb_of b + 1).toNat) (b := (msb_of c + 1).toNat)
+      rcases ite_inv ev with ⟨-, e⟩ | ⟨-, e⟩
+      · have := ih b (by simp at hK ⊢; omega) hb e
+        by_cases hm : msb_of b ≥ msb_of c <;> simp only [zmax, hm, decide_true, decide_false,
+          ite_true, Bool.false_eq_true, ite_false]
+        · exact this
+        · have := m2 (by omega); omega
+      · have := ih c (by simp at hK ⊢; omega) hc e
+        by_cases hm : msb_of b ≥ msb_of c <;> simp only [zmax, hm, decide_true, decide_false,
+          ite_true, Bool.false_eq_true, ite_false]
+        · have := m1 (by omega); omega
+        · exact this
+
+theorem msb_bound {FS : FloatSem} {ρ : Env} {v : Term} {n : Nat} {x : BitVec n} {N : Int}
+    (hv : TB v N) (ev : eval FS ρ v = some (.bv n x)) :
+    (x.toNat : Int) < 2 ^ (msb_of v + 1).toNat :=
+  msb_bound_aux (sizeOf v + 1) v (by omega) hv ev
+
+theorem le_unsigned_ub {FS : FloatSem} {ρ : Env} {v : Term} {n : Nat} {x : BitVec n} {N : Int}
+    (hv : TB v N) (ev : eval FS ρ v = some (.bv n x)) : bvz false x ≤ unsigned_ub v := by
+  have := msb_bound hv ev
+  simp only [bvz, Bool.false_eq_true, ite_false, unsigned_ub, zshiftl, Int.one_mul]
+  omega
+
 end CompareL
 end Bvr

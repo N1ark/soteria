@@ -714,14 +714,23 @@ theorem bv_sub.r_add_cancel_r.proof : bv_sub.r_add_cancel_r.Stmt := by
   obtain ⟨-, rfl⟩ := hx; obtain ⟨-, rfl⟩ := e
   rw [hL]; congr 2; grind
 
--- UNSOUND: the flags of the outer subtraction are kept, but the inner additions may wrap. Take
--- 8 bits, `checked = {signed := true, unsigned := false}`, v1 = Add (unchecked, l, r1),
--- v2 = Add (unchecked, l, r2), with l = 1, r1 = 127, r2 = 0xff (take `O` returning the raw spec
--- terms). Then l + r1 = 0x80 (-128) and l + r2 = 0, and -128 -s 0 = -128 has no signed overflow,
--- so the spec is `some 0x80`. The result is r1 -s r2 = 127 -s (-1), whose signed overflow makes it
--- poison.
 theorem bv_sub.r_add_add.proof : bv_sub.r_add_add.Stmt := by
-  sorry
+  intro FS O hO c v1 v2 res h
+  simp only [bv_sub.r_add_add] at h; split at h <;> simp [equal] at h; obtain ⟨rfl, rfl⟩ := h
+  rename_i ck1 l r1 T1 ck2 r2 T2
+  refine Refines.arith_intro (.sub c) (fun n wa wb hT => ?_) (fun n wa wb hT ρ x y v hx hy e => ?_)
+  all_goals obtain ⟨wl, wr1, rfl⟩ := BV_arith_inv (.add ck1) wa
+  all_goals obtain ⟨-, wr2, hT2⟩ := BV_arith_inv (.add ck2) wb
+  · exact BV_arith (.sub _) (hO.bv_sub unchecked r1 r2) wr1 wr2
+  rw [eval_arith (.add ck1) wl wr1 rfl] at hx
+  obtain ⟨L, R1, hL, hR1, hx⟩ := evBinop_inv (.inl (.add ck1)) wl wr1 hx
+  rw [eval_arith (.add ck2) wl wr2 hT2] at hy
+  obtain ⟨L', R2, hL', hR2, hy⟩ := evBinop_inv (.inl (.add ck2)) wl wr2 hy
+  rw [hL] at hL'; simp at hL'; subst hL'
+  refine O_eval (.sub _) (hO.bv_sub unchecked r1 r2) wr1 wr2 hR1 hR2 ?_
+  simp [evBinop, checkedOp, bvBin, unchecked] at hx hy e ⊢
+  obtain ⟨-, rfl⟩ := hx; obtain ⟨-, rfl⟩ := hy; obtain ⟨-, rfl⟩ := e
+  congr 1; grind
 
 theorem bv_sub.r_sub_sub.proof : bv_sub.r_sub_sub.Stmt := by
   intro FS O hO c v1 v2 res h
@@ -936,13 +945,50 @@ theorem bv_rem.r_one_r.proof : bv_rem.r_one_r.Stmt := by
     simp [evBinop, bvBin] at e; subst e
     congr 2
 
--- UNSOUND: `is_pow2 1` holds, and then the bit-width is `log2 1 = 0`, so the rule extracts the
--- empty range `0 .. -1`. Take 8 bits, `signed = false`, v1 a variable x = 5 and v2 the literal 1
--- (take `O` returning the raw spec terms). The spec `x %u 1` is well-typed and is `some 0`. The
--- result is `Extend (false, 8, Extract (0, -1, x))`, whose extraction is ill-typed, so the result
--- is not well-typed (and is poison). In `bv_rem.step`, `r_one_r` fires first on this input.
 theorem bv_rem.r_pow2.proof : bv_rem.r_pow2.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_rem.r_pow2] at h
+  split at h
+  case h_2 => simp at h
+  split at h
+  case isFalse => simp at h
+  simp only [Option.some.injEq] at h; subst h
+  rename_i r T hc
+  simp only [Bool.and_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true, decide_eq_true_eq] at hc
+  obtain ⟨rfl, hp, hr⟩ := hc
+  obtain ⟨hz, hl⟩ := is_pow2_eq hp
+  generalize hk : log2 r = k at hz hl
+  have hE := hO.bv_extract 0 (k - 1) v1
+  refine Refines.trans ?_ (hO.bv_extend _ _ _)
+  have key : ∀ n, BV v1 n → BV (.mk (.bitVec r) T) n → 1 ≤ k ∧ k < n := by
+    intro n wa wb
+    obtain ⟨-, -, z1⟩ := BV_lit wb
+    have e1 : ((2 ^ k.toNat : Nat) : Int) = (2 : Int) ^ k.toNat := by push_cast; rfl
+    have e2 : ((2 ^ n.toNat : Nat) : Int) = (2 : Int) ^ n.toNat := by push_cast; rfl
+    have h1 : 2 ^ k.toNat < 2 ^ n.toNat := by omega
+    have h2 := (Nat.pow_lt_pow_iff_right (by omega)).1 h1
+    have h3 : k.toNat ≠ 0 := by intro h0; rw [h0] at hz; simp at hz; omega
+    have := wa.2.2
+    omega
+  refine Refines.arith_intro (.rem false) (fun n wa wb hT => ?_)
+    (fun n wa wb hT ρ x y v hx hy e => ?_)
+  all_goals obtain ⟨k1, k2⟩ := key n wa wb
+  all_goals have wE := BV_extract hE wa (by omega) (by omega) (by omega)
+  · refine ⟨WT_extend.2 ⟨_, wE, by rw [size_BV wa]; omega, by rw [size_BV wE]⟩, ?_, wa.2.2⟩
+    simp only [bv_extend.spec, size_BV wE, size_BV wa, Term.ty_mk]; congr 1; omega
+  · have hX := hE.sem ρ _ (eval_extract_spec wa (by omega) (by omega) (by omega) hx)
+    rw [eval_extend wE (by rw [size_BV wa]; omega) hX]
+    rw [lit_eval_eq wb hy] at e
+    simp [evBinop, bvBin] at e; subst e
+    rw [size_BV wa]
+    congr 1; apply Val.bv_congr (by omega)
+    rw [BitVec.toNat_setWidth, BitVec.extractLsb'_toNat, BitVec.toNat_umod, hz,
+      ← natCast_two_pow, BitVec.ofInt_natCast, BitVec.toNat_ofNat]
+    have hK : (k - 1 - 0 + 1).toNat = k.toNat := by omega
+    have hKN : 2 ^ k.toNat < 2 ^ n.toNat := Nat.pow_lt_pow_right (by omega) (by omega)
+    rw [hK, Int.toNat_zero, Nat.shiftRight_zero, Nat.mod_eq_of_lt hKN,
+      Nat.mod_eq_of_lt (Nat.lt_of_lt_of_le (Nat.mod_lt _ (Nat.two_pow_pos _))
+        (Nat.pow_le_pow_right (by omega) (Nat.le_add_right _ _)))]
 
 theorem bv_rem.r_add.proof : bv_rem.r_add.Stmt := by
   intro FS O hO s v1 v2 res h
@@ -980,12 +1026,52 @@ theorem bv_rem.r_add.proof : bv_rem.r_add.Stmt := by
       congr 1; apply BitVec.eq_of_toNat_eq
       rw [BitVec.toNat_umod, BitVec.toNat_umod, toNat_add_ok (h2 hu), Nat.add_mod_right]
 
--- UNSOUND: a zero modulus divides everything as far as `trem` is concerned (`trem 0 r2 = 0`), but
--- `x %u 0 = x`. Take 8 bits, `signed = false`, v1 = Rem (false, x, 0), v2 = 2, with x = 5 (take
--- `O` returning the raw spec terms). Then `0 = trem 0 2` and `zmin 0 2 = 0`, so the result is
--- `x %u 0 = some 5`, while the spec is `(5 %u 0) %u 2 = 5 %u 2 = some 1`.
 theorem bv_rem.r_rem_rem.proof : bv_rem.r_rem_rem.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_rem.r_rem_rem] at h
+  split at h
+  case h_2 => simp at h
+  split at h
+  case isFalse => simp at h
+  simp only [Option.some.injEq] at h; subst h
+  rename_i r r1 T1 T r2 T2 hc
+  simp only [Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true,
+    decide_eq_true_eq] at hc
+  obtain ⟨rfl, h1, h2, hd⟩ := hc
+  refine Refines.trans ?_ (hO.bv_rem false r _)
+  refine Refines.arith_intro (.rem false) (fun n wa wb hT => ?_)
+    (fun n wa wb hT ρ x y v hx hy e => ?_)
+  all_goals obtain ⟨wr, wc, rfl⟩ := BV_arith_inv (.rem false) wa
+  all_goals have wrhs : BV (if decide (zmin r1 r2 = r1) = true then Term.mk (Kind.bitVec r1) T1
+      else Term.mk (Kind.bitVec r2) T2) n := by split <;> assumption
+  · exact ⟨(WT_arith (.rem false)).2 ⟨n, wr, wrhs, wr.2.1⟩, wr.2.1, wr.2.2⟩
+  · rw [eval_arith (.rem false) wr wc rfl] at hx
+    obtain ⟨R, C, hR, hC, hx⟩ := evBinop_inv (.inl (.rem false)) wr wc hx
+    obtain ⟨-, z1⟩ := BV_lit wc
+    obtain ⟨-, z2⟩ := BV_lit wb
+    rw [lit_eval_eq wc hC] at hx
+    rw [lit_eval_eq wb hy] at e
+    rw [bv_rem.spec, ty_eq, eval_arith (.rem false) wr wrhs wr.2.1, hR]
+    simp [evBinop, bvBin] at hx e; subst hx; subst e
+    have hmm := mod_mod_min (x := R.toNat) (a := r1.toNat) (b := r2.toNat) (by omega) (by omega)
+      (hd.imp (dvd_of_trem (by omega) (by omega)) (dvd_of_trem (by omega) (by omega)))
+    have e1 : (BitVec.ofInt n.toNat r1).toNat = r1.toNat := by
+      have := toNat_ofInt_lit (w := n.toNat) z1.1 z1.2; omega
+    have e2 : (BitVec.ofInt n.toNat r2).toNat = r2.toNat := by
+      have := toNat_ofInt_lit (w := n.toNat) z2.1 z2.2; omega
+    by_cases hle : r1 ≤ r2
+    · have : zmin r1 r2 = r1 := by simp [zmin, hle]
+      simp only [this, decide_true, ↓reduceIte, eval_lit wc]
+      simp [evBinop, bvBin]
+      apply BitVec.eq_of_toNat_eq
+      rw [BitVec.toNat_umod, BitVec.toNat_umod, BitVec.toNat_umod, e1, e2, hmm]
+      simp [show r1.toNat ≤ r2.toNat by omega]
+    · have : zmin r1 r2 ≠ r1 := by simp [zmin, hle]; omega
+      simp only [this, decide_false, Bool.false_eq_true, ↓reduceIte, eval_lit wb]
+      simp [evBinop, bvBin]
+      apply BitVec.eq_of_toNat_eq
+      rw [BitVec.toNat_umod, BitVec.toNat_umod, BitVec.toNat_umod, e1, e2, hmm]
+      simp [show ¬ r1.toNat ≤ r2.toNat by omega]
 
 theorem bv_rem.r_default.proof : bv_rem.r_default.Stmt := by
   intro FS O hO s v1 v2 res h
@@ -1075,13 +1161,53 @@ theorem bv_mul.r_neg.proof : bv_mul.r_neg.Stmt := by
     obtain ⟨n, w1, w2, -⟩ := (WT_arith (.mul c)).1 w
     have := w1.2.1; simp at this; simp [this]
 
--- UNSOUND: the folded constant `n * m` may overflow as a signed product even when `(x * n) * m`
--- does not. Take 8 bits, `checked = ckm = {signed := true, unsigned := false}`,
--- v1 = Mul (ckm, x, 0x40), v2 = 2, with x = 0xff (-1) (take `O` returning the raw spec terms).
--- Then x *s 64 = -64 and -64 *s 2 = -128 have no signed overflow, so the spec is `some 0x80`. The
--- result is x *s 0x80 = (-1) *s (-128), whose signed overflow makes it poison.
+theorem bv_mul.mul_const_aux {FS : FloatSem} {O : Ops} (hO : O.Sound FS)
+    {c ckm x zN TN T1 zM TM T W} (hW : ∀ n, T = .bitVector n → W = n) :
+    Refines FS (.mk (.binop (.mul c) (.mk (.binop (.mul ckm) x (.mk (.bitVec zN) TN)) T1)
+        (.mk (.bitVec zM) TM)) T)
+      (O.bv_mul (if overflows_mul true W zN zM = true
+          then checked_meet (checked_meet c ckm) checked_unsigned else checked_meet c ckm)
+        x (mk_masked W (zN * zM))) := by
+  refine Refines.arith_intro (.mul c) (fun n wa wb hT => ?_)
+    (fun n wa wb hT ρ X Y v hx hy e => ?_)
+  all_goals obtain ⟨wx, wN, rfl⟩ := BV_arith_inv (.mul ckm) wa
+  all_goals obtain rfl := hW n hT
+  all_goals have hm := O_arith (.mul _) (hO.bv_mul (if overflows_mul true W zN zM = true
+          then checked_meet (checked_meet c ckm) checked_unsigned else checked_meet c ckm)
+        x (mk_masked W (zN * zM))) wx (BV_mk_masked wx.2.2)
+  · exact hm.1
+  · rw [eval_arith (.mul ckm) wx wN rfl] at hx
+    obtain ⟨X', Nv, hX', hN, hx⟩ := evBinop_inv (.inl (.mul ckm)) wx wN hx
+    obtain ⟨-, z1⟩ := BV_lit wN
+    obtain ⟨-, z2⟩ := BV_lit wb
+    rw [lit_eval_eq wN hN] at hx; rw [lit_eval_eq wb hy] at e
+    refine hm.2 ρ v ?_
+    rw [hX', eval_mk_masked wx.2.2, overflows_mul_lit wx.2.2 z1.1 z1.2 z2.1 z2.2]
+    simp [evBinop, checkedOp, bvBin, checked_meet, checked_unsigned] at hx e ⊢
+    obtain ⟨⟨h1s, h1u⟩, rfl⟩ := hx; obtain ⟨⟨e1s, e1u⟩, rfl⟩ := e
+    rw [BitVec.ofInt_mul]
+    refine ⟨⟨fun hs => ?_, fun hu => ?_⟩, by rw [BitVec.mul_assoc]⟩
+    · split at hs
+      · simp at hs
+      · rename_i hn
+        simp only [Bool.and_eq_true] at hs
+        exact smul_assoc_ok (h1s hs.2) (e1s hs.1) (by simpa using hn)
+    · have : c.unsigned = true ∧ ckm.unsigned = true := by split at hu <;> simpa using hu
+      exact umul_assoc_ok (h1u this.2) (e1u this.1)
+
 theorem bv_mul.r_mul_const.proof : bv_mul.r_mul_const.Stmt := by
-  sorry
+  intro FS O hO c v1 v2 res h
+  simp only [bv_mul.r_mul_const] at h
+  rcases orElse_eq_some h with h | h <;> (try rcases orElse_eq_some h with h | h) <;>
+    (try rcases orElse_eq_some h with h | h) <;> split at h <;> simp at h <;>
+    obtain ⟨-, rfl⟩ := h <;> simp only [bv_mul.spec, ty_eq, Term.ty_mk]
+  · exact bv_mul.mul_const_aux hO (fun n h => by simp [h])
+  · exact Refines.trans (Refines.binop (Refines.comm (.mul _)) Refines.refl (fun _ => rfl))
+      (bv_mul.mul_const_aux hO (fun n h => by simp [h]))
+  · exact Refines.trans (Refines.comm (.mul _)) (bv_mul.mul_const_aux hO (fun n h => by simp [h]))
+  · exact Refines.trans (Refines.comm (.mul _)) (Refines.trans
+      (Refines.binop (Refines.comm (.mul _)) Refines.refl (fun _ => rfl))
+      (bv_mul.mul_const_aux hO (fun n h => by simp [h])))
 
 theorem bv_mul.r_ite.proof : bv_mul.r_ite.Stmt := by
   intro FS O hO c v1 v2 res h
@@ -1107,11 +1233,30 @@ theorem bv_mul.r_default.proof : bv_mul.r_default.Stmt := by
   simp only [bv_mul.r_default] at h; simp at h; subst h
   exact Refines.commut_binop (.mul c)
 
--- UNSOUND: the literals are divided with `tdiv`, for which `tdiv l 0 = 0`, but division by zero
--- follows SMT-LIB (`x /u 0` is all ones, `x /s 0` is -1 or 1). Take 8 bits, `signed = false`,
--- v1 = 5 and v2 = 0. The spec `5 /u 0` is `some 0xff`, and the result is the literal 0.
 theorem bv_div.r_lits.proof : bv_div.r_lits.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_div.r_lits] at h; split at h <;> simp only [Option.some.injEq, reduceCtorEq] at h
+  subst h
+  refine Refines.arith_intro (.div s) (fun n wa wb hT => ?_) (fun n wa wb hT ρ x y v hx hy e => ?_)
+  · rw [size_eq, Term.ty_mk, size_ty_lit wa]; split <;> exact BV_mk_masked wa.2.2
+  · obtain ⟨-, hz1⟩ := BV_lit wa
+    obtain ⟨-, hz2⟩ := BV_lit wb
+    rw [lit_eval_eq wa hx, lit_eval_eq wb hy] at e
+    simp [evBinop, bvBin] at e; subst e
+    rw [size_eq, Term.ty_mk, size_ty_lit wa, bv_to_z_lit wa.2.2 hz1.1 hz1.2,
+      bv_to_z_lit wa.2.2 hz2.1 hz2.2]
+    have hn : 0 < n.toNat := by have := wa.2.2; omega
+    generalize BitVec.ofInt n.toNat _ = X
+    generalize BitVec.ofInt n.toNat _ = Y
+    cases s
+    · simp only [Bool.false_eq_true, ↓reduceIte, Bool.false_and]
+      split <;> rename_i hc <;> rw [eval_mk_masked wa.2.2] <;> congr 2
+      · exact udiv_lits_zero _ _ (by simpa using hc)
+      · exact udiv_lits _ _ (by simpa using hc)
+    · simp only [↓reduceIte, Bool.true_and]
+      split <;> rename_i hc <;> rw [eval_mk_masked wa.2.2] <;> congr 2
+      · exact sdiv_lits_zero _ _ (by simpa using hc)
+      · exact sdiv_lits _ _ (by simpa using hc)
 
 theorem bv_div.r_one.proof : bv_div.r_one.Stmt := by
   intro FS O hO s v1 v2 res h
@@ -1139,12 +1284,41 @@ theorem bv_div.r_mul_lits.proof : bv_div.r_mul_lits.Stmt := by
     have := (BV_arith (.mul c) hm this.1 this.2.1).2.1
     simp [this]
 
--- UNSOUND: `divisible 0 0` holds, and then the rule replaces a division by zero with a
--- multiplication by `tdiv 0 0 = 0`. Take 8 bits, `signed = false`, v1 = Mul (checked_unsigned,
--- 0, x), v2 = 0, with x = 1 (take `O` returning the raw spec terms). The spec is
--- `(0 *u 1) /u 0 = some 0xff`, and the result is `x *u 0 = some 0`.
+theorem bv_div.mul_div_aux {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {s' n Tn x T1 d T2 N}
+    (hdiv : d ∣ n) (hd : d ≠ 0) (hN : ∀ m, T1 = .bitVector m → N = m) :
+    Refines FS (.mk (.binop (.div false) (.mk (.binop (.mul ⟨s', true⟩) (.mk (.bitVec n) Tn) x) T1)
+        (.mk (.bitVec d) T2)) T1)
+      (O.bv_mul checked_unsigned x (mk_bv N (tdiv n d))) := by
+  refine Refines.arith_intro (.div false) (fun m wa wb hT => ?_)
+    (fun m wa wb hT ρ P Dv v hx hy e => ?_)
+  all_goals obtain ⟨wn, wx, rfl⟩ := BV_arith_inv (.mul _) wa
+  all_goals obtain rfl := hN m rfl
+  all_goals obtain ⟨rfl, hzn⟩ := BV_lit wn
+  all_goals obtain ⟨rfl, hzd⟩ := BV_lit wb
+  all_goals have hk := BV_mk_bv (n := N) (z := tdiv n d) wa.2.2
+  all_goals have hres := O_arith (.mul _) (hO.bv_mul checked_unsigned x _) wx hk
+  · exact hres.1
+  · rw [eval_arith (.mul _) wn wx rfl] at hx
+    obtain ⟨Nv, X, hNv, hX, hx⟩ := evBinop_inv (.inl (.mul _)) wn wx hx
+    obtain rfl := lit_eval_eq wn hNv
+    obtain rfl := lit_eval_eq wb hy
+    simp [evBinop, checkedOp, bvBin] at hx e; obtain ⟨⟨-, hu⟩, rfl⟩ := hx; subst e
+    refine O_eval (.mul _) (hO.bv_mul _ _ _) wx hk hX (by rw [mk_bv, eval_mk_masked wa.2.2]) ?_
+    simp [evBinop, checkedOp, bvBin, checked_unsigned]
+    obtain ⟨t0, t1, t2, t3⟩ := tdiv_facts hzd.1 hzn.1 hdiv
+    rw [umul_ok, lit_toNat hzn.1 hzn.2] at hu
+    obtain ⟨h1, h2⟩ := udiv_mul_eq (lit_toNat hzn.1 hzn.2) (lit_toNat hzd.1 hzd.2)
+      (lit_toNat t0 (by omega)) t2 (by omega) hu
+    exact ⟨h2, h1.symm⟩
+
 theorem bv_div.r_mul_div.proof : bv_div.r_mul_div.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_div.r_mul_div] at h
+  rcases orElse_eq_some h with h | h <;> split at h <;> simp [divisible] at h <;>
+    obtain ⟨⟨rfl, hd, hdiv⟩, rfl⟩ := h
+  · exact bv_div.mul_div_aux hO hdiv hd (fun m h => by simp [h])
+  · refine Refines.trans (Refines.binop (Refines.comm (.mul _)) Refines.refl (fun _ => rfl))
+      (bv_div.mul_div_aux hO hdiv hd (fun m h => by simp [h]))
 
 theorem bv_div.div_mul_aux {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {s' n Tn x T1 d T2 N}
     (hdiv : n ∣ d) (hN : ∀ m, T1 = .bitVector m → N = m) :
@@ -1181,10 +1355,13 @@ theorem bv_div.r_div_mul.proof : bv_div.r_div_mul.Stmt := by
   · refine Refines.trans (Refines.binop (Refines.comm (.mul _)) Refines.refl (fun _ => rfl))
       (bv_div.div_mul_aux hO hd (fun m h => by simp [h]))
 
--- UNSOUND: when the inner divisor is zero, `x / 0` is all ones (SMT-LIB), and dividing it again
--- differs from dividing `x` by `0 * d = 0`. Take 8 bits, `signed = false`, v1 = Div (false, x, 0),
--- v2 = 2, with x = 5 (take `O` returning the raw spec terms); `overflows_mul false 8 0 2` is false.
--- The spec is `(5 /u 0) /u 2 = 0xff /u 2 = some 0x7f`, and the result is `x /u 0 = some 0xff`.
+-- UNSOUND (still, after requiring `n <> 0`; the unsigned case is sound): signed division wraps,
+-- and `x /s 0` depends on the sign of `x`. Take 8 bits, `signed = s = true`, v1 = Div (true, x,
+-- 0xff), v2 = 2, with x = 0x80 (-128) (take `O` returning the raw spec terms). Then
+-- `overflows_mul true 8 255 2` is false (-1 * 2 = -2). The spec is `(0x80 /s 0xff) /s 2 =
+-- 0x80 /s 2 = some 0xc0` (-64), and the result is `x /s mk_bv 8 510 = 0x80 /s 0xfe = some 0x40`
+-- (64). Another one, with a zero outer divisor: v1 = Div (true, x, 2), v2 = 0, x = 0xff (-1); the
+-- spec is `(0xff /s 2) /s 0 = 0 /s 0 = some 0xff`, and the result is `0xff /s 0 = some 0x01`.
 theorem bv_div.r_div_div.proof : bv_div.r_div_div.Stmt := by
   sorry
 
@@ -1348,20 +1525,56 @@ theorem bv_add_overflows.r_signed.proof : bv_add_overflows.r_signed.Stmt := by
         saddOverflow_nonpos (by have := wa.2.2; omega) _ _ (by omega)]
       simp
 
--- UNSOUND: for one-bit vectors, `1 + 1` overflows (in both signednesses). Take `signed = false`,
--- v1 = BvOfBool (1, b1), v2 = BvOfBool (1, b2), with b1 = b2 = true. The spec is
--- `uaddOverflow 1 1 = some true`, and the result is `v_false`. In `bv_add_overflows.step`,
--- `r_size1` fires first on one-bit vectors.
 theorem bv_add_overflows.r_of_bools.proof : bv_add_overflows.r_of_bools.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_add_overflows.r_of_bools] at h; split at h <;> simp at h; obtain ⟨hm, rfl⟩ := h
+  rename_i m g1 T1 m2 g2 T2
+  refine Refines.cmp_intro (.addOvf s) (fun n wa wb hT => ?_)
+    (fun n wa wb hT ρ x y v hx hy e => ?_)
+  all_goals obtain ⟨rfl, wg1, hg1, rfl⟩ := BV_ofBool_inv wa
+  all_goals obtain ⟨rfl, wg2, hg2, -⟩ := BV_ofBool_inv wb
+  all_goals have hr := O_b_and hO ⟨wg1, hg1⟩ ⟨wg2, hg2⟩
+  · split
+    · exact hr.1
+    · exact ⟨v_false_WT, rfl⟩
+  · obtain ⟨b1, hb1, rfl⟩ := eval_ofBool_inv wa hx
+    obtain ⟨b2, hb2, rfl⟩ := eval_ofBool_inv wb hy
+    simp [evBinop, bvBin] at e; subst e
+    split
+    · rename_i hs
+      obtain ⟨rfl, rfl⟩ : s = true ∧ m2 = 2 := by simpa using hs
+      rw [hr.2 ρ b1 b2 hb1 hb2]
+      congr 2; cases b1 <;> cases b2 <;> decide
+    · rename_i hs
+      have hs' : s = true → ¬m2 = 2 := by simpa using hs
+      rw [eval_v_false, ofBools_addOvf (by omega) s b1 b2 (fun h => hs' h.1 (by omega))]
 
--- UNSOUND: for one-bit vectors, `BvOfBool (1, true)` is -1 as a signed number, not 1. Take
--- `signed = true`, v1 = BvOfBool (1, b), v2 = the literal 0 (of 1 bit), with b = true (take `O`
--- returning the raw spec terms). The spec is `saddOverflow 1 0 = some false` (-1 + 0 = -1), but
--- `max_for true 1 = 0`, so the result is `b && (0 = 0) = some true`. In `bv_add_overflows.step`,
--- `r_size1` fires first on one-bit vectors.
+theorem bv_add_overflows.of_bool_aux {FS : FloatSem} {O : Ops} (hO : O.Sound FS)
+    {s m g T other N} (hN : ∀ n, T = .bitVector n → other.ty = .bitVector n → N = n)
+    (h1 : 1 < N) :
+    Refines FS (.mk (.binop (.addOvf s) (.mk (.unop (.bvOfBool m) g) T) other) .bool)
+      (O.b_and g (O.sem_eq (.mk other.kind (.bitVector N)) (mk_bv N (max_for s N)))) := by
+  refine Refines.cmp_intro (.addOvf s) (fun n wa wb hT => ?_)
+    (fun n wa wb hT ρ x y v hx hy e => ?_)
+  all_goals obtain ⟨rfl, wg, hg, hT'⟩ := BV_ofBool_inv wa
+  all_goals obtain rfl := hN _ hT' wb.2.1
+  all_goals rw [Term.mk_kind_of_ty wb.2.1]
+  all_goals have hq := O_sem_eq hO wb (BV_mk_bv (z := max_for s N) wb.2.2)
+  all_goals have hr := O_b_and hO ⟨wg, hg⟩ hq.1
+  · exact hr.1
+  · obtain ⟨b, hb, rfl⟩ := eval_ofBool_inv wa hx
+    simp [evBinop, bvBin] at e; subst e
+    rw [hr.2 ρ b _ hb (hq.2 ρ y _ hy (by rw [mk_bv, eval_mk_masked wb.2.2])),
+      ofBool_addOvf (by omega), max_for_eq wb.2.2]
+
 theorem bv_add_overflows.r_of_bool.proof : bv_add_overflows.r_of_bool.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_add_overflows.r_of_bool] at h
+  rcases orElse_eq_some h with h | h <;> split at h <;> simp at h <;> obtain ⟨hn, rfl⟩ := h <;>
+    simp only [bv_add_overflows.spec]
+  · exact bv_add_overflows.of_bool_aux hO (fun n h _ => by simp [h]) hn
+  · exact Refines.trans (Refines.comm (.addOvf s))
+      (bv_add_overflows.of_bool_aux hO (fun n _ h => by simp [h]) hn)
 
 theorem bv_add_overflows.r_default.proof : bv_add_overflows.r_default.Stmt := by
   intro FS O hO s v1 v2 res h
@@ -1414,12 +1627,38 @@ theorem bv_mul_overflows.r_msb.proof : bv_mul_overflows.r_msb.Stmt := by
   · have := mulOvf_of_msb true ha.1 hb.1 (ha.2 x hx) (hb.2 y hy) (by simp; omega)
     simp at this; rw [this, eval_v_false]
 
--- UNSOUND: the literal 1 is only neutral as an unsigned number; as a signed one-bit vector it is -1.
--- Take `signed = true`, v1 = the literal 1 (of 1 bit), v2 = x with x = 1. The spec is
--- `smulOverflow 1 1 = some true` ((-1) * (-1) = 1 > 0), and the result is `v_false`. In
--- `bv_mul_overflows.step`, `r_size1` fires first on signed one-bit vectors.
+theorem bv_mul_overflows.const_aux {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {s z T x N Tx}
+    (hN : ∀ n, T = .bitVector n → x.ty = .bitVector n → N = n ∧ Tx = .bitVector n)
+    (hc : s = true → 1 < N) :
+    Refines FS (.mk (.binop (.mulOvf s) (.mk (.bitVec z) T) x) .bool)
+      (mulOvfConst O s N z (.mk x.kind Tx)) := by
+  refine Refines.cmp_intro (.mulOvf s) (fun n wa wb hT => ?_)
+    (fun n wa wb hT ρ Z Y v hx hy e => ?_)
+  all_goals obtain ⟨rfl, rfl⟩ := hN n (BV_lit wa).1 wb.2.1
+  all_goals rw [Term.mk_kind_of_ty wb.2.1]
+  all_goals have hm := mulOvfConst_sound hO wa wb hc
+  · exact hm.1
+  · rw [lit_eval_eq wa hx] at e
+    simp [evBinop, bvBin] at e; subst e
+    exact hm.2 ρ Y hy
+
 theorem bv_mul_overflows.r_const.proof : bv_mul_overflows.r_const.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_mul_overflows.r_const] at h
+  rcases orElse_eq_some h with h | h <;> split at h
+  all_goals try (simp at h; done)
+  all_goals split at h
+  all_goals try (simp at h; done)
+  all_goals simp only [Option.some.injEq] at h; subst h
+  all_goals rename_i hc
+  all_goals simp only [Bool.or_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true,
+    decide_eq_true_eq] at hc
+  all_goals simp only [bv_mul_overflows.spec]
+  · exact bv_mul_overflows.const_aux hO (fun n h _ => by simp [h])
+      (fun h => by subst h; simpa [size] using hc)
+  · exact Refines.trans (Refines.comm (.mulOvf s))
+      (bv_mul_overflows.const_aux hO (fun n _ h => by simp [h])
+        (fun h => by subst h; simpa [size] using hc))
 
 theorem bv_mul_overflows.r_div.proof : bv_mul_overflows.r_div.Stmt := by
   intro FS O hO s v1 v2 res h

@@ -280,13 +280,17 @@ theorem sem_eq.r_ite_ite.proof : sem_eq.r_ite_ite.Stmt := by
   exact Refines.trans Refines.eq_ite_ite (Refines.b_ite hO Refines.refl (hO.sem_eq _ _) (hO.sem_eq _ _))
 
 theorem sem_eq.r_mul_cancel.proof : sem_eq.r_mul_cancel.Stmt := by
-  -- UNSOUND: the checked case does not exclude a zero factor. Counterexample: a = 0 and
-  -- ck1 = ck2 = checked_unsigned (so `is_checked (checked_meet ck1 ck2)` holds),
-  -- v1 = Mul checked_unsigned (0 : bv8) (var 0 : bv8), v2 = Mul checked_unsigned (0 : bv8)
-  -- (var 1 : bv8), ρ.var 0 = bv 8 1, ρ.var 1 = bv 8 2. Neither product overflows (both are 0),
-  -- so the spec `v1 == v2` evaluates to `true`; the result `O.sem_eq (var 0) (var 1)` refines
-  -- `var 0 == var 1`, which evaluates to `false`.
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [sem_eq.r_mul_cancel] at h
+  rcases orElse_eq_some4 h with h | h | h | h <;> split at h <;>
+    simp only [reduceCtorEq, Option.ite_none_right_eq_some, Option.some.injEq, Bool.and_eq_true,
+      Bool.or_eq_true, decide_eq_true_eq] at h <;>
+    obtain ⟨⟨rfl, hc⟩, rfl⟩ := h <;>
+    refine Refines.trans ?_ (hO.sem_eq _ _)
+  · exact Refines.eq_mul_cancel (Or.inl ⟨rfl, rfl⟩) (Or.inl ⟨rfl, rfl⟩) hc
+  · exact Refines.eq_mul_cancel (Or.inl ⟨rfl, rfl⟩) (Or.inr ⟨rfl, rfl⟩) hc
+  · exact Refines.eq_mul_cancel (Or.inr ⟨rfl, rfl⟩) (Or.inl ⟨rfl, rfl⟩) hc
+  · exact Refines.eq_mul_cancel (Or.inr ⟨rfl, rfl⟩) (Or.inr ⟨rfl, rfl⟩) hc
 
 theorem sem_eq.r_or_zero.aux {FS : FloatSem} {l r : Term} {T1 T2 : Ty} {N : Int}
     (hN : N = size_of_ty T1 ∨ N = size_of_ty T2) :

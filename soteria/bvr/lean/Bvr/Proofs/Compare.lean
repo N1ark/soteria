@@ -1,10 +1,10 @@
-import Bvr.Lemmas
+import Bvr.Proofs.CompareLemmas
 
 /-! Bit-vector comparisons (`bv_lt`, `bv_leq`). -/
 
 namespace Bvr
 
-open Classical
+open Classical CompareL
 
 theorem bv_lt.r_lits.proof : bv_lt.r_lits.Stmt := by
   sorry

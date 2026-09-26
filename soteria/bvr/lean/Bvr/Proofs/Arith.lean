@@ -1399,7 +1399,20 @@ theorem bv_mul_overflows.r_size1.proof : bv_mul_overflows.r_size1.Stmt := by
     decide
 
 theorem bv_mul_overflows.r_msb.proof : bv_mul_overflows.r_msb.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_mul_overflows.r_msb] at h
+  cases s <;> simp at h <;> obtain ⟨hc, rfl⟩ := h <;>
+    refine Refines.cmp_intro (.mulOvf _) (fun n wa wb hT => ⟨v_false_WT, rfl⟩)
+      (fun n wa wb hT ρ x y v hx hy e => ?_) <;>
+    have ha := msb_bound (FS := FS) (ρ := ρ) wa <;>
+    have hb := msb_bound (FS := FS) (ρ := ρ) wb <;>
+    simp [evBinop, bvBin] at e <;> subst e <;>
+    have hn : ((n.toNat : Nat) : Int) = n := (by have := wa.2.2; omega) <;>
+    simp only [size_eq, wa.2.1, size_of_ty_bitVector, decide_eq_true_eq] at hc
+  · have := mulOvf_of_msb false ha.1 hb.1 (ha.2 x hx) (hb.2 y hy) (by simp; omega)
+    simp at this; rw [this, eval_v_false]
+  · have := mulOvf_of_msb true ha.1 hb.1 (ha.2 x hx) (hb.2 y hy) (by simp; omega)
+    simp at this; rw [this, eval_v_false]
 
 -- UNSOUND: the literal 1 is only neutral as an unsigned number; as a signed one-bit vector it is -1.
 -- Take `signed = true`, v1 = the literal 1 (of 1 bit), v2 = x with x = 1. The spec is

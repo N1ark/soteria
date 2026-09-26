@@ -945,13 +945,50 @@ theorem bv_rem.r_one_r.proof : bv_rem.r_one_r.Stmt := by
     simp [evBinop, bvBin] at e; subst e
     congr 2
 
--- UNSOUND: `is_pow2 1` holds, and then the bit-width is `log2 1 = 0`, so the rule extracts the
--- empty range `0 .. -1`. Take 8 bits, `signed = false`, v1 a variable x = 5 and v2 the literal 1
--- (take `O` returning the raw spec terms). The spec `x %u 1` is well-typed and is `some 0`. The
--- result is `Extend (false, 8, Extract (0, -1, x))`, whose extraction is ill-typed, so the result
--- is not well-typed (and is poison). In `bv_rem.step`, `r_one_r` fires first on this input.
 theorem bv_rem.r_pow2.proof : bv_rem.r_pow2.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_rem.r_pow2] at h
+  split at h
+  case h_2 => simp at h
+  split at h
+  case isFalse => simp at h
+  simp only [Option.some.injEq] at h; subst h
+  rename_i r T hc
+  simp only [Bool.and_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true, decide_eq_true_eq] at hc
+  obtain ⟨rfl, hp, hr⟩ := hc
+  obtain ⟨hz, hl⟩ := is_pow2_eq hp
+  generalize hk : log2 r = k at hz hl
+  have hE := hO.bv_extract 0 (k - 1) v1
+  refine Refines.trans ?_ (hO.bv_extend _ _ _)
+  have key : ∀ n, BV v1 n → BV (.mk (.bitVec r) T) n → 1 ≤ k ∧ k < n := by
+    intro n wa wb
+    obtain ⟨-, -, z1⟩ := BV_lit wb
+    have e1 : ((2 ^ k.toNat : Nat) : Int) = (2 : Int) ^ k.toNat := by push_cast; rfl
+    have e2 : ((2 ^ n.toNat : Nat) : Int) = (2 : Int) ^ n.toNat := by push_cast; rfl
+    have h1 : 2 ^ k.toNat < 2 ^ n.toNat := by omega
+    have h2 := (Nat.pow_lt_pow_iff_right (by omega)).1 h1
+    have h3 : k.toNat ≠ 0 := by intro h0; rw [h0] at hz; simp at hz; omega
+    have := wa.2.2
+    omega
+  refine Refines.arith_intro (.rem false) (fun n wa wb hT => ?_)
+    (fun n wa wb hT ρ x y v hx hy e => ?_)
+  all_goals obtain ⟨k1, k2⟩ := key n wa wb
+  all_goals have wE := BV_extract hE wa (by omega) (by omega) (by omega)
+  · refine ⟨WT_extend.2 ⟨_, wE, by rw [size_BV wa]; omega, by rw [size_BV wE]⟩, ?_, wa.2.2⟩
+    simp only [bv_extend.spec, size_BV wE, size_BV wa, Term.ty_mk]; congr 1; omega
+  · have hX := hE.sem ρ _ (eval_extract_spec wa (by omega) (by omega) (by omega) hx)
+    rw [eval_extend wE (by rw [size_BV wa]; omega) hX]
+    rw [lit_eval_eq wb hy] at e
+    simp [evBinop, bvBin] at e; subst e
+    rw [size_BV wa]
+    congr 1; apply Val.bv_congr (by omega)
+    rw [BitVec.toNat_setWidth, BitVec.extractLsb'_toNat, BitVec.toNat_umod, hz,
+      ← natCast_two_pow, BitVec.ofInt_natCast, BitVec.toNat_ofNat]
+    have hK : (k - 1 - 0 + 1).toNat = k.toNat := by omega
+    have hKN : 2 ^ k.toNat < 2 ^ n.toNat := Nat.pow_lt_pow_right (by omega) (by omega)
+    rw [hK, Int.toNat_zero, Nat.shiftRight_zero, Nat.mod_eq_of_lt hKN,
+      Nat.mod_eq_of_lt (Nat.lt_of_lt_of_le (Nat.mod_lt _ (Nat.two_pow_pos _))
+        (Nat.pow_le_pow_right (by omega) (Nat.le_add_right _ _)))]
 
 theorem bv_rem.r_add.proof : bv_rem.r_add.Stmt := by
   intro FS O hO s v1 v2 res h

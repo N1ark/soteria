@@ -1336,5 +1336,55 @@ theorem dvd_of_trem {a b : Int} (ha : 0 ≤ a) (hb : 0 ≤ b) (h : 0 = trem a b)
   exact Nat.dvd_of_mod_eq_zero (by exact_mod_cast h.symm)
 
 
+/-! ## Powers of two and extraction -/
+
+theorem popcountNat_eq_zero : ∀ {m : Nat}, popcountNat m = 0 → m = 0
+  | 0, _ => rfl
+  | k + 1, h => by
+      rw [popcountNat] at h
+      have : (k + 1) / 2 < k + 1 := by omega
+      have := popcountNat_eq_zero (m := (k + 1) / 2) (by omega)
+      omega
+
+theorem popcountNat_eq_one : ∀ {m : Nat}, popcountNat m = 1 → ∃ j, m = 2 ^ j
+  | 0, h => by simp [popcountNat] at h
+  | k + 1, h => by
+      rw [popcountNat] at h
+      have : (k + 1) / 2 < k + 1 := by omega
+      by_cases hm : (k + 1) % 2 = 1
+      · have := popcountNat_eq_zero (m := (k + 1) / 2) (by omega)
+        exact ⟨0, by omega⟩
+      · obtain ⟨j, hj⟩ := popcountNat_eq_one (m := (k + 1) / 2) (by omega)
+        exact ⟨j + 1, by rw [Nat.pow_succ]; omega⟩
+
+theorem is_pow2_eq {z : Int} (h : is_pow2 z = true) : z = 2 ^ (log2 z).toNat ∧ 0 ≤ log2 z := by
+  unfold is_pow2 at h
+  simp only [Bool.and_eq_true, decide_eq_true_eq] at h
+  obtain ⟨h0, h1⟩ := h
+  simp only [popcount] at h1
+  have h1' : popcountNat z.toNat = 1 := by exact_mod_cast h1
+  obtain ⟨j, hj⟩ := popcountNat_eq_one h1'
+  have e1 : ((2 ^ j : Nat) : Int) = (2 : Int) ^ j := by push_cast; rfl
+  simp only [log2, hj, Nat.log2_two_pow, Int.toNat_natCast]
+  omega
+
+theorem WT_extract {i j a T} : (Term.mk (.unop (.bvExtract i j) a) T).WT ↔
+    ∃ n : Int, a.ty = .bitVector n ∧ 0 ≤ i ∧ i ≤ j ∧ j < n ∧ T = .bitVector (j - i + 1) ∧
+      a.WT := by
+  simp only [WT_unop, Unop.WT, Ty.sort_eq]
+  constructor
+  · rintro ⟨⟨n, h1, h2, h3, h4, h5⟩, h6⟩; exact ⟨n, h1, h2, h3, h4, h5, h6⟩
+  · rintro ⟨n, h1, h2, h3, h4, h5, h6⟩; exact ⟨⟨n, h1, h2, h3, h4, h5⟩, h6⟩
+
+theorem BV_extract {FS i j a m r} (hR : Refines FS (bv_extract.spec i j a) r) (wa : BV a m)
+    (h0 : 0 ≤ i) (h1 : i ≤ j) (h2 : j < m) : BV r (j - i + 1) :=
+  BV_of_refines hR (WT_extract.2 ⟨m, wa.2.1, h0, h1, h2, rfl, wa.1⟩) rfl (by omega)
+
+theorem eval_extract_spec {FS ρ i j a m X} (wa : BV a m) (h0 : 0 ≤ i) (h1 : i ≤ j) (h2 : j < m)
+    (hX : eval FS ρ a = some (.bv m.toNat X)) :
+    eval FS ρ (bv_extract.spec i j a) = some (.bv (j - i + 1).toNat (X.extractLsb' i.toNat _)) := by
+  rw [bv_extract.spec, eval_unop (WT_extract.2 ⟨m, wa.2.1, h0, h1, h2, rfl, wa.1⟩), hX]
+  rfl
+
 end ArithL
 end Bvr

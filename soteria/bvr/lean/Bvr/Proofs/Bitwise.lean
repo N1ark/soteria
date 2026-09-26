@@ -458,25 +458,210 @@ theorem bv_extract.r_lit.proof : bv_extract.r_lit.Stmt := by
   sorry
 
 theorem bv_extract.r_full.proof : bv_extract.r_full.Stmt := by
-  sorry
+  intro FS O hO i j v res h
+  simp only [bv_extract.r_full] at h
+  split at h <;> simp at h
+  rename_i hij; simp only [Bool.and_eq_true, decide_eq_true_eq] at hij
+  obtain ⟨rfl, rfl⟩ := hij; subst h
+  refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+  · obtain ⟨n, hv, _, _, _, _, wv⟩ := WT_extract.1 w
+    refine ⟨wv, ?_⟩
+    simp only [bv_extract.spec, size_eq, hv, size_of_ty_bitVector, Term.ty_mk, Ty.sort_eq]
+    congr 1; omega
+  · obtain ⟨n, x, hv, _, _, h2, _, ev, rfl⟩ := eval_extract e
+    rw [ev]; congr 1
+    have hs : size v = n := by simp [hv]
+    apply Val.bv_ext (by omega)
+    intro t ht; simp (disch := omega) only [BitVec.getLsbD_extractLsb', decide_eq_true, Bool.true_and, Nat.zero_add, Int.toNat_zero]
 
 theorem bv_extract.r_and_.proof : bv_extract.r_and_.Stmt := by
-  sorry
+  intro FS O hO i j v res h
+  simp only [bv_extract.r_and_] at h
+  split at h <;> simp at h; subst h
+  rename_i a b T
+  refine Refines.trans (BitOp.and.extract (fun _ _ _ _ => BitVec.extractLsb'_and)
+    (T' := .bitVector (size (bv_extract.spec i j a))) rfl) ?_
+  refine Refines.trans (Refines.binop_ty (fun x => .bitVector (size x)) (fun x y h => by simp [h])
+    (hO.bv_extract _ _ _) (hO.bv_extract _ _ _)) (hO.bv_and _ _)
 
 theorem bv_extract.r_or_.proof : bv_extract.r_or_.Stmt := by
-  sorry
+  intro FS O hO i j v res h
+  simp only [bv_extract.r_or_] at h
+  split at h <;> simp at h; subst h
+  rename_i a b T
+  refine Refines.trans (BitOp.or.extract (fun _ _ _ _ => BitVec.extractLsb'_or)
+    (T' := ty (bv_extract.spec i j a)) rfl) ?_
+  refine Refines.trans (Refines.binop_ty (fun x => ty x) (fun x y h => by simp [h])
+    (hO.bv_extract _ _ _) (hO.bv_extract _ _ _)) (hO.bv_or _ _)
 
 theorem bv_extract.r_xor.proof : bv_extract.r_xor.Stmt := by
-  sorry
+  intro FS O hO i j v res h
+  simp only [bv_extract.r_xor] at h
+  split at h <;> simp at h; subst h
+  rename_i a b T
+  refine Refines.trans (BitOp.xor.extract (fun _ _ _ _ => BitVec.extractLsb'_xor)
+    (T' := ty (bv_extract.spec i j a)) rfl) ?_
+  refine Refines.trans (Refines.binop_ty (fun x => ty x) (fun x y h => by simp [h])
+    (hO.bv_extract _ _ _) (hO.bv_extract _ _ _)) (hO.bv_xor _ _)
 
 theorem bv_extract.r_shl.proof : bv_extract.r_shl.Stmt := by
-  sorry
+  intro FS O hO i j v res h
+  simp only [bv_extract.r_shl] at h
+  split at h <;> simp at h; subst h
+  rename_i a s T2 T
+  -- the shape of a well-typed spec
+  have key : (bv_extract.spec i j (.mk (.binop .shl a (.mk (.bitVec s) T2)) T)).WT →
+      ∃ n : Int, 0 < n ∧ a.ty = .bitVector n ∧ T2 = .bitVector n ∧ T = .bitVector n ∧
+        0 ≤ i ∧ i ≤ j ∧ j < n ∧ a.WT ∧ 0 ≤ s ∧ s < 2 ^ n.toNat := by
+    intro w
+    obtain ⟨n, hb, h0, h1, h2, -, wb⟩ := WT_extract.1 w
+    obtain ⟨n', hn', ha, h2', ht, wa, w2⟩ := (BitOp.shl (FS := FS)).WT.1 wb
+    simp only [Term.ty_mk] at hb h2'; subst hb
+    simp only [Ty.bitVector.injEq] at ht; subst ht
+    exact ⟨n, hn', ha, h2', rfl, h0, h1, h2, wa, (lit_inv w2 n h2').2⟩
+  have sem : ∀ ρ u, eval FS ρ (bv_extract.spec i j (.mk (.binop .shl a (.mk (.bitVec s) T2)) T)) =
+      some u → ∃ n : Int, ∃ x : BitVec n.toNat, eval FS ρ a = some (.bv n.toNat x) ∧
+        0 < n ∧ a.ty = .bitVector n ∧ 0 ≤ i ∧ i ≤ j ∧ j < n ∧ 0 ≤ s ∧ s < 2 ^ n.toNat ∧
+        u = .bv (j - i + 1).toNat ((x <<< s.toNat).extractLsb' i.toNat _) := by
+    intro ρ u e
+    obtain ⟨n, x, hb, h0, h1, h2, -, eb, rfl⟩ := eval_extract e
+    obtain ⟨k, y, ea, hx, s0, s1⟩ := BitOp.shl.eval_lit_r eb
+    obtain ⟨rfl, rfl⟩ := Val.bv_inj hx
+    obtain ⟨n', hn, ha, _, hT, _⟩ := key (eval_WT e)
+    simp only [Term.ty_mk] at hb; rw [hT] at hb; simp only [Ty.bitVector.injEq] at hb; subst hb
+    refine ⟨n', y, ea, hn, ha, h0, h1, h2, s0, s1, ?_⟩
+    simp only [BitVec.shiftLeft_eq', toNat_ofInt_lit s0 s1]
+  split
+  · rename_i hs
+    refine Refines.trans ?_ (hO.bv_extract _ _ _)
+    refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+    · obtain ⟨n, hn, ha, -, -, h0, h1, h2, wa, s0, s1⟩ := key w
+      refine ⟨WT_extract.2 ⟨n, ha, by omega, by omega, by omega, rfl, wa⟩, ?_⟩
+      simp only [bv_extract.spec, Term.ty_mk, Ty.sort_eq]; congr 1; omega
+    · obtain ⟨n, x, ea, hn, ha, h0, h1, h2, s0, s1, rfl⟩ := sem ρ u e
+      simp only [bv_extract.spec] at w' ⊢
+      rw [eval_extract_of w' ea]; congr 1
+      apply Val.bv_ext (by omega)
+      intro t ht
+      bitw_simp
+      congr 1; omega
+  split
+  · refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+    · obtain ⟨n, hn, ha, -, -, h0, h1, h2, wa, s0, s1⟩ := key w
+      exact ⟨bv_zero_WT (by omega), rfl⟩
+    · obtain ⟨n, x, ea, hn, ha, h0, h1, h2, s0, s1, rfl⟩ := sem ρ u e
+      rw [eval_bv_zero (by omega)]; congr 1
+      apply Val.bv_ext rfl
+      intro t ht
+      bitw_simp
+  · rename_i hs1 hs2
+    refine Refines.trans ?_ (Refines.trans (Refines.binop_ty2 (op := .bvConcat)
+      (fun x y => .bitVector (size x + size y)) (fun x x' y y' h1 h2 => by simp [h1, h2])
+      (hO.bv_extract _ _ _) Refines.refl) (hO.bv_concat _ _))
+    refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+    · obtain ⟨n, hn, ha, -, -, h0, h1, h2, wa, s0, s1⟩ := key w
+      refine ⟨WT_concat.2 ⟨j - s + 1, s - i, by omega, by omega, by simp [bv_extract.spec], rfl,
+        by simp [bv_extract.spec] <;> omega,
+        WT_extract.2 ⟨n, ha, by omega, by omega, by omega, by simp, wa⟩, bv_zero_WT (by omega)⟩, ?_⟩
+      simp only [bv_extract.spec, Term.ty_mk, Ty.sort_eq, size_eq, bv_zero_ty, size_of_ty_bitVector]
+      congr 1; omega
+    · obtain ⟨n, x, ea, hn, ha, h0, h1, h2, s0, s1, rfl⟩ := sem ρ u e
+      obtain ⟨_, w1, w2⟩ := WT_binop.1 w'
+      simp only [bv_extract.spec] at w1 w' ⊢
+      rw [eval_concat_of w' (eval_extract_of w1 ea) (eval_bv_zero (by omega))]; congr 1
+      apply Val.bv_ext (by omega)
+      intro t ht
+      by_cases hts : t < (s - i).toNat
+      · bitw_simp
+      · bitw_simp; congr 1; omega
 
 theorem bv_extract.r_lshr.proof : bv_extract.r_lshr.Stmt := by
-  sorry
+  intro FS O hO i j v res h
+  simp only [bv_extract.r_lshr] at h
+  split at h
+  case h_2 => simp at h
+  simp only [Option.some.injEq] at h; subst h
+  rename_i a s T2 T
+  have key : (bv_extract.spec i j (.mk (.binop .lShr a (.mk (.bitVec s) T2)) T)).WT →
+      ∃ n : Int, 0 < n ∧ a.ty = .bitVector n ∧ T2 = .bitVector n ∧ T = .bitVector n ∧
+        0 ≤ i ∧ i ≤ j ∧ j < n ∧ a.WT ∧ 0 ≤ s ∧ s < 2 ^ n.toNat := by
+    intro w
+    obtain ⟨n, hb, h0, h1, h2, -, wb⟩ := WT_extract.1 w
+    obtain ⟨n', hn', ha, h2', ht, wa, w2⟩ := (BitOp.lshr (FS := FS)).WT.1 wb
+    simp only [Term.ty_mk] at hb h2'; subst hb
+    simp only [Ty.bitVector.injEq] at ht; subst ht
+    exact ⟨n, hn', ha, h2', rfl, h0, h1, h2, wa, (lit_inv w2 n h2').2⟩
+  have sem : ∀ ρ u, eval FS ρ (bv_extract.spec i j (.mk (.binop .lShr a (.mk (.bitVec s) T2)) T)) =
+      some u → ∃ n : Int, ∃ x : BitVec n.toNat, eval FS ρ a = some (.bv n.toNat x) ∧
+        0 < n ∧ a.ty = .bitVector n ∧ T = .bitVector n ∧ 0 ≤ i ∧ i ≤ j ∧ j < n ∧ 0 ≤ s ∧
+        s < 2 ^ n.toNat ∧
+        u = .bv (j - i + 1).toNat ((x >>> s.toNat).extractLsb' i.toNat _) := by
+    intro ρ u e
+    obtain ⟨n, x, hb, h0, h1, h2, -, eb, rfl⟩ := eval_extract e
+    obtain ⟨k, y, ea, hx, s0, s1⟩ := BitOp.lshr.eval_lit_r eb
+    obtain ⟨rfl, rfl⟩ := Val.bv_inj hx
+    obtain ⟨n', hn, ha, _, hT, _⟩ := key (eval_WT e)
+    simp only [Term.ty_mk] at hb; rw [hT] at hb; simp only [Ty.bitVector.injEq] at hb; subst hb
+    refine ⟨n', y, ea, hn, ha, hT, h0, h1, h2, s0, s1, ?_⟩
+    simp only [BitVec.ushiftRight_eq', toNat_ofInt_lit s0 s1]
+  split
+  · rename_i hs
+    simp only [decide_eq_true_eq, ge_iff_le] at hs
+    refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+    · obtain ⟨n, hn, ha, -, -, h0, h1, h2, wa, s0, s1⟩ := key w
+      exact ⟨bv_zero_WT (by omega), rfl⟩
+    · obtain ⟨n, x, ea, hn, ha, rfl, h0, h1, h2, s0, s1, rfl⟩ := sem ρ u e
+      simp only [size_eq, Term.ty_mk, size_of_ty_bitVector] at hs
+      rw [eval_bv_zero (by omega)]; congr 1
+      apply Val.bv_ext rfl
+      intro t ht
+      bitw_simp
+  rename_i hs1
+  simp only [decide_eq_true_eq, ge_iff_le] at hs1
+  by_cases hs2 : j + s < size (Term.mk (.binop .lShr a (.mk (.bitVec s) T2)) T)
+  · simp only [decide_eq_true hs2, ↓reduceIte]
+    refine Refines.trans ?_ (hO.bv_extract _ _ _)
+    refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+    · obtain ⟨n, hn, ha, -, rfl, h0, h1, h2, wa, s0, s1⟩ := key w
+      simp only [size_eq, Term.ty_mk, size_of_ty_bitVector] at hs1 hs2
+      refine ⟨WT_extract.2 ⟨n, ha, by omega, by omega, by omega, rfl, wa⟩, ?_⟩
+      simp only [bv_extract.spec, Term.ty_mk, Ty.sort_eq]; congr 1; omega
+    · obtain ⟨n, x, ea, hn, ha, rfl, h0, h1, h2, s0, s1, rfl⟩ := sem ρ u e
+      simp only [size_eq, Term.ty_mk, size_of_ty_bitVector] at hs1 hs2
+      simp only [bv_extract.spec] at w' ⊢
+      rw [eval_extract_of w' ea]; congr 1
+      apply Val.bv_ext (by omega)
+      intro t ht
+      bitw_simp
+      congr 1; omega
+  · simp only [decide_eq_false hs2, Bool.false_eq_true, ↓reduceIte]
+    refine Refines.trans ?_ (Refines.trans (Refines.binop_ty2 (op := .bvConcat)
+      (fun x y => .bitVector (size x + size y)) (fun x x' y y' h1 h2 => by simp [h1, h2])
+      Refines.refl (hO.bv_extract _ _ _)) (hO.bv_concat _ _))
+    refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+    · obtain ⟨n, hn, ha, -, rfl, h0, h1, h2, wa, s0, s1⟩ := key w
+      simp only [size_eq, Term.ty_mk, size_of_ty_bitVector] at hs1 hs2 ⊢
+      refine ⟨WT_concat.2 ⟨j - (n - s - 1), n - 1 - (i + s) + 1, by omega, by omega, rfl,
+        by simp [bv_extract.spec], by simp [bv_extract.spec] <;> omega,
+        bv_zero_WT (by omega), WT_extract.2 ⟨n, ha, by omega, by omega, by omega, by simp, wa⟩⟩, ?_⟩
+      simp only [bv_extract.spec, Term.ty_mk, Ty.sort_eq, size_eq, bv_zero_ty, size_of_ty_bitVector]
+      congr 1; omega
+    · obtain ⟨n, x, ea, hn, ha, rfl, h0, h1, h2, s0, s1, rfl⟩ := sem ρ u e
+      simp only [size_eq, Term.ty_mk, size_of_ty_bitVector] at hs1 hs2 w' ⊢
+      obtain ⟨_, w1, w2⟩ := WT_binop.1 w'
+      simp only [bv_extract.spec] at w2 w' ⊢
+      rw [eval_concat_of w' (eval_bv_zero (by omega)) (eval_extract_of w2 ea)]; congr 1
+      apply Val.bv_ext (by omega)
+      intro t ht
+      by_cases hts : t < (n - 1 - (i + s) + 1).toNat
+      · bitw_simp; congr 1; omega
+      · bitw_simp
 
 theorem bv_extract.r_ite.proof : bv_extract.r_ite.Stmt := by
-  sorry
+  intro FS O hO i j v res h
+  simp only [bv_extract.r_ite] at h
+  split at h <;> simp at h; subst h
+  exact Refines.trans Refines.unop_ite (Refines.ite_O hO (hO.bv_extract _ _ _) (hO.bv_extract _ _ _))
 
 theorem bv_extract.r_zext_high.proof : bv_extract.r_zext_high.Stmt := by
   sorry
@@ -491,7 +676,29 @@ theorem bv_extract.r_ext_orig.proof : bv_extract.r_ext_orig.Stmt := by
   sorry
 
 theorem bv_extract.r_extract.proof : bv_extract.r_extract.Stmt := by
-  sorry
+  intro FS O hO i j v res h
+  simp only [bv_extract.r_extract] at h
+  split at h <;> simp at h; subst h
+  rename_i pi pj a T
+  refine Refines.trans ?_ (hO.bv_extract _ _ _)
+  refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+  · obtain ⟨m, hv, h0, h1, h2, -, wv⟩ := WT_extract.1 w
+    obtain ⟨n, ha, h3, h4, h5, hT, wa⟩ := WT_extract.1 wv
+    simp only [Term.ty_mk] at hv; subst hv; simp only [Ty.bitVector.injEq] at hT; subst hT
+    refine ⟨WT_extract.2 ⟨n, ha, by omega, by omega, by omega, rfl, wa⟩, ?_⟩
+    simp only [bv_extract.spec, Term.ty_mk, Ty.sort_eq]; congr 1; omega
+  · obtain ⟨m, x, hv, h0, h1, h2, -, ev, rfl⟩ := eval_extract e
+    obtain ⟨n, y, ha, h3, h4, h5, hT, ea, hx⟩ := eval_extract ev
+    simp only [Term.ty_mk] at hv; subst hv; simp only [Ty.bitVector.injEq] at hT; subst hT
+    obtain ⟨hw, rfl⟩ := Val.bv_inj hx
+    simp only [bv_extract.spec] at w' ⊢
+    rw [eval_extract_of w' ea]; congr 1
+    apply Val.bv_ext (by omega)
+    intro t ht
+    simp only [BitVec.getLsbD_extractLsb']
+    have e1 : (pi + i).toNat + t = pi.toNat + (i.toNat + t) := by omega
+    rw [e1]
+    simp (disch := omega) only [decide_eq_true, Bool.true_and]
 
 theorem bv_extract.r_concat.proof : bv_extract.r_concat.Stmt := by
   sorry
@@ -522,7 +729,13 @@ theorem bv_extend.r_extend.proof : bv_extend.r_extend.Stmt := by
   sorry
 
 theorem bv_extend.r_ite.proof : bv_extend.r_ite.Stmt := by
-  sorry
+  intro FS O hO s k v res h
+  simp only [bv_extend.r_ite] at h
+  split at h <;> simp at h; subst h
+  have rt : ∀ {a : Term} {t}, Refines FS (.mk (.unop (.bvExtend s k) a) t) (O.bv_extend s k a) :=
+    fun {a t} => Refines.trans (Refines.retype (fun w => by
+      obtain ⟨n, _, h1, _, ht, _⟩ := WT_extend.1 w; simp [h1, ht])) (hO.bv_extend s k a)
+  exact Refines.trans Refines.unop_ite (Refines.ite_O hO rt rt)
 
 theorem bv_extend.r_of_bool.proof : bv_extend.r_of_bool.Stmt := by
   sorry

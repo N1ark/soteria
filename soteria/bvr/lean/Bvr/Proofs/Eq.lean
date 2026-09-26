@@ -280,6 +280,12 @@ theorem sem_eq.r_ite_ite.proof : sem_eq.r_ite_ite.Stmt := by
   exact Refines.trans Refines.eq_ite_ite (Refines.b_ite hO Refines.refl (hO.sem_eq _ _) (hO.sem_eq _ _))
 
 theorem sem_eq.r_mul_cancel.proof : sem_eq.r_mul_cancel.Stmt := by
+  -- UNSOUND: the checked case does not exclude a zero factor. Counterexample: a = 0 and
+  -- ck1 = ck2 = checked_unsigned (so `is_checked (checked_meet ck1 ck2)` holds),
+  -- v1 = Mul checked_unsigned (0 : bv8) (var 0 : bv8), v2 = Mul checked_unsigned (0 : bv8)
+  -- (var 1 : bv8), ρ.var 0 = bv 8 1, ρ.var 1 = bv 8 2. Neither product overflows (both are 0),
+  -- so the spec `v1 == v2` evaluates to `true`; the result `O.sem_eq (var 0) (var 1)` refines
+  -- `var 0 == var 1`, which evaluates to `false`.
   sorry
 
 theorem sem_eq.r_or_zero.aux {FS : FloatSem} {l r : Term} {T1 T2 : Ty} {N : Int}
@@ -312,7 +318,7 @@ theorem sem_eq.r_or_zero.aux {FS : FloatSem} {l r : Term} {T1 T2 : Ty} {N : Int}
 theorem sem_eq.r_or_zero.proof : sem_eq.r_or_zero.Stmt := by
   intro FS O hO v1 v2 res h
   simp only [sem_eq.r_or_zero] at h
-  rcases orElse_eq_some h with h | h <;> split at h <;> simp only [reduceCtorEq, Option.some.injEq, decide_eq_true_eq, ite_true, ite_false, Option.ite_none_right_eq_some] at h
+  rcases orElse_eq_some h with h | h <;> split at h <;> simp only [reduceCtorEq, Option.some.injEq, decide_eq_true_eq, Option.ite_none_right_eq_some] at h
   all_goals
     obtain ⟨rfl, rfl⟩ := h
     refine Refines.trans ?_ (Refines.b_and hO (hO.sem_eq _ _) (hO.sem_eq _ _))
@@ -647,8 +653,8 @@ theorem sem_eq.r_nots.proof : sem_eq.r_nots.Stmt := by
     cases hb : eval FS ρ _ <;> rw [hb] at hx <;> simp [evUnop] at hx
     cases hc : eval FS ρ _ <;> rw [hc] at hy <;> simp [evUnop] at hy
     rename_i vb vc
-    rcases vb with _ | _ | _ | _ | _ | _ <;> simp [evUnop] at hx
-    rcases vc with _ | _ | _ | _ | _ | _ <;> simp [evUnop] at hy
+    rcases vb with _ | _ | _ | _ | _ | _ <;> simp at hx
+    rcases vc with _ | _ | _ | _ | _ | _ <;> simp at hy
     subst hx hy
     exact ⟨_, _, rfl, rfl, by simp⟩
 
@@ -659,7 +665,7 @@ theorem sem_eq.r_of_bool_const.aux {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {
   split
   · subst_vars
     refine Refines.eq_of_bool_lit (fun h w => ⟨w, h⟩) (fun ρ c n hn _ _ e => ?_)
-    rw [e]; cases c <;> simp [BitVec.one_ne_zero' hn, (BitVec.one_ne_zero' hn).symm] <;> omega
+    rw [e]; cases c <;> simp <;> omega
   split
   · subst_vars
     refine Refines.trans ?_ (hO.b_not b)
@@ -667,7 +673,7 @@ theorem sem_eq.r_of_bool_const.aux {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {
       (fun ρ c n hn _ _ e => ?_)
     have hb : b.ty = .bool := by have := eval_hasSort e; simpa using this
     rw [b_not.spec, eval_unop (WT_unop.2 ⟨by simp [Unop.WT, hb], eval_WT e⟩), e]
-    cases c <;> simp [evUnop, BitVec.one_ne_zero' hn] <;> omega
+    cases c <;> simp [evUnop] <;> omega
   · rename_i h1 h0
     refine Refines.eq_of_bool_lit (fun _ _ => ⟨by simp, rfl⟩) (fun ρ c n hn z1 z2 e => ?_)
     simp only [eval_v_false, Option.some.injEq, Val.bool.injEq, Bool.false_eq, decide_eq_false_iff_not]

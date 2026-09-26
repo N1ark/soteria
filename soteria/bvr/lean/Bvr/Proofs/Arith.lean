@@ -769,31 +769,121 @@ theorem bv_neg.r_default.proof : bv_neg.r_default.Stmt := by
   exact Refines.refl
 
 theorem bv_mod.r_lits.proof : bv_mod.r_lits.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [bv_mod.r_lits] at h; split at h <;> simp only [Option.some.injEq, reduceCtorEq] at h; subst h
+  refine Refines.arith_intro .mod_ (fun n wa wb hT => ?_) (fun n wa wb hT ρ x y v hx hy e => ?_)
+  · rw [size_eq, Term.ty_mk, size_ty_lit wa]; exact BV_mk_masked wa.2.2
+  · obtain ⟨-, hz1⟩ := BV_lit wa
+    obtain ⟨-, hz2⟩ := BV_lit wb
+    rw [size_eq, Term.ty_mk, size_ty_lit wa, eval_mk_masked wa.2.2]
+    rw [lit_eval_eq wa hx, lit_eval_eq wb hy] at e
+    simp [evBinop, bvBin] at e; subst e
+    rw [bv_to_z_lit wa.2.2 hz1.1 hz1.2, bv_to_z_lit wa.2.2 hz2.1 hz2.2]
+    rw [← BitVec.ofInt_toInt (x := BitVec.smod _ _), BitVec.toInt_smod]
+    simp only [↓reduceIte, trem, ← smod_formula]
+    congr 4 <;> simp
 
 theorem bv_mod.r_default.proof : bv_mod.r_default.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [bv_mod.r_default] at h; simp at h; subst h
+  exact Refines.refl
 
 theorem bv_rem.r_lits.proof : bv_rem.r_lits.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_rem.r_lits] at h; split at h <;> simp only [Option.some.injEq, reduceCtorEq] at h; subst h
+  refine Refines.arith_intro (.rem s) (fun n wa wb hT => ?_) (fun n wa wb hT ρ x y v hx hy e => ?_)
+  · rw [size_eq, Term.ty_mk, size_ty_lit wa]; exact BV_mk_masked wa.2.2
+  · obtain ⟨-, hz1⟩ := BV_lit wa
+    obtain ⟨-, hz2⟩ := BV_lit wb
+    rw [size_eq, Term.ty_mk, size_ty_lit wa, eval_mk_masked wa.2.2]
+    rw [lit_eval_eq wa hx, lit_eval_eq wb hy] at e
+    simp [evBinop, bvBin] at e; subst e
+    rw [bv_to_z_lit wa.2.2 hz1.1 hz1.2, bv_to_z_lit wa.2.2 hz2.1 hz2.2]
+    cases s
+    · simp only [Bool.false_eq_true, ↓reduceIte, trem]
+      rw [← Int.ofNat_tmod, BitVec.ofInt_natCast]
+      congr 2; apply BitVec.eq_of_toNat_eq
+      rw [BitVec.toNat_ofNat, BitVec.toNat_umod]
+      exact Nat.mod_eq_of_lt (Nat.lt_of_le_of_lt (Nat.mod_le _ _) (BitVec.isLt _))
+    · simp only [↓reduceIte, trem]
+      rw [← BitVec.toInt_srem, BitVec.ofInt_toInt]
 
 theorem bv_rem.r_zero_l.proof : bv_rem.r_zero_l.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_rem.r_zero_l] at h; split at h <;> simp at h; obtain ⟨rfl, rfl⟩ := h
+  refine Refines.arith_intro (.rem s) (fun n wa wb hT => ?_) (fun n wa wb hT ρ x y v hx hy e => ?_)
+  · rw [size_ty_lit wa]; exact BV_bv_zero wa.2.2
+  · rw [size_ty_lit wa, eval_bv_zero wa.2.2]
+    rw [lit_eval_eq wa hx] at e
+    simp [evBinop, bvBin] at e; subst e
+    cases s <;> simp
 
 theorem bv_rem.r_one_r.proof : bv_rem.r_one_r.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_rem.r_one_r] at h; split at h <;> simp at h; obtain ⟨⟨rfl, rfl⟩, rfl⟩ := h
+  refine Refines.arith_intro (.rem false) (fun n wa wb hT => ?_)
+    (fun n wa wb hT ρ x y v hx hy e => ?_)
+  · simp only [wa.2.1, size_of_ty_bitVector]; exact BV_bv_zero wa.2.2
+  · simp only [wa.2.1, size_of_ty_bitVector]; rw [eval_bv_zero wa.2.2]
+    rw [lit_eval_eq wb hy] at e
+    simp [evBinop, bvBin] at e; subst e
+    congr 2
 
+-- UNSOUND: `is_pow2 1` holds, and then the bit-width is `log2 1 = 0`, so the rule extracts the
+-- empty range `0 .. -1`. Take 8 bits, `signed = false`, v1 a variable x = 5 and v2 the literal 1
+-- (take `O` returning the raw spec terms). The spec `x %u 1` is well-typed and is `some 0`. The
+-- result is `Extend (false, 8, Extract (0, -1, x))`, whose extraction is ill-typed, so the result
+-- is not well-typed (and is poison). In `bv_rem.step`, `r_one_r` fires first on this input.
 theorem bv_rem.r_pow2.proof : bv_rem.r_pow2.Stmt := by
   sorry
 
 theorem bv_rem.r_add.proof : bv_rem.r_add.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_rem.r_add] at h
+  rcases orElse_eq_some h with h | h <;> split at h <;> simp at h <;>
+    obtain ⟨⟨rfl, rfl, hu⟩, rfl⟩ := h
+  · rename_i ck d T1 r T _
+    refine Refines.arith_intro (.rem false) (fun n wa wb hT => ?_)
+      (fun n wa wb hT ρ x y v hx hy e => ?_)
+    all_goals obtain ⟨wd, wr, rfl⟩ := BV_arith_inv (.add ck) wa
+    · exact BV_arith (.rem _) (hO.bv_rem false r _) wr wb
+    · rw [eval_arith (.add ck) wd wr rfl] at hx
+      obtain ⟨D, R, hD, hR, hx2⟩ := evBinop_inv (.inl (.add ck)) wd wr hx
+      obtain ⟨rfl, -⟩ := BV_lit wd
+      obtain ⟨rfl, -⟩ := BV_lit wb
+      rw [hD] at hy; simp at hy; subst hy
+      refine O_eval (.rem _) (hO.bv_rem _ _ _) wr wb hR hD ?_
+      simp [evBinop, checkedOp, bvBin] at hx2 e ⊢
+      obtain ⟨⟨-, h2⟩, rfl⟩ := hx2; subst e
+      congr 1; apply BitVec.eq_of_toNat_eq
+      rw [BitVec.toNat_umod, BitVec.toNat_umod, toNat_add_ok (h2 hu), Nat.add_mod_left]
+  · rename_i ck r d T1 T _
+    refine Refines.arith_intro (.rem false) (fun n wa wb hT => ?_)
+      (fun n wa wb hT ρ x y v hx hy e => ?_)
+    all_goals obtain ⟨wr, wd, rfl⟩ := BV_arith_inv (.add ck) wa
+    · exact BV_arith (.rem _) (hO.bv_rem false r _) wr wb
+    · rw [eval_arith (.add ck) wr wd rfl] at hx
+      obtain ⟨R, D, hR, hD, hx2⟩ := evBinop_inv (.inl (.add ck)) wr wd hx
+      obtain ⟨rfl, -⟩ := BV_lit wd
+      obtain ⟨rfl, -⟩ := BV_lit wb
+      rw [hD] at hy; simp at hy; subst hy
+      refine O_eval (.rem _) (hO.bv_rem _ _ _) wr wb hR hD ?_
+      simp [evBinop, checkedOp, bvBin] at hx2 e ⊢
+      obtain ⟨⟨-, h2⟩, rfl⟩ := hx2; subst e
+      congr 1; apply BitVec.eq_of_toNat_eq
+      rw [BitVec.toNat_umod, BitVec.toNat_umod, toNat_add_ok (h2 hu), Nat.add_mod_right]
 
+-- UNSOUND: a zero modulus divides everything as far as `trem` is concerned (`trem 0 r2 = 0`), but
+-- `x %u 0 = x`. Take 8 bits, `signed = false`, v1 = Rem (false, x, 0), v2 = 2, with x = 5 (take
+-- `O` returning the raw spec terms). Then `0 = trem 0 2` and `zmin 0 2 = 0`, so the result is
+-- `x %u 0 = some 5`, while the spec is `(5 %u 0) %u 2 = 5 %u 2 = some 1`.
 theorem bv_rem.r_rem_rem.proof : bv_rem.r_rem_rem.Stmt := by
   sorry
 
 theorem bv_rem.r_default.proof : bv_rem.r_default.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_rem.r_default] at h; simp at h; subst h
+  exact Refines.refl
 
 theorem bv_mul.r_lits.proof : bv_mul.r_lits.Stmt := by
   sorry

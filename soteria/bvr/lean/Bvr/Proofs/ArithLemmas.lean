@@ -857,5 +857,25 @@ theorem eval_ite_inv' {FS ρ g a b T n x} (w : BV (.mk (.triop .ite g a b) T) n)
   eval_ite_inv e
 
 
+/-! ## Division and remainder -/
+
+theorem smod_formula (a b : Int) :
+    (if a.tmod b < 0 ∧ ¬ b < 0 then a.tmod b + b
+     else if 0 < a.tmod b ∧ b < 0 then a.tmod b + b else a.tmod b) = a.fmod b := by
+  rw [Int.tmod_eq_emod, Int.fmod_eq_emod]
+  by_cases hb : b = 0
+  · subst hb; simp
+  have h1 := Int.emod_nonneg a hb
+  have h2 := Int.emod_lt a hb
+  simp only [Int.dvd_iff_emod_eq_zero]
+  rcases Int.lt_or_lt_of_ne hb with hb' | hb'
+  · have : (b.natAbs : Int) = -b := by omega
+    repeat' split
+    all_goals simp_all <;> omega
+  · have : (b.natAbs : Int) = b := by omega
+    repeat' split
+    all_goals simp_all <;> omega
+
+
 end ArithL
 end Bvr

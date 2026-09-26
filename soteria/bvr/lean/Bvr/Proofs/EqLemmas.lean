@@ -821,5 +821,682 @@ theorem BitVec.ofBool_inj {k : Nat} (hk : 0 < k) {b1 b2 : Bool} :
     ((if b1 then 1 else 0 : BitVec k) = if b2 then 1 else 0) ↔ b1 = b2 := by
   cases b1 <;> cases b2 <;> simp <;> omega
 
+
+theorem pand_bools (a b : Bool) :
+    pand (some (.bool a)) (some (.bool b)) = some (.bool (a && b)) := by
+  cases a <;> cases b <;> rfl
+
+/-- An equality that splits into the conjunction of two equalities. -/
+theorem Refines.eq_and {FS : FloatSem} {a b c d e f : Term}
+    (syn : a.ty = b.ty → a.WT → b.WT → c.ty = d.ty ∧ c.WT ∧ d.WT ∧ e.ty = f.ty ∧ e.WT ∧ f.WT)
+    (sem : ∀ ρ x y, a.ty = b.ty → a.WT → b.WT → eval FS ρ a = some x →
+      eval FS ρ b = some y → ∃ xc xd xe xf, eval FS ρ c = some xc ∧ eval FS ρ d = some xd ∧
+        eval FS ρ e = some xe ∧ eval FS ρ f = some xf ∧ (x = y ↔ xc = xd ∧ xe = xf)) :
+    Refines FS (sem_eq.spec a b) (b_and.spec (sem_eq.spec c d) (sem_eq.spec e f)) := by
+  refine Refines.intro (fun w => ?_) (fun ρ v w w' hev => ?_)
+  · have ⟨h1, h2, h3⟩ := WT_sem_eq.1 w
+    obtain ⟨k1, k2, k3, k4, k5, k6⟩ := syn h1 h2 h3
+    exact ⟨WT_and.2 ⟨by simp, by simp, rfl, WT_sem_eq.2 ⟨k1, k2, k3⟩, WT_sem_eq.2 ⟨k4, k5, k6⟩⟩,
+      rfl⟩
+  · have ⟨h1, h2, h3⟩ := WT_sem_eq.1 w
+    obtain ⟨x, y, hx, hy, rfl⟩ := eval_eq_some hev
+    obtain ⟨xc, xd, xe, xf, ec, ed, ee, ef, hiff⟩ := sem ρ x y h1 h2 h3 hx hy
+    have ⟨_, wl, wr⟩ := WT_binop.1 w'
+    simp only [sem_eq.spec] at wl wr
+    rw [b_and.spec, eval_binop w', sem_eq.spec, sem_eq.spec, eval_eq_of wl ec ed,
+      eval_eq_of wr ee ef, evBinop, pand_bools]
+    simp only [Option.some.injEq, Val.bool.injEq]
+    by_cases h : x = y <;> simp_all
+
+
+/-- An equality between [bv_of_bool] and a literal. -/
+theorem Refines.eq_of_bool_lit {FS : FloatSem} {b r : Term} {k z : Int} {T1 T2 : Ty}
+    (hsyn : b.ty = .bool → b.WT → r.WT ∧ r.ty = .bool)
+    (hsem : ∀ ρ (c : Bool) (n : Nat), 0 < n → 0 ≤ z → z < 2 ^ n →
+      eval FS ρ b = some (.bool c) →
+      eval FS ρ r = some (.bool (decide (((if c then 1 else 0) : BitVec n) = BitVec.ofInt n z)))) :
+    Refines FS (sem_eq.spec (.mk (.unop (.bvOfBool k) b) T1) (.mk (.bitVec z) T2)) r := by
+  refine Refines.eq_const (fun hT w1 w2 => ?_) (fun ρ x y hT w1 w2 hx hy => ?_)
+  · have ⟨h1, wb⟩ := WT_unop.1 w1
+    simp only [Unop.WT, Ty.sort_eq] at h1
+    exact hsyn h1.2.1 wb
+  · have ⟨h1, wb⟩ := WT_unop.1 w1
+    simp only [Unop.WT, Ty.sort_eq, Term.ty_mk] at h1 hT
+    obtain ⟨hk, hb, rfl⟩ := h1
+    rw [eval_unop w1] at hx
+    cases he : eval FS ρ b with
+    | none => rw [he] at hx; simp at hx
+    | some vb =>
+      obtain ⟨c, rfl⟩ := eval_bool_val he hb
+      rw [he] at hx; simp only [evUnop, Option.some.injEq] at hx; subst hx
+      obtain ⟨n, hn, hT2, z1, z2, e⟩ := eval_bitVec_range (FS := FS) (ρ := ρ) w2
+      rw [e] at hy; cases hy
+      rw [← hT] at hT2
+      have : k.toNat = n := by rcases hT2 with h | h <;> simp at h; omega
+      subst this
+      rw [hsem ρ c _ hn z1 z2 he]; simp
+
+
+theorem lit_WT' {z n : Int} (hn : 0 < n) (h0 : 0 ≤ z) (h1 : z < 2 ^ n.toNat) :
+    (Term.mk (.bitVec z) (.bitVector n)).WT :=
+  WT_bitVec.2 ⟨n.toNat, by omega, Or.inl (by simp; omega), h0, h1⟩
+
+theorem eval_lit' {FS ρ} {z n : Int} (w : (Term.mk (.bitVec z) (.bitVector n)).WT) :
+    eval FS ρ (.mk (.bitVec z) (.bitVector n)) = some (.bv n.toNat (BitVec.ofInt _ z)) :=
+  eval_bitVec' w (Or.inl rfl)
+
+@[simp] theorem bv_zero_ty' {n : Int} : (bv_zero n).ty = .bitVector n := rfl
+
+theorem bv_zero_WT' {n : Int} (hn : 0 < n) : (bv_zero n).WT :=
+  lit_WT' hn (by omega) (two_pow_pos' _)
+
+theorem eval_bv_zero'' {FS ρ} {n : Int} (hn : 0 < n) :
+    eval FS ρ (bv_zero n) = some (.bv n.toNat 0) := by
+  rw [bv_zero, eval_lit' (bv_zero_WT' hn)]; simp
+
+/-- The width of the value of a bit-vector term. -/
+theorem eval_bv_ty {FS ρ t n m x} (h : eval FS ρ t = some (.bv m x)) (ht : t.ty = .bitVector n) :
+    m = n.toNat ∧ 0 < n := by
+  obtain ⟨hn, x', hx⟩ := eval_bv_of_ty h (Or.inl ht)
+  simp at hx; exact ⟨hx.1, hn⟩
+
+
+theorem WT_concat {a b t} : (Term.mk (.binop .bvConcat a b) t).WT ↔
+    ∃ n m : Int, 0 < n ∧ 0 < m ∧ a.ty = .bitVector n ∧ b.ty = .bitVector m ∧
+      t = .bitVector (n + m) ∧ a.WT ∧ b.WT := by
+  simp [Term.WT, Binop.WT]; grind
+
+theorem eval_concat_some {FS ρ a b t v} (w : (Term.mk (.binop .bvConcat a b) t).WT)
+    (h : eval FS ρ (.mk (.binop .bvConcat a b) t) = some v) :
+    ∃ n m x y, eval FS ρ a = some (.bv n x) ∧ eval FS ρ b = some (.bv m y) ∧
+      v = .bv (n + m) (x ++ y) := by
+  rw [eval_binop w] at h
+  cases ha : eval FS ρ a with
+  | none => rw [ha] at h; simp [evBinop] at h
+  | some va =>
+    cases hb : eval FS ρ b with
+    | none => rw [ha, hb] at h; rcases va with _ | _ | _ | _ | _ | _ <;> simp [evBinop] at h
+    | some vb =>
+      rw [ha, hb] at h
+      rcases va with _ | ⟨n, x⟩ | _ | _ | _ | _ <;> rcases vb with _ | ⟨m, y⟩ | _ | _ | _ | _ <;>
+        simp [evBinop] at h
+      exact ⟨n, m, x, y, rfl, rfl, h.symm⟩
+
+
+theorem Val_bv_extract_congr {W k k' : Nat} (h : k = k') (c : BitVec W) (i : Nat) :
+    Val.bv k (c.extractLsb' i k) = Val.bv k' (c.extractLsb' i k') := by subst h; rfl
+
+theorem val_concat_iff {W A B : Nat} (c : BitVec W) (x : BitVec A) (y : BitVec B)
+    (h : W = A + B) :
+    Val.bv W c = Val.bv (A + B) (x ++ y) ↔
+      (Val.bv A (c.extractLsb' B A) = Val.bv A x ∧ Val.bv B (c.extractLsb' 0 B) = Val.bv B y) := by
+  subst h
+  simp only [Val.bv.injEq, heq_eq_eq, true_and]
+  constructor
+  · rintro rfl
+    exact ⟨BitVec.extractLsb'_append_eq_left, BitVec.extractLsb'_append_eq_right⟩
+  · rintro ⟨rfl, rfl⟩
+    exact BitVec.extractLsb'_append_extractLsb'.symm
+
+theorem WT_extract_spec {Z : Term} {i j N : Int} (wZ : Z.WT) (hZ : Z.ty = .bitVector N)
+    (h0 : 0 ≤ i) (h1 : i ≤ j) (h2 : j < N) : (bv_extract.spec i j Z).WT :=
+  WT_unop.2 ⟨⟨N, by simpa using hZ, h0, h1, h2, rfl⟩, wZ⟩
+
+theorem eval_extract_spec {FS ρ} {Z : Term} {i j : Int} {W : Nat} {c : BitVec W}
+    (w : (bv_extract.spec i j Z).WT) (h : eval FS ρ Z = some (.bv W c)) :
+    eval FS ρ (bv_extract.spec i j Z) = some (.bv (j - i + 1).toNat (c.extractLsb' i.toNat _)) := by
+  rw [bv_extract.spec, eval_unop w, h]; rfl
+
+/-- The high part of a bit-vector of width [n + m]. -/
+theorem extract_hi {FS ρ} {Z : Term} {n m : Int} (hn : 0 < n) (hm : 0 < m) (wZ : Z.WT)
+    (hZ : Z.ty = .bitVector (n + m)) :
+    (bv_extract.spec m (m + n - 1) Z).WT ∧ (bv_extract.spec m (m + n - 1) Z).ty = .bitVector n ∧
+      ∀ W (c : BitVec W), eval FS ρ Z = some (.bv W c) →
+        eval FS ρ (bv_extract.spec m (m + n - 1) Z) =
+          some (.bv n.toNat (c.extractLsb' m.toNat n.toNat)) := by
+  have w := WT_extract_spec (i := m) (j := m + n - 1) wZ hZ (by omega) (by omega) (by omega)
+  refine ⟨w, by simp [bv_extract.spec]; omega, fun W c h => ?_⟩
+  rw [eval_extract_spec w h, Val_bv_extract_congr (k' := n.toNat) (by omega)]
+
+/-- The low part of a bit-vector of width [n + m]. -/
+theorem extract_lo {FS ρ} {Z : Term} {n m : Int} (hn : 0 < n) (hm : 0 < m) (wZ : Z.WT)
+    (hZ : Z.ty = .bitVector (n + m)) :
+    (bv_extract.spec 0 (m - 1) Z).WT ∧ (bv_extract.spec 0 (m - 1) Z).ty = .bitVector m ∧
+      ∀ W (c : BitVec W), eval FS ρ Z = some (.bv W c) →
+        eval FS ρ (bv_extract.spec 0 (m - 1) Z) =
+          some (.bv m.toNat (c.extractLsb' 0 m.toNat)) := by
+  have w := WT_extract_spec (i := 0) (j := m - 1) wZ hZ (by omega) (by omega) (by omega)
+  refine ⟨w, by simp [bv_extract.spec], fun W c h => ?_⟩
+  rw [eval_extract_spec w h, Val_bv_extract_congr (k' := m.toNat) (by omega)]; rfl
+
+/-- An equality with a concatenation, split into its two parts. -/
+theorem Refines.eq_concat {FS : FloatSem} {Z l r EL ER : Term} {T : Ty}
+    (sL : ∀ n m : Int, 0 < n → 0 < m → l.ty = .bitVector n → r.ty = .bitVector m → Z.WT →
+      Z.ty = .bitVector (n + m) →
+      EL.WT ∧ EL.ty = .bitVector n ∧ ER.WT ∧ ER.ty = .bitVector m)
+    (eL : ∀ n m : Int, 0 < n → 0 < m → l.ty = .bitVector n → r.ty = .bitVector m → Z.WT →
+      Z.ty = .bitVector (n + m) → ∀ ρ W (c : BitVec W), eval FS ρ Z = some (.bv W c) →
+      eval FS ρ EL = some (.bv n.toNat (c.extractLsb' m.toNat n.toNat)) ∧
+      eval FS ρ ER = some (.bv m.toNat (c.extractLsb' 0 m.toNat))) :
+    Refines FS (sem_eq.spec Z (.mk (.binop .bvConcat l r) T))
+      (b_and.spec (sem_eq.spec EL l) (sem_eq.spec ER r)) := by
+  refine Refines.eq_and (fun hT w1 w2 => ?_) (fun ρ x y hT w1 w2 hx hy => ?_)
+  · obtain ⟨n, m, hn, hm, hl, hr, hT2, wl, wr⟩ := WT_concat.1 w2
+    simp only [Term.ty_mk] at hT
+    obtain ⟨k1, k2, k3, k4⟩ := sL n m hn hm hl hr w1 (by rw [hT, hT2])
+    exact ⟨by rw [k2, hl], k1, wl, by rw [k4, hr], k3, wr⟩
+  · obtain ⟨n, m, hn, hm, hl, hr, hT2, wl, wr⟩ := WT_concat.1 w2
+    simp only [Term.ty_mk] at hT
+    have hZ : Z.ty = .bitVector (n + m) := by rw [hT, hT2]
+    obtain ⟨_, c, rfl⟩ := eval_bv_of_ty hx (Or.inl hZ)
+    obtain ⟨a, b, x1, y1, e1, e2, rfl⟩ := eval_concat_some w2 hy
+    obtain ⟨rfl, _⟩ := eval_bv_ty e1 hl
+    obtain ⟨rfl, _⟩ := eval_bv_ty e2 hr
+    obtain ⟨k1, k2⟩ := eL n m hn hm hl hr w1 hZ ρ _ c hx
+    exact ⟨_, _, _, _, k1, e1, k2, e2, val_concat_iff c x1 y1 (by omega)⟩
+
+theorem Refines.and_eq_symm {FS : FloatSem} {a b c d : Term} :
+    Refines FS (b_and.spec (sem_eq.spec a b) (sem_eq.spec c d))
+      (b_and.spec (sem_eq.spec b a) (sem_eq.spec d c)) :=
+  Refines.binop Refines.eq_symm Refines.eq_symm (fun _ => rfl)
+
+
+theorem Refines.eq_retype {FS : FloatSem} {a b : Term} :
+    Refines FS (sem_eq.spec a b) (sem_eq.spec (.mk a.kind b.ty) b) := by
+  refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
+  · have ⟨h1, _, _⟩ := WT_sem_eq.1 w
+    cases a; simp only [Term.ty_mk, Term.kind_mk] at h1 ⊢; subst h1; exact ⟨w, rfl⟩
+  · have ⟨h1, _, _⟩ := WT_sem_eq.1 w
+    cases a; simp only [Term.ty_mk, Term.kind_mk] at h1 ⊢; subst h1; exact e
+
+
+theorem nat_and_mask_eq_zero_iff {z N K : Nat} (hz : z < 2^(N+K)) :
+    z &&& ((2^K - 1) * 2^N) = 0 ↔ z < 2^N := by
+  rw [← Nat.shiftLeft_eq]
+  constructor
+  · intro h
+    apply Nat.lt_pow_two_of_testBit
+    intro i hi
+    cases hb : z.testBit i
+    · rfl
+    have hik : i < N + K := by
+      have := Nat.ge_two_pow_of_testBit hb
+      refine Nat.lt_of_not_le fun hc => ?_
+      have : 2^(N+K) ≤ 2^i := Nat.pow_le_pow_right (by omega) hc
+      omega
+    have := congrArg (fun x => x.testBit i) h
+    simp only [Nat.testBit_and, Nat.testBit_shiftLeft, Nat.zero_testBit, hb,
+      Nat.testBit_two_pow_sub_one] at this
+    simp at this
+    omega
+  · intro h
+    apply Nat.eq_of_testBit_eq; intro i
+    simp only [Nat.testBit_and, Nat.testBit_shiftLeft, Nat.zero_testBit]
+    by_cases hi : i < N
+    · simp; omega
+    · have : z.testBit i = false :=
+        Nat.testBit_lt_two_pow (Nat.lt_of_lt_of_le h (Nat.pow_le_pow_right (by omega) (by omega)))
+      simp [this]
+
+theorem zland_mask_eq_zero_iff {z n k : Int} (hn : 0 ≤ n) (hk : 0 ≤ k) (h0 : 0 ≤ z)
+    (h1 : z < 2 ^ (n + k).toNat) :
+    zland z (zshiftl (zshiftl 1 k - 1) n) = 0 ↔ z < 2 ^ n.toNat := by
+  obtain ⟨Z, rfl⟩ := Int.eq_ofNat_of_zero_le h0
+  have hm : zshiftl (zshiftl 1 k - 1) n = (((2 ^ k.toNat - 1) * 2 ^ n.toNat : Nat) : Int) := by
+    have := Nat.one_le_two_pow (n := k.toNat)
+    simp only [zshiftl, Int.one_mul]
+    rw [Int.natCast_mul, Int.natCast_sub this]
+    simp
+  rw [hm]
+  show Int.ofNat (Z &&& _) = 0 ↔ _
+  have h1' : Z < 2 ^ (n.toNat + k.toNat) := by
+    have : (n + k).toNat = n.toNat + k.toNat := by omega
+    rw [this] at h1; exact_mod_cast h1
+  rw [Int.ofNat_eq_natCast, Int.natCast_eq_zero, nat_and_mask_eq_zero_iff h1']
+  constructor <;> intro h <;> exact_mod_cast h
+
+theorem val_bv_eq_iff {A B : Nat} (x : BitVec A) (y : BitVec B) (h : A = B) :
+    Val.bv A x = Val.bv B y ↔ x.toNat = y.toNat := by
+  subst h; simp [BitVec.toNat_inj]
+
+theorem toNat_of_val_bv_eq {A B : Nat} {x : BitVec A} {y : BitVec B} (h : Val.bv A x = Val.bv B y) :
+    x.toNat = y.toNat := by cases h; rfl
+
+theorem toNat_ofInt_of_range {w : Nat} {z : Int} (h0 : 0 ≤ z) (h1 : z < 2 ^ w) :
+    ((BitVec.ofInt w z).toNat : Int) = z := by
+  rw [BitVec.toNat_ofInt, Int.emod_eq_of_lt h0 (by exact_mod_cast h1)]
+  omega
+
+
+theorem zland_notmask_zero {zn mask F : Int} {c : Nat} (h0 : 0 ≤ zn) (hm : 0 ≤ mask)
+    (hF : 0 ≤ F) (h : zn.toNat = mask.toNat &&& c) :
+    zland zn (zland (zlognot mask) F) = 0 := by
+  obtain ⟨N, rfl⟩ := Int.eq_ofNat_of_zero_le h0
+  obtain ⟨Mk, rfl⟩ := Int.eq_ofNat_of_zero_le hm
+  obtain ⟨Fn, rfl⟩ := Int.eq_ofNat_of_zero_le hF
+  have hl : zlognot (Mk : Int) = Int.negSucc Mk := by
+    rw [zlognot, Int.negSucc_eq]; omega
+  rw [hl]
+  show Int.ofNat (N &&& Nat.bitwise (fun a b => !a && b) Mk Fn) = 0
+  simp only [Int.toNat_natCast] at h
+  subst h
+  rw [Int.ofNat_eq_natCast, Int.natCast_eq_zero]
+  apply Nat.eq_of_testBit_eq; intro i
+  rw [Nat.testBit_and, Nat.testBit_and, Nat.testBit_bitwise rfl]
+  cases Mk.testBit i <;> simp
+
+theorem Refines.eq_and_mask {FS : FloatSem} {zn mask sz : Int} {Tn Tm T : Ty} {A B : Term}
+    (hmask : Term.mk (.bitVec mask) Tm = A ∨ Term.mk (.bitVec mask) Tm = B)
+    (hsz : sz = size_of_ty Tn ∨ sz = size_of_ty T)
+    (hc : (!decide (zland zn (zland (zlognot mask) (zshiftl 1 sz - 1)) = 0)) = true) :
+    Refines FS (sem_eq.spec (.mk (.bitVec zn) Tn) (.mk (.binop .bitAnd A B) T)) v_false := by
+  refine Refines.eq_const (fun _ _ _ => by simp) (fun ρ x y hT w1 w2 hx hy => ?_)
+  simp only [Term.ty_mk] at hT; subst hT
+  obtain ⟨⟨W', hW, hA⟩, hB, hT2, wA, wB⟩ := (WT_bvbin (Or.inr (Or.inr (Or.inr (Or.inl rfl))))).1 w2
+  have hs : sz = W' := by rcases hsz with rfl | rfl <;> rw [hT2, hA] <;> rfl
+  subst hs
+  rw [eval_binop w2] at hy; simp only [evBinop] at hy
+  obtain ⟨m, a, b, ha, hb, hab⟩ := bvBin_eq_some.1 hy
+  simp only [Option.some.injEq] at hab; subst hab
+  obtain ⟨W, _, hTn, zn0, zn1, e⟩ := eval_bitVec_range (FS := FS) (ρ := ρ) w1
+  rw [e] at hx; cases hx
+  simp only [eval_v_false, Option.some.injEq, Val.bool.injEq, Bool.false_eq,
+    decide_eq_false_iff_not]
+  intro heq
+  have ht := toNat_of_val_bv_eq heq
+  rw [BitVec.toNat_and] at ht
+  have hzn : (BitVec.ofInt W zn).toNat = zn.toNat := by
+    have := toNat_ofInt_of_range (w := W) zn0 zn1; omega
+  rw [hzn] at ht
+  have hF : 0 ≤ zshiftl 1 sz - 1 := by
+    simp only [zshiftl, Int.one_mul]
+    have := two_pow_pos' sz.toNat; omega
+  have hz : zland zn (zland (zlognot mask) (zshiftl 1 sz - 1)) = 0 := by
+    rcases hmask with rfl | rfl
+    · obtain ⟨rfl, m0, m1, _⟩ := eval_lit_bv wA ha
+      have := toNat_ofInt_of_range (w := m) m0 m1
+      exact zland_notmask_zero zn0 m0 hF (c := b.toNat) (by rw [ht]; congr 1; omega)
+    · obtain ⟨rfl, m0, m1, _⟩ := eval_lit_bv wB hb
+      have := toNat_ofInt_of_range (w := m) m0 m1
+      exact zland_notmask_zero zn0 m0 hF (c := a.toNat)
+        (by rw [ht, Nat.and_comm]; congr 1; omega)
+  simp [hz] at hc
+
+
+/-- The integer that a bit-vector stands for, in a signedness. -/
+def iv (s : Bool) {w : Nat} (x : BitVec w) : Int := if s then x.toInt else (x.toNat : Int)
+
+theorem iv_inj {s : Bool} {w : Nat} {a b : BitVec w} : iv s a = iv s b ↔ a = b := by
+  cases s
+  · simp only [iv, Bool.false_eq_true, ite_false]
+    exact ⟨fun h => BitVec.eq_of_toNat_eq (by omega), fun h => by rw [h]⟩
+  · simp [iv, BitVec.toInt_inj]
+
+theorem iv_zero {s : Bool} {w : Nat} : iv s (0 : BitVec w) = 0 := by
+  cases s <;> simp [iv, BitVec.toInt_zero]
+
+theorem two_pow_pred {w : Nat} (hw : 0 < w) : (2 : Int) ^ w = 2 * 2 ^ (w - 1) := by
+  have : w = (w - 1) + 1 := by omega
+  conv => lhs; rw [this]
+  rw [Int.pow_succ]; omega
+
+theorem iv_range {s : Bool} {w : Nat} (x : BitVec w) :
+    (if s then -2 ^ (w - 1) ≤ iv s x ∧ iv s x < 2 ^ (w - 1)
+      else 0 ≤ iv s x ∧ iv s x < 2 ^ w) := by
+  cases s
+  · simp only [iv, Bool.false_eq_true, ite_false]
+    have := x.isLt
+    exact ⟨by omega, by exact_mod_cast this⟩
+  · simp only [iv, ite_true]
+    exact ⟨BitVec.le_toInt x, BitVec.toInt_lt⟩
+
+theorem iv_ofInt {s : Bool} {w : Nat} (hw : 0 < w) {q : Int}
+    (h : if s then -2 ^ (w - 1) ≤ q ∧ q < 2 ^ (w - 1) else 0 ≤ q ∧ q < 2 ^ w) :
+    iv s (BitVec.ofInt w q) = q := by
+  cases s
+  · simp only [Bool.false_eq_true, ite_false] at h
+    simp only [iv, Bool.false_eq_true, ite_false]
+    exact toNat_ofInt_of_range h.1 h.2
+  · simp only [ite_true] at h
+    simp only [iv, ite_true, BitVec.toInt_ofInt]
+    have := two_pow_pred hw
+    apply Int.bmod_eq_of_le_mul_two <;> push_cast <;> omega
+
+theorem bv_to_z_lit {s : Bool} {W z : Int} (hW : 0 < W) (h0 : 0 ≤ z) (h1 : z < 2 ^ W.toNat) :
+    bv_to_z s W z = iv s (BitVec.ofInt W.toNat z) := by
+  have hr := toNat_ofInt_of_range (w := W.toNat) h0 h1
+  cases s
+  · simp only [bv_to_z, iv, Bool.false_eq_true, ite_false]; omega
+  · simp only [bv_to_z, signed_extract, zasr, iv, ite_true, Int.toNat_zero, Int.pow_zero,
+      Int.ediv_one]
+    rw [Int.emod_eq_of_lt h0 (by exact_mod_cast h1), BitVec.toInt_eq_toNat_cond]
+    have := two_pow_pred (w := W.toNat) (by omega)
+    have h2 : (((2 ^ W.toNat : Nat)) : Int) = 2 * 2 ^ (W.toNat - 1) := by push_cast; exact this
+    have h3 : ((2 : Nat) : Int) ^ W.toNat = 2 * 2 ^ (W.toNat - 1) := by push_cast; exact this
+    split <;> split <;> omega
+
+theorem iv_mul {ck : Checked} (hck : is_checked ck = true) {w : Nat} {a b : BitVec w}
+    (hf : ((ck.signed && a.smulOverflow b) || (ck.unsigned && a.umulOverflow b)) = false) :
+    iv (!ck.unsigned) (a * b) = iv (!ck.unsigned) a * iv (!ck.unsigned) b := by
+  obtain ⟨cs, cu⟩ := ck
+  simp only [is_checked] at hck
+  cases cu
+  · simp only [Bool.or_false, Bool.false_and] at hck hf
+    subst hck
+    simp only [Bool.true_and] at hf
+    simp only [iv, Bool.not_false, ite_true]
+    exact BitVec.toInt_mul_of_not_smulOverflow (by simp [hf])
+  · simp only [Bool.true_and, Bool.or_eq_false_iff] at hf
+    simp only [iv, Bool.not_true, Bool.false_eq_true, ite_false]
+    rw [BitVec.toNat_mul_of_not_umulOverflow (by simp [hf.2])]; push_cast; rfl
+
+
+/-- Whether a quotient fits in the signedness of the [mul_const] rule of [sem_eq]. -/
+def mulFits (signed : Bool) (sz q : Int) : Bool :=
+  (if signed
+  then (let h := (zshiftl (1 : Int) (sz - (1 : Int)));
+       ((decide ((- h) ≤ q)) && (decide (q < h))))
+  else ((decide ((0 : Int) ≤ q)) && (decide (q < (zshiftl (1 : Int) sz)))))
+
+/-- The result of the [mul_const] rule of [sem_eq]. -/
+def mulConstRes (O : Ops) (signed : Bool) (sz m n : Int) (x : Term) : Term :=
+  (if (decide (m = (0 : Int)))
+  then (of_bool (decide (n = (0 : Int))))
+  else (if (decide (n = (0 : Int)))
+       then (O.sem_eq x (bv_zero sz))
+       else (if (divisible n m)
+            then (if mulFits signed sz (tdiv n m)
+                 then (O.sem_eq x (mk_masked sz (tdiv n m)))
+                 else v_false)
+            else v_false)))
+
+theorem mul_const_key {FS : FloatSem} {zn zm : Int} {ck : Checked} {x L R : Term} {Tn Tm T : Ty}
+    (hLR : (L = .mk (.bitVec zm) Tm ∧ R = x) ∨ (L = x ∧ R = .mk (.bitVec zm) Tm))
+    (hck : is_checked ck = true)
+    (hT : (Term.mk (.bitVec zn) Tn).ty = (Term.mk (.binop (.mul ck) L R) T).ty)
+    (w1 : (Term.mk (.bitVec zn) Tn).WT) (w2 : (Term.mk (.binop (.mul ck) L R) T).WT) :
+    ∃ W : Int, 0 < W ∧ x.ty = .bitVector W ∧ x.WT ∧ size x = W ∧ 0 ≤ zn ∧ zn < 2 ^ W.toNat ∧
+      0 ≤ zm ∧ zm < 2 ^ W.toNat ∧ ∀ ρ xv yv, eval FS ρ (.mk (.bitVec zn) Tn) = some xv →
+        eval FS ρ (.mk (.binop (.mul ck) L R) T) = some yv →
+        ∃ a, eval FS ρ x = some (.bv W.toNat a) ∧
+          (xv = yv ↔ iv (!ck.unsigned) (BitVec.ofInt W.toNat zn) =
+            iv (!ck.unsigned) (BitVec.ofInt W.toNat zm) * iv (!ck.unsigned) a) := by
+  obtain ⟨⟨W, hW, hL⟩, hR, hT2, wL, wR⟩ :=
+    (WT_bvbin (Or.inr (Or.inr (Or.inl ⟨ck, rfl⟩)))).1 w2
+  simp only [Term.ty_mk] at hT
+  have htn : Tn = .bitVector W := by rw [hT, hT2, hL]
+  subst htn
+  have hlit : ∀ {z : Int} {T' : Ty}, T' = .bitVector W → (Term.mk (.bitVec z) T').WT →
+      0 ≤ z ∧ z < 2 ^ W.toNat := by
+    intro z T' h w
+    obtain ⟨k, _, hk, z0, z1⟩ := WT_bitVec.1 w
+    have : k = W.toNat := by rcases hk with hk | hk <;> rw [hk] at h <;> simp at h; omega
+    subst this; exact ⟨z0, z1⟩
+  obtain ⟨n0, n1⟩ := hlit rfl w1
+  have hx : x.ty = .bitVector W := by
+    rcases hLR with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+    · rw [hR, hL]
+    · exact hL
+  have wx : x.WT := by rcases hLR with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> assumption
+  have hm : Term.WT (.mk (.bitVec zm) (.bitVector W)) ∧ 0 ≤ zm ∧ zm < 2 ^ W.toNat := by
+    rcases hLR with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+    · simp only [Term.ty_mk] at hL; subst hL; exact ⟨wL, hlit rfl wL⟩
+    · simp only [Term.ty_mk] at hR; rw [hR, hL] at wR; exact ⟨wR, hlit rfl wR⟩
+  obtain ⟨wm, m0, m1⟩ := hm
+  refine ⟨W, hW, hx, wx, by simp [size, hx], n0, n1, m0, m1, fun ρ xv yv ex ey => ?_⟩
+  rw [eval_lit' w1] at ex; cases ex
+  rw [eval_binop w2] at ey; simp only [evBinop] at ey
+  obtain ⟨k, a, b, ea, eb, hf, rfl⟩ := checkedOp_eq_some.1 ey
+  rcases hLR with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+  · simp only [Term.ty_mk] at hL; subst hL
+    rw [eval_lit' wm] at ea; simp only [Option.some.injEq, Val.bv.injEq] at ea
+    obtain ⟨rfl, ea⟩ := ea; cases ea
+    refine ⟨b, eb, ?_⟩
+    rw [← iv_mul hck hf, iv_inj]; simp
+  · obtain ⟨rfl, _⟩ := eval_bv_ty ea hL
+    simp only [Term.ty_mk] at hR; rw [hR, hL] at eb
+    rw [eval_lit' wm] at eb; simp only [Option.some.injEq, Val.bv.injEq, heq_eq_eq, true_and] at eb
+    subst eb
+    refine ⟨a, ea, ?_⟩
+    rw [Int.mul_comm, ← iv_mul hck hf, iv_inj]; simp
+
+theorem Refines.eq_mul_const {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {zn zm : Int}
+    {ck : Checked} {x L R : Term} {Tn Tm T : Ty}
+    (hLR : (L = .mk (.bitVec zm) Tm ∧ R = x) ∨ (L = x ∧ R = .mk (.bitVec zm) Tm))
+    (hck : is_checked ck = true) :
+    Refines FS (sem_eq.spec (.mk (.bitVec zn) Tn) (.mk (.binop (.mul ck) L R) T))
+      (mulConstRes O (!ck.unsigned) (size x) (bv_to_z (!ck.unsigned) (size x) zm)
+        (bv_to_z (!ck.unsigned) (size x) zn) x) := by
+  have conv : ∀ {W : Int}, 0 < W → size x = W → 0 ≤ zn → zn < 2 ^ W.toNat → 0 ≤ zm →
+      zm < 2 ^ W.toNat →
+      bv_to_z (!ck.unsigned) (size x) zm = iv (!ck.unsigned) (BitVec.ofInt W.toNat zm) ∧
+      bv_to_z (!ck.unsigned) (size x) zn = iv (!ck.unsigned) (BitVec.ofInt W.toNat zn) := by
+    intro W hW hs n0 n1 m0 m1
+    rw [hs]; exact ⟨bv_to_z_lit hW m0 m1, bv_to_z_lit hW n0 n1⟩
+  unfold mulConstRes
+  split
+  · rename_i hM
+    refine Refines.eq_const (fun _ _ _ => by simp) (fun ρ xv yv hT w1 w2 hx hy => ?_)
+    obtain ⟨W, hW, _, _, hs, n0, n1, m0, m1, sem⟩ := mul_const_key (FS := FS) hLR hck hT w1 w2
+    obtain ⟨a, _, hiff⟩ := sem ρ xv yv hx hy
+    obtain ⟨cM, cN⟩ := conv hW hs n0 n1 m0 m1
+    simp only [decide_eq_true_eq, cM] at hM
+    rw [eval_of_bool, cN, hiff, hM, Int.zero_mul]
+    simp only [Option.some.injEq, Val.bool.injEq]; exact decide_eq_decide.2 Iff.rfl
+  split
+  · rename_i hM hN
+    refine Refines.trans ?_ (hO.sem_eq x _)
+    refine Refines.eq_eq (fun hT w1 w2 => ?_) (fun ρ xv yv hT w1 w2 hx hy => ?_)
+    · obtain ⟨W, hW, hx, wx, hs, -⟩ := mul_const_key (FS := FS) hLR hck hT w1 w2
+      rw [hs]; exact ⟨by simp [hx], wx, bv_zero_WT' hW⟩
+    · obtain ⟨W, hW, _, _, hs, n0, n1, m0, m1, sem⟩ := mul_const_key (FS := FS) hLR hck hT w1 w2
+      obtain ⟨a, ea, hiff⟩ := sem ρ xv yv hx hy
+      obtain ⟨cM, cN⟩ := conv hW hs n0 n1 m0 m1
+      simp only [decide_eq_true_eq, cM, cN] at hM hN
+      refine ⟨_, _, ea, by rw [hs]; exact eval_bv_zero'' hW, ?_⟩
+      rw [hiff, hN]
+      simp only [Val.bv.injEq, heq_eq_eq, true_and]
+      rw [← iv_inj (s := !ck.unsigned), iv_zero]
+      constructor
+      · intro h; exact (Int.mul_eq_zero.1 h.symm).resolve_left hM
+      · intro h; rw [h, Int.mul_zero]
+  split
+  · rename_i hM hN hd
+    simp only [decide_eq_true_eq] at hM hN
+    split
+    · rename_i hfit
+      refine Refines.trans ?_ (hO.sem_eq x _)
+      refine Refines.eq_eq (fun hT w1 w2 => ?_) (fun ρ xv yv hT w1 w2 hx hy => ?_)
+      · obtain ⟨W, hW, hx, wx, hs, -⟩ := mul_const_key (FS := FS) hLR hck hT w1 w2
+        rw [hs]; exact ⟨by simp [hx], wx, mk_masked_WT hW⟩
+      · obtain ⟨W, hW, _, _, hs, n0, n1, m0, m1, sem⟩ := mul_const_key (FS := FS) hLR hck hT w1 w2
+        obtain ⟨a, ea, hiff⟩ := sem ρ xv yv hx hy
+        obtain ⟨cM, cN⟩ := conv hW hs n0 n1 m0 m1
+        rw [cM] at hM; rw [cN] at hN; rw [cM, cN] at hd hfit ⊢
+        rw [hs] at hfit ⊢
+        refine ⟨_, _, ea, eval_mk_masked hW, ?_⟩
+        have hdvd : iv (!ck.unsigned) (BitVec.ofInt W.toNat zm) ∣
+            iv (!ck.unsigned) (BitVec.ofInt W.toNat zn) := by simpa [divisible] using hd
+        have hq := Int.mul_tdiv_cancel' hdvd
+        have hrange : iv (!ck.unsigned) (BitVec.ofInt W.toNat
+            (tdiv (iv (!ck.unsigned) (BitVec.ofInt W.toNat zn))
+              (iv (!ck.unsigned) (BitVec.ofInt W.toNat zm)))) =
+            tdiv (iv (!ck.unsigned) (BitVec.ofInt W.toNat zn))
+              (iv (!ck.unsigned) (BitVec.ofInt W.toNat zm)) := by
+          apply iv_ofInt (by omega)
+          simp only [mulFits, zshiftl, Int.one_mul] at hfit
+          have e1 : (W - 1).toNat = W.toNat - 1 := by omega
+          rw [e1] at hfit
+          revert hfit; generalize (!ck.unsigned) = sg; cases sg <;> intro hfit <;> simpa using hfit
+        rw [hiff]
+        simp only [Val.bv.injEq, heq_eq_eq, true_and]
+        rw [← iv_inj (s := !ck.unsigned), hrange]
+        simp only [tdiv] at hq ⊢
+        constructor
+        · intro h; rw [h, Int.mul_tdiv_cancel_left _ hM]
+        · intro h; rw [h]; exact hq.symm
+    · rename_i hfit
+      refine Refines.eq_const (fun _ _ _ => by simp) (fun ρ xv yv hT w1 w2 hx hy => ?_)
+      obtain ⟨W, hW, _, _, hs, n0, n1, m0, m1, sem⟩ := mul_const_key (FS := FS) hLR hck hT w1 w2
+      obtain ⟨a, ea, hiff⟩ := sem ρ xv yv hx hy
+      obtain ⟨cM, cN⟩ := conv hW hs n0 n1 m0 m1
+      rw [cM] at hM; rw [cN] at hN; rw [cM, cN] at hd hfit
+      rw [hs] at hfit
+      simp only [eval_v_false, Option.some.injEq, Val.bool.injEq, Bool.false_eq,
+        decide_eq_false_iff_not, hiff]
+      intro h
+      apply hfit
+      rw [h]; simp only [mulFits, tdiv, Int.mul_tdiv_cancel_left _ hM, zshiftl, Int.one_mul]
+      have e1 : (W - 1).toNat = W.toNat - 1 := by omega
+      rw [e1]
+      have := iv_range (s := !ck.unsigned) a
+      revert this; generalize (!ck.unsigned) = sg; cases sg <;> intro this <;> simpa using this
+  · rename_i hM hN hd
+    refine Refines.eq_const (fun _ _ _ => by simp) (fun ρ xv yv hT w1 w2 hx hy => ?_)
+    obtain ⟨W, hW, _, _, hs, n0, n1, m0, m1, sem⟩ := mul_const_key (FS := FS) hLR hck hT w1 w2
+    obtain ⟨a, ea, hiff⟩ := sem ρ xv yv hx hy
+    obtain ⟨cM, cN⟩ := conv hW hs n0 n1 m0 m1
+    rw [cM, cN] at hd
+    simp only [eval_v_false, Option.some.injEq, Val.bool.injEq, Bool.false_eq,
+      decide_eq_false_iff_not, hiff]
+    intro h
+    apply hd
+    rw [h]; simp [divisible]
+
+
+theorem pow_toNat_succ_le {n k : Int} (h : n - 1 ≤ k) (hn : 0 < n) :
+    2 ^ n.toNat ≤ 2 ^ (k.toNat + 1) :=
+  Nat.pow_le_pow_right (by omega) (by omega)
+
+/-- [msb_of] bounds the value of a bit-vector. -/
+theorem msb_bound_aux {FS : FloatSem} {ρ : Env} (s : Nat) : ∀ v : Term, sizeOf v < s → v.WT →
+    ∀ n : Int, v.ty = .bitVector n →
+    ∀ m (x : BitVec m), eval FS ρ v = some (.bv m x) → ∀ k : Int, msb_of v ≤ k → 0 ≤ k →
+    x.toNat < 2 ^ (k.toNat + 1) := by
+  induction s with
+  | zero => intro v h; omega
+  | succ s ih =>
+    intro v hs w n hT m x e k hk k0
+    have dflt : size v - 1 ≤ k → x.toNat < 2 ^ (k.toNat + 1) := by
+      intro h
+      obtain ⟨rfl, hn⟩ := eval_bv_ty e hT
+      simp only [size, ty_eq, hT, size_of_ty_bitVector] at h
+      exact Nat.lt_of_lt_of_le x.isLt (pow_toNat_succ_le h hn)
+    rw [msb_of.eq_def] at hk
+    rcases v with ⟨kd, T⟩
+    cases kd
+    case bitVec z =>
+      obtain ⟨W, _, _, z0, z1, e'⟩ := eval_bitVec_range (FS := FS) (ρ := ρ) w
+      rw [e'] at e; simp only [Option.some.injEq, Val.bv.injEq] at e
+      obtain ⟨rfl, e⟩ := e; cases e
+      by_cases hz : z > 0
+      · simp [firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse, hz] at hk
+        have h1 := toNat_ofInt_of_range (w := W) z0 z1
+        have h2 := Nat.lt_log2_self (n := z.toNat)
+        have h3 : 2 ^ (Nat.log2 z.toNat + 1) ≤ 2 ^ (k.toNat + 1) :=
+          Nat.pow_le_pow_right (by omega) (by simp [log2] at hk; omega)
+        omega
+      · have : z = 0 := by omega
+        subst this
+        exact Nat.lt_of_le_of_lt (by simp) (Nat.two_pow_pos _)
+    case binop op a b =>
+      cases op
+      case bitAnd =>
+        simp [firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse] at hk
+        obtain ⟨⟨N, hN, ha⟩, hb, hT2, wa, wb⟩ :=
+          (WT_bvbin (Or.inr (Or.inr (Or.inr (Or.inl rfl))))).1 w
+        rw [eval_binop w] at e; simp only [evBinop] at e
+        obtain ⟨m', xa, xb, ea, eb, hab⟩ := bvBin_eq_some.1 e
+        simp only [Option.some.injEq, Val.bv.injEq] at hab
+        obtain ⟨rfl, hab⟩ := hab; cases hab
+        rw [BitVec.toNat_and]
+        simp only [zmin] at hk
+        split at hk
+        · exact Nat.lt_of_le_of_lt Nat.and_le_left (ih a (by simp at hs; omega) wa N ha _ xa ea k hk k0)
+        · exact Nat.lt_of_le_of_lt Nat.and_le_right
+            (ih b (by simp at hs; omega) wb N (by rw [hb, ha]) _ xb eb k hk k0)
+      all_goals
+        simp [firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse] at hk
+        exact dflt hk
+    case triop op g l r =>
+      cases op
+      case ite =>
+        simp [firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse] at hk
+        obtain ⟨hg, h1, h2, wg, wl, wr⟩ := WT_ite.1 w
+        simp only [Term.ty_mk] at hT; subst hT
+        have hk1 : msb_of l ≤ k ∧ msb_of r ≤ k := by
+          simp only [zmax] at hk
+          split at hk <;> rename_i hc <;> simp only [decide_eq_true_eq, ge_iff_le] at hc <;> omega
+        rcases (eval_ite_eq_some w).1 e with ⟨_, el⟩ | ⟨_, er⟩
+        · exact ih l (by simp at hs; omega) wl n h2.symm _ x el k hk1.1 k0
+        · exact ih r (by simp at hs; omega) wr n (by rw [h1, ← h2]) _ x er k hk1.2 k0
+      all_goals
+        simp [firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse] at hk
+        exact dflt hk
+    case unop op u =>
+      cases op
+      case bvExtend s e' =>
+        cases s
+        · simp [firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse] at hk
+          have ⟨h1, wu⟩ := WT_unop.1 w
+          simp only [Unop.WT, Ty.sort_eq] at h1
+          obtain ⟨N, hN, hu, _, _⟩ := h1
+          rw [eval_unop w] at e
+          cases eu : eval FS ρ u with
+          | none => rw [eu] at e; simp at e
+          | some vu =>
+            obtain ⟨_, xu, rfl⟩ := eval_bv_of_ty eu (Or.inl hu)
+            rw [eu] at e; simp only [evUnop, Option.some.injEq, Val.bv.injEq, Bool.false_eq_true,
+              ite_false] at e
+            obtain ⟨rfl, e⟩ := e; cases e
+            rw [BitVec.toNat_setWidth]
+            exact Nat.lt_of_le_of_lt (Nat.mod_le _ _) (ih u (by simp at hs; omega) wu N hu _ xu eu k hk k0)
+        · simp [firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse] at hk
+          exact dflt hk
+      all_goals
+        simp [firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse] at hk
+        exact dflt hk
+    all_goals
+      simp [firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse] at hk
+      exact dflt hk
+
+theorem msb_bound {FS : FloatSem} {ρ : Env} {v : Term} (w : v.WT) {n : Int}
+    (hT : v.ty = .bitVector n) {m} {x : BitVec m} (e : eval FS ρ v = some (.bv m x)) {k : Int}
+    (hk : msb_of v ≤ k) (k0 : 0 ≤ k) : x.toNat < 2 ^ (k.toNat + 1) :=
+  msb_bound_aux _ v (Nat.lt_succ_self _) w n hT m x e k hk k0
+
+theorem is_bv_true {t : Ty} (h : is_bv t = true) : ∃ n, t = .bitVector n := by
+  cases t <;> simp [is_bv, firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse] at h ⊢
+
+theorem le_zmax_left (a b : Int) : a ≤ zmax a b := by
+  unfold zmax; split <;> rename_i h <;> simp only [decide_eq_true_eq] at h <;> omega
+
+theorem le_zmax_right (a b : Int) : b ≤ zmax a b := by
+  unfold zmax; split <;> rename_i h <;> simp only [decide_eq_true_eq] at h <;> omega
+
+/-- Two bit-vectors below [2 ^ (M + 1)] are equal iff their low [M + 1] bits are. -/
+theorem Refines.eq_low {FS : FloatSem} {a b : Term} {M : Int} (hM : 0 ≤ M)
+    (hMa : msb_of a ≤ M) (hMb : msb_of b ≤ M) (hsz : M < size a - 1) (ha : ∃ n, a.ty = .bitVector n) :
+    Refines FS (sem_eq.spec a b) (sem_eq.spec (bv_extract.spec 0 M a) (bv_extract.spec 0 M b)) := by
+  obtain ⟨N, hN⟩ := ha
+  simp only [size, ty_eq, hN, size_of_ty_bitVector] at hsz
+  refine Refines.eq_eq (fun hT wa wb => ?_) (fun ρ x y hT wa wb hx hy => ?_)
+  · have hN' : b.ty = .bitVector N := by rw [← hT]; exact hN
+    have wa' := WT_extract_spec (N := N) (i := 0) (j := M) wa hN (Int.le_refl 0) hM (by omega)
+    have wb' := WT_extract_spec (N := N) (i := 0) (j := M) wb hN' (Int.le_refl 0) hM (by omega)
+    exact ⟨by simp [bv_extract.spec], wa', wb'⟩
+  · have hN' : b.ty = .bitVector N := by rw [← hT]; exact hN
+    have wa' := WT_extract_spec (N := N) (i := 0) (j := M) wa hN (Int.le_refl 0) hM (by omega)
+    have wb' := WT_extract_spec (N := N) (i := 0) (j := M) wb hN' (Int.le_refl 0) hM (by omega)
+    obtain ⟨_, xa, rfl⟩ := eval_bv_of_ty hx (Or.inl hN)
+    obtain ⟨_, xb, rfl⟩ := eval_bv_of_ty hy (Or.inl hN')
+    have ba := msb_bound wa hN hx hMa hM
+    have bb := msb_bound wb hN' hy hMb hM
+    refine ⟨_, _, eval_extract_spec wa' hx, eval_extract_spec wb' hy, ?_⟩
+    rw [val_bv_eq_iff _ _ rfl, val_bv_eq_iff _ _ rfl, BitVec.extractLsb'_toNat,
+      BitVec.extractLsb'_toNat]
+    have e1 : (M - 0 + 1).toNat = M.toNat + 1 := by omega
+    rw [e1, Int.toNat_zero, Nat.shiftRight_zero, Nat.shiftRight_zero, Nat.mod_eq_of_lt ba, Nat.mod_eq_of_lt bb]
+
 end EqL
 end Bvr

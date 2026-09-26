@@ -324,7 +324,38 @@ theorem sem_eq.r_ite_concat.proof : sem_eq.r_ite_concat.Stmt := by
   sorry
 
 theorem sem_eq.r_concat_concat.proof : sem_eq.r_concat_concat.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [sem_eq.r_concat_concat] at h
+  split at h <;> simp only [reduceCtorEq, Option.ite_none_right_eq_some, Option.some.injEq,
+    decide_eq_true_eq] at h
+  obtain ⟨hs, rfl⟩ := h
+  refine Refines.trans ?_ (Refines.b_and hO (hO.sem_eq _ _) (hO.sem_eq _ _))
+  rename_i l1 r1 T1 l2 r2 T2
+  have key : T1 = T2 → (Term.mk (.binop .bvConcat l1 r1) T1).WT →
+      (Term.mk (.binop .bvConcat l2 r2) T2).WT →
+      ∃ n m : Int, 0 < n ∧ 0 < m ∧ l1.ty = .bitVector n ∧ l2.ty = .bitVector n ∧
+        r1.ty = .bitVector m ∧ r2.ty = .bitVector m ∧ l1.WT ∧ l2.WT ∧ r1.WT ∧ r2.WT := by
+    intro hT w1 w2
+    obtain ⟨n1, m1, hn1, hm1, hl1, hr1, hT1, wl1, wr1⟩ := WT_concat.1 w1
+    obtain ⟨n2, m2, hn2, hm2, hl2, hr2, hT2, wl2, wr2⟩ := WT_concat.1 w2
+    simp only [size, ty_eq, hl1, hl2, size_of_ty_bitVector] at hs
+    subst hs hT hT1
+    simp only [Ty.bitVector.injEq] at hT2
+    have : m1 = m2 := by omega
+    subst this
+    exact ⟨_, _, hn1, hm1, hl1, hl2, hr1, hr2, wl1, wl2, wr1, wr2⟩
+  refine Refines.eq_and (fun hT w1 w2 => ?_) (fun ρ x y hT w1 w2 hx hy => ?_)
+  · obtain ⟨n, m, _, _, h1, h2, h3, h4, w1, w2, w3, w4⟩ := key (by simpa using hT) w1 w2
+    exact ⟨by rw [h1, h2], w1, w2, by rw [h3, h4], w3, w4⟩
+  · obtain ⟨n, m, _, _, h1, h2, h3, h4, -⟩ := key (by simpa using hT) w1 w2
+    obtain ⟨a1, b1, x1, y1, e1, e2, rfl⟩ := eval_concat_some w1 hx
+    obtain ⟨a2, b2, x2, y2, e3, e4, rfl⟩ := eval_concat_some w2 hy
+    obtain ⟨rfl, _⟩ := eval_bv_ty e1 h1
+    obtain ⟨rfl, _⟩ := eval_bv_ty e2 h3
+    obtain ⟨rfl, _⟩ := eval_bv_ty e3 h2
+    obtain ⟨rfl, _⟩ := eval_bv_ty e4 h4
+    refine ⟨_, _, _, _, e1, e3, e2, e4, ?_⟩
+    simp [BitVec.append_inj_iff]
 
 theorem sem_eq.r_ite_const_l.proof : sem_eq.r_ite_const_l.Stmt := by
   intro FS O hO v1 v2 res h

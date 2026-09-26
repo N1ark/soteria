@@ -900,5 +900,27 @@ theorem eval_bv_ty {FS ρ t n m x} (h : eval FS ρ t = some (.bv m x)) (ht : t.t
   obtain ⟨hn, x', hx⟩ := eval_bv_of_ty h (Or.inl ht)
   simp at hx; exact ⟨hx.1, hn⟩
 
+
+theorem WT_concat {a b t} : (Term.mk (.binop .bvConcat a b) t).WT ↔
+    ∃ n m : Int, 0 < n ∧ 0 < m ∧ a.ty = .bitVector n ∧ b.ty = .bitVector m ∧
+      t = .bitVector (n + m) ∧ a.WT ∧ b.WT := by
+  simp [Term.WT, Binop.WT]; grind
+
+theorem eval_concat_some {FS ρ a b t v} (w : (Term.mk (.binop .bvConcat a b) t).WT)
+    (h : eval FS ρ (.mk (.binop .bvConcat a b) t) = some v) :
+    ∃ n m x y, eval FS ρ a = some (.bv n x) ∧ eval FS ρ b = some (.bv m y) ∧
+      v = .bv (n + m) (x ++ y) := by
+  rw [eval_binop w] at h
+  cases ha : eval FS ρ a with
+  | none => rw [ha] at h; simp [evBinop] at h
+  | some va =>
+    cases hb : eval FS ρ b with
+    | none => rw [ha, hb] at h; rcases va with _ | _ | _ | _ | _ | _ <;> simp [evBinop] at h
+    | some vb =>
+      rw [ha, hb] at h
+      rcases va with _ | ⟨n, x⟩ | _ | _ | _ | _ <;> rcases vb with _ | ⟨m, y⟩ | _ | _ | _ | _ <;>
+        simp [evBinop] at h
+      exact ⟨n, m, x, y, rfl, rfl, h.symm⟩
+
 end EqL
 end Bvr

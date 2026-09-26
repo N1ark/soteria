@@ -1082,7 +1082,51 @@ theorem bv_div.r_div_div.proof : bv_div.r_div_div.Stmt := by
   sorry
 
 theorem bv_div.r_zext.proof : bv_div.r_zext.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_div.r_zext] at h; split at h <;> simp at h; obtain ⟨⟨rfl, hm⟩, rfl⟩ := h
+  rename_i k x T z T2
+  refine Refines.arith_intro (.div false) (fun n wa wb hT => ?_)
+    (fun n wa wb hT ρ X' Z v hx hy e => ?_)
+  all_goals obtain ⟨m, wx, hk, rfl, rfl⟩ := BV_extend_inv wa
+  all_goals obtain ⟨rfl, hz⟩ := BV_lit wb
+  all_goals rw [show size_of_ty x.ty = m by simp [wx.2.1]]
+  all_goals have hd := O_arith (.div _) (hO.bv_div false x (mk_bv m z)) wx (BV_mk_bv wx.2.2)
+  all_goals have he := hO.bv_extend false k (O.bv_div false x (mk_bv m z))
+  · exact BV_extend he hd.1 hk
+  · obtain ⟨X, hX, hv⟩ := eval_extend_inv wa wx hx
+    obtain ⟨hw, hv⟩ := Val.bv_toNat_eq hv
+    obtain rfl := lit_eval_eq wb hy
+    simp only [msb_of_lit, wx.2.1, size_of_ty_bitVector, decide_eq_true_eq] at hm
+    have hD := hd.2 ρ (.bv m.toNat (X.smtUDiv (BitVec.ofInt _ z)))
+      (by rw [hX, mk_bv, eval_mk_masked wx.2.2]; simp [evBinop, bvBin])
+    have hR := he.sem ρ _ (eval_extend hd.1 hk hD)
+    rw [hR]
+    simp [evBinop, bvBin] at e; subst e
+    congr 1; apply Val.bv_congr (by omega)
+    rw [BitVec.toNat_setWidth, BitVec.smtUDiv_eq, BitVec.smtUDiv_eq]
+    have hX2 := X.isLt
+    have hp : 2 ^ m.toNat ≤ 2 ^ (m.toNat + k.toNat) := Nat.pow_le_pow_right (by omega) (by omega)
+    rw [BitVec.toNat_setWidth, Nat.mod_eq_of_lt (by omega)] at hv
+    by_cases hz0 : 0 < z
+    · simp only [hz0, ↓reduceIte] at hm
+      have hl := Nat.lt_log2_self (n := z.toNat)
+      have hm' : Nat.log2 z.toNat + 1 ≤ m.toNat := by simp only [log2] at hm; omega
+      have h3 : z.toNat < 2 ^ m.toNat := Nat.lt_of_lt_of_le hl (Nat.pow_le_pow_right (by omega) hm')
+      have hzm : z < 2 ^ m.toNat := by have := natCast_two_pow m.toNat; omega
+      have h1 : BitVec.ofInt (m + k).toNat z ≠ 0#_ := by
+        intro h; have := congrArg BitVec.toNat h
+        rw [lit_toNat hz.1 hz.2] at this; simp at this; omega
+      have h2 : BitVec.ofInt m.toNat z ≠ 0#_ := by
+        intro h; have := congrArg BitVec.toNat h
+        rw [lit_toNat hz.1 hzm] at this; simp at this; omega
+      simp only [h1, h2, ↓reduceIte, BitVec.toNat_udiv, lit_toNat hz.1 hz.2, lit_toNat hz.1 hzm, hv]
+      rw [Nat.mod_eq_of_lt]
+      have := Nat.div_le_self X.toNat z.toNat
+      omega
+    · simp only [hz0, ↓reduceIte] at hm
+      obtain rfl : z = 0 := by omega
+      obtain rfl : k = 0 := by omega
+      simp
 
 theorem bv_div.r_default.proof : bv_div.r_default.Stmt := by
   intro FS O hO s v1 v2 res h

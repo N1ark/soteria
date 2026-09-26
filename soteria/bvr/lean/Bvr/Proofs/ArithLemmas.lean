@@ -956,5 +956,53 @@ theorem lit_toNat {w : Nat} {z : Int} (h0 : 0 ≤ z) (h1 : z < 2 ^ w) :
   have := toNat_ofInt_lit h0 h1; omega
 
 
+/-! ## Extension and most significant bits -/
+
+theorem msb_of_lit (z : Int) (T : Ty) :
+    msb_of (.mk (.bitVec z) T) = if 0 < z then log2 z else size_of_ty T - 1 := by
+  rw [msb_of]
+  by_cases h : 0 < z
+  · simp [firstSome, h, HOrElse.hOrElse, OrElse.orElse, Option.orElse]
+  · by_cases h' : z = 0
+    · subst h'; simp [firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse]
+    · simp [firstSome, h, h', HOrElse.hOrElse, OrElse.orElse, Option.orElse]
+
+theorem WT_extend {s k a T} :
+    (Term.mk (.unop (.bvExtend s k) a) T).WT ↔
+      ∃ m, BV a m ∧ 0 ≤ k ∧ T = .bitVector (m + k) := by
+  rw [WT_unop]; simp only [Unop.WT, Ty.sort_eq, BV]; grind
+
+theorem BV_extend_inv {s k a T n} (w : BV (.mk (.unop (.bvExtend s k) a) T) n) :
+    ∃ m, BV a m ∧ 0 ≤ k ∧ n = m + k ∧ T = .bitVector n := by
+  obtain ⟨m, wa, hk, hT⟩ := WT_extend.1 w.1
+  have := w.2.1; simp only [Term.ty_mk] at this; subst this
+  simp at hT; exact ⟨m, wa, hk, hT, by rw [hT]⟩
+
+theorem eval_extend_inv {FS ρ k a T n m v} (w : BV (.mk (.unop (.bvExtend false k) a) T) n)
+    (wa : BV a m) (e : eval FS ρ (.mk (.unop (.bvExtend false k) a) T) = some v) :
+    ∃ X : BitVec m.toNat, eval FS ρ a = some (.bv _ X) ∧
+      v = .bv (m.toNat + k.toNat) (X.setWidth _) := by
+  rw [eval_unop w.1] at e
+  obtain ⟨X, hX, e⟩ := evUnop_inv wa e
+  simp [evUnop] at e
+  exact ⟨X, hX, e.symm⟩
+
+theorem eval_extend {FS ρ k a m X} (wa : BV a m) (hk : 0 ≤ k)
+    (hX : eval FS ρ a = some (.bv m.toNat X)) :
+    eval FS ρ (bv_extend.spec false k a) = some (.bv (m.toNat + k.toNat) (X.setWidth _)) := by
+  rw [bv_extend.spec, eval_unop (WT_extend.2 ⟨m, wa, hk, by simp [wa.2.1]⟩), hX]
+  simp [evUnop]
+
+theorem BV_extend {FS k a m r} (hR : Refines FS (bv_extend.spec false k a) r) (wa : BV a m)
+    (hk : 0 ≤ k) : BV r (m + k) :=
+  BV_of_refines hR (WT_extend.2 ⟨m, wa, hk, by simp [wa.2.1]⟩) (by simp [bv_extend.spec, wa.2.1])
+    (by have := wa.2.2; omega)
+
+
+theorem Val.bv_toNat_eq {n m : Nat} {x : BitVec n} {y : BitVec m} (h : Val.bv n x = Val.bv m y) :
+    n = m ∧ x.toNat = y.toNat := by
+  cases h; exact ⟨rfl, rfl⟩
+
+
 end ArithL
 end Bvr

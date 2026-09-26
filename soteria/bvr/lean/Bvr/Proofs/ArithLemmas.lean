@@ -818,5 +818,44 @@ theorem ssubOverflow_zero_intMin {w : Nat} (hw : 0 < w) :
   simp [BitVec.ssubOverflow, BitVec.toInt_intMin_of_pos hw]
 
 
+theorem checkedOp_unchecked {c so uo f a b v} (h : checkedOp c so uo f a b = some v) :
+    checkedOp unchecked so uo f a b = some v := by
+  rw [checkedOp_eq_some] at *
+  obtain ⟨n, x, y, h1, h2, -, -, h3⟩ := h
+  exact ⟨n, x, y, h1, h2, by simp [unchecked], by simp [unchecked], h3⟩
+
+theorem evBinop_add_unchecked {FS c a b v} (h : evBinop FS (.add c) a b = some v) :
+    evBinop FS (.add unchecked) a b = some v := checkedOp_unchecked h
+theorem evBinop_sub_unchecked {FS c a b v} (h : evBinop FS (.sub c) a b = some v) :
+    evBinop FS (.sub unchecked) a b = some v := checkedOp_unchecked h
+theorem evBinop_mul_unchecked {FS c a b v} (h : evBinop FS (.mul c) a b = some v) :
+    evBinop FS (.mul unchecked) a b = some v := checkedOp_unchecked h
+
+theorem WT_bvOfBool {m g T} : (Term.mk (.unop (.bvOfBool m) g) T).WT ↔
+    0 < m ∧ g.ty = .bool ∧ T = .bitVector m ∧ g.WT := by
+  simp [WT_unop, Unop.WT, and_assoc]
+
+theorem BV_ofBool_inv {m g T n} (w : BV (.mk (.unop (.bvOfBool m) g) T) n) :
+    m = n ∧ g.WT ∧ g.ty = .bool ∧ T = .bitVector n := by
+  obtain ⟨h1, h2, h3, h4⟩ := WT_bvOfBool.1 w.1
+  have := w.2.1; simp only [Term.ty_mk] at this; subst this
+  simp at h3; subst h3; exact ⟨rfl, h4, h2, rfl⟩
+
+theorem eval_ofBool_inv {FS ρ m g T n x} (w : BV (.mk (.unop (.bvOfBool m) g) T) n)
+    (e : eval FS ρ (.mk (.unop (.bvOfBool m) g) T) = some (.bv n.toNat x)) :
+    ∃ b, eval FS ρ g = some (.bool b) ∧ x = if b then 1 else 0 := by
+  obtain ⟨rfl, -⟩ := BV_ofBool_inv w
+  rw [eval_unop w.1] at e
+  rcases eg : eval FS ρ g with _ | ⟨b | _ | _ | _ | _ | _⟩ <;> rw [eg] at e <;>
+    simp [evUnop] at e
+  exact ⟨b, rfl, e.symm⟩
+
+theorem eval_ite_inv' {FS ρ g a b T n x} (w : BV (.mk (.triop .ite g a b) T) n)
+    (e : eval FS ρ (.mk (.triop .ite g a b) T) = some (.bv n.toNat x)) :
+    (eval FS ρ g = some (.bool true) ∧ eval FS ρ a = some (.bv n.toNat x)) ∨
+      (eval FS ρ g = some (.bool false) ∧ eval FS ρ b = some (.bv n.toNat x)) :=
+  eval_ite_inv e
+
+
 end ArithL
 end Bvr

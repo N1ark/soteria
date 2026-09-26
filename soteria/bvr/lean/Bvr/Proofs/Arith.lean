@@ -580,34 +580,134 @@ theorem bv_sub.r_add_const.proof : bv_sub.r_add_const.Stmt := by
     exact Refines.binop (Refines.comm (.add _)) Refines.refl (fun _ => rfl)
 
 theorem bv_sub.r_add_cancel_l.proof : bv_sub.r_add_cancel_l.Stmt := by
-  sorry
+  intro FS O hO c v1 v2 res h
+  simp only [bv_sub.r_add_cancel_l] at h; split at h <;> simp [equal] at h; obtain ⟨rfl, rfl⟩ := h
+  rename_i ck _ _ T
+  refine Refines.arith_intro (.sub c) (fun n wa wb hT => (BV_arith_inv (.add ck) wa).2.1)
+    (fun n wa wb hT ρ x y v hx hy e => ?_)
+  obtain ⟨wl, wr, rfl⟩ := BV_arith_inv (.add ck) wa
+  rw [eval_arith (.add ck) wl wr rfl] at hx
+  obtain ⟨L, R, hL, hR, hx⟩ := evBinop_inv (.inl (.add ck)) wl wr hx
+  rw [hL] at hy; simp at hy; subst hy
+  simp [evBinop, checkedOp, bvBin] at hx e
+  obtain ⟨-, rfl⟩ := hx; obtain ⟨-, rfl⟩ := e
+  rw [hR]; congr 2; grind
 
 theorem bv_sub.r_add_cancel_r.proof : bv_sub.r_add_cancel_r.Stmt := by
-  sorry
+  intro FS O hO c v1 v2 res h
+  simp only [bv_sub.r_add_cancel_r] at h; split at h <;> simp [equal] at h; obtain ⟨rfl, rfl⟩ := h
+  rename_i ck _ _ T
+  refine Refines.arith_intro (.sub c) (fun n wa wb hT => (BV_arith_inv (.add ck) wa).1)
+    (fun n wa wb hT ρ x y v hx hy e => ?_)
+  obtain ⟨wl, wr, rfl⟩ := BV_arith_inv (.add ck) wa
+  rw [eval_arith (.add ck) wl wr rfl] at hx
+  obtain ⟨L, R, hL, hR, hx⟩ := evBinop_inv (.inl (.add ck)) wl wr hx
+  rw [hR] at hy; simp at hy; subst hy
+  simp [evBinop, checkedOp, bvBin] at hx e
+  obtain ⟨-, rfl⟩ := hx; obtain ⟨-, rfl⟩ := e
+  rw [hL]; congr 2; grind
 
+-- UNSOUND: the flags of the outer subtraction are kept, but the inner additions may wrap. Take
+-- 8 bits, `checked = {signed := true, unsigned := false}`, v1 = Add (unchecked, l, r1),
+-- v2 = Add (unchecked, l, r2), with l = 1, r1 = 127, r2 = 0xff (take `O` returning the raw spec
+-- terms). Then l + r1 = 0x80 (-128) and l + r2 = 0, and -128 -s 0 = -128 has no signed overflow,
+-- so the spec is `some 0x80`. The result is r1 -s r2 = 127 -s (-1), whose signed overflow makes it
+-- poison.
 theorem bv_sub.r_add_add.proof : bv_sub.r_add_add.Stmt := by
   sorry
 
 theorem bv_sub.r_sub_sub.proof : bv_sub.r_sub_sub.Stmt := by
-  sorry
+  intro FS O hO c v1 v2 res h
+  simp only [bv_sub.r_sub_sub] at h; split at h <;> simp [equal] at h; obtain ⟨rfl, rfl⟩ := h
+  rename_i ck _ T
+  refine Refines.arith_intro (.sub c) (fun n wa wb hT => (BV_arith_inv (.sub ck) wb).2.1)
+    (fun n wa wb hT ρ x y v hx hy e => ?_)
+  obtain ⟨wl, wr, rfl⟩ := BV_arith_inv (.sub ck) wb
+  rw [eval_arith (.sub ck) wl wr rfl] at hy
+  obtain ⟨L, R, hL, hR, hy⟩ := evBinop_inv (.inl (.sub ck)) wl wr hy
+  rw [hL] at hx; simp at hx; subst hx
+  simp [evBinop, checkedOp, bvBin] at hy e
+  obtain ⟨-, rfl⟩ := hy; obtain ⟨-, rfl⟩ := e
+  rw [hR]; congr 2; grind
 
 theorem bv_sub.r_ite_ite.proof : bv_sub.r_ite_ite.Stmt := by
-  sorry
+  intro FS O hO c v1 v2 res h
+  simp only [bv_sub.r_ite_ite] at h; split at h <;> simp [equal] at h; obtain ⟨rfl, rfl⟩ := h
+  rename_i g l r T l' r' T'
+  refine Refines.arith_intro (.sub c) (fun n wa wb hT => ?_) (fun n wa wb hT ρ x y v hx hy e => ?_)
+  all_goals obtain ⟨wg, hg, wl, wr, rfl⟩ := BV_ite_inv wa
+  all_goals obtain ⟨-, -, wl', wr', rfl⟩ := BV_ite_inv wb
+  all_goals have hA := O_arith (.sub _) (hO.bv_sub unchecked l l') wl wl'
+  all_goals have hB := O_arith (.sub _) (hO.bv_sub unchecked r r') wr wr'
+  all_goals have hres := O_ite hO wg hg hA.1 hB.1
+  · exact hres.1
+  · refine hres.2 ρ v ?_
+    rcases eval_ite_inv hx with ⟨h1, h2⟩ | ⟨h1, h2⟩ <;>
+      rcases eval_ite_inv hy with ⟨h1', h2'⟩ | ⟨h1', h2'⟩ <;> rw [h1] at h1' <;> simp at h1'
+    · exact .inl ⟨h1, hA.2 ρ v (by rw [h2, h2']; exact evBinop_sub_unchecked e)⟩
+    · exact .inr ⟨h1, hB.2 ρ v (by rw [h2, h2']; exact evBinop_sub_unchecked e)⟩
 
 theorem bv_sub.r_ite_l.proof : bv_sub.r_ite_l.Stmt := by
-  sorry
+  intro FS O hO c v1 v2 res h
+  simp only [bv_sub.r_ite_l] at h; split at h <;> simp at h; subst h
+  simp only [bv_sub.spec, ty_eq, Term.ty_mk]
+  refine Refines.ite_push_l hO (.sub c) (fun n wl wV hT => ?_) (fun n wr wV hT => ?_)
+  · have := O_arith (.sub _) (hO.bv_sub unchecked _ _) wl wV
+    exact ⟨this.1, fun ρ v e => this.2 ρ v (evBinop_sub_unchecked e)⟩
+  · have := O_arith (.sub _) (hO.bv_sub unchecked _ _) wr wV
+    exact ⟨this.1, fun ρ v e => this.2 ρ v (evBinop_sub_unchecked e)⟩
 
 theorem bv_sub.r_ite_r.proof : bv_sub.r_ite_r.Stmt := by
-  sorry
+  intro FS O hO c v1 v2 res h
+  simp only [bv_sub.r_ite_r] at h; split at h <;> simp at h; subst h
+  simp only [bv_sub.spec, ty_eq, Term.ty_mk]
+  refine Refines.ite_push_r hO (.sub c) (fun n wl wV hT => ?_) (fun n wr wV hT => ?_)
+  · have := O_arith (.sub _) (hO.bv_sub unchecked _ _) wV wl
+    exact ⟨this.1, fun ρ v e => this.2 ρ v (evBinop_sub_unchecked e)⟩
+  · have := O_arith (.sub _) (hO.bv_sub unchecked _ _) wV wr
+    exact ⟨this.1, fun ρ v e => this.2 ρ v (evBinop_sub_unchecked e)⟩
 
 theorem bv_sub.r_of_bool_l.proof : bv_sub.r_of_bool_l.Stmt := by
-  sorry
+  intro FS O hO c v1 v2 res h
+  simp only [bv_sub.r_of_bool_l] at h; split at h <;> simp at h; subst h
+  rename_i m g T z T2
+  refine Refines.arith_intro (.sub c) (fun n wa wb hT => ?_) (fun n wa wb hT ρ x y v hx hy e => ?_)
+  all_goals obtain ⟨rfl, wg, hg, rfl⟩ := BV_ofBool_inv wa
+  all_goals have hA := O_arith (.sub _) (hO.bv_sub unchecked (bv_one m) _) (BV_bv_one wb.2.2) wb
+  all_goals have hB := O_neg (hO.bv_neg false _) wb
+  all_goals have hres := O_ite hO wg hg hA.1 hB.1
+  · exact hres.1
+  · refine hres.2 ρ v ?_
+    obtain ⟨b, hb, rfl⟩ := eval_ofBool_inv wa hx
+    cases b
+    · refine .inr ⟨hb, hB.2 ρ y v hy ?_⟩
+      simp [evBinop, evUnop, checkedOp, bvBin] at e ⊢; rw [← e.2]
+    · refine .inl ⟨hb, hA.2 ρ v ?_⟩
+      rw [eval_bv_one wb.2.2, hy]
+      simp [evBinop, checkedOp, bvBin, unchecked] at e ⊢; exact e.2
 
 theorem bv_sub.r_of_bool_r.proof : bv_sub.r_of_bool_r.Stmt := by
-  sorry
+  intro FS O hO c v1 v2 res h
+  simp only [bv_sub.r_of_bool_r] at h; split at h <;> simp at h; subst h
+  rename_i z T1 m g T
+  refine Refines.arith_intro (.sub c) (fun n wa wb hT => ?_) (fun n wa wb hT ρ x y v hx hy e => ?_)
+  all_goals obtain ⟨rfl, wg, hg, rfl⟩ := BV_ofBool_inv wb
+  all_goals have hA := O_arith (.sub _) (hO.bv_sub unchecked _ (bv_one m)) wa (BV_bv_one wa.2.2)
+  all_goals have hres := O_ite hO wg hg hA.1 wa
+  · exact hres.1
+  · refine hres.2 ρ v ?_
+    obtain ⟨b, hb, rfl⟩ := eval_ofBool_inv wb hy
+    cases b
+    · refine .inr ⟨hb, ?_⟩
+      simp [evBinop, checkedOp, bvBin] at e; rw [hx, ← e.2]
+    · refine .inl ⟨hb, hA.2 ρ v ?_⟩
+      rw [eval_bv_one wa.2.2, hx]
+      simp [evBinop, checkedOp, bvBin, unchecked] at e ⊢; exact e.2
 
 theorem bv_sub.r_default.proof : bv_sub.r_default.Stmt := by
-  sorry
+  intro FS O hO c v1 v2 res h
+  simp only [bv_sub.r_default] at h; simp at h; subst h
+  exact Refines.refl
 
 theorem bv_neg.r_lit.proof : bv_neg.r_lit.Stmt := by
   sorry

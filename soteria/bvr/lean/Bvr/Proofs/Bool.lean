@@ -759,20 +759,41 @@ theorem b_ite.r_default.proof : b_ite.r_default.Stmt := by
   simp [b_ite.r_default] at h; subst h
   exact Refines.refl
 
--- UNSOUND: a binder that occurs twice with different types has no extension of the
--- environment, so the `exists` is `false` whatever its body, and dropping the binders changes
--- that. With `binders = [(1, .bool), (1, .bitVector 8)]` and `body = v_true`, `used_binders`
--- is `[]`, so the rule returns `v_true`, which evaluates to `true`, while the spec
--- `exists [(1, bool), (1, bv 8)]. true` is well-typed and evaluates to `false` (no `ρ'`
--- satisfies `Env.Extends`, as `var 1` would need to be both a boolean and a bit-vector).
 theorem b_mk_exists.r_empty.proof : b_mk_exists.r_empty.Stmt := by
-  sorry
+  intro FS O hO bs body res h
+  simp only [b_mk_exists.r_empty] at h
+  split at h
+  · rename_i hu
+    simp only [Option.some.injEq] at h
+    subst h
+    refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
+    · obtain ⟨-, -, -, hb, wb⟩ := WT_exists.1 w
+      exact ⟨wb, by simp [hb, b_mk_exists.spec]⟩
+    · obtain ⟨-, hn, hw, -, wb⟩ := WT_exists.1 w
+      simp only [b_mk_exists.spec] at w e
+      rw [eval_eq_ev w, ev_exists_used (T' := Ty.bool) hn hw, hu] at e
+      rw [eval_eq_ev wb]
+      simp only [ev, extends_nil, forall_eq, exists_eq_left] at e
+      split at e
+      · rename_i hc
+        obtain ⟨b, hb⟩ := hc
+        rw [hb] at e ⊢
+        cases b <;> simp at e <;> rw [← e]
+      · simp at e
+  · simp at h
 
--- UNSOUND: for the same reason as `r_empty`. With `binders = [(2, .bool), (2, .bitVector 8)]`
--- and `body = v_true`, the rule returns `exists []. true`, which evaluates to `true` (take
--- `ρ' = ρ`), while the spec `exists [(2, bool), (2, bv 8)]. true` evaluates to `false`.
 theorem b_mk_exists.r_default.proof : b_mk_exists.r_default.Stmt := by
-  sorry
+  intro FS O hO bs body res h
+  simp only [b_mk_exists.r_default, Option.some.injEq] at h
+  subst h
+  refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
+  · obtain ⟨-, hn, hw, hb, wb⟩ := WT_exists.1 w
+    refine ⟨WT_exists.2 ⟨rfl, ((List.filter_sublist).map _).nodup hn,
+      fun b h => hw b (mem_used_binders.1 h).1, hb, wb⟩, rfl⟩
+  · obtain ⟨-, hn, hw, -, -⟩ := WT_exists.1 w
+    simp only [b_mk_exists.spec] at w e
+    rw [eval_eq_ev w, ev_exists_used hn hw] at e
+    rw [eval_eq_ev w']; exact e
 
 theorem sem_eq_untyped.r_main.proof : sem_eq_untyped.r_main.Stmt := by
   intro FS O hO v1 v2 res h

@@ -1014,5 +1014,174 @@ theorem Refines.or_comm {FS : FloatSem} {v1 v2 r : Term} (h : Refines FS (b_or.s
     rw [eval_binop w] at e; rw [eval_binop w']
     simpa [evBinop, por_comm'] using e
 
+theorem sure_neq_cases {a b : Term} (h : sure_neq a b = true) :
+    a.ty ≠ b.ty ∨
+    (∃ za zb Ta Tb, a = .mk (.bitVec za) Ta ∧ b = .mk (.bitVec zb) Tb ∧ za ≠ zb) ∨
+    (∃ fa fb Ta Tb, a = .mk (.float fa) Ta ∧ b = .mk (.float fb) Tb ∧ fa ≠ fb) ∨
+    (∃ ba bb Ta Tb, a = .mk (.bool ba) Ta ∧ b = .mk (.bool bb) Tb ∧ ba ≠ bb) ∨
+    (∃ la oa lb ob Ta Tb, a = .mk (.ptr la oa) Ta ∧ b = .mk (.ptr lb ob) Tb ∧
+      (sure_neq la lb = true ∨ sure_neq oa ob = true)) := by
+  unfold sure_neq at h
+  simp only [getD_firstSome_orElse, Bool.or_eq_true, Bool.not_eq_true', ty_eq] at h
+  rcases h with h | h
+  · left; exact of_decide_eq_false h
+  right
+  rcases a with ⟨ka, Ta⟩; rcases b with ⟨kb, Tb⟩
+  cases ka <;> cases kb <;> simp [firstSome, f_equal] at h ⊢ <;>
+    first | assumption | exact ⟨_, _, ⟨rfl, rfl⟩, _, _, ⟨rfl, rfl⟩, h⟩
+
+theorem eval_ptr_eq_some {FS ρ l o T u} (e : eval FS ρ (.mk (.ptr l o) T) = some u) :
+    ∃ n x y, u = .ptr n x y ∧ eval FS ρ l = some (.bv n x) ∧ eval FS ρ o = some (.bv n y) := by
+  have w := eval_WT e
+  have w' := w
+  obtain ⟨_, _, _, _, _, wl, wo⟩ := w'
+  rw [eval_eq_ev w] at e; rw [eval_eq_ev wl, eval_eq_ev wo]
+  simp only [ev] at e
+  split at e
+  · split at e
+    · rename_i h; subst h; cases e; exact ⟨_, _, _, rfl, by assumption, by assumption⟩
+    · cases e
+  · cases e
+
+theorem sure_neq_sound_aux {FS : FloatSem} (k : Nat) : ∀ {a b : Term} {ρ : Env} {u : Val},
+    sizeOf a < k → sure_neq a b = true →
+    a.ty = b.ty → eval FS ρ a = some u → eval FS ρ b = some u → False := by
+  induction k with
+  | zero => intros; omega
+  | succ k ih =>
+    intro a b ρ u hk h ht ea eb
+    rcases sure_neq_cases h with h | ⟨za, zb, Ta, Tb, rfl, rfl, hz⟩ |
+      ⟨fa, fb, Ta, Tb, rfl, rfl, hf⟩ | ⟨ba, bb, Ta, Tb, rfl, rfl, hb⟩ |
+      ⟨la, oa, lb, ob, Ta, Tb, rfl, rfl, hp⟩
+    · exact h ht
+    · simp only [Term.ty_mk] at ht; subst ht
+      have wa := eval_WT ea; have wb := eval_WT eb
+      obtain ⟨n, hn, hT, h0, h1⟩ := WT_bitVec.1 wa
+      obtain ⟨n', hn', hT', h0', h1'⟩ := WT_bitVec.1 wb
+      have : n' = n := by
+        rcases hT with rfl | rfl <;> rcases hT' with h | h <;> simp at h <;> omega
+      subst this
+      rw [eval_bitVec' wa hT] at ea; rw [eval_bitVec' wb hT, ← ea] at eb
+      simp only [Option.some.injEq, Val.bv.injEq, heq_eq_eq, true_and] at eb
+      have := congrArg BitVec.toNat eb
+      simp only [BitVec.toNat_ofInt] at this
+      simp only [Int.toNat_natCast] at this; push_cast at this
+      rw [Int.emod_eq_of_lt h0' h1', Int.emod_eq_of_lt h0 h1] at this
+      exact hz (by omega)
+    · have wa := eval_WT ea; have wb := eval_WT eb
+      rw [eval_eq_ev wa, ev] at ea; rw [eval_eq_ev wb, ev, ← ea] at eb
+      simp only [Term.WT] at wa wb
+      rcases fa with ⟨p, x⟩; rcases fb with ⟨q, y⟩
+      simp only [FloatLit.sem, FloatLit.val, Option.some.injEq, Val.float.injEq] at eb
+      obtain ⟨rfl, eb⟩ := eb
+      simp only [heq_eq_eq] at eb
+      have := congrArg BitVec.toNat eb
+      simp only [BitVec.toNat_ofNat] at this
+      rw [Nat.mod_eq_of_lt wa.2, Nat.mod_eq_of_lt wb.2] at this
+      exact hf (by simp at this ⊢; omega)
+    · simp only [eval_bool (WT_bool.1 (eval_WT ea)), eval_bool (WT_bool.1 (eval_WT eb))] at ea eb
+      rw [← ea] at eb; simp at eb; exact hb eb.symm
+    · obtain ⟨n, x, y, rfl, hla, hoa⟩ := eval_ptr_eq_some ea
+      obtain ⟨n', x', y', he, hlb, hob⟩ := eval_ptr_eq_some eb
+      simp only [Val.ptr.injEq] at he
+      obtain ⟨rfl, rfl, rfl⟩ := he
+      obtain ⟨m, -, hTa, hla', hoa', -, -⟩ := eval_WT ea
+      obtain ⟨m', -, hTb, hlb', hob', -, -⟩ := eval_WT eb
+      simp only [Term.ty_mk] at ht; rw [hTa, hTb] at ht; simp only [Ty.pointer.injEq] at ht
+      subst ht
+      simp only [Ty.sort_eq] at *
+      rcases hp with hp | hp
+      · exact ih (by simp at hk; omega) hp (hla'.trans hlb'.symm) hla hlb
+      · exact ih (by simp at hk; omega) hp (hoa'.trans hob'.symm) hoa hob
+
+theorem sure_neq_sound {FS : FloatSem} {a b : Term} {ρ : Env} {u : Val} (h : sure_neq a b = true)
+    (ht : a.ty = b.ty) (ea : eval FS ρ a = some u) (eb : eval FS ρ b = some u) : False :=
+  sure_neq_sound_aux (sizeOf a + 1) (Nat.lt_succ_self _) h ht ea eb
+
+theorem Refines.and_eq_neq {FS : FloatSem} {p1 q1 p2 q2 x y a : Term} {T1 T2 : Ty}
+    (o1 : (p1 = a ∧ q1 = x) ∨ (p1 = x ∧ q1 = a)) (o2 : (p2 = a ∧ q2 = y) ∨ (p2 = y ∧ q2 = a))
+    (hn : sure_neq x y = true) :
+    Refines FS (b_and.spec (.mk (.binop .eq p1 q1) T1) (.mk (.binop .eq p2 q2) T2)) v_false := by
+  refine Refines.intro (fun w => ?_) (fun ρ v w _ e => ?_)
+  · simp [b_and.spec]
+  · simp only [b_and.spec] at w e
+    obtain ⟨-, -, -, w1, w2⟩ := WT_and'.1 w
+    obtain ⟨ht1, -, -, -⟩ := WT_eq.1 w1
+    obtain ⟨ht2, -, -, -⟩ := WT_eq.1 w2
+    rw [eval_binop w] at e; simp only [evBinop, pand_eq_some] at e
+    rcases e with ⟨-, rfl⟩ | ⟨-, rfl⟩ | ⟨e1, e2, rfl⟩
+    · simp
+    · simp
+    · exfalso
+      have k1 : ∃ u, eval FS ρ a = some u ∧ eval FS ρ x = some u ∧ a.ty = x.ty := by
+        obtain ⟨u, h1, h2⟩ := eval_eq_true w1 e1
+        rcases o1 with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+        · exact ⟨u, h1, h2, ht1⟩
+        · exact ⟨u, h2, h1, ht1.symm⟩
+      have k2 : ∃ u, eval FS ρ a = some u ∧ eval FS ρ y = some u ∧ a.ty = y.ty := by
+        obtain ⟨u, h1, h2⟩ := eval_eq_true w2 e2
+        rcases o2 with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+        · exact ⟨u, h1, h2, ht2⟩
+        · exact ⟨u, h2, h1, ht2.symm⟩
+      obtain ⟨u, ha, hx, tx⟩ := k1
+      obtain ⟨u', ha', hy, ty⟩ := k2
+      rw [ha] at ha'; cases ha'
+      exact sure_neq_sound hn (tx.symm.trans ty) hx hy
+
+theorem eval_cmp_eq_some {FS ρ op s a b T v} (hop : op = Binop.lt s ∨ op = Binop.leq s)
+    (w : (Term.mk (.binop op a b) T).WT) (e : eval FS ρ (.mk (.binop op a b) T) = some v) :
+    ∃ n x y, eval FS ρ a = some (.bv n x) ∧ eval FS ρ b = some (.bv n y) ∧
+      v = .bool (cmpZ op (bz s x) (bz s y)) := by
+  rw [eval_binop w] at e
+  rcases hop with rfl | rfl <;> simp only [evBinop, bvBin_eq_some] at e <;>
+    obtain ⟨n, x, y, hx, hy, e⟩ := e <;> refine ⟨n, x, y, hx, hy, ?_⟩ <;>
+    simp only [lt_val, leq_val, Option.some.injEq] at e <;> simp [cmpZ, ← e]
+
+theorem bv_val_inj {n m : Nat} {x : BitVec n} {y : BitVec m} (h : Val.bv n x = Val.bv m y) :
+    ∃ h : n = m, h ▸ x = y := by
+  cases h; exact ⟨rfl, rfl⟩
+
+theorem Refines.or_lt_lt {FS : FloatSem} {s : Bool} {a b : Term} {T1 T2 : Ty} :
+    Refines FS (b_or.spec (.mk (.binop (.lt s) a b) T1) (.mk (.binop (.lt s) b a) T2))
+      (.mk (.unop .not_ (.mk (.binop .eq a b) .bool)) .bool) := by
+  refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
+  · obtain ⟨-, -, -, w1, -⟩ := WT_or.1 w
+    obtain ⟨-, hb, -, wa, wb⟩ := (WT_cmp (Or.inl rfl)).1 w1
+    exact ⟨WT_not.2 ⟨rfl, rfl, WT_eq.2 ⟨hb.symm, rfl, wa, wb⟩⟩, rfl⟩
+  · simp only [b_or.spec] at w e
+    obtain ⟨-, -, -, w1, w2⟩ := WT_or.1 w
+    obtain ⟨-, -, w3⟩ := WT_not.1 w'
+    rw [eval_binop w] at e; simp only [evBinop, por_eq_some] at e
+    rw [eval_unop w', eval_binop w3]
+    rcases e with ⟨e1, rfl⟩ | ⟨e2, rfl⟩ | ⟨e1, e2, rfl⟩
+    · obtain ⟨n, x, y, ha, hb, hv⟩ := eval_cmp_eq_some (Or.inl rfl) w1 e1
+      rw [ha, hb]; simp [cmpZ] at hv; simp [evBinop, evUnop]; intro h; subst h; omega
+    · obtain ⟨n, y, x, hb, ha, hv⟩ := eval_cmp_eq_some (Or.inl rfl) w2 e2
+      rw [ha, hb]; simp [cmpZ] at hv; simp [evBinop, evUnop]; intro h; subst h; omega
+    · obtain ⟨n, x, y, ha, hb, hv⟩ := eval_cmp_eq_some (Or.inl rfl) w1 e1
+      obtain ⟨n', y', x', hb', ha', hv'⟩ := eval_cmp_eq_some (Or.inl rfl) w2 e2
+      rw [ha] at ha'; rw [hb] at hb'
+      cases ha'; cases hb'
+      simp [cmpZ] at hv hv'
+      have := bz_inj (s := s) (x := x) (y := y) (by omega)
+      subst this
+      rw [ha, hb]; simp [evBinop, evUnop]
+
+theorem Refines.or_lt_leq {FS : FloatSem} {s : Bool} {a b : Term} {T1 T2 : Ty} :
+    Refines FS (b_or.spec (.mk (.binop (.lt s) a b) T1) (.mk (.binop (.leq s) b a) T2)) v_true := by
+  refine Refines.intro (fun w => by simp [b_or.spec]) (fun ρ v w w' e => ?_)
+  simp only [b_or.spec] at w e
+  obtain ⟨-, -, -, w1, w2⟩ := WT_or.1 w
+  rw [eval_binop w] at e; simp only [evBinop, por_eq_some] at e
+  rcases e with ⟨e1, rfl⟩ | ⟨e2, rfl⟩ | ⟨e1, e2, rfl⟩
+  · simp
+  · simp
+  · obtain ⟨n, x, y, ha, hb, hv⟩ := eval_cmp_eq_some (Or.inl rfl) w1 e1
+    obtain ⟨n', y', x', hb', ha', hv'⟩ := eval_cmp_eq_some (Or.inr rfl) w2 e2
+    rw [ha] at ha'; rw [hb] at hb'
+    cases ha'; cases hb'
+    simp [cmpZ] at hv hv'
+    omega
+
 end BoolL
 end Bvr

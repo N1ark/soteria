@@ -116,7 +116,17 @@ theorem b_and.r_or_r.proof : b_and.r_or_r.Stmt := by
       bool_fin
 
 theorem b_and.r_eq_neq.proof : b_and.r_eq_neq.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [b_and.r_eq_neq] at h
+  bool_alts h
+  all_goals (split at h <;> simp only [Option.ite_none_right_eq_some, Option.some.injEq,
+    reduceCtorEq, Bool.and_eq_true, equal_iff] at h)
+  all_goals (obtain ⟨⟨rfl, hn⟩, rfl⟩ := h)
+  all_goals first
+    | exact Refines.and_eq_neq (Or.inl ⟨rfl, rfl⟩) (Or.inl ⟨rfl, rfl⟩) hn
+    | exact Refines.and_eq_neq (Or.inl ⟨rfl, rfl⟩) (Or.inr ⟨rfl, rfl⟩) hn
+    | exact Refines.and_eq_neq (Or.inr ⟨rfl, rfl⟩) (Or.inl ⟨rfl, rfl⟩) hn
+    | exact Refines.and_eq_neq (Or.inr ⟨rfl, rfl⟩) (Or.inr ⟨rfl, rfl⟩) hn
 
 theorem b_and.r_eq_extracts.proof : b_and.r_eq_extracts.Stmt := by
   sorry
@@ -217,10 +227,22 @@ theorem b_or.r_not.proof : b_or.r_not.Stmt := by
       bool_fin
 
 theorem b_or.r_lt_lt.proof : b_or.r_lt_lt.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [b_or.r_lt_lt] at h
+  split at h <;> simp only [Option.ite_none_right_eq_some, Option.some.injEq, reduceCtorEq,
+    Bool.and_eq_true, decide_eq_true_eq, equal_iff] at h
+  obtain ⟨⟨⟨rfl, rfl⟩, rfl⟩, rfl⟩ := h
+  exact (Refines.or_lt_lt.trans (Refines.unop (hO.sem_eq _ _) (fun _ => rfl))).trans (hO.b_not _)
 
 theorem b_or.r_lt_leq.proof : b_or.r_lt_leq.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [b_or.r_lt_leq] at h
+  bool_alts h
+  all_goals (split at h <;> simp only [Option.ite_none_right_eq_some, Option.some.injEq,
+    reduceCtorEq, Bool.and_eq_true, decide_eq_true_eq, equal_iff] at h)
+  all_goals (obtain ⟨⟨⟨rfl, rfl⟩, rfl⟩, rfl⟩ := h)
+  · exact Refines.or_lt_leq
+  · exact Refines.or_comm Refines.or_lt_leq
 
 theorem b_or.r_or_l.proof : b_or.r_or_l.Stmt := by
   intro FS O hO v1 v2 res h
@@ -730,10 +752,31 @@ theorem b_mk_exists.r_default.proof : b_mk_exists.r_default.Stmt := by
   sorry
 
 theorem sem_eq_untyped.r_main.proof : sem_eq_untyped.r_main.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [sem_eq_untyped.r_main, Option.some.injEq] at h
+  subst h
+  split
+  · exact hO.sem_eq v1 v2
+  · rename_i hne
+    refine Refines.intro (fun w => ?_) (fun ρ v w _ e => ?_)
+    · exact absurd (WT_eq.1 w).1 (fun h => by simp [h] at hne)
+    · exact absurd (WT_eq.1 w).1 (fun h => by simp [h] at hne)
 
 theorem b_distinct.r_small.proof : b_distinct.r_small.Stmt := by
-  sorry
+  intro FS O hO l res h
+  simp only [b_distinct.r_small] at h
+  bool_alts h
+  all_goals (split at h <;> simp only [Option.some.injEq, reduceCtorEq] at h)
+  all_goals subst h
+  all_goals
+    refine Refines.intro (fun w => by simp [b_distinct.spec]) (fun ρ v w _ e => ?_)
+    simp only [b_distinct.spec] at w e
+    rw [eval_eq_ev w] at e
+    simp only [ev, evList] at e
+  · simp at e; subst e; simp
+  · split at e
+    · simp_all
+    · simp at e
 
 theorem b_distinct.r_default.proof : b_distinct.r_default.Stmt := by
   sorry

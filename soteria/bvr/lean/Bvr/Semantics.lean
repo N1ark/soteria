@@ -17,6 +17,9 @@ simplifies (`Refines`): the result has the same sort, and whenever the raw node
 evaluates to a value, the result evaluates to the same value. Under a model of
 a path condition, all flags hold, and refinement is plain equality.
 
+Floats are exact IEEE bit patterns: unlike in SMT-LIB, NaNs with different
+payloads are different values (SMT-LIB's single NaN is an approximation made by
+the solver encoding, not something the simplifications may rely on).
 Floating-point arithmetic is abstract (`FloatSem`); `Oracle.Compat` states what
 the proofs assume of Floatml's concrete operations and of the hash-consing
 order.
@@ -49,7 +52,7 @@ def Val.hasSort : Val → Ty → Prop
   | .bool _, .bool => True
   | .bv n _, .bitVector m => (n : Int) = m ∧ 0 < n
   | .ptr n _ _, .pointer m => (n : Int) = m ∧ 0 < n
-  | .float p x, .float q => p = q ∧ x.canon = x
+  | .float p _, .float q => p = q
   | .seq vs, .seq t => Val.hasSortList vs t
   | .ext _, .extension _ => True
   | _, _ => False
@@ -65,8 +68,8 @@ structure Env where
   var : Int → Option Val
   ext : Ext → Ty → Option Val
 
-/-- Floating-point operations, abstractly (results are canonicalised by
-`eval`). -/
+/-- Floating-point operations, abstractly, as functions on bit patterns (so
+NaN payloads are whatever the implementation produces). -/
 structure FloatSem where
   add : (p : Prec) → FBits p → FBits p → FBits p
   sub : (p : Prec) → FBits p → FBits p → FBits p
@@ -81,11 +84,6 @@ structure FloatSem where
   convert : RM → (p q : Prec) → FBits p → FBits q
   toBv : RM → Bool → (n : Nat) → (p : Prec) → FBits p → BitVec n
   ofBv : RM → Bool → (p : Prec) → (n : Nat) → BitVec n → FBits p
-  /-- [fp.add] and [fp.mul] are commutative (up to the payload of NaNs). -/
-  add_comm : ∀ p x y, (add p x y).canon = (add p y x).canon
-  mul_comm : ∀ p x y, (mul p x y).canon = (mul p y x).canon
-  /-- Converting to the same format is exact. -/
-  convert_id : ∀ rm p x, (convert rm p p x).canon = x.canon
 
 /-! ## Well-typed terms -/
 
@@ -157,7 +155,7 @@ end
 /-- The width of a bit-vector (or location, or pointer) type. -/
 def Ty.width (t : Ty) : Nat := (size_of_ty t).toNat
 
-def FloatLit.sem (f : FloatLit) : Val := .float f.prec f.val.canon
+def FloatLit.sem (f : FloatLit) : Val := .float f.prec f.val
 
 /-- Binary bit-vector operations, on operands of the same width. -/
 def bvBin (f : ∀ {n : Nat}, BitVec n → BitVec n → Option Val) :
@@ -171,7 +169,7 @@ def fBin (f : (p : Prec) → FBits p → FBits p → Option Val) :
   | _, _ => none
 
 def fArith (f : (p : Prec) → FBits p → FBits p → FBits p) :=
-  fBin (fun p x y => some (.float p (f p x y).canon))
+  fBin (fun p x y => some (.float p (f p x y)))
 
 /-- An arithmetic operation, poisoned when it overflows in a checked
 signedness. -/
@@ -199,20 +197,20 @@ def evUnop (FS : FloatSem) : Unop → Option Val → Option Val
   | .getPtrOfs, some (.ptr n _ o) => some (.bv n o)
   | .bvOfBool n, some (.bool b) => some (.bv n.toNat (if b then 1 else 0))
   | .bvOfFloat rm s n, some (.float p x) => some (.bv n.toNat (FS.toBv rm s n.toNat p x))
-  | .floatOfBv rm s p, some (.bv n x) => some (.float p (FS.ofBv rm s p n x).canon)
+  | .floatOfBv rm s p, some (.bv n x) => some (.float p (FS.ofBv rm s p n x))
   | .floatOfBvRaw p, some (.bv n x) =>
-      if h : n = p.size then some (.float p (FBits.canon (p := p) (x.cast h))) else none
-  | .floatOfFloat rm p, some (.float q x) => some (.float p (FS.convert rm q p x).canon)
+      if h : n = p.size then some (.float p (x.cast h)) else none
+  | .floatOfFloat rm p, some (.float q x) => some (.float p (FS.convert rm q p x))
   | .bvExtract i j, some (.bv _ x) =>
       some (.bv (j - i + 1).toNat (x.extractLsb' i.toNat _))
   | .bvExtend s k, some (.bv n x) =>
       some (.bv (n + k.toNat) (if s then x.signExtend _ else x.setWidth _))
   | .bvNot, some (.bv n x) => some (.bv n (~~~x))
   | .neg c, some (.bv n x) => if c && x = BitVec.intMin n then none else some (.bv n (-x))
-  | .fAbs, some (.float p x) => some (.float p x.abs.canon)
-  | .fNeg, some (.float p x) => some (.float p x.neg.canon)
-  | .fSqrt, some (.float p x) => some (.float p (FS.sqrt p x).canon)
-  | .fRound rm, some (.float p x) => some (.float p (FS.round rm p x).canon)
+  | .fAbs, some (.float p x) => some (.float p x.abs)
+  | .fNeg, some (.float p x) => some (.float p x.neg)
+  | .fSqrt, some (.float p x) => some (.float p (FS.sqrt p x))
+  | .fRound rm, some (.float p x) => some (.float p (FS.round rm p x))
   | .fIs fc, some (.float _ x) => some (.bool (x.isClass fc))
   | .fIsNeg, some (.float _ x) => some (.bool x.isNeg)
   | .fIsPos, some (.float _ x) => some (.bool x.isPos)
@@ -260,7 +258,7 @@ def evBinop (FS : FloatSem) : Binop → Option Val → Option Val → Option Val
 def evFma (FS : FloatSem) : Option Val → Option Val → Option Val → Option Val
   | some (.float p x), some (.float q y), some (.float r z) =>
       if h : q = p ∧ r = p then
-        some (.float p (FS.fma p x (h.1 ▸ y) (h.2 ▸ z)).canon)
+        some (.float p (FS.fma p x (h.1 ▸ y) (h.2 ▸ z)))
       else none
   | _, _, _ => none
 
@@ -347,8 +345,8 @@ def FloatLit.WF (f : FloatLit) : Prop := f.bits < 2 ^ f.prec.size
 def FloatLit.term (f : FloatLit) : Term := .mk (.float f) (.float f.prec)
 
 /-- What the proofs assume of the oracles: that sorting by tags permutes a list,
-and that Floatml computes, on literals, the same values as the SMT-LIB
-operations (of the same precision). -/
+and that Floatml computes, on literals, the same values (bit patterns) as the
+float operations (of the same precision). -/
 structure Oracle.Compat (orc : Oracle) (FS : FloatSem) : Prop where
   sort_by_tag : ∀ l, (orc.sort_by_tag l).Perm l
   bin : ∀ (op : Binop) (lit : FloatLit → FloatLit → FloatLit),

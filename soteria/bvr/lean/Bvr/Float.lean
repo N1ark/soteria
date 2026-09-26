@@ -3,10 +3,9 @@ import Bvr.Syntax
 /-!
 # IEEE floats, at the bit level
 
-The SMT-LIB semantics of floating point identifies all NaNs; we represent a
-float by its bit pattern and canonicalise NaNs (`canon`). Classification,
-comparisons, `abs` and `neg` are defined here; arithmetic is abstract (see
-`FloatSem`).
+A float is its IEEE bit pattern; NaN payloads are significant. Classification,
+comparisons, `abs` and `neg` (which only touch the sign bit) are defined here;
+arithmetic is abstract (see `FloatSem`).
 -/
 
 namespace Bvr

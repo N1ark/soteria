@@ -426,7 +426,28 @@ theorem bv_xor.r_zero_r.proof : bv_xor.r_zero_r.Stmt := by
   exact BitOp.xor.lit_r (fun n y _ _ _ => by simp)
 
 theorem bv_xor.r_of_bools.proof : bv_xor.r_of_bools.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [bv_xor.r_of_bools] at h
+  split at h <;> simp at h; subst h
+  rename_i n b1 T1 m b2 T2
+  refine Refines.trans ?_ (hO.bv_of_bool _ _)
+  refine Refines.trans ?_ (Refines.unop (Refines.trans
+    (Refines.unop (hO.sem_eq _ _) (fun _ => rfl)) (hO.b_not _)) (fun _ => rfl))
+  refine BitOp.xor.of_bools (fun a b => !(a == b)) (fun n _ h => h)
+    (fun w1 w2 g1 g2 => ⟨?_, rfl⟩)
+    (fun ρ x1 x2 g1 g2 e1 e2 => ?_) (fun k x1 x2 hk => ?_)
+  · simp [sem_eq.spec, WT_unop, WT_binop, Unop.WT, Binop.WT, g1, g2, w1, w2]
+  · have wb : (sem_eq.spec b1 b2).WT := by
+      simp [sem_eq.spec, WT_binop, Binop.WT, g1, g2, eval_WT e1, eval_WT e2]
+    have wn : (b_not.spec (sem_eq.spec b1 b2)).WT := by
+      simp only [b_not.spec]; exact WT_unop.2 ⟨by simp [Unop.WT, sem_eq.spec], wb⟩
+    show eval FS ρ (b_not.spec (sem_eq.spec b1 b2)) = _
+    simp only [b_not.spec] at wn ⊢
+    rw [eval_unop wn]
+    simp only [sem_eq.spec] at wb ⊢
+    rw [eval_binop wb, e1, e2]
+    cases x1 <;> cases x2 <;> simp [evUnop, evBinop]
+  · cases x1 <;> cases x2 <;> simp
 
 theorem bv_xor.r_default.proof : bv_xor.r_default.Stmt := by
   intro FS O hO v1 v2 res h
@@ -491,7 +512,8 @@ theorem bv_extract.r_urem.proof : bv_extract.r_urem.Stmt := by
   sorry
 
 theorem bv_extract.r_default.proof : bv_extract.r_default.Stmt := by
-  sorry
+  intro FS O hO i j v res h
+  simp [bv_extract.r_default] at h; subst h; exact Refines.refl
 
 theorem bv_extend.r_lit.proof : bv_extend.r_lit.Stmt := by
   sorry
@@ -506,7 +528,8 @@ theorem bv_extend.r_of_bool.proof : bv_extend.r_of_bool.Stmt := by
   sorry
 
 theorem bv_extend.r_default.proof : bv_extend.r_default.Stmt := by
-  sorry
+  intro FS O hO s k v res h
+  simp [bv_extend.r_default] at h; subst h; exact Refines.refl
 
 theorem bv_concat.r_lits.proof : bv_concat.r_lits.Stmt := by
   sorry
@@ -515,7 +538,9 @@ theorem bv_concat.r_extracts.proof : bv_concat.r_extracts.Stmt := by
   sorry
 
 theorem bv_concat.r_extract_extracts.proof : bv_concat.r_extract_extracts.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [bv_concat.r_extract_extracts] at h
+  split at h <;> simp at h; subst h; exact Refines.refl
 
 theorem bv_concat.r_assoc_l.proof : bv_concat.r_assoc_l.Stmt := by
   sorry
@@ -527,7 +552,8 @@ theorem bv_concat.r_ites.proof : bv_concat.r_ites.Stmt := by
   sorry
 
 theorem bv_concat.r_default.proof : bv_concat.r_default.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp [bv_concat.r_default] at h; subst h; exact Refines.refl
 
 theorem bv_shl.r_lits.proof : bv_shl.r_lits.Stmt := by
   sorry
@@ -551,7 +577,8 @@ theorem bv_shl.r_or_mask.proof : bv_shl.r_or_mask.Stmt := by
   sorry
 
 theorem bv_shl.r_default.proof : bv_shl.r_default.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp [bv_shl.r_default] at h; subst h; exact Refines.refl
 
 theorem bv_lshr.r_lits.proof : bv_lshr.r_lits.Stmt := by
   sorry
@@ -572,7 +599,8 @@ theorem bv_lshr.r_or_mask.proof : bv_lshr.r_or_mask.Stmt := by
   sorry
 
 theorem bv_lshr.r_default.proof : bv_lshr.r_default.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp [bv_lshr.r_default] at h; subst h; exact Refines.refl
 
 theorem bv_ashr.r_lits.proof : bv_ashr.r_lits.Stmt := by
   sorry
@@ -587,24 +615,92 @@ theorem bv_ashr.r_ashr.proof : bv_ashr.r_ashr.Stmt := by
   sorry
 
 theorem bv_ashr.r_default.proof : bv_ashr.r_default.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp [bv_ashr.r_default] at h; subst h; exact Refines.refl
 
 theorem bv_of_float.r_lit.proof : bv_of_float.r_lit.Stmt := by
-  sorry
+  intro FS O hO rm s n v res h
+  simp only [bv_of_float.r_lit] at h
+  split at h <;> simp at h; subst h
+  rename_i f T
+  rcases ez : O.orc.f_to_int rm s n f with _ | z
+  · simp [firstSome]; exact Refines.refl
+  · simp [firstSome]
+    refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
+    · have := (WT_unop.1 w).1; simp [Unop.WT] at this
+      exact ⟨mk_masked_WT this.1, by simp [bv_of_float.spec]⟩
+    · have ⟨w1, w2⟩ := WT_unop.1 w
+      simp [Unop.WT] at w1
+      have w3 := w2
+      simp [Term.WT] at w3
+      rw [bv_of_float.spec, eval_unop w, eval_eq_ev w2, ev] at e
+      rw [eval_mk_masked w1.1]
+      rw [hO.orc.to_int rm s n f z w3.2 w1.1 ez] at e
+      exact e
 
 theorem bv_of_float.r_default.proof : bv_of_float.r_default.Stmt := by
-  sorry
+  intro FS O hO rm s n v res h
+  simp [bv_of_float.r_default] at h; subst h; exact Refines.refl
 
 theorem bv_to_float.r_lit.proof : bv_to_float.r_lit.Stmt := by
-  sorry
+  intro FS O hO rm s p v res h
+  simp only [bv_to_float.r_lit] at h
+  split at h <;> simp at h; subst h
+  rename_i z T
+  rcases ez : O.orc.f_of_int rm s p (size_of_ty T) z with _ | f
+  · simp [firstSome]; exact Refines.refl
+  · simp [firstSome]
+    have key : (bv_to_float.spec rm s p (.mk (.bitVec z) T)).WT →
+        ∃ n : Int, 0 < n ∧ T = .bitVector n ∧ 0 ≤ z ∧ z < 2 ^ n.toNat := by
+      intro w
+      have ⟨w1, w2⟩ := WT_unop.1 w
+      simp [Unop.WT] at w1
+      obtain ⟨n, hn, rfl⟩ := w1
+      exact ⟨n, hn, rfl, lit_inv w2 n rfl |>.2⟩
+    refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
+    · obtain ⟨n, hn, rfl, h0, h1⟩ := key w
+      obtain ⟨hp, hf, _⟩ := hO.orc.of_int rm s p n z f hn h0 h1 ez
+      refine ⟨?_, by simp [bv_to_float.spec, hp]⟩
+      simp only [Term.WT, hp]; exact ⟨trivial, by simpa [FloatLit.WF, hp] using hf⟩
+    · obtain ⟨n, hn, rfl, h0, h1⟩ := key w
+      obtain ⟨hp, hf, he⟩ := hO.orc.of_int rm s p n z f hn h0 h1 ez
+      rw [bv_to_float.spec, eval_unop w, eval_lit' (WT_unop.1 w).2 rfl, he] at e
+      rw [eval_eq_ev w']; simp only [ev]; exact e
 
 theorem bv_to_float.r_default.proof : bv_to_float.r_default.Stmt := by
-  sorry
+  intro FS O hO rm s p v res h
+  simp [bv_to_float.r_default] at h; subst h; exact Refines.refl
 
 theorem bv_to_float_raw.r_lit.proof : bv_to_float_raw.r_lit.Stmt := by
-  sorry
+  intro FS O hO v res h
+  simp only [bv_to_float_raw.r_lit] at h
+  split at h <;> simp at h; subst h
+  rename_i z T
+  simp only [bv_to_float_raw.spec, size_eq, Term.ty_mk]
+  generalize fp_of_size (size_of_ty T) = p
+  refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
+  · refine ⟨?_, rfl⟩
+    simp only [Term.WT, f_of_bits]
+    refine ⟨trivial, ?_⟩
+    have := emod_two_pow_lt z p.size
+    have := emod_two_pow_nonneg z p.size
+    have e1 : ((2 ^ p.size : Nat) : Int) = (2 : Int) ^ p.size := by push_cast; rfl
+    omega
+  · have ⟨w1, w2⟩ := WT_unop.1 w
+    simp only [Unop.WT] at w1
+    rw [eval_unop w, eval_lit' w2 w1.1] at e
+    simp [evUnop] at e
+    rw [eval_eq_ev w']; simp only [ev]; rw [← e]
+    simp [FloatLit.sem, FloatLit.val, f_of_bits]
+    apply BitVec.eq_of_toNat_eq
+    rw [BitVec.toNat_ofNat, BitVec.toNat_ofInt]
+    have := emod_two_pow_lt z p.size
+    have := emod_two_pow_nonneg z p.size
+    have e1 : ((2 ^ p.size : Nat) : Int) = (2 : Int) ^ p.size := by push_cast; rfl
+    rw [Nat.mod_eq_of_lt (by omega)]; simp
 
 theorem bv_to_float_raw.r_default.proof : bv_to_float_raw.r_default.Stmt := by
-  sorry
+  intro FS O hO v res h
+  simp [bv_to_float_raw.r_default] at h; subst h; exact Refines.refl
 
 end Bvr

@@ -294,7 +294,10 @@ def ev (FS : FloatSem) : Env → Term → Option Val
       if ∀ ρ', ρ'.Extends ρ bs → ∃ b, ev FS ρ' body = some (.bool b) then
         some (.bool (decide (∃ ρ', ρ'.Extends ρ bs ∧ ev FS ρ' body = some (.bool true))))
       else none
-  | ρ, .mk (.extension e) t => ρ.ext e t
+  | ρ, .mk (.extension e) t =>
+      match ρ.ext e t with
+      | some x => if x.hasTy t then some x else none
+      | none => none
 
 def evList (FS : FloatSem) : Env → List Term → Option (List Val)
   | _, [] => some []

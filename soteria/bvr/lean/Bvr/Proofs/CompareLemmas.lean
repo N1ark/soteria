@@ -1010,5 +1010,8 @@ theorem Refines.ite_split {FS : FloatSem} {spec a b : Term} {c : Prop} [Decidabl
   · exact h1 ‹_›
   · exact h2 ‹_›
 
+theorem max_for_false (n : Nat) : max_for false n = 2 ^ n - 1 := by rw [max_for_eq]; simp
+theorem min_for_false (n : Nat) : min_for false n = 0 := by simp [min_for]
+
 end CompareL
 end Bvr

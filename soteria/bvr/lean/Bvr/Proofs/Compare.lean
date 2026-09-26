@@ -356,16 +356,120 @@ theorem bv_lt.r_mul_mul.proof : bv_lt.r_mul_mul.Stmt := by
   sorry
 
 theorem bv_lt.r_const_sub1.proof : bv_lt.r_const_sub1.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_lt.r_const_sub1] at h
+  split at h <;> (try split at h) <;> simp at h
+  rename_i hc; subst h
+  refine Refines.ite_split (fun hov => Refines.ite_split (fun hs => ?_) (fun _ => Refines.refl))
+    (fun hov => ?_)
+  · obtain rfl : s = false := by simpa using hs
+    refine cmp_refines_lt (fun _ _ _ _ => TBool_false) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+    subst hn
+    obtain ⟨xa, xb, ea, eb, hy, hr1, hr2⟩ := eval_sub_inv false hc e2
+    rsz h1 at hov
+    simp only [overflows_add, Bool.or_eq_true, decide_eq_true_eq] at hov
+    rw [lit_val' false h1 e1, lit_val' false (TB_sub_inv h2).2.2 eb] at hov
+    have := bvz_false_range xa; have := bvz_false_range xb
+    have := bvz_false_range x; have := bvz_false_range y
+    simp only [max_for_false, min_for_false] at *
+    simp; omega
+  · simp at hov
+    refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_lt hO hN (TB_O_add hO hN h1 (TB_sub_inv h2).2.2) (TB_sub_inv h2).2.1)
+      (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+    subst hn
+    obtain ⟨xa, xb, ea, eb, hy, -⟩ := eval_sub_inv s hc e2
+    rsz h1 at hov
+    rw [overflows_add_false, lit_val' s h1 e1, lit_val' s (TB_sub_inv h2).2.2 eb] at hov
+    obtain ⟨r', er', hr'⟩ := eval_O_add_rng hO hN h1 (TB_sub_inv h2).2.2 e1 eb hov.1 hov.2
+    rw [eval_O_lt hO hN (TB_O_add hO hN h1 (TB_sub_inv h2).2.2) (TB_sub_inv h2).2.1 er' ea, hr', hy]
+    simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
 theorem bv_lt.r_const_sub2.proof : bv_lt.r_const_sub2.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_lt.r_const_sub2] at h
+  split at h <;> (try split at h) <;> simp at h
+  rename_i hc; subst h
+  refine Refines.ite_split (fun hov => Refines.ite_split (fun hs => ?_) (fun _ => Refines.refl))
+    (fun hov => ?_)
+  · obtain rfl : s = false := by simpa using hs
+    refine cmp_refines_lt (fun _ _ _ _ => TBool_false) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+    subst hn
+    obtain ⟨xa, xb, ea, eb, hy, hr1, hr2⟩ := eval_sub_inv false hc e2
+    rsz h1 at hov
+    simp only [overflows_sub, Bool.or_eq_true, decide_eq_true_eq] at hov
+    rw [lit_val' false (TB_sub_inv h2).2.1 ea, lit_val' false h1 e1] at hov
+    have := bvz_false_range xa; have := bvz_false_range xb
+    have := bvz_false_range x; have := bvz_false_range y
+    simp only [max_for_false, min_for_false] at *
+    simp; omega
+  · simp at hov
+    refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_lt hO hN (TB_sub_inv h2).2.2 (TB_O_sub hO hN (TB_sub_inv h2).2.1 h1))
+      (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+    subst hn
+    obtain ⟨xa, xb, ea, eb, hy, -⟩ := eval_sub_inv s hc e2
+    rsz h1 at hov
+    rw [overflows_sub_false, lit_val' s (TB_sub_inv h2).2.1 ea, lit_val' s h1 e1] at hov
+    obtain ⟨r', er', hr'⟩ := eval_O_sub_rng hO hN (TB_sub_inv h2).2.1 h1 ea e1 hov.1 hov.2
+    rw [eval_O_lt hO hN (TB_sub_inv h2).2.2 (TB_O_sub hO hN (TB_sub_inv h2).2.1 h1) eb er', hr', hy]
+    simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
 theorem bv_lt.r_sub_const1.proof : bv_lt.r_sub_const1.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_lt.r_sub_const1] at h
+  split at h <;> (try split at h) <;> simp at h
+  rename_i hc; subst h
+  refine Refines.ite_split (fun hov => Refines.ite_split (fun hs => ?_) (fun _ => Refines.refl))
+    (fun hov => ?_)
+  · obtain rfl : s = false := by simpa using hs
+    refine cmp_refines_lt (fun _ _ _ _ => TBool_true) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+    subst hn
+    obtain ⟨xa, xb, ea, eb, hy, hr1, hr2⟩ := eval_sub_inv false hc e1
+    rsz h1 at hov
+    simp only [overflows_add, Bool.or_eq_true, decide_eq_true_eq] at hov
+    rw [lit_val' false h2 e2, lit_val' false (TB_sub_inv h1).2.2 eb] at hov
+    have := bvz_false_range xa; have := bvz_false_range xb
+    have := bvz_false_range x; have := bvz_false_range y
+    simp only [max_for_false, min_for_false] at *
+    simp; omega
+  · simp at hov
+    refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_lt hO hN (TB_sub_inv h1).2.1 (TB_O_add hO hN h2 (TB_sub_inv h1).2.2))
+      (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+    subst hn
+    obtain ⟨xa, xb, ea, eb, hy, -⟩ := eval_sub_inv s hc e1
+    rsz h1 at hov
+    rw [overflows_add_false, lit_val' s h2 e2, lit_val' s (TB_sub_inv h1).2.2 eb] at hov
+    obtain ⟨r', er', hr'⟩ := eval_O_add_rng hO hN h2 (TB_sub_inv h1).2.2 e2 eb hov.1 hov.2
+    rw [eval_O_lt hO hN (TB_sub_inv h1).2.1 (TB_O_add hO hN h2 (TB_sub_inv h1).2.2) ea er', hr', hy]
+    simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
 theorem bv_lt.r_sub_const2.proof : bv_lt.r_sub_const2.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_lt.r_sub_const2] at h
+  split at h <;> (try split at h) <;> simp at h
+  rename_i hc; subst h
+  refine Refines.ite_split (fun hov => Refines.ite_split (fun hs => ?_) (fun _ => Refines.refl))
+    (fun hov => ?_)
+  · obtain rfl : s = false := by simpa using hs
+    refine cmp_refines_lt (fun _ _ _ _ => TBool_true) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+    subst hn
+    obtain ⟨xa, xb, ea, eb, hy, hr1, hr2⟩ := eval_sub_inv false hc e1
+    rsz h1 at hov
+    simp only [overflows_sub, Bool.or_eq_true, decide_eq_true_eq] at hov
+    rw [lit_val' false (TB_sub_inv h1).2.1 ea, lit_val' false h2 e2] at hov
+    have := bvz_false_range xa; have := bvz_false_range xb
+    have := bvz_false_range x; have := bvz_false_range y
+    simp only [max_for_false, min_for_false] at *
+    simp; omega
+  · simp at hov
+    refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_lt hO hN (TB_O_sub hO hN (TB_sub_inv h1).2.1 h2) (TB_sub_inv h1).2.2)
+      (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+    subst hn
+    obtain ⟨xa, xb, ea, eb, hy, -⟩ := eval_sub_inv s hc e1
+    rsz h1 at hov
+    rw [overflows_sub_false, lit_val' s (TB_sub_inv h1).2.1 ea, lit_val' s h2 e2] at hov
+    obtain ⟨r', er', hr'⟩ := eval_O_sub_rng hO hN (TB_sub_inv h1).2.1 h2 ea e2 hov.1 hov.2
+    rw [eval_O_lt hO hN (TB_O_sub hO hN (TB_sub_inv h1).2.1 h2) (TB_sub_inv h1).2.2 er' eb, hr', hy]
+    simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
 theorem bv_lt.r_ub_r.proof : bv_lt.r_ub_r.Stmt := by
   sorry
@@ -656,16 +760,120 @@ theorem bv_leq.r_ite_r.proof : bv_leq.r_ite_r.Stmt := by
   · exact eval_O_leq hO hN h1 hr e1 ex
 
 theorem bv_leq.r_const_sub1.proof : bv_leq.r_const_sub1.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_leq.r_const_sub1] at h
+  split at h <;> (try split at h) <;> simp at h
+  rename_i hc; subst h
+  refine Refines.ite_split (fun hov => Refines.ite_split (fun hs => ?_) (fun _ => Refines.refl))
+    (fun hov => ?_)
+  · obtain rfl : s = false := by simpa using hs
+    refine cmp_refines_leq (fun _ _ _ _ => TBool_false) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+    subst hn
+    obtain ⟨xa, xb, ea, eb, hy, hr1, hr2⟩ := eval_sub_inv false hc e2
+    rsz h1 at hov
+    simp only [overflows_add, Bool.or_eq_true, decide_eq_true_eq] at hov
+    rw [lit_val' false h1 e1, lit_val' false (TB_sub_inv h2).2.2 eb] at hov
+    have := bvz_false_range xa; have := bvz_false_range xb
+    have := bvz_false_range x; have := bvz_false_range y
+    simp only [max_for_false, min_for_false] at *
+    simp; omega
+  · simp at hov
+    refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_leq hO hN (TB_O_add hO hN h1 (TB_sub_inv h2).2.2) (TB_sub_inv h2).2.1)
+      (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+    subst hn
+    obtain ⟨xa, xb, ea, eb, hy, -⟩ := eval_sub_inv s hc e2
+    rsz h1 at hov
+    rw [overflows_add_false, lit_val' s h1 e1, lit_val' s (TB_sub_inv h2).2.2 eb] at hov
+    obtain ⟨r', er', hr'⟩ := eval_O_add_rng hO hN h1 (TB_sub_inv h2).2.2 e1 eb hov.1 hov.2
+    rw [eval_O_leq hO hN (TB_O_add hO hN h1 (TB_sub_inv h2).2.2) (TB_sub_inv h2).2.1 er' ea, hr', hy]
+    simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
 theorem bv_leq.r_const_sub2.proof : bv_leq.r_const_sub2.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_leq.r_const_sub2] at h
+  split at h <;> (try split at h) <;> simp at h
+  rename_i hc; subst h
+  refine Refines.ite_split (fun hov => Refines.ite_split (fun hs => ?_) (fun _ => Refines.refl))
+    (fun hov => ?_)
+  · obtain rfl : s = false := by simpa using hs
+    refine cmp_refines_leq (fun _ _ _ _ => TBool_false) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+    subst hn
+    obtain ⟨xa, xb, ea, eb, hy, hr1, hr2⟩ := eval_sub_inv false hc e2
+    rsz h1 at hov
+    simp only [overflows_sub, Bool.or_eq_true, decide_eq_true_eq] at hov
+    rw [lit_val' false (TB_sub_inv h2).2.1 ea, lit_val' false h1 e1] at hov
+    have := bvz_false_range xa; have := bvz_false_range xb
+    have := bvz_false_range x; have := bvz_false_range y
+    simp only [max_for_false, min_for_false] at *
+    simp; omega
+  · simp at hov
+    refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_leq hO hN (TB_sub_inv h2).2.2 (TB_O_sub hO hN (TB_sub_inv h2).2.1 h1))
+      (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+    subst hn
+    obtain ⟨xa, xb, ea, eb, hy, -⟩ := eval_sub_inv s hc e2
+    rsz h1 at hov
+    rw [overflows_sub_false, lit_val' s (TB_sub_inv h2).2.1 ea, lit_val' s h1 e1] at hov
+    obtain ⟨r', er', hr'⟩ := eval_O_sub_rng hO hN (TB_sub_inv h2).2.1 h1 ea e1 hov.1 hov.2
+    rw [eval_O_leq hO hN (TB_sub_inv h2).2.2 (TB_O_sub hO hN (TB_sub_inv h2).2.1 h1) eb er', hr', hy]
+    simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
 theorem bv_leq.r_sub_const1.proof : bv_leq.r_sub_const1.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_leq.r_sub_const1] at h
+  split at h <;> (try split at h) <;> simp at h
+  rename_i hc; subst h
+  refine Refines.ite_split (fun hov => Refines.ite_split (fun hs => ?_) (fun _ => Refines.refl))
+    (fun hov => ?_)
+  · obtain rfl : s = false := by simpa using hs
+    refine cmp_refines_leq (fun _ _ _ _ => TBool_true) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+    subst hn
+    obtain ⟨xa, xb, ea, eb, hy, hr1, hr2⟩ := eval_sub_inv false hc e1
+    rsz h1 at hov
+    simp only [overflows_add, Bool.or_eq_true, decide_eq_true_eq] at hov
+    rw [lit_val' false h2 e2, lit_val' false (TB_sub_inv h1).2.2 eb] at hov
+    have := bvz_false_range xa; have := bvz_false_range xb
+    have := bvz_false_range x; have := bvz_false_range y
+    simp only [max_for_false, min_for_false] at *
+    simp; omega
+  · simp at hov
+    refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_leq hO hN (TB_sub_inv h1).2.1 (TB_O_add hO hN h2 (TB_sub_inv h1).2.2))
+      (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+    subst hn
+    obtain ⟨xa, xb, ea, eb, hy, -⟩ := eval_sub_inv s hc e1
+    rsz h1 at hov
+    rw [overflows_add_false, lit_val' s h2 e2, lit_val' s (TB_sub_inv h1).2.2 eb] at hov
+    obtain ⟨r', er', hr'⟩ := eval_O_add_rng hO hN h2 (TB_sub_inv h1).2.2 e2 eb hov.1 hov.2
+    rw [eval_O_leq hO hN (TB_sub_inv h1).2.1 (TB_O_add hO hN h2 (TB_sub_inv h1).2.2) ea er', hr', hy]
+    simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
 theorem bv_leq.r_sub_const2.proof : bv_leq.r_sub_const2.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_leq.r_sub_const2] at h
+  split at h <;> (try split at h) <;> simp at h
+  rename_i hc; subst h
+  refine Refines.ite_split (fun hov => Refines.ite_split (fun hs => ?_) (fun _ => Refines.refl))
+    (fun hov => ?_)
+  · obtain rfl : s = false := by simpa using hs
+    refine cmp_refines_leq (fun _ _ _ _ => TBool_true) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+    subst hn
+    obtain ⟨xa, xb, ea, eb, hy, hr1, hr2⟩ := eval_sub_inv false hc e1
+    rsz h1 at hov
+    simp only [overflows_sub, Bool.or_eq_true, decide_eq_true_eq] at hov
+    rw [lit_val' false (TB_sub_inv h1).2.1 ea, lit_val' false h2 e2] at hov
+    have := bvz_false_range xa; have := bvz_false_range xb
+    have := bvz_false_range x; have := bvz_false_range y
+    simp only [max_for_false, min_for_false] at *
+    simp; omega
+  · simp at hov
+    refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_leq hO hN (TB_O_sub hO hN (TB_sub_inv h1).2.1 h2) (TB_sub_inv h1).2.2)
+      (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+    subst hn
+    obtain ⟨xa, xb, ea, eb, hy, -⟩ := eval_sub_inv s hc e1
+    rsz h1 at hov
+    rw [overflows_sub_false, lit_val' s (TB_sub_inv h1).2.1 ea, lit_val' s h2 e2] at hov
+    obtain ⟨r', er', hr'⟩ := eval_O_sub_rng hO hN (TB_sub_inv h1).2.1 h2 ea e2 hov.1 hov.2
+    rw [eval_O_leq hO hN (TB_O_sub hO hN (TB_sub_inv h1).2.1 h2) (TB_sub_inv h1).2.2 er' eb, hr', hy]
+    simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]; omega
 
 theorem bv_leq.r_ub_r.proof : bv_leq.r_ub_r.Stmt := by
   sorry

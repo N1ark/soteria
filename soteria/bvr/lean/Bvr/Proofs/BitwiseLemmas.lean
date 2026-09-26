@@ -921,6 +921,78 @@ theorem BitOp.eval_lit_l {FS op f} (H : BitOp FS op f) {ρ b s T1 t v}
 theorem toNat_ofInt_lit {k : Nat} {z : Int} (h0 : 0 ≤ z) (h1 : z < 2 ^ k) :
     (BitVec.ofInt k z).toNat = z.toNat := toNat_ofInt_of_range h0 h1
 
+theorem Val.bv_getLsbD {n m : Nat} {x : BitVec n} {y : BitVec m} (h : Val.bv n x = Val.bv m y)
+    (t : Nat) : x.getLsbD t = y.getLsbD t := by
+  cases h; rfl
+
+theorem extract_extend_WT {i j s k a T}
+    (w : (bv_extract.spec i j (.mk (.unop (.bvExtend s k) a) T)).WT) :
+    ∃ m : Int, 0 < m ∧ a.ty = .bitVector m ∧ 0 ≤ k ∧ T = .bitVector (m + k) ∧ 0 ≤ i ∧ i ≤ j ∧
+      j < m + k ∧ a.WT := by
+  obtain ⟨n, hb, h0, h1, h2, -, wb⟩ := WT_extract.1 w
+  obtain ⟨m, hm, ha, hk, hT, wa⟩ := WT_extend.1 wb
+  simp only [Term.ty_mk] at hb; subst hT; simp only [Ty.bitVector.injEq] at hb; subst hb
+  exact ⟨m, hm, ha, hk, rfl, h0, h1, h2, wa⟩
+
+theorem extract_extend_eval {FS ρ i j s k a T u}
+    (e : eval FS ρ (bv_extract.spec i j (.mk (.unop (.bvExtend s k) a) T)) = some u) :
+    ∃ m : Int, ∃ x : BitVec m.toNat, eval FS ρ a = some (.bv m.toNat x) ∧ 0 < m ∧
+      a.ty = .bitVector m ∧ 0 ≤ k ∧ T = .bitVector (m + k) ∧ 0 ≤ i ∧ i ≤ j ∧ j < m + k ∧
+      u = .bv (j - i + 1).toNat ((if s then x.signExtend (m.toNat + k.toNat)
+        else x.setWidth (m.toNat + k.toNat)).extractLsb' i.toNat _) := by
+  obtain ⟨n, y, hb, h0, h1, h2, -, eb, rfl⟩ := eval_extract e
+  obtain ⟨m, x, hm, ha, hk, hT, ea, hy⟩ := eval_extend eb
+  simp only [Term.ty_mk] at hb; subst hT; simp only [Ty.bitVector.injEq] at hb; subst hb
+  refine ⟨m, x, ea, hm, ha, hk, rfl, h0, h1, h2, ?_⟩
+  apply Val.bv_ext rfl
+  intro t ht
+  simp only [BitVec.getLsbD_extractLsb']
+  rw [Val.bv_getLsbD hy]
+
+theorem BitOp.urem {FS} : BitOp FS (.rem false) (fun x y => x.umod y) :=
+  ⟨fun _ _ _ => Iff.rfl, fun _ _ => by simp [evBinop]⟩
+
+/-- Checked arithmetic: well-typed like the unchecked one, and its value is the unchecked one
+when it is not poison. -/
+theorem WT_checked {op} (hop : ∀ a b t, Binop.WT op a b t ↔ Binop.WT (.add unchecked) a b t)
+    {a b t} : (Term.mk (.binop op a b) t).WT ↔
+      ∃ n : Int, 0 < n ∧ a.ty = .bitVector n ∧ b.ty = .bitVector n ∧ t = .bitVector n ∧
+        a.WT ∧ b.WT := by
+  rw [WT_binop, hop]
+  constructor
+  · rintro ⟨⟨⟨n, hn, ha⟩, hb, ht⟩, wa, wb⟩
+    exact ⟨n, hn, ha, hb.trans ha, ht.trans ha, wa, wb⟩
+  · rintro ⟨n, hn, ha, hb, ht, wa, wb⟩
+    exact ⟨⟨⟨n, hn, ha⟩, hb.trans ha.symm, ht.trans ha.symm⟩, wa, wb⟩
+
+theorem eval_checked {c sovf uovf} {f : ∀ {n : Nat}, BitVec n → BitVec n → BitVec n}
+    {a b : Option Val} {v : Val} (e : checkedOp c sovf uovf f a b = some v) :
+    ∃ n x y, a = some (.bv n x) ∧ b = some (.bv n y) ∧ v = .bv n (f x y) := by
+  obtain ⟨n, x, y, ea, eb, h⟩ := bvBin_eq_some.1 e
+  refine ⟨n, x, y, ea, eb, ?_⟩
+  split at h <;> simp at h; exact h.symm
+
+theorem eval_add_eq_some {FS ρ c a b t v}
+    (e : eval FS ρ (.mk (.binop (.add c) a b) t) = some v) :
+    ∃ n x y, eval FS ρ a = some (.bv n x) ∧ eval FS ρ b = some (.bv n y) ∧ v = .bv n (x + y) := by
+  rw [eval_binop (eval_WT e)] at e; exact eval_checked e
+
+theorem eval_mul_eq_some {FS ρ c a b t v}
+    (e : eval FS ρ (.mk (.binop (.mul c) a b) t) = some v) :
+    ∃ n x y, eval FS ρ a = some (.bv n x) ∧ eval FS ρ b = some (.bv n y) ∧ v = .bv n (x * y) := by
+  rw [eval_binop (eval_WT e)] at e; exact eval_checked e
+
+theorem is_pow2_eq {z : Int} (h : is_pow2 z = true) : z = 2 ^ (log2 z).toNat ∧ 0 ≤ log2 z := by
+  unfold is_pow2 at h
+  simp only [Bool.and_eq_true, decide_eq_true_eq] at h
+  obtain ⟨h0, h1⟩ := h
+  simp only [popcount] at h1
+  have h1' : popcountNat z.toNat = 1 := by exact_mod_cast h1
+  obtain ⟨j, hj⟩ := popcountNat_eq_one h1'
+  have e1 : ((2 ^ j : Nat) : Int) = (2 : Int) ^ j := by push_cast; rfl
+  simp only [log2, hj, Nat.log2_two_pow, Int.toNat_natCast]
+  omega
+
 theorem ite_pos' {c : Prop} [Decidable c] {α} {a b : α} (h : c) : (if c then a else b) = a :=
   by simp [h]
 theorem ite_neg' {c : Prop} [Decidable c] {α} {a b : α} (h : ¬c) : (if c then a else b) = b :=
@@ -935,7 +1007,8 @@ macro "bitw_simp" : tactic => `(tactic| simp (disch := omega) only [BitVec.getLs
   Bool.true_and,
   Bool.and_true, Bool.false_and, Bool.and_false, Bool.not_true, Bool.not_false, Nat.zero_add,
   Nat.add_zero, Int.toNat_zero, BitVec.getLsbD_of_ge, BitVec.getLsbD_signExtend,
-  BitVec.getLsbD_sshiftRight, BitVec.msb_eq_getLsbD_last, Bool.not_and, Bool.not_not])
+  BitVec.getLsbD_sshiftRight, BitVec.msb_eq_getLsbD_last, Bool.not_and, Bool.not_not, Bool.false_eq_true,
+  Bool.true_eq_false, ↓reduceIte])
 
 end BitwiseL
 end Bvr

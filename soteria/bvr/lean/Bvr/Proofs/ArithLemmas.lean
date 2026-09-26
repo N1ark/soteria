@@ -1004,5 +1004,104 @@ theorem Val.bv_toNat_eq {n m : Nat} {x : BitVec n} {y : BitVec m} (h : Val.bv n 
   cases h; exact ⟨rfl, rfl⟩
 
 
+
+/-! ## Boolean results -/
+
+/-- A well-typed boolean term. -/
+def BoolT (t : Term) : Prop := t.WT ∧ t.ty = .bool
+
+theorem of_bool_BoolT (b : Bool) : BoolT (of_bool b) := by
+  cases b <;> simp [BoolT, of_bool]
+
+theorem eval_of_bool {FS ρ} (b : Bool) : eval FS ρ (of_bool b) = some (.bool b) := by
+  cases b <;> simp [of_bool]
+
+theorem eval_bool_inv {FS ρ t v} (w : BoolT t) (e : eval FS ρ t = some v) : ∃ b, v = .bool b := by
+  have := eval_hasSort e; rw [w.2] at this
+  rcases v with _ | _ | _ | _ | _ | _ <;> simp [Val.hasSort] at this; exact ⟨_, rfl⟩
+
+theorem O_b_and {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {a b} (wa : BoolT a) (wb : BoolT b) :
+    BoolT (O.b_and a b) ∧ ∀ ρ p q, eval FS ρ a = some (.bool p) → eval FS ρ b = some (.bool q) →
+      eval FS ρ (O.b_and a b) = some (.bool (p && q)) := by
+  have w : (b_and.spec a b).WT := WT_and.2 ⟨by simp [wa.2], by simp [wb.2], rfl, wa.1, wb.1⟩
+  refine ⟨?_, fun ρ p q hp hq => (hO.b_and a b).sem ρ _ ?_⟩
+  · have := (hO.b_and a b).syn w; exact ⟨this.1, by simpa [b_and.spec] using this.2⟩
+  · rw [b_and.spec, eval_binop w, hp, hq]; cases p <;> cases q <;> rfl
+
+theorem O_b_or {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {a b} (wa : BoolT a) (wb : BoolT b) :
+    BoolT (O.b_or a b) ∧ ∀ ρ p q, eval FS ρ a = some (.bool p) → eval FS ρ b = some (.bool q) →
+      eval FS ρ (O.b_or a b) = some (.bool (p || q)) := by
+  have w : (b_or.spec a b).WT := by
+    simp [b_or.spec, Term.WT, Binop.WT, wa.2, wb.2, wa.1, wb.1]
+  refine ⟨?_, fun ρ p q hp hq => (hO.b_or a b).sem ρ _ ?_⟩
+  · have := (hO.b_or a b).syn w; exact ⟨this.1, by simpa [b_or.spec] using this.2⟩
+  · rw [b_or.spec, eval_binop w, hp, hq]; cases p <;> cases q <;> rfl
+
+theorem O_sem_eq {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {a b n} (wa : BV a n) (wb : BV b n) :
+    BoolT (O.sem_eq a b) ∧ ∀ ρ (x y : BitVec n.toNat), eval FS ρ a = some (.bv _ x) →
+      eval FS ρ b = some (.bv _ y) → eval FS ρ (O.sem_eq a b) = some (.bool (decide (x = y))) := by
+  have w : (sem_eq.spec a b).WT := by
+    simp [sem_eq.spec, Term.WT, Binop.WT, wa.2.1, wb.2.1, wa.1, wb.1]
+  refine ⟨?_, fun ρ x y hx hy => (hO.sem_eq a b).sem ρ _ ?_⟩
+  · have := (hO.sem_eq a b).syn w; exact ⟨this.1, by simpa [sem_eq.spec] using this.2⟩
+  · rw [sem_eq.spec, eval_binop w, hx, hy]; simp [evBinop]
+
+theorem O_bv_lt {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {s a b n} (wa : BV a n) (wb : BV b n) :
+    BoolT (O.bv_lt s a b) ∧ ∀ ρ (x y : BitVec n.toNat), eval FS ρ a = some (.bv _ x) →
+      eval FS ρ b = some (.bv _ y) →
+      eval FS ρ (O.bv_lt s a b) = some (.bool (if s then x.slt y else x.ult y)) := by
+  have := O_cmp (.lt s) (hO.bv_lt s a b) wa wb
+  exact ⟨this.1, fun ρ x y hx hy => this.2 ρ x y _ hx hy (by simp [evBinop, bvBin])⟩
+
+theorem Refines.bool_intro {FS : FloatSem} {spec r : Term} (hr : BoolT r)
+    (hs : spec.WT → spec.ty = .bool)
+    (sem : ∀ ρ v, spec.WT → eval FS ρ spec = some v → eval FS ρ r = some v) : Refines FS spec r :=
+  Refines.intro (fun w => ⟨hr.1, by simp [hr.2, hs w]⟩) (fun ρ v w _ e => sem ρ v w e)
+
+
+
+/-! ## Overflow checks as comparisons -/
+
+theorem toInt_ofInt_signed {w : Nat} {v : Int} (hw : 0 < w) (h1 : -2 ^ (w - 1) ≤ v)
+    (h2 : v < 2 ^ (w - 1)) : (BitVec.ofInt w v).toInt = v := by
+  rw [BitVec.toInt_ofInt]
+  have := two_pow_pred hw
+  apply Int.bmod_eq_of_le_mul_two <;> rw [natCast_two_pow] <;> omega
+
+theorem saddOverflow_zero_left {w : Nat} (y : BitVec w) : (0#w).saddOverflow y = false := by
+  rw [sadd_ok]; have := BitVec.toInt_lt (x := y); have := BitVec.le_toInt y; simp; omega
+
+theorem uaddOverflow_zero_left {w : Nat} (y : BitVec w) : (0#w).uaddOverflow y = false := by
+  rw [uadd_ok]; simp [y.isLt]
+
+theorem uaddOverflow_eq_ult {w : Nat} (Z X : BitVec w) :
+    Z.uaddOverflow X = (BitVec.ofInt w (2 ^ w - 1 - Z.toNat)).ult X := by
+  have h := Z.isLt
+  have hp := natCast_two_pow w
+  have := lit_toNat (w := w) (z := 2 ^ w - 1 - Z.toNat) (by omega) (by omega)
+  simp only [BitVec.uaddOverflow, BitVec.ult, this, decide_eq_decide]
+  omega
+
+theorem saddOverflow_pos {w : Nat} (Z X : BitVec w) (h : 0 < Z.toInt) :
+    Z.saddOverflow X = (BitVec.ofInt w (2 ^ (w - 1) - 1 - Z.toInt)).slt X := by
+  have hw : 0 < w := by
+    rcases Nat.eq_zero_or_pos w with rfl | hw
+    · simp [BitVec.toInt_zero_length] at h
+    · exact hw
+  have h1 := BitVec.toInt_lt (x := Z); have := BitVec.le_toInt X; have := BitVec.toInt_lt (x := X)
+  have := toInt_ofInt_signed (w := w) (v := 2 ^ (w - 1) - 1 - Z.toInt) hw (by omega) (by omega)
+  rw [Bool.eq_iff_iff]
+  simp only [BitVec.saddOverflow, BitVec.slt, this, Bool.or_eq_true, decide_eq_true_eq]
+  omega
+
+theorem saddOverflow_nonpos {w : Nat} (hw : 0 < w) (Z X : BitVec w) (h : Z.toInt ≤ 0) :
+    Z.saddOverflow X = X.slt (BitVec.ofInt w (-2 ^ (w - 1) - Z.toInt)) := by
+  have h1 := BitVec.le_toInt Z; have := BitVec.le_toInt X; have := BitVec.toInt_lt (x := X)
+  have := toInt_ofInt_signed (w := w) (v := -2 ^ (w - 1) - Z.toInt) hw (by omega) (by omega)
+  rw [Bool.eq_iff_iff]
+  simp only [BitVec.saddOverflow, BitVec.slt, this, Bool.or_eq_true, decide_eq_true_eq]
+  omega
+
+
 end ArithL
 end Bvr

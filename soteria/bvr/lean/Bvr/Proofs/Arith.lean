@@ -1134,16 +1134,71 @@ theorem bv_div.r_default.proof : bv_div.r_default.Stmt := by
   exact Refines.refl
 
 theorem bv_add_overflows.r_lits.proof : bv_add_overflows.r_lits.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_add_overflows.r_lits] at h; split at h <;> simp at h; subst h
+  refine Refines.cmp_intro (.addOvf s) (fun n wa wb hT => of_bool_BoolT _)
+    (fun n wa wb hT ρ x y v hx hy e => ?_)
+  obtain ⟨rfl, hz1⟩ := BV_lit wa; obtain ⟨-, hz2⟩ := BV_lit wb
+  rw [lit_eval_eq wa hx, lit_eval_eq wb hy] at e
+  simp [evBinop, bvBin] at e; subst e
+  rw [size_of_ty_bitVector, overflows_add_lit wa.2.2 hz1.1 hz1.2 hz2.1 hz2.2, eval_of_bool]
 
 theorem bv_add_overflows.r_zero.proof : bv_add_overflows.r_zero.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_add_overflows.r_zero] at h
+  rcases orElse_eq_some h with h | h <;> split at h <;> simp at h <;> obtain ⟨rfl, rfl⟩ := h <;>
+    refine Refines.cmp_intro (.addOvf s) (fun n wa wb hT => ⟨v_false_WT, rfl⟩)
+      (fun n wa wb hT ρ x y v hx hy e => ?_)
+  · rw [lit_eval_eq wa hx] at e
+    simp [evBinop, bvBin] at e; subst e
+    cases s <;> simp [saddOverflow_zero_left, uaddOverflow_zero_left]
+  · rw [lit_eval_eq wb hy] at e
+    simp [evBinop, bvBin] at e; subst e
+    cases s <;> simp [saddOverflow_comm x, uaddOverflow_comm x, saddOverflow_zero_left,
+      uaddOverflow_zero_left]
 
 theorem bv_add_overflows.r_size1.proof : bv_add_overflows.r_size1.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_add_overflows.r_size1] at h; split at h <;> simp at h; subst h
+  rename_i h1
+  refine Refines.cmp_intro (.addOvf s) (fun n wa wb hT => ?_)
+    (fun n wa wb hT ρ x y v hx hy e => ?_)
+  all_goals obtain rfl : n = 1 := by simpa [wa.2.1] using h1
+  all_goals have e1 := O_sem_eq hO wa (BV_bv_one (n := 1) (by omega))
+  all_goals have e2 := O_sem_eq hO wb (BV_bv_one (n := 1) (by omega))
+  all_goals have hr := O_b_and hO e1.1 e2.1
+  · exact hr.1
+  · rw [hr.2 ρ _ _ (e1.2 ρ x 1 hx (eval_bv_one (by omega))) (e2.2 ρ y 1 hy (eval_bv_one (by omega)))]
+    simp [evBinop, bvBin] at e; subst e
+    congr 2
+    clear hx hy
+    revert x y
+    show ∀ x y : BitVec 1, _
+    cases s <;> decide
 
 theorem bv_add_overflows.r_unsigned.proof : bv_add_overflows.r_unsigned.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_add_overflows.r_unsigned] at h
+  rcases orElse_eq_some h with h | h <;> split at h <;> simp at h <;> obtain ⟨rfl, rfl⟩ := h <;>
+    refine Refines.cmp_intro (.addOvf false) (fun n wa wb hT => ?_)
+      (fun n wa wb hT ρ x y v hx hy e => ?_)
+  · obtain ⟨rfl, hz⟩ := BV_lit wa
+    simp only [size_of_ty_bitVector, max_for_eq wa.2.2, Bool.false_eq_true, ↓reduceIte]
+    exact (O_bv_lt hO (BV_mk_bv wa.2.2) wb).1
+  · obtain ⟨rfl, hz⟩ := BV_lit wa
+    simp only [size_of_ty_bitVector, max_for_eq wa.2.2, Bool.false_eq_true, ↓reduceIte]
+    rw [(O_bv_lt hO (BV_mk_bv wa.2.2) wb).2 ρ _ y (by rw [mk_bv, eval_mk_masked wa.2.2]) hy]
+    obtain rfl := lit_eval_eq wa hx
+    simp [evBinop, bvBin] at e; subst e
+    rw [uaddOverflow_eq_ult, toNat_ofInt_lit hz.1 hz.2]; simp
+  · simp only [wa.2.1, size_of_ty_bitVector, max_for_eq wa.2.2, Bool.false_eq_true, ↓reduceIte]
+    exact (O_bv_lt hO (BV_mk_bv wa.2.2) wa).1
+  · simp only [wa.2.1, size_of_ty_bitVector, max_for_eq wa.2.2, Bool.false_eq_true, ↓reduceIte]
+    obtain ⟨rfl, hz⟩ := BV_lit wb
+    rw [(O_bv_lt hO (BV_mk_bv wa.2.2) wa).2 ρ _ x (by rw [mk_bv, eval_mk_masked wa.2.2]) hx]
+    obtain rfl := lit_eval_eq wb hy
+    simp [evBinop, bvBin] at e; subst e
+    rw [uaddOverflow_comm, uaddOverflow_eq_ult, toNat_ofInt_lit hz.1 hz.2]; simp
 
 theorem bv_add_overflows.r_signed.proof : bv_add_overflows.r_signed.Stmt := by
   sorry
@@ -1155,7 +1210,9 @@ theorem bv_add_overflows.r_of_bool.proof : bv_add_overflows.r_of_bool.Stmt := by
   sorry
 
 theorem bv_add_overflows.r_default.proof : bv_add_overflows.r_default.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_add_overflows.r_default] at h; simp at h; subst h
+  exact Refines.commut_binop (.addOvf s)
 
 theorem bv_mul_overflows.r_lits.proof : bv_mul_overflows.r_lits.Stmt := by
   sorry

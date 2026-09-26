@@ -1627,12 +1627,38 @@ theorem bv_mul_overflows.r_msb.proof : bv_mul_overflows.r_msb.Stmt := by
   · have := mulOvf_of_msb true ha.1 hb.1 (ha.2 x hx) (hb.2 y hy) (by simp; omega)
     simp at this; rw [this, eval_v_false]
 
--- UNSOUND: the literal 1 is only neutral as an unsigned number; as a signed one-bit vector it is -1.
--- Take `signed = true`, v1 = the literal 1 (of 1 bit), v2 = x with x = 1. The spec is
--- `smulOverflow 1 1 = some true` ((-1) * (-1) = 1 > 0), and the result is `v_false`. In
--- `bv_mul_overflows.step`, `r_size1` fires first on signed one-bit vectors.
+theorem bv_mul_overflows.const_aux {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {s z T x N Tx}
+    (hN : ∀ n, T = .bitVector n → x.ty = .bitVector n → N = n ∧ Tx = .bitVector n)
+    (hc : s = true → 1 < N) :
+    Refines FS (.mk (.binop (.mulOvf s) (.mk (.bitVec z) T) x) .bool)
+      (mulOvfConst O s N z (.mk x.kind Tx)) := by
+  refine Refines.cmp_intro (.mulOvf s) (fun n wa wb hT => ?_)
+    (fun n wa wb hT ρ Z Y v hx hy e => ?_)
+  all_goals obtain ⟨rfl, rfl⟩ := hN n (BV_lit wa).1 wb.2.1
+  all_goals rw [Term.mk_kind_of_ty wb.2.1]
+  all_goals have hm := mulOvfConst_sound hO wa wb hc
+  · exact hm.1
+  · rw [lit_eval_eq wa hx] at e
+    simp [evBinop, bvBin] at e; subst e
+    exact hm.2 ρ Y hy
+
 theorem bv_mul_overflows.r_const.proof : bv_mul_overflows.r_const.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_mul_overflows.r_const] at h
+  rcases orElse_eq_some h with h | h <;> split at h
+  all_goals try (simp at h; done)
+  all_goals split at h
+  all_goals try (simp at h; done)
+  all_goals simp only [Option.some.injEq] at h; subst h
+  all_goals rename_i hc
+  all_goals simp only [Bool.or_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true,
+    decide_eq_true_eq] at hc
+  all_goals simp only [bv_mul_overflows.spec]
+  · exact bv_mul_overflows.const_aux hO (fun n h _ => by simp [h])
+      (fun h => by subst h; simpa [size] using hc)
+  · exact Refines.trans (Refines.comm (.mulOvf s))
+      (bv_mul_overflows.const_aux hO (fun n _ h => by simp [h])
+        (fun h => by subst h; simpa [size] using hc))
 
 theorem bv_mul_overflows.r_div.proof : bv_mul_overflows.r_div.Stmt := by
   intro FS O hO s v1 v2 res h

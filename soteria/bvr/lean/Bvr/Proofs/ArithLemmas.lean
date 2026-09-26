@@ -1498,5 +1498,180 @@ theorem ofBool_addOvf {w : Nat} (hw : 1 < w) (s b : Bool) (Y : BitVec w) :
 theorem Term.mk_kind_of_ty {t : Term} {T : Ty} (h : t.ty = T) : Term.mk t.kind T = t := by
   cases t; simp_all
 
+/-! ## Multiplication overflow by a constant -/
+
+theorem mul_range_pos {k x A B : Int} (hk : 0 < k) :
+    (-A ≤ k * x ∧ k * x ≤ B) ↔ (-(A / k) ≤ x ∧ x ≤ B / k) := by
+  have h1 : k * x ≤ B ↔ x ≤ B / k := by rw [Int.le_ediv_iff_mul_le hk, Int.mul_comm]
+  have h2 : -A ≤ k * x ↔ -(A / k) ≤ x := by
+    have : -x ≤ A / k ↔ -x * k ≤ A := Int.le_ediv_iff_mul_le hk
+    rw [Int.neg_mul, Int.mul_comm] at this; omega
+  rw [h1, h2]
+
+theorem two_le_two_pow_pred {w : Nat} (hw : 1 < w) : (2 : Int) ≤ 2 ^ (w - 1) := by
+  have := Nat.pow_le_pow_right (n := 2) (by omega) (show 1 ≤ w - 1 by omega)
+  have : ((2 ^ 1 : Nat) : Int) ≤ ((2 ^ (w - 1) : Nat) : Int) := by exact_mod_cast this
+  simpa using this
+
+theorem smulOvf_pos {w : Nat} (hw : 1 < w) (Z X : BitVec w) (hz : 0 < Z.toInt) :
+    Z.smulOverflow X = (X.slt (BitVec.ofInt w ((-2 ^ (w - 1)).tdiv Z.toInt)) ||
+      (BitVec.ofInt w ((2 ^ (w - 1) - 1 : Int).tdiv Z.toInt)).slt X) := by
+  have hM := two_le_two_pow_pred hw
+  rw [Int.neg_tdiv, Int.tdiv_eq_ediv_of_nonneg (by omega), Int.tdiv_eq_ediv_of_nonneg (by omega)]
+  have ha0 := Int.ediv_nonneg (a := 2 ^ (w - 1)) (b := Z.toInt) (by omega) (by omega)
+  have ha1 := Int.ediv_le_self (a := 2 ^ (w - 1)) Z.toInt (by omega)
+  have hb0 := Int.ediv_nonneg (a := 2 ^ (w - 1) - 1) (b := Z.toInt) (by omega) (by omega)
+  have hb1 := Int.ediv_le_self (a := 2 ^ (w - 1) - 1) Z.toInt (by omega)
+  rw [BitVec.slt, BitVec.slt, toInt_ofInt_signed (by omega) (by omega) (by omega),
+    toInt_ofInt_signed (by omega) (by omega) (by omega)]
+  have key := mul_range_pos (k := Z.toInt) (x := X.toInt) (A := 2 ^ (w - 1))
+    (B := 2 ^ (w - 1) - 1) hz
+  rw [Bool.eq_iff_iff]
+  simp only [BitVec.smulOverflow, Bool.or_eq_true, decide_eq_true_eq]
+  omega
+
+theorem smulOvf_neg {w : Nat} (hw : 1 < w) (Z X : BitVec w) (hz : Z.toInt < -1) :
+    Z.smulOverflow X = (X.slt (BitVec.ofInt w ((2 ^ (w - 1) - 1 : Int).tdiv Z.toInt)) ||
+      (BitVec.ofInt w ((-2 ^ (w - 1)).tdiv Z.toInt)).slt X) := by
+  have hM := two_le_two_pow_pred hw
+  obtain ⟨k, hk⟩ : ∃ k, Z.toInt = -k := ⟨-Z.toInt, by omega⟩
+  rw [hk, Int.tdiv_neg, Int.tdiv_neg, Int.neg_tdiv, Int.neg_neg,
+    Int.tdiv_eq_ediv_of_nonneg (by omega), Int.tdiv_eq_ediv_of_nonneg (by omega)]
+  have ha0 := Int.ediv_nonneg (a := 2 ^ (w - 1)) (b := k) (by omega) (by omega)
+  have hb0 := Int.ediv_nonneg (a := 2 ^ (w - 1) - 1) (b := k) (by omega) (by omega)
+  have hb1 := Int.ediv_le_self (a := 2 ^ (w - 1) - 1) k (by omega)
+  have hm : (2 : Int) ^ (w - 1) * 2 ≤ 2 ^ (w - 1) * k := Int.mul_le_mul_of_nonneg_left (by omega) (by omega)
+  have ha1 : (2 : Int) ^ (w - 1) / k < 2 ^ (w - 1) := Int.ediv_lt_of_lt_mul (by omega) (by omega)
+  rw [BitVec.slt, BitVec.slt, toInt_ofInt_signed (by omega) (by omega) (by omega),
+    toInt_ofInt_signed (by omega) (by omega) (by omega)]
+  have key := mul_range_pos (k := k) (x := X.toInt) (A := 2 ^ (w - 1) - 1)
+    (B := 2 ^ (w - 1)) (by omega)
+  rw [Bool.eq_iff_iff]
+  simp only [BitVec.smulOverflow, Bool.or_eq_true, decide_eq_true_eq, hk,
+    Int.neg_mul]
+  omega
+
+theorem umulOvf_const {w : Nat} (Z X : BitVec w) (hz : 0 < Z.toNat) :
+    Z.umulOverflow X = (BitVec.ofInt w ((2 ^ w - 1 : Int).tdiv (Z.toNat : Int))).ult X := by
+  have hp : (2 : Int) ^ w - 1 = ((2 ^ w - 1 : Nat) : Int) := by
+    have := Nat.one_le_two_pow (n := w); rw [Int.ofNat_sub this]; simp
+  rw [hp, ← Int.ofNat_tdiv, BitVec.ofInt_natCast, BitVec.ult, BitVec.toNat_ofNat,
+    Nat.mod_eq_of_lt (Nat.lt_of_le_of_lt (Nat.div_le_self _ _)
+      (by have := Nat.one_le_two_pow (n := w); omega))]
+  have key : X.toNat ≤ (2 ^ w - 1) / Z.toNat ↔ X.toNat * Z.toNat ≤ 2 ^ w - 1 :=
+    Nat.le_div_iff_mul_le hz
+  rw [Nat.mul_comm] at key
+  rw [Bool.eq_iff_iff]
+  simp only [BitVec.umulOverflow, decide_eq_true_eq]
+  have := Nat.one_le_two_pow (n := w)
+  omega
+
+theorem smulOvf_neg_one {w : Nat} (hw : 1 < w) (Z X : BitVec w) (hz : Z.toInt = -1) :
+    Z.smulOverflow X = decide (X = BitVec.ofInt w (-2 ^ (w - 1))) := by
+  have hM := two_le_two_pow_pred hw
+  have := toInt_ofInt_signed (w := w) (v := -2 ^ (w - 1)) (by omega) (by omega) (by omega)
+  rw [Bool.eq_iff_iff, decide_eq_true_iff, ← BitVec.toInt_inj, this]
+  have := BitVec.toInt_lt (x := X); have := BitVec.le_toInt X
+  simp only [BitVec.smulOverflow, hz, Bool.or_eq_true, decide_eq_true_eq, Int.neg_one_mul]
+  omega
+
+theorem mulOvf_zero_one {w : Nat} (s : Bool) (Z X : BitVec w) (hz : Z.toNat = 0 ∨ Z.toNat = 1)
+    (hs : s = true → 1 < w) :
+    (if s then Z.smulOverflow X else Z.umulOverflow X) = false := by
+  rcases hz with hz | hz
+  · have : Z = 0#w := BitVec.eq_of_toNat_eq (by simp [hz])
+    subst this; cases s <;> simp [BitVec.smulOverflow, BitVec.umulOverflow] <;>
+      exact ⟨two_pow_pos' _, Int.le_of_lt (two_pow_pos' _)⟩
+  · cases s
+    · simp [BitVec.umulOverflow, hz, X.isLt]
+    · have hw := hs rfl
+      have h1 : Z.toInt = 1 := by
+        rw [BitVec.toInt_eq_toNat_cond, hz]
+        have := Nat.pow_le_pow_right (n := 2) (by omega) hw; simp at this ⊢; omega
+      have := BitVec.toInt_lt (x := X); have := BitVec.le_toInt X
+      simp [BitVec.smulOverflow, h1]; omega
+
+/-- The result of `bv_mul_overflows.r_const`, for the literal `z` of width `n`. -/
+def mulOvfConst (O : Ops) (signed : Bool) (n z : Int) (x : Term) : Term :=
+  if ((decide (z = (0 : Int))) || (decide (z = (1 : Int)))) then v_false
+  else (let z := (bv_to_z signed n z);
+       (if signed
+        then (let min_val := (- (zshiftl (1 : Int) (n - (1 : Int))));
+              (let max_val := ((zshiftl (1 : Int) (n - (1 : Int))) - (1 : Int));
+              (if (decide (z = (-1 : Int)))
+               then (O.sem_eq x (mk_masked n min_val))
+               else (match (if (decide (z > (0 : Int)))
+                           then ((tdiv min_val z), (tdiv max_val z))
+                           else ((tdiv max_val z), (tdiv min_val z))) with
+                    | (min_x, max_x) =>
+                      (O.b_or (O.bv_lt signed x (mk_masked n min_x))
+                        (O.bv_lt signed (mk_masked n max_x) x))))))
+        else (O.bv_lt signed (mk_bv n (tdiv ((zshiftl (1 : Int) n) - (1 : Int)) z)) x)))
+
+theorem mulOvfConst_sound {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {s z T x n}
+    (wz : BV (.mk (.bitVec z) T) n) (wx : BV x n) (hc : s = true → 1 < n) :
+    BoolT (mulOvfConst O s n z x) ∧ ∀ ρ X, eval FS ρ x = some (.bv n.toNat X) →
+      eval FS ρ (mulOvfConst O s n z x) = some (.bool (if s
+        then (BitVec.ofInt n.toNat z).smulOverflow X
+        else (BitVec.ofInt n.toNat z).umulOverflow X)) := by
+  obtain ⟨-, hz0, hz1⟩ := BV_lit wz
+  have hn := wx.2.2
+  have hZ := lit_toNat (w := n.toNat) hz0 hz1
+  unfold mulOvfConst
+  split
+  · rename_i h01
+    refine ⟨⟨v_false_WT, rfl⟩, fun ρ X hX => ?_⟩
+    simp only [Bool.or_eq_true, decide_eq_true_eq] at h01
+    rw [eval_v_false, mulOvf_zero_one s _ X (by omega) (fun h => by have := hc h; omega)]
+  · rename_i h01
+    simp only [Bool.or_eq_true, decide_eq_true_eq, not_or] at h01
+    rw [bv_to_z_lit hn hz0 hz1]
+    cases s
+    · simp only [Bool.false_eq_true, ↓reduceIte]
+      have hq := O_bv_lt (s := false) hO (BV_mk_bv (z := tdiv (zshiftl 1 n - 1)
+        ((BitVec.ofInt n.toNat z).toNat : Int)) hn) wx
+      refine ⟨hq.1, fun ρ X hX => ?_⟩
+      rw [hq.2 ρ _ X (by rw [mk_bv, eval_mk_masked hn]) hX, umulOvf_const _ X (by omega)]
+      simp [zshiftl, tdiv]
+    · simp only [↓reduceIte]
+      have hw : 1 < n.toNat := by have := hc rfl; omega
+      have e1 : zshiftl 1 (n - 1) = 2 ^ (n.toNat - 1) := by
+        simp only [zshiftl, Int.one_mul]; congr 1; omega
+      simp only [e1]
+      have hZ0 : (BitVec.ofInt n.toNat z).toInt ≠ 0 := by
+        intro h
+        have : BitVec.ofInt n.toNat z = 0#_ := BitVec.eq_of_toInt_eq (by simp [h])
+        rw [this] at hZ; simp at hZ; omega
+      split
+      · rename_i hm1
+        have hq := O_sem_eq hO wx (BV_mk_masked (z := -2 ^ (n.toNat - 1)) hn)
+        refine ⟨hq.1, fun ρ X hX => ?_⟩
+        rw [hq.2 ρ X _ hX (eval_mk_masked hn), smulOvf_neg_one hw _ X (by simpa using hm1)]
+      · rename_i hm1
+        simp only [decide_eq_true_eq] at hm1
+        split
+        · rename_i hp
+          simp only [decide_eq_true_eq] at hp
+          have hA := O_bv_lt (s := true) hO wx (BV_mk_masked (z := tdiv (-2 ^ (n.toNat - 1))
+            (BitVec.ofInt n.toNat z).toInt) hn)
+          have hB := O_bv_lt (s := true) hO (BV_mk_masked (z := tdiv (2 ^ (n.toNat - 1) - 1)
+            (BitVec.ofInt n.toNat z).toInt) hn) wx
+          have hr := O_b_or hO hA.1 hB.1
+          refine ⟨hr.1, fun ρ X hX => ?_⟩
+          rw [hr.2 ρ _ _ (hA.2 ρ X _ hX (eval_mk_masked hn)) (hB.2 ρ _ X (eval_mk_masked hn) hX),
+            smulOvf_pos hw _ X hp]
+          simp [tdiv]
+        · rename_i hp
+          simp only [decide_eq_true_eq] at hp
+          have hA := O_bv_lt (s := true) hO wx (BV_mk_masked (z := tdiv (2 ^ (n.toNat - 1) - 1)
+            (BitVec.ofInt n.toNat z).toInt) hn)
+          have hB := O_bv_lt (s := true) hO (BV_mk_masked (z := tdiv (-2 ^ (n.toNat - 1))
+            (BitVec.ofInt n.toNat z).toInt) hn) wx
+          have hr := O_b_or hO hA.1 hB.1
+          refine ⟨hr.1, fun ρ X hX => ?_⟩
+          rw [hr.2 ρ _ _ (hA.2 ρ X _ hX (eval_mk_masked hn)) (hB.2 ρ _ X (eval_mk_masked hn) hX),
+            smulOvf_neg hw _ X (by omega)]
+          simp [tdiv]
+
 end ArithL
 end Bvr

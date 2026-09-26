@@ -1103,5 +1103,10 @@ theorem saddOverflow_nonpos {w : Nat} (hw : 0 < w) (Z X : BitVec w) (h : Z.toInt
   omega
 
 
+theorem BoolT_ite {c : Prop} [Decidable c] {a b : Term} (ha : BoolT a) (hb : BoolT b) :
+    BoolT (if c then a else b) := by
+  split <;> assumption
+
+
 end ArithL
 end Bvr

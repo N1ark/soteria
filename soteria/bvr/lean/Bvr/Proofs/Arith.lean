@@ -1201,11 +1201,58 @@ theorem bv_add_overflows.r_unsigned.proof : bv_add_overflows.r_unsigned.Stmt := 
     rw [uaddOverflow_comm, uaddOverflow_eq_ult, toNat_ofInt_lit hz.1 hz.2]; simp
 
 theorem bv_add_overflows.r_signed.proof : bv_add_overflows.r_signed.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_add_overflows.r_signed] at h
+  rcases orElse_eq_some h with h | h <;> split at h <;> simp at h <;> obtain ⟨rfl, rfl⟩ := h <;>
+    refine Refines.cmp_intro (.addOvf true) (fun n wa wb hT => ?_)
+      (fun n wa wb hT ρ x y v hx hy e => ?_)
+  · obtain ⟨rfl, hz⟩ := BV_lit wa
+    simp only [size_of_ty_bitVector]
+    exact BoolT_ite (O_bv_lt hO (BV_mk_bv wa.2.2) wb).1 (O_bv_lt hO wb (BV_mk_masked wa.2.2)).1
+  · obtain ⟨rfl, hz⟩ := BV_lit wa
+    obtain rfl := lit_eval_eq wa hx
+    simp [evBinop, bvBin] at e; subst e
+    simp only [size_of_ty_bitVector, bv_to_z_lit wa.2.2 hz.1 hz.2, max_for_eq wa.2.2,
+      min_for_eq wa.2.2, ↓reduceIte]
+    split
+    · rename_i hp
+      rw [(O_bv_lt hO (BV_mk_bv wa.2.2) wb).2 ρ _ y (by rw [mk_bv, eval_mk_masked wa.2.2]) hy,
+        saddOverflow_pos _ _ hp]
+      simp
+    · rename_i hp
+      rw [(O_bv_lt hO wb (BV_mk_masked wa.2.2)).2 ρ y _ hy (eval_mk_masked wa.2.2),
+        saddOverflow_nonpos (by have := wa.2.2; omega) _ _ (by omega)]
+      simp
+  · simp only [wa.2.1, size_of_ty_bitVector]
+    exact BoolT_ite (O_bv_lt hO (BV_mk_bv wa.2.2) wa).1 (O_bv_lt hO wa (BV_mk_masked wa.2.2)).1
+  · obtain ⟨rfl, hz⟩ := BV_lit wb
+    obtain rfl := lit_eval_eq wb hy
+    simp [evBinop, bvBin] at e; subst e
+    simp only [wa.2.1, size_of_ty_bitVector, bv_to_z_lit wa.2.2 hz.1 hz.2, max_for_eq wa.2.2,
+      min_for_eq wa.2.2, ↓reduceIte]
+    rw [saddOverflow_comm]
+    split
+    · rename_i hp
+      rw [(O_bv_lt hO (BV_mk_bv wa.2.2) wa).2 ρ _ x (by rw [mk_bv, eval_mk_masked wa.2.2]) hx,
+        saddOverflow_pos _ _ hp]
+      simp
+    · rename_i hp
+      rw [(O_bv_lt hO wa (BV_mk_masked wa.2.2)).2 ρ x _ hx (eval_mk_masked wa.2.2),
+        saddOverflow_nonpos (by have := wa.2.2; omega) _ _ (by omega)]
+      simp
 
+-- UNSOUND: for one-bit vectors, `1 + 1` overflows (in both signednesses). Take `signed = false`,
+-- v1 = BvOfBool (1, b1), v2 = BvOfBool (1, b2), with b1 = b2 = true. The spec is
+-- `uaddOverflow 1 1 = some true`, and the result is `v_false`. In `bv_add_overflows.step`,
+-- `r_size1` fires first on one-bit vectors.
 theorem bv_add_overflows.r_of_bools.proof : bv_add_overflows.r_of_bools.Stmt := by
   sorry
 
+-- UNSOUND: for one-bit vectors, `BvOfBool (1, true)` is -1 as a signed number, not 1. Take
+-- `signed = true`, v1 = BvOfBool (1, b), v2 = the literal 0 (of 1 bit), with b = true (take `O`
+-- returning the raw spec terms). The spec is `saddOverflow 1 0 = some false` (-1 + 0 = -1), but
+-- `max_for true 1 = 0`, so the result is `b && (0 = 0) = some true`. In `bv_add_overflows.step`,
+-- `r_size1` fires first on one-bit vectors.
 theorem bv_add_overflows.r_of_bool.proof : bv_add_overflows.r_of_bool.Stmt := by
   sorry
 

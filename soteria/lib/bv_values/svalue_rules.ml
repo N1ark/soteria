@@ -269,6 +269,15 @@ module Make (P : PRIMS) = struct
         (P.node (Svalue_ast.Unop ((Svalue_ast.Unop.BvOfBool ((Z.to_int n))), b)) (Svalue_ast.TBitVector ((Z.to_int n))))
       )
   
+  let cancellable (signed : bool) (a : t) : bool =
+      (if signed
+      then (match a with
+           | { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (x); _ }; _ } ->
+             (Z.gt (bv_to_z true (size a) x) Z.zero)
+           | _ -> false
+           )
+      else (sure_neq a (P.bv_zero (size a))))
+  
   let const_keeps_in_range (base : Z.t) (d : Z.t) : bool =
       ((Z.leq (zmin Z.zero base) d) && (Z.leq d (zmax Z.zero base)))
   
@@ -1648,7 +1657,7 @@ module Make (P : PRIMS) = struct
         when (((Z.equal (bv_to_z signed bits x) (max_for signed bits)))) ->
         (b_not (sem_eq v1 v2))
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (c2); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (checked)), x, ({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (c1); _ }; _ } as vc1)); _ }; _ })
-        when ((checked_has signed checked)) ->
+        when (((checked_has signed checked) && (not (Z.equal c1 Z.zero)))) ->
         (let c1 = (bv_to_z signed bits c1) in
         (let c2 = (bv_to_z signed bits c2) in
         (if ((P.divisible c2 c1) || (Z.geq c2 Z.zero))
@@ -1661,7 +1670,7 @@ module Make (P : PRIMS) = struct
              then (bv_leq signed x (bv_div signed v1 vc1))
              else (bv_leq signed (bv_div signed v1 vc1) x)))))
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (c2); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (checked)), ({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (c1); _ }; _ } as vc1), x); _ }; _ })
-        when ((checked_has signed checked)) ->
+        when (((checked_has signed checked) && (not (Z.equal c1 Z.zero)))) ->
         (let c1 = (bv_to_z signed bits c1) in
         (let c2 = (bv_to_z signed bits c2) in
         (if ((P.divisible c2 c1) || (Z.geq c2 Z.zero))
@@ -1674,7 +1683,7 @@ module Make (P : PRIMS) = struct
              then (bv_leq signed x (bv_div signed v1 vc1))
              else (bv_leq signed (bv_div signed v1 vc1) x)))))
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (checked)), x, ({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (c1); _ }; _ } as vc1)); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (c2); _ }; _ })
-        when ((checked_has signed checked)) ->
+        when (((checked_has signed checked) && (not (Z.equal c1 Z.zero)))) ->
         (let c1 = (bv_to_z signed bits c1) in
         (let c2 = (bv_to_z signed bits c2) in
         (if ((P.divisible c2 c1) || (Z.lt c2 Z.zero))
@@ -1687,7 +1696,7 @@ module Make (P : PRIMS) = struct
              then (bv_leq signed (bv_div signed v2 vc1) x)
              else (bv_leq signed x (bv_div signed v2 vc1))))))
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (checked)), ({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (c1); _ }; _ } as vc1), x); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (c2); _ }; _ })
-        when ((checked_has signed checked)) ->
+        when (((checked_has signed checked) && (not (Z.equal c1 Z.zero)))) ->
         (let c1 = (bv_to_z signed bits c1) in
         (let c2 = (bv_to_z signed bits c2) in
         (if ((P.divisible c2 c1) || (Z.lt c2 Z.zero))
@@ -1700,16 +1709,16 @@ module Make (P : PRIMS) = struct
              then (bv_leq signed (bv_div signed v2 vc1) x)
              else (bv_leq signed x (bv_div signed v2 vc1))))))
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (checked_l)), a, x); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (checked_r)), bvr__1, y); _ }; _ })
-        when (((P.equal a bvr__1) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (sure_neq a (P.bv_zero (size a))))))) ->
+        when (((P.equal a bvr__1) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))) ->
         (bv_lt signed x y)
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (checked_l)), a, x); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (checked_r)), y, bvr__1); _ }; _ })
-        when (((P.equal a bvr__1) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (sure_neq a (P.bv_zero (size a))))))) ->
+        when (((P.equal a bvr__1) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))) ->
         (bv_lt signed x y)
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (checked_l)), x, a); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (checked_r)), bvr__1, y); _ }; _ })
-        when (((P.equal a bvr__1) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (sure_neq a (P.bv_zero (size a))))))) ->
+        when (((P.equal a bvr__1) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))) ->
         (bv_lt signed x y)
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (checked_l)), x, a); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (checked_r)), y, bvr__1); _ }; _ })
-        when (((P.equal a bvr__1) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (sure_neq a (P.bv_zero (size a))))))) ->
+        when (((P.equal a bvr__1) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))) ->
         (bv_lt signed x y)
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (bv_v1); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Sub (checked)), x, ({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (bv_k); _ }; _ } as k)); _ }; _ })
         when ((checked_has signed checked)) ->
@@ -1855,7 +1864,7 @@ module Make (P : PRIMS) = struct
         when (((Z.equal (bv_to_z signed bits x) (max_for signed bits)))) ->
         P.v_true
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (c2); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (checked)), x, ({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (c1); _ }; _ } as vc1)); _ }; _ })
-        when ((checked_has signed checked)) ->
+        when (((checked_has signed checked) && (not (Z.equal c1 Z.zero)))) ->
         (let c1 = (bv_to_z signed bits c1) in
         (let c2 = (bv_to_z signed bits c2) in
         (if (P.divisible c2 c1)
@@ -1872,7 +1881,7 @@ module Make (P : PRIMS) = struct
                   then (bv_leq signed (bv_div signed v1 vc1) x)
                   else (bv_lt signed (bv_div signed v1 vc1) x))))))
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (c2); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (checked)), ({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (c1); _ }; _ } as vc1), x); _ }; _ })
-        when ((checked_has signed checked)) ->
+        when (((checked_has signed checked) && (not (Z.equal c1 Z.zero)))) ->
         (let c1 = (bv_to_z signed bits c1) in
         (let c2 = (bv_to_z signed bits c2) in
         (if (P.divisible c2 c1)
@@ -1889,7 +1898,7 @@ module Make (P : PRIMS) = struct
                   then (bv_leq signed (bv_div signed v1 vc1) x)
                   else (bv_lt signed (bv_div signed v1 vc1) x))))))
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (checked)), x, ({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (c1); _ }; _ } as vc1)); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (c2); _ }; _ })
-        when ((checked_has signed checked)) ->
+        when (((checked_has signed checked) && (not (Z.equal c1 Z.zero)))) ->
         (let c1 = (bv_to_z signed bits c1) in
         (let c2 = (bv_to_z signed bits c2) in
         (if (P.divisible c2 c1)
@@ -1906,7 +1915,7 @@ module Make (P : PRIMS) = struct
                   then (bv_lt signed x (bv_div signed v2 vc1))
                   else (bv_leq signed x (bv_div signed v2 vc1)))))))
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (checked)), ({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (c1); _ }; _ } as vc1), x); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (c2); _ }; _ })
-        when ((checked_has signed checked)) ->
+        when (((checked_has signed checked) && (not (Z.equal c1 Z.zero)))) ->
         (let c1 = (bv_to_z signed bits c1) in
         (let c2 = (bv_to_z signed bits c2) in
         (if (P.divisible c2 c1)
@@ -1923,16 +1932,16 @@ module Make (P : PRIMS) = struct
                   then (bv_lt signed x (bv_div signed v2 vc1))
                   else (bv_leq signed x (bv_div signed v2 vc1)))))))
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (checked_l)), a, x); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (checked_r)), bvr__1, y); _ }; _ })
-        when (((P.equal a bvr__1) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (sure_neq a (P.bv_zero (size a))))))) ->
+        when (((P.equal a bvr__1) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))) ->
         (bv_leq signed x y)
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (checked_l)), a, x); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (checked_r)), y, bvr__1); _ }; _ })
-        when (((P.equal a bvr__1) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (sure_neq a (P.bv_zero (size a))))))) ->
+        when (((P.equal a bvr__1) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))) ->
         (bv_leq signed x y)
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (checked_l)), x, a); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (checked_r)), bvr__1, y); _ }; _ })
-        when (((P.equal a bvr__1) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (sure_neq a (P.bv_zero (size a))))))) ->
+        when (((P.equal a bvr__1) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))) ->
         (bv_leq signed x y)
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (checked_l)), x, a); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (checked_r)), y, bvr__1); _ }; _ })
-        when (((P.equal a bvr__1) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (sure_neq a (P.bv_zero (size a))))))) ->
+        when (((P.equal a bvr__1) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))) ->
         (bv_leq signed x y)
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Div (false)), _, { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (d); _ }; _ }); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (n); _ }; _ })
         when (((not signed) && (Z.gt (Z.mul n d) (max_for false bits)))) ->

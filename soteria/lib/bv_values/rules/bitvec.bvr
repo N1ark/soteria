@@ -582,6 +582,13 @@ let const_keeps_in_range (base : int) (d : int) : bool =
 
 (* Whether [v <s 0]: whether this node is negative if we can tell, and
    otherwise the node that represents the sign bit *)
+(* Whether [a] is a factor that can be cancelled on both sides of a comparison
+   of products that do not overflow *)
+let cancellable (signed : bool) (a : t) : bool =
+  if signed then
+    match a with BitVec x -> bv_to_z true (size a) x > 0 | _ -> false
+  else sure_neq a (bv_zero (size a))
+
 let rec lt_zero_aux (v : t) : t =
   let lt_zero (v : t) = Lt (true, v, bv_zero (size v)) <| TBool in
   let not_eq_0 (v : t) = b_not (sem_eq v (bv_zero (size v))) in
@@ -675,7 +682,7 @@ let[@spec Lt (signed, v1, v2) <| TBool] bv_lt (signed : bool) (v1 : t) (v2 : t)
       b_not (sem_eq v1 v2)
   (* c2 < x * c1 *)
   | BitVec c2, Mul (checked, x, (BitVec c1 as vc1)) [@comm] [@r const_mul]
-    when checked_has signed checked ->
+    when checked_has signed checked && c1 <> 0 ->
       let c1 = bv_to_z signed bits c1 in
       let c2 = bv_to_z signed bits c2 in
       if divisible c2 c1 || c2 >= 0 then
@@ -687,7 +694,7 @@ let[@spec Lt (signed, v1, v2) <| TBool] bv_lt (signed : bool) (v1 : t) (v2 : t)
       else bv_leq signed (bv_div signed v1 vc1) x
   (* x * c1 < c2 *)
   | Mul (checked, x, (BitVec c1 as vc1)) [@comm], BitVec c2 [@r mul_const]
-    when checked_has signed checked ->
+    when checked_has signed checked && c1 <> 0 ->
       let c1 = bv_to_z signed bits c1 in
       let c2 = bv_to_z signed bits c2 in
       if divisible c2 c1 || c2 < 0 then
@@ -697,12 +704,12 @@ let[@spec Lt (signed, v1, v2) <| TBool] bv_lt (signed : bool) (v1 : t) (v2 : t)
         else bv_lt signed x (bv_div signed v2 vc1)
       else if c1 < 0 then bv_leq signed (bv_div signed v2 vc1) x
       else bv_leq signed x (bv_div signed v2 vc1)
-  (* a * x < a * y <=> x < y, when a is non-zero and neither product
-     overflows *)
+  (* a * x < a * y <=> x < y, when a is non-zero (positive if signed) and
+     neither product overflows *)
   | Mul (checked_l, a, x) [@comm], Mul (checked_r, a, y) [@comm] [@r mul_mul]
     when checked_has signed checked_l
          && checked_has signed checked_r
-         && sure_neq a (bv_zero (size a)) ->
+         && cancellable signed a ->
       bv_lt signed x y
   (* v1 < x - k <=> v1 + k < x (when v1 + k doesn't overflow) *)
   | BitVec bv_v1, Sub (checked, x, (BitVec bv_k as k)) [@r const_sub1]
@@ -797,7 +804,7 @@ let[@spec Leq (signed, v1, v2) <| TBool] bv_leq (signed : bool) (v1 : t)
       v_true
   (* c2 <= x * c1 *)
   | BitVec c2, Mul (checked, x, (BitVec c1 as vc1)) [@comm] [@r const_mul]
-    when checked_has signed checked ->
+    when checked_has signed checked && c1 <> 0 ->
       let c1 = bv_to_z signed bits c1 in
       let c2 = bv_to_z signed bits c2 in
       if divisible c2 c1 then
@@ -812,7 +819,7 @@ let[@spec Leq (signed, v1, v2) <| TBool] bv_leq (signed : bool) (v1 : t)
       else bv_lt signed (bv_div signed v1 vc1) x
   (* x * c1 <= c2 *)
   | Mul (checked, x, (BitVec c1 as vc1)) [@comm], BitVec c2 [@r mul_const]
-    when checked_has signed checked ->
+    when checked_has signed checked && c1 <> 0 ->
       let c1 = bv_to_z signed bits c1 in
       let c2 = bv_to_z signed bits c2 in
       if divisible c2 c1 then
@@ -825,12 +832,12 @@ let[@spec Leq (signed, v1, v2) <| TBool] bv_leq (signed : bool) (v1 : t)
         else bv_leq signed (bv_div signed v2 vc1) x
       else if c2 < 0 then bv_lt signed x (bv_div signed v2 vc1)
       else bv_leq signed x (bv_div signed v2 vc1)
-  (* a * x <= a * y <=> x <= y, when a is non-zero and neither product
-     overflows *)
+  (* a * x <= a * y <=> x <= y, when a is non-zero (positive if signed) and
+     neither product overflows *)
   | Mul (checked_l, a, x) [@comm], Mul (checked_r, a, y) [@comm] [@r mul_mul]
     when checked_has signed checked_l
          && checked_has signed checked_r
-         && sure_neq a (bv_zero (size a)) ->
+         && cancellable signed a ->
       bv_leq signed x y
   (* x /u d <= n when n * d exceeds the maximum *)
   | Div (false, _, BitVec d), BitVec n [@r udiv_big]

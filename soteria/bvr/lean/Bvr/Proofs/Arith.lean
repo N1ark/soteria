@@ -1026,12 +1026,52 @@ theorem bv_rem.r_add.proof : bv_rem.r_add.Stmt := by
       congr 1; apply BitVec.eq_of_toNat_eq
       rw [BitVec.toNat_umod, BitVec.toNat_umod, toNat_add_ok (h2 hu), Nat.add_mod_right]
 
--- UNSOUND: a zero modulus divides everything as far as `trem` is concerned (`trem 0 r2 = 0`), but
--- `x %u 0 = x`. Take 8 bits, `signed = false`, v1 = Rem (false, x, 0), v2 = 2, with x = 5 (take
--- `O` returning the raw spec terms). Then `0 = trem 0 2` and `zmin 0 2 = 0`, so the result is
--- `x %u 0 = some 5`, while the spec is `(5 %u 0) %u 2 = 5 %u 2 = some 1`.
 theorem bv_rem.r_rem_rem.proof : bv_rem.r_rem_rem.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_rem.r_rem_rem] at h
+  split at h
+  case h_2 => simp at h
+  split at h
+  case isFalse => simp at h
+  simp only [Option.some.injEq] at h; subst h
+  rename_i r r1 T1 T r2 T2 hc
+  simp only [Bool.and_eq_true, Bool.or_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true,
+    decide_eq_true_eq] at hc
+  obtain ⟨rfl, h1, h2, hd⟩ := hc
+  refine Refines.trans ?_ (hO.bv_rem false r _)
+  refine Refines.arith_intro (.rem false) (fun n wa wb hT => ?_)
+    (fun n wa wb hT ρ x y v hx hy e => ?_)
+  all_goals obtain ⟨wr, wc, rfl⟩ := BV_arith_inv (.rem false) wa
+  all_goals have wrhs : BV (if decide (zmin r1 r2 = r1) = true then Term.mk (Kind.bitVec r1) T1
+      else Term.mk (Kind.bitVec r2) T2) n := by split <;> assumption
+  · exact ⟨(WT_arith (.rem false)).2 ⟨n, wr, wrhs, wr.2.1⟩, wr.2.1, wr.2.2⟩
+  · rw [eval_arith (.rem false) wr wc rfl] at hx
+    obtain ⟨R, C, hR, hC, hx⟩ := evBinop_inv (.inl (.rem false)) wr wc hx
+    obtain ⟨-, z1⟩ := BV_lit wc
+    obtain ⟨-, z2⟩ := BV_lit wb
+    rw [lit_eval_eq wc hC] at hx
+    rw [lit_eval_eq wb hy] at e
+    rw [bv_rem.spec, ty_eq, eval_arith (.rem false) wr wrhs wr.2.1, hR]
+    simp [evBinop, bvBin] at hx e; subst hx; subst e
+    have hmm := mod_mod_min (x := R.toNat) (a := r1.toNat) (b := r2.toNat) (by omega) (by omega)
+      (hd.imp (dvd_of_trem (by omega) (by omega)) (dvd_of_trem (by omega) (by omega)))
+    have e1 : (BitVec.ofInt n.toNat r1).toNat = r1.toNat := by
+      have := toNat_ofInt_lit (w := n.toNat) z1.1 z1.2; omega
+    have e2 : (BitVec.ofInt n.toNat r2).toNat = r2.toNat := by
+      have := toNat_ofInt_lit (w := n.toNat) z2.1 z2.2; omega
+    by_cases hle : r1 ≤ r2
+    · have : zmin r1 r2 = r1 := by simp [zmin, hle]
+      simp only [this, decide_true, ↓reduceIte, eval_lit wc]
+      simp [evBinop, bvBin]
+      apply BitVec.eq_of_toNat_eq
+      rw [BitVec.toNat_umod, BitVec.toNat_umod, BitVec.toNat_umod, e1, e2, hmm]
+      simp [show r1.toNat ≤ r2.toNat by omega]
+    · have : zmin r1 r2 ≠ r1 := by simp [zmin, hle]; omega
+      simp only [this, decide_false, Bool.false_eq_true, ↓reduceIte, eval_lit wb]
+      simp [evBinop, bvBin]
+      apply BitVec.eq_of_toNat_eq
+      rw [BitVec.toNat_umod, BitVec.toNat_umod, BitVec.toNat_umod, e1, e2, hmm]
+      simp [show ¬ r1.toNat ≤ r2.toNat by omega]
 
 theorem bv_rem.r_default.proof : bv_rem.r_default.Stmt := by
   intro FS O hO s v1 v2 res h

@@ -455,7 +455,20 @@ theorem bv_xor.r_default.proof : bv_xor.r_default.Stmt := by
   exact BitOp.xor.commut BitVec.xor_comm
 
 theorem bv_extract.r_lit.proof : bv_extract.r_lit.Stmt := by
-  sorry
+  intro FS O hO i j v res h
+  simp only [bv_extract.r_lit] at h
+  split at h
+  case h_2 => simp at h
+  simp only [Option.some.injEq] at h; subst h
+  rename_i z T
+  refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+  · obtain ⟨n, hb, h0, h1, h2, -, wb⟩ := WT_extract.1 w
+    exact ⟨mk_masked_WT (by omega), rfl⟩
+  · obtain ⟨n, x, hb, h0, h1, h2, -, eb, rfl⟩ := eval_extract e
+    obtain ⟨rfl, z0, z1⟩ := lit_val₀ eb
+    rw [eval_mk_masked (by omega)]; congr 2
+    simp only [zasr]
+    rw [ofInt_div_two_pow _ z0, BitVec.extractLsb', toNat_ofInt_lit z0 z1]
 
 theorem bv_extract.r_full.proof : bv_extract.r_full.Stmt := by
   intro FS O hO i j v res h
@@ -924,10 +937,71 @@ theorem bv_extract.r_add_low.proof : bv_extract.r_add_low.Stmt := by
     rw [BitVec.extractLsb'_add (by omega)]
 
 theorem bv_extract.r_add_const.proof : bv_extract.r_add_const.Stmt := by
-  sorry
+  intro FS O hO i j v res h
+  simp only [bv_extract.r_add_const] at h
+  have main : ∀ {c l r T} (x : Term) {n : Int}, j < lsb n →
+      (∀ ρ u, eval FS ρ (.mk (.binop (.add c) l r) T) = some u →
+        ∃ k a b, eval FS ρ x = some (.bv k b) ∧ u = .bv k (a + b) ∧ 0 ≤ n ∧
+          a = BitVec.ofInt k n ∧ n < 2 ^ k) →
+      ((Term.mk (.binop (.add c) l r) T).WT → x.ty = T ∧ x.WT) →
+      Refines FS (bv_extract.spec i j (.mk (.binop (.add c) l r) T)) (O.bv_extract i j x) := by
+    intro c l r T x n hj hsem hwt
+    refine Refines.trans ?_ (hO.bv_extract _ _ _)
+    refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+    · obtain ⟨m, hb, h0, h1, h2, -, wb⟩ := WT_extract.1 w
+      obtain ⟨hx, wx⟩ := hwt wb
+      exact ⟨WT_extract.2 ⟨m, hx.trans hb, h0, h1, h2, rfl, wx⟩, rfl⟩
+    · obtain ⟨m, z, hb, h0, h1, h2, -, eb, rfl⟩ := eval_extract e
+      obtain ⟨k, a, b, ex, hz, n0, rfl, n1⟩ := hsem ρ _ eb
+      have hd := lsb_dvd n0 hj (by omega)
+      obtain ⟨rfl, rfl⟩ := Val.bv_inj hz
+      simp only [bv_extract.spec] at w' ⊢
+      rw [eval_extract_of w' ex]; congr 1
+      apply Val.bv_ext rfl
+      intro t ht
+      simp only [BitVec.getLsbD_extractLsb']
+      rw [getLsbD_add_of_dvd _ _ (q := j.toNat + 1) (by rw [toNat_ofInt_lit n0 n1]; exact hd)
+        (by omega)]
+  rcases orElse_eq_some h with h | h <;> split at h <;> simp at h <;> obtain ⟨hj, rfl⟩ := h
+  · rename_i c n T1 x T
+    refine main x hj (fun ρ u e => ?_) (fun w => ?_)
+    · obtain ⟨k, a, b, ea, eb, rfl⟩ := eval_add_eq_some e
+      obtain ⟨rfl, n0, n1⟩ := lit_val₀ ea
+      exact ⟨k, _, b, eb, rfl, n0, rfl, n1⟩
+    · obtain ⟨m, hm, h1, h2, hT, w1, w2⟩ := (WT_checked (fun _ _ _ => Iff.rfl)).1 w
+      exact ⟨h2.trans hT.symm, w2⟩
+  · rename_i c x n T1 T
+    refine main x hj (fun ρ u e => ?_) (fun w => ?_)
+    · obtain ⟨k, b, a, eb, ea, rfl⟩ := eval_add_eq_some e
+      obtain ⟨rfl, n0, n1⟩ := lit_val₀ ea
+      exact ⟨k, _, b, eb, by rw [BitVec.add_comm], n0, rfl, n1⟩
+    · obtain ⟨m, hm, h1, h2, hT, w1, w2⟩ := (WT_checked (fun _ _ _ => Iff.rfl)).1 w
+      exact ⟨h1.trans hT.symm, w1⟩
 
 theorem bv_extract.r_mul_pow2.proof : bv_extract.r_mul_pow2.Stmt := by
-  sorry
+  intro FS O hO i j v res h
+  simp only [bv_extract.r_mul_pow2] at h
+  split at h
+  case h_2 => simp at h
+  split at h
+  case isFalse => simp at h
+  simp only [Option.some.injEq] at h; subst h
+  rename_i c z T1 y T hc
+  simp only [Bool.and_eq_true, decide_eq_true_eq] at hc
+  obtain ⟨hp, hj⟩ := hc
+  obtain ⟨hz, hl⟩ := is_pow2_eq hp
+  refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+  · obtain ⟨n, hb, h0, h1, h2, -, wb⟩ := WT_extract.1 w
+    exact ⟨bv_zero_WT (by omega), rfl⟩
+  · obtain ⟨n, x, hb, h0, h1, h2, -, eb, rfl⟩ := eval_extract e
+    obtain ⟨k, a, b, ea, eb', hx⟩ := eval_mul_eq_some eb
+    obtain ⟨rfl, rfl⟩ := Val.bv_inj hx
+    obtain ⟨rfl, -, -⟩ := lit_val₀ ea
+    rw [eval_bv_zero (by omega)]; congr 1
+    apply Val.bv_ext rfl
+    intro t ht
+    rw [hz, ofInt_two_pow, BitVec.twoPow_mul_eq_shiftLeft]
+    bitw_simp
 
 theorem bv_extract.r_mul_low.proof : bv_extract.r_mul_low.Stmt := by
   intro FS O hO i j v res h
@@ -957,7 +1031,53 @@ theorem bv_extract.r_mul_low.proof : bv_extract.r_mul_low.Stmt := by
     rw [BitVec.extractLsb'_mul (by omega)]
 
 theorem bv_extract.r_urem.proof : bv_extract.r_urem.Stmt := by
-  sorry
+  intro FS O hO i j v res h
+  simp only [bv_extract.r_urem] at h
+  split at h
+  case h_2 => simp at h
+  split at h
+  case isFalse => simp at h
+  simp only [Option.some.injEq] at h; subst h
+  rename_i l z T2 T hc
+  simp only [Bool.and_eq_true, decide_eq_true_eq] at hc
+  obtain ⟨rfl, hp, hj⟩ := hc
+  obtain ⟨hz, hl⟩ := is_pow2_eq hp
+  refine Refines.trans ?_ (Refines.trans (Refines.binop_ty (fun x => ty x)
+    (fun x y h => by simp [h]) (hO.bv_extract _ _ _) Refines.refl) (hO.bv_rem _ _ _))
+  have key : (bv_extract.spec 0 j (.mk (.binop (.rem false) l (.mk (.bitVec z) T2)) T)).WT →
+      ∃ n : Int, 0 < n ∧ l.ty = .bitVector n ∧ T2 = .bitVector n ∧ T = .bitVector n ∧
+        0 ≤ j ∧ j < n ∧ l.WT ∧ 0 ≤ z ∧ z < 2 ^ n.toNat := by
+    intro w
+    obtain ⟨n, hb, h0, h1, h2, -, wb⟩ := WT_extract.1 w
+    obtain ⟨n', hn', ha, h2', ht, wa, w2⟩ := (BitOp.urem (FS := FS)).WT.1 wb
+    simp only [Term.ty_mk] at hb h2'; subst hb
+    simp only [Ty.bitVector.injEq] at ht; subst ht
+    exact ⟨n, hn', ha, h2', rfl, h1, h2, wa, (lit_inv w2 n h2').2⟩
+  refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+  · obtain ⟨n, hn, hl, -, rfl, h1, h2, wl, z0, z1⟩ := key w
+    refine ⟨(BitOp.urem (FS := FS)).WT.2 ⟨j - 0 + 1, by omega, rfl, by simp [mk_bv], rfl,
+      WT_extract.2 ⟨n, hl, by omega, h1, h2, rfl, wl⟩, mk_masked_WT (by omega)⟩, rfl⟩
+  · obtain ⟨n, hn, hl, rfl, rfl, h1, h2, wl, z0, z1⟩ := key w
+    obtain ⟨k, x, hb, h0, -, -, -, eb, rfl⟩ := eval_extract e
+    simp only [Term.ty_mk, Ty.bitVector.injEq] at hb; subst hb
+    obtain ⟨k', y, ea, hx, -, -⟩ := BitOp.urem.eval_lit_r eb
+    obtain ⟨rfl, rfl⟩ := Val.bv_inj hx
+    obtain ⟨_, w1, w2⟩ := WT_binop.1 w'
+    have em : eval FS ρ (mk_bv (j + 1) z) = some (.bv (j - 0 + 1).toNat (BitVec.ofInt _ z)) := by
+      rw [mk_bv, eval_mk_masked (by omega), show j - 0 + 1 = j + 1 by omega]
+    rw [BitOp.urem.eval_of w' (eval_extract_of w1 ea) em]
+    congr 2
+    apply BitVec.eq_of_toNat_eq
+    obtain ⟨K, hK, rfl⟩ : ∃ K : Nat, K < (j - 0 + 1).toNat ∧ z = ((2 ^ K : Nat) : Int) :=
+      ⟨(log2 z).toNat, by omega, by rw [int_two_pow_cast]; exact hz⟩
+    simp only [BitVec.umod_eq, BitVec.toNat_umod, BitVec.extractLsb'_toNat, Int.toNat_zero,
+      Nat.shiftRight_zero, BitVec.ofInt_natCast, BitVec.toNat_ofNat]
+    have hKL : 2 ^ K < 2 ^ (j - 0 + 1).toNat := Nat.pow_lt_pow_right (by omega) hK
+    have hKN : 2 ^ K < 2 ^ n.toNat := by
+      exact_mod_cast (by rw [int_two_pow_cast]; exact z1 : ((2 ^ K : Nat) : Int) < ((2 ^ n.toNat : Nat) : Int))
+    rw [Nat.mod_eq_of_lt hKL, Nat.mod_eq_of_lt hKN,
+      Nat.mod_mod_of_dvd _ (Nat.pow_dvd_pow 2 (Nat.le_of_lt hK)),
+      Nat.mod_eq_of_lt (Nat.lt_trans (Nat.mod_lt _ (Nat.two_pow_pos _)) hKL)]
 
 theorem bv_extract.r_default.proof : bv_extract.r_default.Stmt := by
   intro FS O hO i j v res h

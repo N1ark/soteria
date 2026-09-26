@@ -993,6 +993,81 @@ theorem is_pow2_eq {z : Int} (h : is_pow2 z = true) : z = 2 ^ (log2 z).toNat ∧
   simp only [log2, hj, Nat.log2_two_pow, Int.toNat_natCast]
   omega
 
+theorem int_two_pow_cast (k : Nat) : ((2 ^ k : Nat) : Int) = (2 : Int) ^ k := by push_cast; rfl
+
+theorem ofInt_two_pow (N k : Nat) : BitVec.ofInt N ((2 : Int) ^ k) = BitVec.twoPow N k := by
+  rw [← int_two_pow_cast, BitVec.ofInt_natCast]
+  apply BitVec.eq_of_toNat_eq; simp [BitVec.toNat_twoPow]
+
+theorem ofInt_div_two_pow (L : Nat) {z : Int} (h : 0 ≤ z) (i : Nat) :
+    BitVec.ofInt L (z / 2 ^ i) = BitVec.ofNat L (z.toNat >>> i) := by
+  obtain ⟨b, rfl⟩ := Int.eq_ofNat_of_zero_le h
+  rw [← int_two_pow_cast, ← Int.natCast_ediv, BitVec.ofInt_natCast, Int.toNat_natCast,
+    Nat.shiftRight_eq_div_pow]
+
+/-! ### The lowest set bit -/
+
+theorem testBit_two_mul (y i : Nat) : (2 * y).testBit i = (decide (0 < i) && y.testBit (i - 1)) := by
+  cases i with
+  | zero => simp
+  | succ i => simp [Nat.testBit_succ, Nat.mul_div_cancel_left y (by omega : 0 < 2)]
+
+theorem lowbit_spec : ∀ m : Nat, 0 < m →
+    ∃ t, Nat.bitwise (fun a b => a && !b) m (m - 1) = 2 ^ t ∧ 2 ^ t ∣ m
+  | m, hm => by
+    by_cases ho : m % 2 = 1
+    · refine ⟨0, Nat.eq_of_testBit_eq (fun i => ?_), by simp⟩
+      rw [Nat.testBit_bitwise rfl]
+      cases i with
+      | zero => simp [ho]; omega
+      | succ i =>
+        simp only [Nat.testBit_succ, Nat.pow_zero]
+        rw [show (m - 1) / 2 = m / 2 by omega]
+        simp
+    · have h2 : m / 2 < m := by omega
+      obtain ⟨t, ht, hd⟩ := lowbit_spec (m / 2) (by omega)
+      refine ⟨t + 1, Nat.eq_of_testBit_eq (fun i => ?_), ?_⟩
+      · rw [Nat.pow_succ, Nat.mul_comm, ← ht, testBit_two_mul, Nat.testBit_bitwise rfl]
+        cases i with
+        | zero => simp; omega
+        | succ i =>
+          simp only [Nat.testBit_succ, Nat.add_sub_cancel]
+          rw [Nat.testBit_bitwise rfl, show (m - 1) / 2 = m / 2 - 1 by omega]
+          simp
+      · rw [Nat.pow_succ]
+        have := Nat.mul_dvd_mul hd (Nat.dvd_refl 2)
+        rwa [Nat.div_mul_cancel (by omega : 2 ∣ m)] at this
+termination_by m => m
+
+/-- The bits of a literal below its lowest set bit are zero. -/
+theorem lsb_dvd {n : Int} (h0 : 0 ≤ n) {j : Int} (hj : j < lsb n) (hj0 : 0 ≤ j) :
+    2 ^ (j.toNat + 1) ∣ n.toNat := by
+  obtain ⟨m, rfl⟩ := Int.eq_ofNat_of_zero_le h0
+  simp only [Int.toNat_natCast]
+  rcases m with _ | k
+  · exact Nat.dvd_zero _
+  obtain ⟨t, ht, hd⟩ := lowbit_spec (k + 1) (by omega)
+  have : lsb ((k + 1 : Nat) : Int) = t := by
+    have hne : ((k + 1 : Nat) : Int) ≠ 0 := by omega
+    simp only [lsb, hne, decide_false, Bool.false_eq_true, ↓reduceIte]
+    show log2 (zland (Int.ofNat (k + 1)) (Int.negSucc k)) = t
+    simp only [Nat.add_sub_cancel] at ht
+    simp only [zland, log2, Int.ofNat_eq_natCast, Int.toNat_natCast, ht, Nat.log2_two_pow]
+  rw [this] at hj
+  exact Nat.dvd_trans (Nat.pow_dvd_pow 2 (by omega)) hd
+
+theorem getLsbD_add_of_dvd {w : Nat} (a b : BitVec w) {q : Nat} (h : 2 ^ q ∣ a.toNat) {p : Nat}
+    (hp : p < q) : (a + b).getLsbD p = b.getLsbD p := by
+  by_cases hw : p < w
+  · simp only [BitVec.getLsbD, BitVec.toNat_add]
+    rw [Nat.testBit_mod_two_pow, decide_eq_true hw, Bool.true_and]
+    have e1 : (a.toNat + b.toNat).testBit p = ((a.toNat + b.toNat) % 2 ^ q).testBit p := by
+      rw [Nat.testBit_mod_two_pow]; simp [hp]
+    have e2 : b.toNat.testBit p = (b.toNat % 2 ^ q).testBit p := by
+      rw [Nat.testBit_mod_two_pow]; simp [hp]
+    rw [e1, e2, Nat.add_mod, (Nat.dvd_iff_mod_eq_zero ..).1 h, Nat.zero_add, Nat.mod_mod]
+  · rw [BitVec.getLsbD_of_ge _ _ (by omega), BitVec.getLsbD_of_ge _ _ (by omega)]
+
 theorem ite_pos' {c : Prop} [Decidable c] {α} {a b : α} (h : c) : (if c then a else b) = a :=
   by simp [h]
 theorem ite_neg' {c : Prop} [Decidable c] {α} {a b : α} (h : ¬c) : (if c then a else b) = b :=

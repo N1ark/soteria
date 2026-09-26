@@ -438,15 +438,6 @@ theorem float_cast.r_lit.proof : float_cast.r_lit.Stmt := by
   have := hO.orc.convert rm fp f (FloatLit.WF_of_WT w2)
   exact ⟨by rw [this.1], this.2.1⟩
 
-theorem float_cast.r_same.proof : float_cast.r_same.Stmt := by
-  -- UNSOUND: converting to the same format is not the identity on bit patterns: IEEE
-  -- `convertFormat` quiets signalling NaNs, and `FS.convert` is arbitrary. Counterexample:
-  -- `FS.convert rm p q x := x` except that a signalling NaN gets its quiet bit set, so
-  -- `FS.convert rm f32 f32 0x7f800001 = 0x7fc00001`; v = var 0 : float f32 with
-  -- ρ.var 0 = float f32 0x7f800001, fp = f32. The spec `floatOfFloat rm f32 v` evaluates to
-  -- float f32 0x7fc00001, the result `v` to float f32 0x7f800001.
-  sorry
-
 theorem float_cast.r_default.proof : float_cast.r_default.Stmt := by
   intro FS O hO rm fp v res h
   simp [float_cast.r_default] at h; subst h

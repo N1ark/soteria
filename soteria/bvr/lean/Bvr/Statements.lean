@@ -1844,11 +1844,6 @@ def float_cast.r_lit.Stmt : Prop :=
   ∀ (rounding : RM) (fp : Prec) (v : Term) (res : Term), float_cast.r_lit O rounding fp v = some res →
   Refines FS (float_cast.spec rounding fp v) res
 
-def float_cast.r_same.Stmt : Prop :=
-  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (rounding : RM) (fp : Prec) (v : Term) (res : Term), float_cast.r_same O rounding fp v = some res →
-  Refines FS (float_cast.spec rounding fp v) res
-
 def float_cast.r_default.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
   ∀ (rounding : RM) (fp : Prec) (v : Term) (res : Term), float_cast.r_default O rounding fp v = some res →

@@ -59,12 +59,12 @@ let[@spec Add (checked, v1, v2) <| ty v1] bv_add (checked : checked) (v1 : t)
       bv_add unchecked b c
   (* a * b + a * c = a * (b + c) *)
   | Mul (_, a, b) [@comm], Mul (_, a, c) [@comm] [@r factor] ->
-      bv_mul checked a (bv_add checked b c)
+      bv_mul unchecked a (bv_add unchecked b c)
   | ( Mul (ck1, (BitVec l1 as v_l1), r1) [@comm],
       Mul (ck2, (BitVec l2 as v_l2), r2) [@comm] ) [@r factor_const]
-    when is_checked (checked_meet (checked_meet checked ck1) ck2)
+    when (checked_meet (checked_meet checked ck1) ck2).unsigned
          && (divisible l1 l2 || divisible l2 l1) ->
-      let checked = checked_meet (checked_meet checked ck1) ck2 in
+      let checked = checked_unsigned in
       if divisible l2 l1 then
         let common = mk_bv (size v1) (tdiv l2 l1) in
         bv_mul checked v_l1 (bv_add checked r1 (bv_mul checked common r2))
@@ -162,7 +162,7 @@ let[@spec Mod (v1, v2) <| ty v1] bv_mod (v1 : t) (v2 : t) : t =
       let res = trem l r in
       let res =
         if res < 0 && not (r < 0) then res + r
-        else if res >= 0 && r < 0 then res + r
+        else if res > 0 && r < 0 then res + r
         else res
       in
       mk_masked sz res
@@ -186,8 +186,9 @@ let[@spec Rem (signed, v1, v2) <| ty v1] bv_rem (signed : bool) (v1 : t)
       let bitwidth = log2 r in
       let lower = bv_extract 0 (bitwidth - 1) v1 in
       bv_extend false (sz - bitwidth) lower
-  (* (d + r) %u d = r %u d *)
-  | Add (_, BitVec d, r) [@comm], BitVec d [@r add] when not signed ->
+  (* (d + r) %u d = r %u d, when the addition does not wrap *)
+  | Add (ck, BitVec d, r) [@comm], BitVec d [@r add]
+    when (not signed) && ck.unsigned ->
       bv_rem signed r v2
   | Rem (false, r, (BitVec r1 as v_r1)), BitVec r2 [@r rem_rem]
     when (not signed) && (0 = trem r1 r2 || 0 = trem r2 r1) ->
@@ -386,8 +387,9 @@ let[@spec BvExtract (from_, to_, v) <| TBitVector (to_ - from_ + 1)] bv_extract
   | Mul (_, l, r) [@r mul_low] when from_ = 0 ->
       (* i think the extraction is necessarily unchecked? *)
       bv_mul unchecked (bv_extract from_ to_ l) (bv_extract from_ to_ r)
-  | Rem (false, l, BitVec n) [@r urem] when from_ = 0 && log2 n < to_ ->
-      (* extract[0,N](X % M) when M < 2^M can be pushed down *)
+  | Rem (false, l, BitVec n) [@r urem]
+    when from_ = 0 && is_pow2 n && log2 n < to_ ->
+      (* extract[0,N](X % 2^M) when M < N can be pushed down *)
       bv_rem false (bv_extract from_ to_ l) (mk_bv (to_ + 1) n)
   | _ [@r default] -> BvExtract (from_, to_, v) <| TBitVector sz
 
@@ -578,25 +580,21 @@ let unsigned_ub (v : t) : int = (1 lsl (msb_of v + 1)) - 1
 let const_keeps_in_range (base : int) (d : int) : bool =
   zmin 0 base <= d && d <= zmax 0 base
 
-(* Whether [v1 <s 0], for [v1] compared (signed) against zero: whether this
-   node is negative if we can tell, and otherwise the node that represents the
-   sign bit *)
-let rec lt_zero_aux (v1 : t) (v : t) : t =
+(* Whether [v <s 0]: whether this node is negative if we can tell, and
+   otherwise the node that represents the sign bit *)
+let rec lt_zero_aux (v : t) : t =
   let lt_zero (v : t) = Lt (true, v, bv_zero (size v)) <| TBool in
-  let not_eq_0 (v : t) = b_not (sem_eq v1 (bv_zero (size v))) in
+  let not_eq_0 (v : t) = b_not (sem_eq v (bv_zero (size v))) in
   match v with
-  | BvExtend (true, _, v) -> lt_zero_aux v1 v
-  | BvExtend (false, _, _) -> v_false
-  | Mod (_, r) -> b_and (lt_zero_aux v1 r) (not_eq_0 v)
-  | Rem (true, l, _) -> b_and (lt_zero_aux v1 l) (not_eq_0 v)
-  | Div (true, l, r) ->
-      b_and (not_eq_0 v) (b_not (sem_eq (lt_zero_aux v1 l) (lt_zero_aux v1 r)))
-  | BvConcat (l, _) -> lt_zero_aux v1 l
-  | BvNot v -> b_not (lt_zero_aux v1 v)
+  | BvExtend (true, _, v) -> lt_zero_aux v
+  | BvExtend (false, k, _) when k > 0 -> v_false
+  | Rem (true, l, _) -> b_and (lt_zero_aux l) (not_eq_0 v)
+  | BvConcat (l, _) -> lt_zero_aux l
+  | BvNot v -> b_not (lt_zero_aux v)
   | BvOfBool (n, _) when n > 1 -> v_false
   | Ite (_, l, r) ->
-      let pos_l = lt_zero_aux v1 l in
-      let pos_r = lt_zero_aux v1 r in
+      let pos_l = lt_zero_aux l in
+      let pos_r = lt_zero_aux r in
       if equal pos_l pos_r then pos_l else lt_zero v
   | _ -> lt_zero v
 
@@ -666,7 +664,7 @@ let[@spec Lt (signed, v1, v2) <| TBool] bv_lt (signed : bool) (v1 : t) (v2 : t)
   | _, Ite (b, l, r) [@r ite_r] ->
       b_ite b (bv_lt signed v1 l) (bv_lt signed v1 r)
   | _, 0 [@r lt_zero] when signed && not (is_checked_unsigned_op v1) ->
-      lt_zero_aux v1 v1
+      lt_zero_aux v1
   | BitVec x, _ [@r max_l] when bv_to_z signed bits x = max_for signed bits ->
       v_false
   | _, BitVec x [@r min_r] when bv_to_z signed bits x = min_for signed bits ->

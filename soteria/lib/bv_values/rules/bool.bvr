@@ -78,7 +78,12 @@ let[@spec And (v1, v2) <| TBool] b_and (v1 : t) (v2 : t) : t =
   (* [a == x && a == y] with [x] and [y] surely different *)
   | Eq (a, x) [@comm], Eq (a, y) [@comm] [@r eq_neq] when sure_neq x y ->
       v_false
-  | Eq (bv1, BvExtract (s1, e1, x)), Eq (bv2, BvExtract (s2, e2, x))
+  (* only for constants: if [bv1] or [bv2] could be undefined (an operation
+     whose overflow check does not hold), the conjunction could still be false
+     thanks to the other conjunct, while the merged equality would be
+     undefined *)
+  | ( Eq ((BitVec _ as bv1), BvExtract (s1, e1, x)),
+      Eq ((BitVec _ as bv2), BvExtract (s2, e2, x)) )
     [@r eq_extracts]
     when e1 + 1 = s2 || e2 + 1 = s1 ->
       let bv, xy =
@@ -157,7 +162,7 @@ let[@spec Ite (guard, if_, else_) <| ty if_] b_ite (guard : t) (if_ : t)
   | _, true, _ [@r true_then] -> b_or guard else_
   | _, _, false [@r false_else] -> b_and guard if_
   | _, _, true [@r true_else] -> b_or (b_not guard) if_
-  | _, 1, 0 [@r bv_of_bool] -> bv_of_bool (size if_) guard
+  | _, 1, 0 [@r bv_of_bool] when is_bv (ty if_) -> bv_of_bool (size if_) guard
   | Not g, _, _ [@r not_guard] -> b_ite g else_ if_
   | g, g, _ [@r guard_then] -> b_or guard else_
   | g, _, g [@r guard_else] -> b_and guard if_

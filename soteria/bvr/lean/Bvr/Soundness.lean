@@ -568,7 +568,6 @@ theorem float_cast.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (round
   Refines FS (float_cast.spec rounding fp v) (float_cast.step O rounding fp v) := by
   unfold float_cast.step
   refine Refines.firstSome_cons (fun res h => float_cast.r_lit.proof FS O hO rounding fp v res h) ?_
-  refine Refines.firstSome_cons (fun res h => float_cast.r_same.proof FS O hO rounding fp v res h) ?_
   refine Refines.firstSome_cons (fun res h => float_cast.r_default.proof FS O hO rounding fp v res h) ?_
   exact Refines.firstSome_nil
 

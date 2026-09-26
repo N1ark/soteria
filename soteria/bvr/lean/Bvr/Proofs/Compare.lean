@@ -504,12 +504,24 @@ theorem bv_lt.r_max_r.proof : bv_lt.r_max_r.Stmt := by
   · have : bvz s x ≠ bvz s y := fun h => e (bvz_inj.1 h)
     simp [e]; omega
 
+-- UNSOUND: when c1 = 0. Take signed = true, 8 bits, v1 = BitVec 0 and v2 = Mul (checked_signed,
+-- x, BitVec 0) with x ↦ 0#8. c1 = c2 = 0, so the rule returns bv_lt true (bv_div true v1 vc1) x.
+-- The spec evaluates to 0 <s 0 = false, but bv_div true 0 0 is smtSDiv 0 0 = -1, and -1 <s 0 is
+-- true.
 theorem bv_lt.r_const_mul.proof : bv_lt.r_const_mul.Stmt := by
   sorry
 
+-- UNSOUND: when c1 = 0. Take signed = false, 8 bits, v1 = Mul (checked_unsigned, x, BitVec 0)
+-- and v2 = BitVec 0 with x ↦ 0#8. c1 = c2 = 0 (divisible), so the rule returns
+-- bv_lt false x (bv_div false v2 vc1). The spec evaluates to 0 <u 0 = false, but
+-- bv_div false 0 0 is smtUDiv 0 0 = 255, and 0 <u 255 is true.
 theorem bv_lt.r_mul_const.proof : bv_lt.r_mul_const.Stmt := by
   sorry
 
+-- UNSOUND: when a is negative (signed). Take signed = true, 8 bits, v1 = Mul (checked_signed,
+-- a, x), v2 = Mul (checked_signed, a, y) with a = BitVec 255 (-1, so sure_neq a 0), x ↦ 1#8 and
+-- y ↦ 2#8. Neither product overflows. The spec evaluates to (-1) <s (-2) = false, but the result
+-- bv_lt true x y evaluates to 1 <s 2 = true.
 theorem bv_lt.r_mul_mul.proof : bv_lt.r_mul_mul.Stmt := by
   sorry
 
@@ -1035,12 +1047,24 @@ theorem bv_leq.r_max_r.proof : bv_leq.r_max_r.Stmt := by
   simp only [eval_v_true, eval_v_false, Option.some.injEq, Val.bool.injEq]
   symm; simp only [decide_eq_true_eq, decide_eq_false_iff_not]; omega
 
+-- UNSOUND: when c1 = 0. Take signed = false, 8 bits, v1 = BitVec 0 and v2 = Mul
+-- (checked_unsigned, x, BitVec 0) with x ↦ 0#8. c1 = c2 = 0 (divisible), so the rule returns
+-- bv_leq false (bv_div false v1 vc1) x. The spec evaluates to 0 ≤u 0 = true, but
+-- bv_div false 0 0 is smtUDiv 0 0 = 255, and 255 ≤u 0 is false.
 theorem bv_leq.r_const_mul.proof : bv_leq.r_const_mul.Stmt := by
   sorry
 
+-- UNSOUND: when c1 = 0. Take signed = true, 8 bits, v1 = Mul (checked_signed, x, BitVec 0) and
+-- v2 = BitVec 0 with x ↦ 0#8. c1 = c2 = 0 (divisible), so the rule returns
+-- bv_leq true x (bv_div true v2 vc1). The spec evaluates to 0 ≤s 0 = true, but
+-- bv_div true 0 0 is smtSDiv 0 0 = -1, and 0 ≤s -1 is false.
 theorem bv_leq.r_mul_const.proof : bv_leq.r_mul_const.Stmt := by
   sorry
 
+-- UNSOUND: when a is negative (signed). Take signed = true, 8 bits, v1 = Mul (checked_signed,
+-- a, x), v2 = Mul (checked_signed, a, y) with a = BitVec 255 (-1, so sure_neq a 0), x ↦ 1#8 and
+-- y ↦ 2#8. Neither product overflows. The spec evaluates to (-1) ≤s (-2) = false, but the result
+-- bv_leq true x y evaluates to 1 ≤s 2 = true.
 theorem bv_leq.r_mul_mul.proof : bv_leq.r_mul_mul.Stmt := by
   sorry
 

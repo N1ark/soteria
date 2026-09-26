@@ -49,7 +49,7 @@ def Val.hasSort : Val → Ty → Prop
   | .bool _, .bool => True
   | .bv n _, .bitVector m => (n : Int) = m ∧ 0 < n
   | .ptr n _ _, .pointer m => (n : Int) = m ∧ 0 < n
-  | .float p _, .float q => p = q
+  | .float p x, .float q => p = q ∧ x.canon = x
   | .seq vs, .seq t => Val.hasSortList vs t
   | .ext _, .extension _ => True
   | _, _ => False
@@ -84,6 +84,8 @@ structure FloatSem where
   /-- [fp.add] and [fp.mul] are commutative (up to the payload of NaNs). -/
   add_comm : ∀ p x y, (add p x y).canon = (add p y x).canon
   mul_comm : ∀ p x y, (mul p x y).canon = (mul p y x).canon
+  /-- Converting to the same format is exact. -/
+  convert_id : ∀ rm p x, (convert rm p p x).canon = x.canon
 
 /-! ## Well-typed terms -/
 

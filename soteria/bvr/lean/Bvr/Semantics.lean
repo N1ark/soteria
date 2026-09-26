@@ -149,7 +149,7 @@ def Term.WT : Term → Prop
       op.WT a.ty.sort b.ty.sort c.ty.sort t.sort ∧ a.WT ∧ b.WT ∧ c.WT
   | .mk (.nop _ l) t => t = .bool ∧ ∃ e, Term.WTList e l
   | .mk (.exists_ bs body) t =>
-      t = .bool ∧ (∀ b ∈ bs, b.2.WF) ∧ body.ty = .bool ∧ body.WT
+      t = .bool ∧ (bs.map Prod.fst).Nodup ∧ (∀ b ∈ bs, b.2.WF) ∧ body.ty = .bool ∧ body.WT
   | .mk (.extension _) _ => True
 
 /-- All the terms are well-typed, of the sort of [e]. -/

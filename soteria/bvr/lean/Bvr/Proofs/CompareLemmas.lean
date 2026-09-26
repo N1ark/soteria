@@ -994,5 +994,13 @@ theorem TB_div_inv {s a b t n} (h : TB (.mk (.binop (.div s) a b) t) n) : 0 < n 
 macro "rsz " h:term : tactic =>
   `(tactic| ((try rw [TB_size $h]); (try rw [TB_mk_size $h]); (try rw [TB_sz $h])))
 
+@[simp] theorem bvz_zero' {n : Nat} (s : Bool) : bvz s (0#n) = 0 := by
+  cases s <;> simp [bvz]
+
+theorem bvz_false_one {n : Nat} (hn : 0 < n) : bvz false (1#n) = 1 := by
+  simp only [bvz, Bool.false_eq_true, ite_false, BitVec.toNat_ofNat]
+  have : 1 < 2 ^ n := Nat.one_lt_two_pow (by omega)
+  rw [Nat.mod_eq_of_lt this]; rfl
+
 end CompareL
 end Bvr

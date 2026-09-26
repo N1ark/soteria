@@ -124,10 +124,48 @@ theorem bv_lt.r_add_add.proof : bv_lt.r_add_add.Stmt := by
   sorry
 
 theorem bv_lt.r_one.proof : bv_lt.r_one.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_lt.r_one] at h
+  split at h <;> (try split at h) <;> simp at h
+  rename_i hc; simp at hc; obtain ⟨rfl, rfl⟩ := hc; subst h
+  refine cmp_refines_lt (fun N hN h1 h2 => by rsz h1; exact TBool_O_eq hO h1 (TB_zero hN))
+    (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+  subst hn
+  have hy : (1 : Int) = bvz false y := lit_val' false h2 e2
+  rsz h1
+  rw [eval_O_eq hO h1.1 (TB_zero hN).1 (h1.2.trans (TB_zero hN).2.symm) e1 (eval_zero hn0)]
+  simp only [Option.some.injEq, Val.bool.injEq, val_bv_eq]
+  have := bvz_false_range x
+  by_cases e : x = 0#n
+  · subst e; simp; omega
+  · have : bvz false x ≠ bvz false 0#n := fun h => e (bvz_inj.1 h)
+    simp at this; simp [e]; omega
 
 theorem bv_lt.r_of_bool.proof : bv_lt.r_of_bool.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_lt.r_of_bool] at h
+  split at h <;> (try split at h) <;> simp at h
+  rename_i hc; simp at hc; subst hc h
+  refine cmp_refines_lt (fun N hN h1 h2 => by
+      obtain ⟨rfl, -, hb⟩ := TB_ofBool_inv h2
+      exact TBool_O_and hO hb (TBool_O_eq hO h1 (TB_zero hN)))
+    (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+  subst hn
+  obtain ⟨rfl, -, hb⟩ := TB_ofBool_inv h2
+  obtain ⟨bb, eb, hy⟩ := eval_ofBool_eq_some e2
+  simp at hy
+  refine eval_O_and hO hb (TBool_O_eq hO h1 (TB_zero hN)) _ ?_
+  rw [eb, eval_O_eq hO h1.1 (TB_zero hN).1 (h1.2.trans (TB_zero hN).2.symm) e1 (eval_zero hn0),
+    pand_bool]
+  have := bvz_false_range x
+  simp only [Option.some.injEq, Val.bool.injEq, val_bv_eq]
+  cases bb <;> simp at hy <;> subst hy
+  · simp; omega
+  · rw [bvz_false_one hn0]
+    by_cases e : x = 0#n
+    · subst e; simp
+    · have : bvz false x ≠ bvz false 0#n := fun h => e (bvz_inj.1 h)
+      simp at this; simp [e]; omega
 
 theorem bv_lt.r_ite_l.proof : bv_lt.r_ite_l.Stmt := by
   intro FS O hO s v1 v2 res h

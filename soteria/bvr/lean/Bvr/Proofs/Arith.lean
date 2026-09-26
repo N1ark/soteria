@@ -1294,6 +1294,10 @@ theorem bv_mul_overflows.r_size1.proof : bv_mul_overflows.r_size1.Stmt := by
 theorem bv_mul_overflows.r_msb.proof : bv_mul_overflows.r_msb.Stmt := by
   sorry
 
+-- UNSOUND: the literal 1 is only neutral as an unsigned number; as a signed one-bit vector it is -1.
+-- Take `signed = true`, v1 = the literal 1 (of 1 bit), v2 = x with x = 1. The spec is
+-- `smulOverflow 1 1 = some true` ((-1) * (-1) = 1 > 0), and the result is `v_false`. In
+-- `bv_mul_overflows.step`, `r_size1` fires first on signed one-bit vectors.
 theorem bv_mul_overflows.r_const.proof : bv_mul_overflows.r_const.Stmt := by
   sorry
 
@@ -1330,15 +1334,39 @@ theorem bv_neg_overflows.r_main.proof : bv_neg_overflows.r_main.Stmt := by
   exact hO.sem_eq _ _
 
 theorem bv_sub_overflows.r_lits.proof : bv_sub_overflows.r_lits.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_sub_overflows.r_lits] at h; split at h <;> simp at h; subst h
+  refine Refines.cmp_intro (.subOvf s) (fun n wa wb hT => of_bool_BoolT _)
+    (fun n wa wb hT ρ x y v hx hy e => ?_)
+  obtain ⟨rfl, hz1⟩ := BV_lit wa; obtain ⟨-, hz2⟩ := BV_lit wb
+  rw [lit_eval_eq wa hx, lit_eval_eq wb hy] at e
+  simp [evBinop, bvBin] at e; subst e
+  rw [size_of_ty_bitVector, overflows_sub_lit wa.2.2 hz1.1 hz1.2 hz2.1 hz2.2, eval_of_bool]
 
 theorem bv_sub_overflows.r_same.proof : bv_sub_overflows.r_same.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_sub_overflows.r_same] at h; split at h <;> simp at h; subst h
+  rename_i he; simp [equal] at he; subst he
+  refine Refines.cmp_intro (.subOvf s) (fun n wa wb hT => ⟨v_false_WT, rfl⟩)
+    (fun n wa wb hT ρ x y v hx hy e => ?_)
+  rw [hx] at hy; simp at hy; subst hy
+  simp [evBinop, bvBin] at e; subst e
+  have := two_pow_pos' (n.toNat - 1)
+  cases s <;> simp [ssub_ok, usub_ok] <;> omega
 
 theorem bv_sub_overflows.r_unsigned.proof : bv_sub_overflows.r_unsigned.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_sub_overflows.r_unsigned] at h; split at h <;> simp at h; subst h
+  rename_i hs; simp at hs; subst hs
+  refine Refines.cmp_intro (.subOvf false) (fun n wa wb hT => (O_bv_lt hO wa wb).1)
+    (fun n wa wb hT ρ x y v hx hy e => ?_)
+  rw [(O_bv_lt hO wa wb).2 ρ x y hx hy]
+  simp [evBinop, bvBin] at e; subst e
+  simp [BitVec.usubOverflow, BitVec.ult]
 
 theorem bv_sub_overflows.r_default.proof : bv_sub_overflows.r_default.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_sub_overflows.r_default] at h; simp at h; subst h
+  exact Refines.refl
 
 end Bvr

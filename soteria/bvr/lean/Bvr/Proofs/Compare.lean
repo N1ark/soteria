@@ -444,7 +444,17 @@ theorem bv_lt.r_ite_r.proof : bv_lt.r_ite_r.Stmt := by
   · exact eval_O_lt hO hN h1 hr e1 ex
 
 theorem bv_lt.r_lt_zero.proof : bv_lt.r_lt_zero.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_lt.r_lt_zero] at h
+  split at h <;> (try split at h) <;> simp at h
+  rename_i hc; simp at hc; obtain ⟨rfl, rfl, -⟩ := hc; subst h
+  have H := fun N (hN : 0 < N) (h1 : TB v1 N) =>
+    lt_zero_aux_sound hO (sizeOf v1 + 1) v1 (by omega) hN h1
+  refine cmp_refines_lt (fun N hN h1 h2 => (H N hN h1).1)
+    (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+  rw [(H N hN h1).2 ρ n x e1]
+  obtain ⟨-, -, -, -, -, rfl, -⟩ := lit_val h2 e2
+  simp [bvz, BitVec.msb_eq_toInt]
 
 theorem bv_lt.r_max_l.proof : bv_lt.r_max_l.Stmt := by
   intro FS O hO s v1 v2 res h

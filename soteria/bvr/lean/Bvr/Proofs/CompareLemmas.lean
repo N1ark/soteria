@@ -1231,5 +1231,222 @@ theorem le_unsigned_ub {FS : FloatSem} {ρ : Env} {v : Term} {n : Nat} {x : BitV
   simp only [bvz, Bool.false_eq_true, ite_false, unsigned_ub, zshiftl, Int.one_mul]
   omega
 
+/-! ## Sign tests (`lt_zero_aux`) -/
+
+theorem TB_ext_inv {s k a t n} (h : TB (.mk (.unop (.bvExtend s k) a) t) n) :
+    ∃ m, 0 < m ∧ TB a m ∧ 0 ≤ k ∧ n = m + k := by
+  have ⟨w1, w2⟩ := WT_unop.1 h.1
+  simp only [Unop.WT] at w1
+  obtain ⟨m, hm, ha, hk, ht⟩ := w1
+  have := h.2; simp only [Term.ty_mk] at this
+  rw [this] at ht; simp at ht
+  exact ⟨m, hm, ⟨w2, ha⟩, hk, ht⟩
+
+theorem eval_sext_inv {FS ρ k a t n} {x : BitVec n}
+    (h : eval FS ρ (.mk (.unop (.bvExtend true k) a) t) = some (.bv n x)) :
+    ∃ m xa, eval FS ρ a = some (.bv m xa) ∧ x.msb = xa.msb := by
+  rw [eval_unop (eval_WT h)] at h
+  revert h
+  rcases eval FS ρ a with _ | ⟨_ | ⟨m, xa⟩ | _ | _ | _ | _⟩ <;> simp [evUnop]
+  intro h1 h2; subst h1
+  refine ⟨m, xa, by simp, ?_⟩
+  cases eq_of_heq h2
+  rw [BitVec.msb_eq_toInt, BitVec.msb_eq_toInt, BitVec.toInt_signExtend_of_le (by omega)]
+
+theorem eval_zext_inv' {FS ρ k a t n} {x : BitVec n}
+    (h : eval FS ρ (.mk (.unop (.bvExtend false k) a) t) = some (.bv n x)) :
+    ∃ m xa, eval FS ρ a = some (.bv m xa) ∧ n = m + k.toNat ∧ x.toNat = xa.toNat := by
+  rw [eval_unop (eval_WT h)] at h
+  revert h
+  rcases eval FS ρ a with _ | ⟨_ | ⟨m, xa⟩ | _ | _ | _ | _⟩ <;> simp [evUnop]
+  intro h1 h2; subst h1
+  refine ⟨m, xa, by simp, rfl, ?_⟩
+  cases eq_of_heq h2
+  simp only [BitVec.toNat_setWidth]
+  exact Nat.mod_eq_of_lt (Nat.lt_of_lt_of_le xa.isLt (Nat.pow_le_pow_right (by omega) (by omega)))
+
+theorem eval_rem_inv {FS ρ s a b t n} {x : BitVec n}
+    (h : eval FS ρ (.mk (.binop (.rem s) a b) t) = some (.bv n x)) :
+    ∃ xa xb, eval FS ρ a = some (.bv n xa) ∧ eval FS ρ b = some (.bv n xb) ∧
+      x = if s then xa.srem xb else xa.umod xb := by
+  rw [eval_binop (eval_WT h)] at h; simp only [evBinop] at h
+  obtain ⟨m, xa, xb, ea, eb, e⟩ := bvBin_eq_some.1 h
+  simp at e; obtain ⟨rfl, e⟩ := e; cases e
+  exact ⟨xa, xb, ea, eb, rfl⟩
+
+theorem eval_concat_inv {FS ρ a b t n} {x : BitVec n}
+    (h : eval FS ρ (.mk (.binop .bvConcat a b) t) = some (.bv n x)) :
+    ∃ m xa, eval FS ρ a = some (.bv m xa) ∧ ∃ k, ∃ xb : BitVec k, eval FS ρ b = some (.bv k xb) ∧
+      x.msb = (if m = 0 then xb.msb else xa.msb) := by
+  rw [eval_binop (eval_WT h)] at h
+  generalize ea : eval FS ρ a = oa at h
+  generalize eb : eval FS ρ b = ob at h
+  rcases oa with _ | ⟨_ | ⟨m, xa⟩ | _ | _ | _ | _⟩ <;>
+    rcases ob with _ | ⟨_ | ⟨k, xb⟩ | _ | _ | _ | _⟩ <;> simp [evBinop] at h
+  obtain ⟨rfl, h2⟩ := h
+  cases eq_of_heq h2
+  exact ⟨m, xa, rfl, k, xb, rfl, BitVec.msb_append⟩
+
+theorem TB_concat_inv {a b t n} (h : TB (.mk (.binop .bvConcat a b) t) n) :
+    ∃ m, 0 < m ∧ TB a m := by
+  have ⟨w1, wa, wb⟩ := WT_binop.1 h.1
+  simp only [Binop.WT] at w1
+  obtain ⟨m, k, hm, hk, ha, hb, ht⟩ := w1
+  exact ⟨m, hm, wa, ha⟩
+
+theorem TB_not_inv {a t n} (h : TB (.mk (.unop .bvNot a) t) n) : 0 < n ∧ TB a n := by
+  have ⟨w1, w2⟩ := WT_unop.1 h.1
+  simp only [Unop.WT] at w1
+  obtain ⟨n', hn', ha, ht⟩ := w1
+  have := h.2; simp only [Term.ty_mk] at this
+  rw [this, ha] at ht; cases ht
+  exact ⟨hn', w2, ha⟩
+
+theorem eval_not_inv {FS ρ a t n} {x : BitVec n}
+    (h : eval FS ρ (.mk (.unop .bvNot a) t) = some (.bv n x)) :
+    ∃ xa, eval FS ρ a = some (.bv n xa) ∧ x = ~~~xa := by
+  rw [eval_unop (eval_WT h)] at h
+  revert h
+  rcases eval FS ρ a with _ | ⟨_ | ⟨m, xa⟩ | _ | _ | _ | _⟩ <;> simp [evUnop]
+  intro h1 h2; subst h1
+  exact ⟨xa, by simp, (eq_of_heq h2).symm⟩
+
+section O
+variable {FS : FloatSem} {O : Ops} (hO : O.Sound FS)
+include hO
+
+omit hO in
+/-- The default case of `lt_zero_aux`. -/
+theorem lt_zero_default {v : Term} {N : Int} (hN : 0 < N) (hv : TB v N) :
+    TBool (Term.mk (.binop (.lt true) v (bv_zero (size v))) .bool) ∧
+      ∀ ρ n (x : BitVec n), eval FS ρ v = some (.bv n x) →
+        eval FS ρ (Term.mk (.binop (.lt true) v (bv_zero (size v))) .bool) =
+          some (.bool x.msb) := by
+  rw [TB_size hv]
+  have hT := TBool_cmp (op := .lt true) ⟨true, .inl rfl⟩ hN hv (TB_zero hN) rfl
+  refine ⟨hT, fun ρ n x e => ?_⟩
+  have hw := eval_bv_width hv.2 e
+  obtain ⟨rfl, hn0⟩ := hw
+  rw [eval_lt_of hT.1 e (eval_zero hn0), BitVec.msb_eq_toInt]
+  simp [bvz]
+
+theorem TBool_not_eq_0 {v : Term} {N : Int} (hN : 0 < N) (hv : TB v N) :
+    TBool (O.b_not (O.sem_eq v (bv_zero (size v)))) := by
+  rw [TB_size hv]; exact TBool_O_not hO (TBool_O_eq hO hv (TB_zero hN))
+
+theorem eval_not_eq_0 {v : Term} {N : Int} (hN : 0 < N) (hv : TB v N) {ρ n} {x : BitVec n}
+    (e : eval FS ρ v = some (.bv n x)) :
+    eval FS ρ (O.b_not (O.sem_eq v (bv_zero (size v)))) = some (.bool (decide (x ≠ 0#n))) := by
+  obtain ⟨rfl, hn0⟩ := eval_bv_width hv.2 e
+  rw [TB_size hv]
+  rw [eval_O_not hO (TBool_O_eq hO hv (TB_zero hN))
+    (eval_O_eq hO hv.1 (TB_zero hN).1 (hv.2.trans (TB_zero hN).2.symm) e (eval_zero hn0))]
+  simp
+
+theorem lt_zero_aux_sound (K : Nat) : ∀ (v : Term), sizeOf v < K → ∀ {N : Int}, 0 < N → TB v N →
+    TBool (lt_zero_aux O v) ∧ ∀ ρ n (x : BitVec n), eval FS ρ v = some (.bv n x) →
+      eval FS ρ (lt_zero_aux O v) = some (.bool x.msb) := by
+  induction K with
+  | zero => intro v h; omega
+  | succ K ih =>
+  intro v hK N hN hv
+  have hdef := lt_zero_default (FS := FS) hN hv
+  rw [lt_zero_aux.eq_def]
+  rcases v with ⟨k, T⟩
+  cases k
+  all_goals dsimp only
+  all_goals try (simp only [firstSome]; exact hdef)
+  case unop op a =>
+    cases op
+    all_goals try (simp only [firstSome]; exact hdef)
+    case bvExtend s k =>
+      obtain ⟨m, hm, ha, hk0, rfl⟩ := TB_ext_inv hv
+      cases s
+      · by_cases hk : k > 0
+        · simp only [firstSome, hk, decide_true, ite_true, none_orElse', some_orElse',
+            Option.getD_some]
+          refine ⟨TBool_false, fun ρ n x e => ?_⟩
+          obtain ⟨m', xa, ea, rfl, hx⟩ := eval_zext_inv' e
+          obtain ⟨hm', -⟩ := eval_bv_width ha.2 ea
+          rw [eval_v_false, BitVec.msb_eq_decide, hx]
+          have := xa.isLt
+          have : 2 ^ m' ≤ 2 ^ (m' + k.toNat - 1) := Nat.pow_le_pow_right (by omega) (by omega)
+          simp; omega
+        · simp only [firstSome, hk, decide_false, Bool.false_eq_true, ite_false, none_orElse']
+          exact hdef
+      · simp only [firstSome, some_orElse', Option.getD_some]
+        have := ih a (by simp at hK ⊢; omega) hm ha
+        refine ⟨this.1, fun ρ n x e => ?_⟩
+        obtain ⟨m', xa, ea, hx⟩ := eval_sext_inv e
+        rw [hx]; exact this.2 ρ m' xa ea
+    case bvNot =>
+      simp only [firstSome, none_orElse', some_orElse', Option.getD_some]
+      obtain ⟨-, ha⟩ := TB_not_inv hv
+      have := ih a (by simp at hK ⊢; omega) hN ha
+      refine ⟨TBool_O_not hO this.1, fun ρ n x e => ?_⟩
+      obtain ⟨xa, ea, rfl⟩ := eval_not_inv e
+      obtain ⟨-, hn0⟩ := eval_bv_width ha.2 ea
+      rw [eval_O_not hO this.1 (this.2 ρ n xa ea), BitVec.msb_not]
+      simp [hn0]
+    case bvOfBool k =>
+      by_cases hk : k > 1
+      · simp only [firstSome, hk, decide_true, ite_true, none_orElse', some_orElse',
+          Option.getD_some]
+        refine ⟨TBool_false, fun ρ n x e => ?_⟩
+        obtain ⟨bb, -, hx⟩ := eval_ofBool_eq_some e
+        simp at hx; obtain ⟨rfl, hx⟩ := hx
+        rw [eval_v_false, BitVec.msb_eq_decide]
+        have : 2 ≤ 2 ^ (k.toNat - 1) := by
+          have := Nat.pow_le_pow_right (n := 2) (by omega) (show 1 ≤ k.toNat - 1 by omega)
+          simpa using this
+        cases bb <;> simp at hx <;> subst hx <;> simp
+        have : 1 < 2 ^ k.toNat := Nat.one_lt_two_pow (by omega)
+        rw [Nat.mod_eq_of_lt this]; omega
+      · simp only [firstSome, hk, decide_false, Bool.false_eq_true, ite_false, none_orElse']
+        exact hdef
+  case binop op a b =>
+    cases op
+    all_goals try (simp only [firstSome]; exact hdef)
+    case rem s =>
+      cases s
+      · simp only [firstSome]; exact hdef
+      · simp only [firstSome, none_orElse', some_orElse', Option.getD_some]
+        obtain ⟨-, ha, hb⟩ := TB_arith_inv (op := .rem true) trivial hv
+        have := ih a (by simp at hK ⊢; omega) hN ha
+        refine ⟨TBool_O_and hO this.1 (TBool_not_eq_0 hO hN hv), fun ρ n x e => ?_⟩
+        refine eval_O_and hO this.1 (TBool_not_eq_0 hO hN hv) _ ?_
+        obtain ⟨xa, xb, ea, eb, hx⟩ := eval_rem_inv e
+        rw [this.2 ρ n xa ea, eval_not_eq_0 hO hN hv e, pand_bool]
+        simp only [ite_true] at hx; subst hx
+        rw [BitVec.msb_srem]; rfl
+    case bvConcat =>
+      simp only [firstSome, none_orElse', some_orElse', Option.getD_some]
+      obtain ⟨m, hm, ha⟩ := TB_concat_inv hv
+      have := ih a (by simp at hK ⊢; omega) hm ha
+      refine ⟨this.1, fun ρ n x e => ?_⟩
+      obtain ⟨m', xa, ea, k, xb, eb, hx⟩ := eval_concat_inv e
+      obtain ⟨-, hm0⟩ := eval_bv_width ha.2 ea
+      have hm0 : m' ≠ 0 := by omega
+      simp only [hx, hm0, ite_false]; exact this.2 ρ m' xa ea
+  case triop op g a b =>
+    cases op
+    all_goals try (simp only [firstSome]; exact hdef)
+    case ite =>
+      simp only [firstSome, none_orElse', some_orElse', Option.getD_some]
+      obtain ⟨-, ha, hb⟩ := TB_ite_inv hv
+      have h1 := ih a (by simp at hK ⊢; omega) hN ha
+      have h2 := ih b (by simp at hK ⊢; omega) hN hb
+      by_cases he : equal (lt_zero_aux O a) (lt_zero_aux O b) = true
+      · simp only [he, ite_true]
+        simp only [equal, decide_eq_true_eq] at he
+        refine ⟨h1.1, fun ρ n x e => ?_⟩
+        rcases ite_inv e with ⟨-, e'⟩ | ⟨-, e'⟩
+        · exact h1.2 ρ n x e'
+        · rw [he]; exact h2.2 ρ n x e'
+      · simp only [he, Bool.false_eq_true, ite_false]
+        exact hdef
+
+end O
+
 end CompareL
 end Bvr

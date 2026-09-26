@@ -1442,5 +1442,63 @@ theorem ashr_ashr_lits {k : Nat} (hk0 : 0 < k) (x : BitVec k) {s1 s2 : Int} (s10
     toNat_ofInt_lit m0 m1, ashr_ashr_nat]
   congr 1; rw [zmin_eq_min]; omega
 
+/-! ## Or of an extension and a shifted extension -/
+
+theorem extend_shl_WT {nx k base tail s T1 T4 T5 T2 T}
+    (w : (Term.mk (.binop .bitOr (.mk (.unop (.bvExtend false nx) base) T1)
+      (.mk (.binop .shl (.mk (.unop (.bvExtend false k) tail) T4) (.mk (.bitVec s) T5)) T2)) T).WT) :
+    ∃ nb nt : Int, 0 < nb ∧ 0 < nt ∧ base.ty = .bitVector nb ∧ tail.ty = .bitVector nt ∧
+      0 ≤ nx ∧ 0 ≤ k ∧ nb + nx = nt + k ∧ T1 = .bitVector (nb + nx) ∧ T = T1 ∧
+      base.WT ∧ tail.WT := by
+  obtain ⟨⟨⟨n, hn, h1⟩, h2, h3⟩, w1, w2⟩ := WT_binop.1 w
+  obtain ⟨nb, hnb, hb, hnx, hT1, wb⟩ := WT_extend.1 w1
+  obtain ⟨⟨⟨n', hn', h4⟩, h5, h6⟩, w3, w4⟩ := WT_binop.1 w2
+  obtain ⟨nt, hnt, ht, hk, hT4, wt⟩ := WT_extend.1 w3
+  simp only [Term.ty_mk, Ty.sort] at h1 h2 h3 h4 h5 h6
+  subst h1 h4 h2
+  simp only [Ty.bitVector.injEq] at hT1 hT4 h6
+  subst h6
+  exact ⟨nb, nt, hnb, hnt, hb, ht, hnx, hk, by omega, by rw [hT1], h3, wb, wt⟩
+
+theorem extend_shl_eval {FS ρ nx k base tail s T1 T4 T5 T2 T v}
+    (hs : s = size base)
+    (e : eval FS ρ (.mk (.binop .bitOr (.mk (.unop (.bvExtend false nx) base) T1)
+      (.mk (.binop .shl (.mk (.unop (.bvExtend false k) tail) T4) (.mk (.bitVec s) T5)) T2)) T) =
+        some v) :
+    ∃ nb nt : Int, ∃ xb : BitVec nb.toNat, ∃ xt : BitVec nt.toNat, ∃ N, ∃ Y : BitVec N,
+      N = nb.toNat + nx.toNat ∧ 0 < nb ∧ 0 < nt ∧ base.ty = .bitVector nb ∧
+      tail.ty = .bitVector nt ∧ 0 ≤ nx ∧ 0 ≤ k ∧ nb + nx = nt + k ∧ T1 = .bitVector (nb + nx) ∧
+      eval FS ρ base = some (.bv nb.toNat xb) ∧ eval FS ρ tail = some (.bv nt.toNat xt) ∧
+      v = .bv N Y ∧ ∀ i, Y.getLsbD i = (decide (i < N) &&
+        if i < nb.toNat then xb.getLsbD i else xt.getLsbD (i - nb.toNat)) := by
+  obtain ⟨nb, nt, hnb, hnt, hb, ht, hnx, hk, hsum, hT1, hT, wb, wt⟩ := extend_shl_WT (eval_WT e)
+  obtain ⟨n, x, y, e1, e2, rfl⟩ := BitOp.or.eval_eq_some e
+  obtain ⟨nb', xb, -, hb', -, -, eb, hx⟩ := eval_extend e1
+  obtain ⟨n', x2, e3, hy, s0, s1⟩ := BitOp.shl.eval_lit_r e2
+  obtain ⟨nt', xt, -, ht', -, -, et, hx2⟩ := eval_extend e3
+  rw [hb] at hb'; rw [ht] at ht'
+  simp only [Ty.bitVector.injEq] at hb' ht'; subst hb' ht'
+  obtain ⟨hn, -⟩ := Val.bv_inj hx
+  obtain ⟨hn', -⟩ := Val.bv_inj hy
+  obtain ⟨hn'', -⟩ := Val.bv_inj hx2
+  subst hs
+  simp only [size, ty, hb, size_of_ty] at s0 s1
+  refine ⟨nb, nt, xb, xt, n, x ||| y, by omega, hnb, hnt, hb, ht, hnx, hk, hsum, hT1, eb, et, rfl,
+    fun i => ?_⟩
+  rw [BitVec.getLsbD_or, Val.bv_getLsbD hx, Val.bv_getLsbD hy]
+  have hsz : size base = nb := by simp [size, ty, hb, size_of_ty]
+  rw [hsz, BitVec.shiftLeft_eq', toNat_ofInt_lit s0 s1, BitVec.getLsbD_shiftLeft,
+    Val.bv_getLsbD hx2]
+  simp only [Bool.false_eq_true, ↓reduceIte, BitVec.getLsbD_setWidth]
+  subst hn hn''
+  by_cases h1 : i < nb.toNat + nx.toNat
+  · by_cases h2 : i < nb.toNat
+    · simp [h1, h2]
+    · have h3 : i - nb.toNat < nt.toNat + k.toNat := by omega
+      have h4 : i < nt.toNat + k.toNat := by omega
+      simp [h1, h2, h3, h4, BitVec.getLsbD_of_ge xb i (by omega)]
+  · have h1' : ¬ i < nt.toNat + k.toNat := by omega
+    simp only [h1, h1', decide_false, Bool.false_and, Bool.and_false, Bool.or_false]
+
 end BitwiseL
 end Bvr

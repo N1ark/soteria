@@ -486,13 +486,86 @@ theorem bv_or.r_masks.proof : bv_or.r_masks.Stmt := by
           (fun k c10 c20 => ofInt_zlor c10 c20)))
 
 theorem bv_or.r_extend_shl.proof : bv_or.r_extend_shl.Stmt := by
-  -- UNSOUND: when `nx = 0` (an extension by zero bits, which is well-typed), the last branch
-  -- builds `O.bv_extract 0 (-1) tail`, which is ill-typed. With `base` and `tail` variables of
-  -- type `bitVector 1` both valued `1#1` and `shift = 1`, the spec
-  -- `(zext 0 base) ||| ((zext 0 tail) <<< 1)` evaluates to `1#1`, but for `O` the specs
-  -- themselves (a sound `O`) the result `bv_concat.spec (bv_extract.spec 0 (-1) tail) base` is
-  -- ill-typed, hence poison.
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [bv_or.r_extend_shl] at h
+  split at h
+  case h_2 => simp at h
+  split at h
+  case isFalse => simp at h
+  rename_i nx base T1 k tail T4 s T5 T2 hc
+  simp only [Bool.and_eq_true, decide_eq_true_eq] at hc; obtain ⟨hs, hnx⟩ := hc
+  simp only [Option.some.injEq] at h; subst h
+  simp only [bv_or.spec, ty, Term.ty_mk]
+  split
+  · rename_i h1; simp only [decide_eq_true_eq] at h1
+    refine Refines.trans ?_ (hO.bv_concat _ _)
+    refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+    · obtain ⟨nb, nt, hnb, hnt, hb, ht, -, hk, hsum, hT1, -, wb, wt⟩ := extend_shl_WT w
+      simp only [size, ty, ht, size_of_ty] at h1
+      refine ⟨WT_concat.2 ⟨nt, nb, hnt, hnb, ht, hb, by simp [size, ty, ht, hb, size_of_ty], wt, wb⟩, ?_⟩
+      simp [bv_concat.spec, size, ty, ht, hb, size_of_ty, hT1]; omega
+    · obtain ⟨nb, nt, xb, xt, N, Y, hN, hnb, hnt, hb, ht, -, hk, hsum, hT1, eb, et, rfl, hY⟩ :=
+        extend_shl_eval hs e
+      simp only [size, ty, ht, size_of_ty] at h1
+      rw [bv_concat.spec, eval_concat_of w' et eb]
+      congr 1
+      apply Val.bv_ext (by omega)
+      intro i hi
+      rw [hY, BitVec.getLsbD_append]
+      have : i < N := by omega
+      simp [this]
+  · rename_i h1; simp only [decide_eq_true_eq] at h1
+    split
+    · rename_i h2; simp only [decide_eq_true_eq] at h2
+      refine Refines.trans ?_ (Refines.trans (Refines.unop_ty
+        (fun a => .bitVector (size a + (nx - size tail))) (fun x y h => by simp [size, ty, h])
+        (hO.bv_concat tail base)) (hO.bv_extend _ _ _))
+      refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+      · obtain ⟨nb, nt, hnb, hnt, hb, ht, -, hk, hsum, hT1, -, wb, wt⟩ := extend_shl_WT w
+        simp only [size, ty, ht, size_of_ty] at h1 h2 ⊢
+        refine ⟨WT_extend.2 ⟨nt + nb, by omega, by simp [bv_concat.spec, size, ty, ht, hb,
+          size_of_ty], by omega, by simp [bv_concat.spec, size, ty, ht, hb, size_of_ty], WT_concat.2 ⟨nt, nb, hnt, hnb, ht, hb,
+          by simp [size, ty, ht, hb, size_of_ty], wt, wb⟩⟩, ?_⟩
+        simp [bv_concat.spec, size, ty, ht, hb, size_of_ty, hT1]; omega
+      · obtain ⟨nb, nt, xb, xt, N, Y, hN, hnb, hnt, hb, ht, -, hk, hsum, hT1, eb, et, rfl, hY⟩ :=
+          extend_shl_eval hs e
+        simp only [size, ty, ht, size_of_ty] at h1 h2 w' ⊢
+        rw [eval_extend_of w' (eval_concat_of (WT_unop.1 w').2 et eb)]
+        congr 1
+        apply Val.bv_ext (by omega)
+        intro i hi
+        rw [hY]
+        simp only [Bool.false_eq_true, ↓reduceIte, BitVec.getLsbD_setWidth,
+          BitVec.getLsbD_append]
+        have h3 : i < N := by omega
+        simp [h3, hi]
+    · rename_i h2; simp only [decide_eq_true_eq] at h2
+      refine Refines.trans ?_ (Refines.trans (Refines.binop_ty2
+        (fun a b => .bitVector (size a + size b)) (fun x x' y y' h h' => by simp [size, ty, h, h'])
+        (hO.bv_extract 0 (nx - 1) tail) Refines.refl) (hO.bv_concat _ _))
+      refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+      · obtain ⟨nb, nt, hnb, hnt, hb, ht, -, hk, hsum, hT1, -, wb, wt⟩ := extend_shl_WT w
+        simp only [size, ty, ht, size_of_ty] at h1 h2 ⊢
+        refine ⟨WT_concat.2 ⟨nx, nb, hnx, hnb, by simp [bv_extract.spec], hb,
+          by simp [bv_extract.spec, size, ty, hb, size_of_ty],
+          WT_extract.2 ⟨nt, ht, by omega, by omega, by omega, by simp, wt⟩, wb⟩, ?_⟩
+        simp [bv_extract.spec, size, ty, hb, size_of_ty, hT1]; omega
+      · obtain ⟨nb, nt, xb, xt, N, Y, hN, hnb, hnt, hb, ht, -, hk, hsum, hT1, eb, et, rfl, hY⟩ :=
+          extend_shl_eval hs e
+        simp only [size, ty, ht, size_of_ty] at h1 h2 w' ⊢
+        rw [eval_concat_of w' (eval_extract_of (WT_binop.1 w').2.1 et) eb]
+        congr 1
+        apply Val.bv_ext (by omega)
+        intro i hi
+        rw [hY]
+        simp only [BitVec.getLsbD_extractLsb', BitVec.getLsbD_append]
+        have h3 : i < N := by omega
+        have h4 : nx - 1 - 0 + 1 = nx := by omega
+        simp only [h3, h4, decide_true, Bool.true_and, Int.toNat_zero, Nat.zero_add]
+        split
+        · rfl
+        · have : i - nb.toNat < nx.toNat := by omega
+          simp [this]
 
 theorem bv_or.r_of_bools.proof : bv_or.r_of_bools.Stmt := by
   intro FS O hO v1 v2 res h

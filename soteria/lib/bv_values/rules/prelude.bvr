@@ -1,5 +1,8 @@
 (* Primitives and pure helpers used by the rules. Primitives are implemented
-   by hand, once in OCaml (svalue.ml) and once in Lean (Bvr/Prims.lean). *)
+   by hand, once in OCaml (svalue.ml) and once in Lean (Bvr/Prims.lean).
+   Oracles have no Lean definition: the Lean model is parameterised by them,
+   and the properties that the proofs rely on are stated in Bvr/Semantics.lean.
+   They are the hash-consing order and Floatml's float arithmetic. *)
 
 (* {1 Primitives} *)
 
@@ -9,10 +12,10 @@ external ty : t -> ty = ""
 external kind : t -> kind = ""
 
 (* Whether [l] comes before [r] in the (arbitrary) hash-consing order. *)
-external tag_le : t -> t -> bool = ""
+external tag_le : t -> t -> bool = "oracle"
 
 (* Sorts terms along the hash-consing order. *)
-external sort_by_tag : t list -> t list = ""
+external sort_by_tag : t list -> t list = "oracle"
 
 (* The binders of [binders] that occur free in the body. *)
 external used_binders : (var * ty) list -> t -> (var * ty) list = ""
@@ -58,28 +61,28 @@ external f_is_positive : float -> bool = ""
 external f_eq : float -> float -> bool = ""
 external f_lt : float -> float -> bool = ""
 external f_le : float -> float -> bool = ""
-external f_add : float -> float -> float = ""
-external f_sub : float -> float -> float = ""
-external f_mul : float -> float -> float = ""
-external f_div : float -> float -> float = ""
-external f_rem : float -> float -> float = ""
-external f_fmod : float -> float -> float = ""
-external f_min : float -> float -> float = ""
-external f_max : float -> float -> float = ""
-external f_fma : float -> float -> float -> float = ""
+external f_add : float -> float -> float = "oracle"
+external f_sub : float -> float -> float = "oracle"
+external f_mul : float -> float -> float = "oracle"
+external f_div : float -> float -> float = "oracle"
+external f_rem : float -> float -> float = "oracle"
+external f_fmod : float -> float -> float = "oracle"
+external f_min : float -> float -> float = "oracle"
+external f_max : float -> float -> float = "oracle"
+external f_fma : float -> float -> float -> float = "oracle"
 external f_abs : float -> float = ""
 external f_neg : float -> float = ""
-external f_sqrt : float -> float = ""
-external f_round : rm -> float -> float = ""
-external f_convert : rm -> fp -> float -> float = ""
+external f_sqrt : float -> float = "oracle"
+external f_round : rm -> float -> float = "oracle"
+external f_convert : rm -> fp -> float -> float = "oracle"
 
 (* [f_to_int rm signed size f] converts [f] to an integer of [size] bits, if
    that size is supported and the conversion is defined. *)
-external f_to_int : rm -> bool -> int -> float -> int option = ""
+external f_to_int : rm -> bool -> int -> float -> int option = "oracle"
 
 (* [f_of_int rm signed fp size z] converts the [size]-bit integer [z] to a
    float, if that size is supported. *)
-external f_of_int : rm -> bool -> fp -> int -> int -> float option = ""
+external f_of_int : rm -> bool -> fp -> int -> int -> float option = "oracle"
 
 (* {1 Helpers} *)
 
@@ -143,10 +146,10 @@ let lsb (z : int) : int = if z = 0 then 128 else log2 (z land -z)
 let rec msb_of (v : t) : int =
   match v with
   | BitVec z when z > 0 -> log2 z
-  | BitVec z when z = 0 -> size v - 1
-  | Binop (BitAnd, bv1, bv2) -> zmin (msb_of bv1) (msb_of bv2)
-  | Triop (Ite, _, l, r) -> zmax (msb_of l) (msb_of r)
-  | Unop (BvExtend (false, _), v) -> msb_of v
+  | 0 -> size v - 1
+  | BitAnd (bv1, bv2) -> zmin (msb_of bv1) (msb_of bv2)
+  | Ite (_, l, r) -> zmax (msb_of l) (msb_of r)
+  | BvExtend (false, _, v) -> msb_of v
   | _ -> size v - 1
 
 (* whether [op l r] overflows, for [n]-bit bit-vectors *)

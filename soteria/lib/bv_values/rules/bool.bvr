@@ -6,14 +6,14 @@
    < a] / [c <= a] (returning an inclusive lower bound). *)
 let as_upper_bound (v : t) : (t * bool * t * int) option =
   match v with
-  | Binop (Lt s, a, BitVec c) -> Some (a, s, v, bv_to_z s (size a) c - 1)
-  | Binop (Leq s, a, BitVec c) -> Some (a, s, v, bv_to_z s (size a) c)
+  | Lt (s, a, BitVec c) -> Some (a, s, v, bv_to_z s (size a) c - 1)
+  | Leq (s, a, BitVec c) -> Some (a, s, v, bv_to_z s (size a) c)
   | _ -> None
 
 let as_lower_bound (v : t) : (t * bool * t * int) option =
   match v with
-  | Binop (Lt s, BitVec c, a) -> Some (a, s, v, bv_to_z s (size a) c + 1)
-  | Binop (Leq s, BitVec c, a) -> Some (a, s, v, bv_to_z s (size a) c)
+  | Lt (s, BitVec c, a) -> Some (a, s, v, bv_to_z s (size a) c + 1)
+  | Leq (s, BitVec c, a) -> Some (a, s, v, bv_to_z s (size a) c)
   | _ -> None
 
 (* For two bounds on the same value (same signedness), [&&] keeps the tighter
@@ -50,7 +50,7 @@ let complementary_bounds (ubv : t) (lbv : t) : bool =
    == k] with [k] constant), i.e. [k] satisfies the bound. *)
 let bound_implied_by_eq (boundv : t) (eqv : t) : bool =
   match eqv with
-  | Binop (Eq, a, BitVec k) | Binop (Eq, BitVec k, a) -> (
+  | Eq (a, BitVec k) [@comm] -> (
       let k_in (s : bool) = bv_to_z s (size a) k in
       (match as_upper_bound boundv with
       | Some (ba, s, _, u) -> equal ba a && k_in s <= u
@@ -61,30 +61,26 @@ let bound_implied_by_eq (boundv : t) (eqv : t) : bool =
       | None -> false)
   | _ -> false
 
-let[@spec Binop (And, v1, v2) <| TBool] b_and (v1 : t) (v2 : t) : t =
+let[@spec And (v1, v2) <| TBool] b_and (v1 : t) (v2 : t) : t =
   match (v1, v2) with
-  | _ [@r same] when equal v1 v2 -> v1
-  | (Bool false, _ | _, Bool false) [@r false_] -> v_false
-  | Bool true, _ [@r true_l] -> v2
-  | _, Bool true [@r true_r] -> v1
+  | v, v [@r same] -> v1
+  | (false, _) [@comm] [@r false_] -> v_false
+  | true, _ [@r true_l] -> v2
+  | _, true [@r true_r] -> v1
   (* p && !p <=> false *)
-  | _, Unop (Not, p) [@r not_r] when equal v1 p -> v_false
-  | Unop (Not, p), _ [@r not_l] when equal v2 p -> v_false
+  | (p, Not p) [@comm] [@r not] -> v_false
   (* (a && b) && a <=> a && b *)
-  | Binop (And, a, b), _ [@r and_l] when equal a v2 || equal b v2 -> v1
-  | _, Binop (And, a, b) [@r and_r] when equal v1 a || equal v1 b -> v2
+  | And (a, _) [@comm], a [@r and_l] -> v1
+  | a, And (a, _) [@comm] [@r and_r] -> v2
   (* (a || b) && a <=> a *)
-  | Binop (Or, a, b), _ [@r or_l] when equal a v2 || equal b v2 -> v2
-  | _, Binop (Or, a, b) [@r or_r] when equal v1 a || equal v1 b -> v1
-  | Binop (Eq, l1, r1), Binop (Eq, l2, r2) [@r eq_neq]
-    when (equal l1 l2 && sure_neq r1 r2)
-         || (equal l1 r2 && sure_neq r1 l2)
-         || (equal r1 l2 && sure_neq l1 r2)
-         || (equal r1 r2 && sure_neq l1 l2) ->
+  | Or (a, _) [@comm], a [@r or_l] -> v2
+  | a, Or (a, _) [@comm] [@r or_r] -> v1
+  (* [a == x && a == y] with [x] and [y] surely different *)
+  | Eq (a, x) [@comm], Eq (a, y) [@comm] [@r eq_neq] when sure_neq x y ->
       v_false
-  | ( Binop (Eq, bv1, Unop (BvExtract (s1, e1), x)),
-      Binop (Eq, bv2, Unop (BvExtract (s2, e2), y)) ) [@r eq_extracts]
-    when equal x y && (e1 + 1 = s2 || e2 + 1 = s1) ->
+  | Eq (bv1, BvExtract (s1, e1, x)), Eq (bv2, BvExtract (s2, e2, x))
+    [@r eq_extracts]
+    when e1 + 1 = s2 || e2 + 1 = s1 ->
       let bv, xy =
         if e1 + 1 = s2 then (bv_concat bv2 bv1, bv_extract s1 e2 x)
         else (bv_concat bv1 bv2, bv_extract s2 e1 x)
@@ -92,147 +88,118 @@ let[@spec Binop (And, v1, v2) <| TBool] b_and (v1 : t) (v2 : t) : t =
       sem_eq bv xy
   (* two upper (resp. lower) bounds on the same value (e.g. [a < c1] && [a <=
      c2]) keep the tighter one *)
-  | ( Binop ((Lt s1 | Leq s1), a1, BitVec _),
-      Binop ((Lt s2 | Leq s2), a2, BitVec _) ) [@r upper_bounds]
-    when s1 = s2 && equal a1 a2 ->
+  | (Lt (s, a, BitVec _) | Leq (s, a, BitVec _)),
+    (Lt (s, a, BitVec _) | Leq (s, a, BitVec _)) [@r upper_bounds] ->
       combine_upper_bounds true v1 v2
-  | ( Binop ((Lt s1 | Leq s1), BitVec _, a1),
-      Binop ((Lt s2 | Leq s2), BitVec _, a2) ) [@r lower_bounds]
-    when s1 = s2 && equal a1 a2 ->
+  | (Lt (s, BitVec _, a) | Leq (s, BitVec _, a)),
+    (Lt (s, BitVec _, a) | Leq (s, BitVec _, a)) [@r lower_bounds] ->
       combine_lower_bounds true v1 v2
   | _ [@r default] -> mk_commut_binop And v1 v2 <| TBool
 
-let[@spec Binop (Or, v1, v2) <| TBool] b_or (v1 : t) (v2 : t) : t =
+let[@spec Or (v1, v2) <| TBool] b_or (v1 : t) (v2 : t) : t =
   match (v1, v2) with
-  | _ [@r same] when equal v1 v2 -> v1
-  | (Bool true, _ | _, Bool true) [@r true_] -> v_true
-  | Bool false, _ [@r false_l] -> v2
-  | _, Bool false [@r false_r] -> v1
+  | v, v [@r same] -> v1
+  | (true, _) [@comm] [@r true_] -> v_true
+  | false, _ [@r false_l] -> v2
+  | _, false [@r false_r] -> v1
   (* p || !p <=> true *)
-  | _, Unop (Not, p) [@r not_r] when equal v1 p -> v_true
-  | Unop (Not, p), _ [@r not_l] when equal v2 p -> v_true
-  | Binop (Lt s1, l1, r1), Binop (Lt s2, l2, r2) [@r lt_lt]
-    when s1 = s2 && equal l1 r2 && equal r1 l2 ->
-      b_not (sem_eq l1 r1)
-  | ( Binop (Lt s1, l1, r1), Binop (Leq s2, l2, r2)
-    | Binop (Leq s1, l1, r1), Binop (Lt s2, l2, r2) ) [@r lt_leq]
-    when s1 = s2 && equal l1 r2 && equal r1 l2 ->
-      v_true
-  | Binop (Or, a, b), _ [@r or_l] when equal a v2 || equal b v2 -> v1
-  | _, Binop (Or, a, b) [@r or_r] when equal v1 a || equal v1 b -> v2
+  | (p, Not p) [@comm] [@r not] -> v_true
+  (* [a < b || b < a] <=> [a != b] *)
+  | Lt (s, a, b), Lt (s, b, a) [@r lt_lt] -> b_not (sem_eq a b)
+  (* [a < b || b <= a] <=> true *)
+  | (Lt (s, a, b), Leq (s, b, a)) [@comm] [@r lt_leq] -> v_true
+  | Or (a, _) [@comm], a [@r or_l] -> v1
+  | a, Or (a, _) [@comm] [@r or_r] -> v2
   (* (a && b) || a <=> a *)
-  | Binop (And, a, b), _ [@r and_l] when equal a v2 || equal b v2 -> v2
-  | _, Binop (And, a, b) [@r and_r] when equal v1 a || equal v1 b -> v1
+  | And (a, _) [@comm], a [@r and_l] -> v2
+  | a, And (a, _) [@comm] [@r and_r] -> v1
   (* an upper and a lower bound on the same value that (at least) touch cover
      the whole domain, e.g. [a <= 2] || [3 <= a] *)
-  | Binop ((Lt _ | Leq _), _, _), Binop ((Lt _ | Leq _), _, _)
-    [@r complementary]
+  | (Lt _ | Leq _), (Lt _ | Leq _) [@r complementary]
     when complementary_bounds v1 v2 || complementary_bounds v2 v1 ->
       v_true
   (* a bound absorbs an equality it already allows, e.g. [a < c] || [a ==
      0] *)
-  | Binop ((Lt _ | Leq _), _, _), Binop (Eq, _, _) [@r bound_eq]
-    when bound_implied_by_eq v1 v2 ->
-      v1
-  | Binop (Eq, _, _), Binop ((Lt _ | Leq _), _, _) [@r eq_bound]
-    when bound_implied_by_eq v2 v1 ->
-      v2
+  | (Lt _ | Leq _), Eq _ [@r bound_eq] when bound_implied_by_eq v1 v2 -> v1
+  | Eq _, (Lt _ | Leq _) [@r eq_bound] when bound_implied_by_eq v2 v1 -> v2
   (* two upper (resp. lower) bounds on the same value keep the looser one *)
-  | ( Binop ((Lt s1 | Leq s1), a1, BitVec _),
-      Binop ((Lt s2 | Leq s2), a2, BitVec _) ) [@r upper_bounds]
-    when s1 = s2 && equal a1 a2 ->
+  | (Lt (s, a, BitVec _) | Leq (s, a, BitVec _)),
+    (Lt (s, a, BitVec _) | Leq (s, a, BitVec _)) [@r upper_bounds] ->
       combine_upper_bounds false v1 v2
-  | ( Binop ((Lt s1 | Leq s1), BitVec _, a1),
-      Binop ((Lt s2 | Leq s2), BitVec _, a2) ) [@r lower_bounds]
-    when s1 = s2 && equal a1 a2 ->
+  | (Lt (s, BitVec _, a) | Leq (s, BitVec _, a)),
+    (Lt (s, BitVec _, a) | Leq (s, BitVec _, a)) [@r lower_bounds] ->
       combine_lower_bounds false v1 v2
   | _ [@r default] -> mk_commut_binop Or v1 v2 <| TBool
 
-let[@spec Unop (Not, sv) <| TBool] b_not (sv : t) : t =
+let[@spec Not sv <| TBool] b_not (sv : t) : t =
   match sv with
-  | _ [@r true_] when equal sv v_true -> v_false
-  | _ [@r false_] when equal sv v_false -> v_true
-  | Unop (Not, sv) [@r not] -> sv
-  | Binop (Lt signed, v1, v2) [@r lt] -> bv_leq signed v2 v1
-  | Binop (Leq signed, v1, v2) [@r leq] -> bv_lt signed v2 v1
-  | Binop (Or, v1, v2) [@r or_] -> b_and (b_not v1) (b_not v2)
-  | Binop (And, v1, v2) [@r and_] -> b_or (b_not v1) (b_not v2)
-  | Triop (Ite, g, a, b) [@r ite] -> b_ite g (b_not a) (b_not b)
-  | (Binop (Eq, (BitVec bv as c), v) | Binop (Eq, v, (BitVec bv as c)))
-    [@r eq_bit]
-    when ty c = TBitVector 1 ->
+  | true [@r true_] -> v_false
+  | false [@r false_] -> v_true
+  | Not sv [@r not] -> sv
+  | Lt (signed, v1, v2) [@r lt] -> bv_leq signed v2 v1
+  | Leq (signed, v1, v2) [@r leq] -> bv_lt signed v2 v1
+  | Or (v1, v2) [@r or_] -> b_and (b_not v1) (b_not v2)
+  | And (v1, v2) [@r and_] -> b_or (b_not v1) (b_not v2)
+  | Ite (g, a, b) [@r ite] -> b_ite g (b_not a) (b_not b)
+  | Eq ((BitVec bv as c), v) [@comm] [@r eq_bit] when ty c = TBitVector 1 ->
       sem_eq (mk_bv 1 (1 - bv)) v
-  | Nop (Distinct, [ l; r ]) [@r distinct] -> sem_eq l r
-  | _ [@r default] -> Unop (Not, sv) <| TBool
+  | Distinct [ l; r ] [@r distinct] -> sem_eq l r
+  | _ [@r default] -> Not sv <| TBool
 
-let[@spec Triop (Ite, guard, if_, else_) <| ty if_] b_ite (guard : t) (if_ : t)
+let[@spec Ite (guard, if_, else_) <| ty if_] b_ite (guard : t) (if_ : t)
     (else_ : t) : t =
   match (guard, if_, else_) with
-  | Bool true, _, _ [@r true_] -> if_
-  | Bool false, _, _ [@r false_] -> else_
-  | _, Bool true, Bool false [@r bool] -> guard
-  | _, Bool false, Bool true [@r not_bool] -> b_not guard
-  | _, Bool false, _ [@r false_then] -> b_and (b_not guard) else_
-  | _, Bool true, _ [@r true_then] -> b_or guard else_
-  | _, _, Bool false [@r false_else] -> b_and guard if_
-  | _, _, Bool true [@r true_else] -> b_or (b_not guard) if_
-  | _, BitVec o, BitVec z [@r bv_of_bool] when o = 1 && z = 0 ->
-      bv_of_bool (size if_) guard
-  | Unop (Not, g), _, _ [@r not_guard] -> b_ite g else_ if_
-  | _ [@r guard_then] when equal guard if_ -> b_or guard else_
-  | _ [@r guard_else] when equal guard else_ -> b_and guard if_
-  | _, Triop (Ite, g, x, _), _ [@r ite_then] when equal g guard ->
+  | true, _, _ [@r true_] -> if_
+  | false, _, _ [@r false_] -> else_
+  | _, true, false [@r bool] -> guard
+  | _, false, true [@r not_bool] -> b_not guard
+  | _, false, _ [@r false_then] -> b_and (b_not guard) else_
+  | _, true, _ [@r true_then] -> b_or guard else_
+  | _, _, false [@r false_else] -> b_and guard if_
+  | _, _, true [@r true_else] -> b_or (b_not guard) if_
+  | _, 1, 0 [@r bv_of_bool] -> bv_of_bool (size if_) guard
+  | Not g, _, _ [@r not_guard] -> b_ite g else_ if_
+  | g, g, _ [@r guard_then] -> b_or guard else_
+  | g, _, g [@r guard_else] -> b_and guard if_
+  | g, Ite (g, x, _), _ [@r ite_then] -> b_ite guard x else_
+  | g, _, Ite (g, _, y) [@r ite_else] -> b_ite guard if_ y
+  | And (g, _) [@comm], Ite (g, x, _), _ [@r and_ite_then] ->
       b_ite guard x else_
-  | _, _, Triop (Ite, g, _, y) [@r ite_else] when equal g guard ->
-      b_ite guard if_ y
-  | Binop (And, a, b), Triop (Ite, g, x, _), _ [@r and_ite_then]
-    when equal g a || equal g b ->
-      b_ite guard x else_
-  | Binop (Or, a, b), _, Triop (Ite, g, _, y) [@r or_ite_else]
-    when equal g a || equal g b ->
-      b_ite guard if_ y
-  | _ [@r same] when equal if_ else_ -> if_
-  | _ [@r default] -> Triop (Ite, guard, if_, else_) <| ty if_
+  | Or (g, _) [@comm], _, Ite (g, _, y) [@r or_ite_else] -> b_ite guard if_ y
+  | _, x, x [@r same] -> if_
+  | _ [@r default] -> Ite (guard, if_, else_) <| ty if_
 
-let[@spec Binop (Eq, v1, v2) <| TBool] sem_eq (v1 : t) (v2 : t) : t =
+let[@spec Eq (v1, v2) <| TBool] sem_eq (v1 : t) (v2 : t) : t =
   match (v1, v2) with
-  | _ [@r same] when equal v1 v2 -> v_true
+  | v, v [@r same] -> v_true
   | Bool b1, Bool b2 [@r bools] -> of_bool (b1 = b2)
   | Ptr (l1, o1), Ptr (l2, o2) [@r ptrs] -> b_and (sem_eq l1 l2) (sem_eq o1 o2)
   | BitVec b1, BitVec b2 [@r bvs] -> of_bool (b1 = b2)
   | Float f1, Float f2 [@r floats] -> of_bool (f_bits_equal f1 f2)
   (* Arithmetics *)
-  | BitVec _, Unop (Neg _, v2) [@r neg_r] -> sem_eq (bv_neg false v1) v2
-  | Unop (Neg _, v1), BitVec _ [@r neg_l] -> sem_eq v1 (bv_neg false v2)
-  | BitVec _, Unop (BvNot, v2) [@r not_r] -> sem_eq (bv_not v1) v2
-  | Unop (BvNot, v1), BitVec _ [@r not_l] -> sem_eq v1 (bv_not v2)
-  | ( BitVec _,
-      (Binop (Add _, (BitVec _ as l), r) | Binop (Add _, r, (BitVec _ as l))) )
-    [@r add_const_r] ->
+  | BitVec _, Neg (_, v2) [@r neg_r] -> sem_eq (bv_neg false v1) v2
+  | Neg (_, v1), BitVec _ [@r neg_l] -> sem_eq v1 (bv_neg false v2)
+  | BitVec _, BvNot v2 [@r not_r] -> sem_eq (bv_not v1) v2
+  | BvNot v1, BitVec _ [@r not_l] -> sem_eq v1 (bv_not v2)
+  (* c == l + r <=> c - l == r, for constants c and l *)
+  | BitVec _, Add (_, (BitVec _ as l), r) [@comm] [@r add_const_r] ->
       sem_eq (bv_sub unchecked v1 l) r
-  | ( (Binop (Add _, (BitVec _ as l), r) | Binop (Add _, r, (BitVec _ as l))),
-      BitVec _ ) [@r add_const_l] ->
+  | Add (_, (BitVec _ as l), r) [@comm], BitVec _ [@r add_const_l] ->
       sem_eq (bv_sub unchecked v2 l) r
-  | BitVec _, Binop (Sub _, l, (BitVec _ as r)) [@r sub_const_r1] ->
+  (* c == l - r <=> c + r == l, and c == l - r <=> l - c == r *)
+  | BitVec _, Sub (_, l, (BitVec _ as r)) [@r sub_const_r1] ->
       sem_eq (bv_add unchecked v1 r) l
-  | BitVec _, Binop (Sub _, (BitVec _ as l), r) [@r sub_const_r2] ->
+  | BitVec _, Sub (_, (BitVec _ as l), r) [@r sub_const_r2] ->
       sem_eq (bv_sub unchecked l v1) r
-  | Binop (Sub _, l, (BitVec _ as r)), BitVec _ [@r sub_const_l1] ->
+  | Sub (_, l, (BitVec _ as r)), BitVec _ [@r sub_const_l1] ->
       sem_eq (bv_add unchecked v2 r) l
-  | Binop (Sub _, (BitVec _ as l), r), BitVec _ [@r sub_const_l2] ->
+  | Sub (_, (BitVec _ as l), r), BitVec _ [@r sub_const_l2] ->
       sem_eq (bv_sub unchecked l v2) r
-  | _, Binop (Add _, v2, BitVec bv) [@r self_add_r1] when equal v1 v2 ->
-      of_bool (bv = 0)
-  | _, Binop (Add _, BitVec bv, v2) [@r self_add_r2] when equal v1 v2 ->
-      of_bool (bv = 0)
-  | Binop (Add _, BitVec bv, v1), _ [@r self_add_l1] when equal v1 v2 ->
-      of_bool (bv = 0)
-  | Binop (Add _, v1, BitVec bv), _ [@r self_add_l2] when equal v1 v2 ->
-      of_bool (bv = 0)
-  | ( ( Binop (Add _, (BitVec bv_l as l), y)
-      | Binop (Add _, y, (BitVec bv_l as l)) ),
-      ( Binop (Add _, (BitVec bv_r as r), x)
-      | Binop (Add _, x, (BitVec bv_r as r)) ) ) [@r add_add] ->
+  (* x == x + c <=> c == 0 *)
+  | x, Add (_, x, BitVec bv) [@comm] [@r self_add_r] -> of_bool (bv = 0)
+  | Add (_, x, BitVec bv) [@comm], x [@r self_add_l] -> of_bool (bv = 0)
+  | ( Add (_, (BitVec bv_l as l), y) [@comm],
+      Add (_, (BitVec bv_r as r), x) [@comm] ) [@r add_add] ->
       (* y + l == x + r <=> y == x + (r - l) <=> y + (l - r) == x *)
       (* we pick the option that will make a positive constant (superstition);
          this rewrite holds modulo 2^n regardless of overflow, but the rebuilt
@@ -240,10 +207,7 @@ let[@spec Binop (Eq, v1, v2) <| TBool] sem_eq (v1 : t) (v2 : t) : t =
       if bv_l >= bv_r then
         sem_eq x (bv_add unchecked y (bv_sub unchecked l r))
       else sem_eq y (bv_add unchecked x (bv_sub unchecked r l))
-  | ( ( BitVec n,
-        (Binop (Mul ck, BitVec m, x) | Binop (Mul ck, x, BitVec m)) )
-    | ( (Binop (Mul ck, BitVec m, x) | Binop (Mul ck, x, BitVec m)),
-        BitVec n ) ) [@r mul_const]
+  | (BitVec n, Mul (ck, BitVec m, x) [@comm]) [@comm] [@r mul_const]
     when is_checked ck ->
       (* the multiplication is exact in a checked signedness, so read the
          constants in that signedness: the result must be a multiple of [m], and
@@ -265,51 +229,36 @@ let[@spec Binop (Eq, v1, v2) <| TBool] sem_eq (v1 : t) (v2 : t) : t =
         if fits then sem_eq x (mk_masked sz q) else v_false
       else v_false
   (* distributing over a shared guard lets the branches cancel pairwise *)
-  | Triop (Ite, b, l, r), Triop (Ite, b', l', r') [@r ite_ite]
-    when equal b b' ->
+  | Ite (b, l, r), Ite (b, l', r') [@r ite_ite] ->
       b_ite b (sem_eq l l') (sem_eq r r')
   (* Cancelling a common factor [a] from [a*b == a*d] is only sound when [a] is
      odd (invertible modulo 2^n), or when both multiplications are
      overflow-checked (so they behave like exact integer arithmetic). *)
-  | Binop (Mul ck1, BitVec a, b), Binop (Mul ck2, BitVec c, d) [@r mul_cancel1]
-    when a = c && (a land 1 = 1 || is_checked (checked_meet ck1 ck2)) ->
-      sem_eq b d
-  | Binop (Mul ck1, b, BitVec a), Binop (Mul ck2, d, BitVec c) [@r mul_cancel2]
-    when a = c && (a land 1 = 1 || is_checked (checked_meet ck1 ck2)) ->
-      sem_eq b d
-  | Binop (Mul ck1, BitVec a, b), Binop (Mul ck2, d, BitVec c) [@r mul_cancel3]
-    when a = c && (a land 1 = 1 || is_checked (checked_meet ck1 ck2)) ->
-      sem_eq b d
-  | Binop (Mul ck1, b, BitVec a), Binop (Mul ck2, BitVec c, d) [@r mul_cancel4]
-    when a = c && (a land 1 = 1 || is_checked (checked_meet ck1 ck2)) ->
+  | Mul (ck1, BitVec a, b) [@comm], Mul (ck2, BitVec a, d) [@comm]
+    [@r mul_cancel]
+    when a land 1 = 1 || is_checked (checked_meet ck1 ck2) ->
       sem_eq b d
   (* Bitvectors *)
   (* 0 == L | R ==> 0 == L && 0 == R, splitting is better for the PC *)
-  | (BitVec z, Binop (BitOr, l, r) | Binop (BitOr, l, r), BitVec z) [@r or_zero]
-    when z = 0 ->
+  | (0, BitOr (l, r)) [@comm] [@r or_zero] ->
       let z = bv_zero (size v1) in
       b_and (sem_eq l z) (sem_eq r z)
   (* for N == (M & X), if N has bits set that aren't in M, then it must be
      false, since the mask would unset them *)
-  | ( BitVec n, Binop (BitAnd, BitVec mask, _)
-    | BitVec n, Binop (BitAnd, _, BitVec mask)
-    | Binop (BitAnd, BitVec mask, _), BitVec n
-    | Binop (BitAnd, _, BitVec mask), BitVec n ) [@r and_mask]
+  | (BitVec n, BitAnd (BitVec mask, _) [@comm]) [@comm] [@r and_mask]
     when let sz = size v1 in
          let full_mask = (1 lsl sz) - 1 in
          let mask_not = lognot mask land full_mask in
          not (n land mask_not = 0) ->
       v_false
-  | ( (BitVec _ as z), Binop (BvConcat, l, r)
-    | Binop (BvConcat, l, r), (BitVec _ as z) ) [@r concat_const] ->
+  | ((BitVec _ as z), BvConcat (l, r)) [@comm] [@r concat_const] ->
       let z = kind z <| ty v1 in
       let size_r = size r in
       let size_l = size l in
       let z_r = bv_extract 0 (size_r - 1) z in
       let z_l = bv_extract size_r (size_r + size_l - 1) z in
       b_and (sem_eq l z_l) (sem_eq r z_r)
-  | ( Unop (BvExtend (false, by), bv), BitVec z
-    | BitVec z, Unop (BvExtend (false, by), bv) ) [@r zext_const] ->
+  | (BvExtend (false, by, bv), BitVec z) [@comm] [@r zext_const] ->
       let size_bv = size bv in
       (* if any of the bits of z are set in [size_bv, size_bv+by), this cannot
          be true since they're extended to 0 *)
@@ -320,8 +269,7 @@ let[@spec Binop (Eq, v1, v2) <| TBool] sem_eq (v1 : t) (v2 : t) : t =
         sem_eq bv z_bv
   (* ite(b, A::B, C::D) == l :: r <=>
    * ite(b, A, C) == l && ite(b, B, D) == r *)
-  | ( Triop (Ite, b, (BitVec _ as t), (BitVec _ as e)), Binop (BvConcat, l, r)
-    | Binop (BvConcat, l, r), Triop (Ite, b, (BitVec _ as t), (BitVec _ as e)) )
+  | (Ite (b, (BitVec _ as t), (BitVec _ as e)), BvConcat (l, r)) [@comm]
     [@r ite_concat] ->
       let size_r = size r in
       let size_l = size l in
@@ -330,22 +278,21 @@ let[@spec Binop (Eq, v1, v2) <| TBool] sem_eq (v1 : t) (v2 : t) : t =
       let e_r = bv_extract 0 (size_r - 1) e in
       let e_l = bv_extract size_r (size_r + size_l - 1) e in
       b_and (sem_eq (b_ite b t_l e_l) l) (sem_eq (b_ite b t_r e_r) r)
-  | Binop (BvConcat, l1, r1), Binop (BvConcat, l2, r2) [@r concat_concat]
+  | BvConcat (l1, r1), BvConcat (l2, r2) [@r concat_concat]
     when size l1 = size l2 ->
       b_and (sem_eq l1 l2) (sem_eq r1 r2)
   (* BvOfBool and If-then-elses *)
-  | Triop (Ite, b, l, t), (BitVec _ | Bool _) [@r ite_const_l] ->
+  | Ite (b, l, t), (BitVec _ | Bool _) [@r ite_const_l] ->
       b_ite b (sem_eq l v2) (sem_eq t v2)
-  | (BitVec _ | Bool _), Triop (Ite, b, l, t) [@r ite_const_r] ->
+  | (BitVec _ | Bool _), Ite (b, l, t) [@r ite_const_r] ->
       b_ite b (sem_eq v1 l) (sem_eq v1 t)
-  | Bool false, _ [@r false_l] -> b_not v2
-  | _, Bool false [@r false_r] -> b_not v1
-  | Bool true, _ [@r true_l] -> v2
-  | _, Bool true [@r true_r] -> v1
-  | Unop (BvOfBool _, b), Unop (BvOfBool _, c) [@r of_bools] -> sem_eq b c
-  | Unop (Not, b), Unop (Not, c) [@r nots] -> sem_eq b c
-  | (Unop (BvOfBool _, b), BitVec z | BitVec z, Unop (BvOfBool _, b))
-    [@r of_bool_const] ->
+  | false, _ [@r false_l] -> b_not v2
+  | _, false [@r false_r] -> b_not v1
+  | true, _ [@r true_l] -> v2
+  | _, true [@r true_r] -> v1
+  | BvOfBool (_, b), BvOfBool (_, c) [@r of_bools] -> sem_eq b c
+  | Not b, Not c [@r nots] -> sem_eq b c
+  | (BvOfBool (_, b), BitVec z) [@comm] [@r of_bool_const] ->
       if z = 1 then b else if z = 0 then b_not b else v_false
   (* special case: for BVs, check if we can infer the most significant set bits
      and extract *)
@@ -366,7 +313,7 @@ let[@spec Exists (binders, body) <| TBool] b_mk_exists
   | [] [@r empty] -> body
   | binders [@r default] -> Exists (binders, body) <| TBool
 
-let[@spec Binop (Eq, v1, v2) <| TBool] sem_eq_untyped (v1 : t) (v2 : t) : t =
+let[@spec Eq (v1, v2) <| TBool] sem_eq_untyped (v1 : t) (v2 : t) : t =
   if ty v1 = ty v2 then sem_eq v1 v2 else v_false
 
 (* [distinct_check_one a rest] and [distinct_check l] go through the pairs of
@@ -388,11 +335,11 @@ let rec distinct_check (l : t list) : bool option =
       | Some true -> distinct_check rest
       | r -> r)
 
-let[@spec Nop (Distinct, l) <| TBool] b_distinct (l : t list) : t =
+let[@spec Distinct l <| TBool] b_distinct (l : t list) : t =
   match l with
   | ([] | [ _ ]) [@r small] -> v_true
   | _ [@r default] -> (
       match distinct_check l with
       | Some true -> v_true
       | Some false -> v_false
-      | None -> Nop (Distinct, sort_by_tag l) <| TBool)
+      | None -> Distinct (sort_by_tag l) <| TBool)

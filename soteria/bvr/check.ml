@@ -107,18 +107,91 @@ let split_ppat (p : pattern) =
 let split_pexp (e : expression) =
   match e.pexp_desc with Pexp_tuple l -> Some l | _ -> None
 
-(** Converts a pattern at the expected type, returning it and its binders. *)
+(** Operators can be used directly as node constructors: [Add (c, l, r)] stands
+    for [Binop (Add c, l, r)], [Not p] for [Unop (Not, p)], etc. *)
+let node_of_op (op : constr) =
+  let kind name = Option.get (find_constr name) in
+  match op.c_res with
+  | TData "unop" -> Some (kind "Unop", [ TTerm ])
+  | TData "binop" -> Some (kind "Binop", [ TTerm; TTerm ])
+  | TData "triop" -> Some (kind "Triop", [ TTerm; TTerm; TTerm ])
+  | TData "nop" -> Some (kind "Nop", [ TList TTerm ])
+  | _ -> None
+
+let has_attr name (attrs : attributes) =
+  List.exists (fun (a : attribute) -> a.attr_name.txt = name) attrs
+
+let strip_attr name (p : pattern) =
+  {
+    p with
+    ppat_attributes =
+      List.filter
+        (fun (a : attribute) -> a.attr_name.txt <> name)
+        p.ppat_attributes;
+  }
+
+(** Converts a pattern at the expected type. *)
 let rec pat (expected : Syntax.ty) (p : pattern) : Syntax.pat =
+  if has_attr "comm" p.ppat_attributes then
+    (* [p [@comm]]: the operands of a binary operator, or the components of a
+       pair, in either order *)
+    let q = pat expected (strip_attr "comm" p) in
+    let swapped =
+      match q.p with
+      | PTuple [ a; b ] -> PTuple [ b; a ]
+      | PConstr (({ c_name = "Binop"; _ } as c), [ op; a; b ]) ->
+          PConstr (c, [ op; b; a ])
+      | _ -> error p.ppat_loc "[@comm] applies to pairs and binary operators"
+    in
+    { q with p = POr (q, { q with p = swapped }) }
+  else pat' expected p
+
+and pat' (expected : Syntax.ty) (p : pattern) : Syntax.pat =
   let loc = p.ppat_loc in
   let mk d = { p = d; pty = expected; ploc = loc } in
+  let lit_node kname arg_pat =
+    let c = Option.get (find_constr kname) in
+    mk
+      (PConstr
+         (c, [ { p = arg_pat; pty = arg_ty (List.hd c.c_args); ploc = loc } ]))
+  in
   match p.ppat_desc with
+  | Ppat_constant (Pconst_integer (s, None)) when expected = TTerm ->
+      lit_node "BitVec" (PInt (Z.of_string s))
+  | Ppat_construct ({ txt = Lident (("true" | "false") as b); _ }, None)
+    when expected = TTerm ->
+      lit_node "Bool" (PBool (b = "true"))
+  | Ppat_construct ({ txt = Lident name; _ }, arg)
+    when (expected = TTerm || expected = TKind)
+         && Option.fold ~none:false
+              ~some:(fun c -> Option.is_some (node_of_op c))
+              (find_constr name) ->
+      let op = Option.get (find_constr name) in
+      let kc, operand_tys = Option.get (node_of_op op) in
+      let nparams = List.length op.c_args in
+      let n = nparams + List.length operand_tys in
+      let args =
+        match arg with
+        | None -> error loc "%s: missing operands" name
+        | Some (_, ({ ppat_desc = Ppat_any; _ } as a)) ->
+            List.init n (fun _ -> a)
+        | Some (_, a) when n = 1 -> [ a ]
+        | Some (_, { ppat_desc = Ppat_tuple l; _ }) when List.length l = n -> l
+        | Some _ -> error loc "%s expects %d arguments" name n
+      in
+      let params = List.filteri (fun i _ -> i < nparams) args in
+      let operands = List.filteri (fun i _ -> i >= nparams) args in
+      let params = List.map2 (fun a p -> pat (arg_ty a) p) op.c_args params in
+      let op_pat = { p = PConstr (op, params); pty = op.c_res; ploc = loc } in
+      let operands = List.map2 pat operand_tys operands in
+      mk (PConstr (kc, op_pat :: operands))
   | Ppat_any -> mk PAny
   | Ppat_var { txt; _ } -> mk (PVar txt)
   | Ppat_alias (p, { txt; _ }) -> mk (PAs (pat expected p, txt))
   | Ppat_or (p1, p2) ->
       let p1 = pat expected p1 and p2 = pat expected p2 in
       let b1 = binders p1 and b2 = binders p2 in
-      let sort = List.sort compare in
+      let sort = List.sort_uniq compare in
       if sort (List.map fst b1) <> sort (List.map fst b2) then
         error loc "or-pattern alternatives bind different variables";
       List.iter
@@ -185,8 +258,6 @@ let rec pat (expected : Syntax.ty) (p : pattern) : Syntax.pat =
                   error p.ploc
                     "only variables, wildcards and literals can match \
                      machine-integer fields"
-              | Arg TInt, PInt _ ->
-                  error p.ploc "cannot match an arbitrary-precision literal"
               | _ -> ())
             c.c_args args;
           mk (PConstr (c, args)))
@@ -234,9 +305,122 @@ let no_shadow env loc x =
     error loc "%s shadows a global function" x
 
 let add_binders env p =
-  let bs = binders p in
+  let bs =
+    List.fold_left
+      (fun acc (x, b) -> if List.mem_assoc x acc then acc else acc @ [ (x, b) ])
+      [] (binders p)
+  in
   List.iter (fun (x, _) -> no_shadow env p.ploc x) bs;
   { env with vars = List.map (fun (x, (t, _)) -> (x, t)) bs @ env.vars }
+
+(** Types on which [=] and [<>] are allowed: structural equality coincides in
+    OCaml and Lean. *)
+let rec eq_ty = function
+  | TInt | TBool | TUnit | TSty | TData _ -> true
+  | TTuple l -> List.for_all eq_ty l
+  | TOption t -> eq_ty t
+  | TTerm | TKind | TFloat | TVar | TList _ -> false
+
+(* ---------------------------------------------------------------- *)
+(* Desugaring of patterns
+
+   A case is compiled to one case per alternative of its or-patterns (so a
+   guard that fails on one alternative lets the next alternative be tried).
+   Each alternative is then made linear and free of integer literals: a
+   repeated variable is renamed and constrained to be equal to its first
+   occurrence ([equal] for terms), and a literal becomes a variable
+   constrained to be equal to it. These constraints are checked, in order,
+   before the guard. *)
+
+let rec product = function
+  | [] -> [ [] ]
+  | x :: xs ->
+      let rest = product xs in
+      List.concat_map (fun a -> List.map (fun r -> a :: r) rest) x
+
+let rec alternatives (p : Syntax.pat) : Syntax.pat list =
+  let mk d = { p with p = d } in
+  match p.p with
+  | PAny | PVar _ | PInt _ | PBool _ | PUnit | PNone | PNil -> [ p ]
+  | POr (a, b) -> alternatives a @ alternatives b
+  | PAs (q, x) -> List.map (fun q -> mk (PAs (q, x))) (alternatives q)
+  | PTuple l ->
+      List.map (fun l -> mk (PTuple l)) (product (List.map alternatives l))
+  | PSome q -> List.map (fun q -> mk (PSome q)) (alternatives q)
+  | PCons (a, b) ->
+      List.map
+        (function [ a; b ] -> mk (PCons (a, b)) | _ -> assert false)
+        (product [ alternatives a; alternatives b ])
+  | PRecord fs ->
+      List.map
+        (fun ps -> mk (PRecord (List.combine (List.map fst fs) ps)))
+        (product (List.map (fun (_, p) -> alternatives p) fs))
+  | PConstr (c, args) ->
+      List.map
+        (fun l -> mk (PConstr (c, l)))
+        (product (List.map alternatives args))
+
+let fresh_counter = ref 0
+
+let linearize (p : Syntax.pat) : Syntax.pat * Syntax.expr list =
+  let seen = Hashtbl.create 8 and conds = ref [] in
+  let fresh () =
+    incr fresh_counter;
+    Printf.sprintf "bvr__%d" !fresh_counter
+  in
+  let v loc t x = { e = EVar x; ety = t; eloc = loc } in
+  let eq loc t a b =
+    let d =
+      match t with
+      | TTerm -> ECall ("equal", [ a; b ])
+      | t when eq_ty t -> EBinop (Arith Eq, a, b)
+      | t -> error loc "non-linear pattern at type %a" pp_ty t
+    in
+    conds := { e = d; ety = TBool; eloc = loc } :: !conds
+  in
+  let bind (p : Syntax.pat) x =
+    if Hashtbl.mem seen x then (
+      let x' = fresh () in
+      eq p.ploc p.pty (v p.ploc p.pty x) (v p.ploc p.pty x');
+      x')
+    else (
+      Hashtbl.add seen x ();
+      x)
+  in
+  let rec go (p : Syntax.pat) : Syntax.pat =
+    let mk d = { p with p = d } in
+    match p.p with
+    | PAny | PBool _ | PUnit | PNone | PNil -> p
+    | PVar x -> mk (PVar (bind p x))
+    | PInt z ->
+        let x = fresh () in
+        eq p.ploc TInt (v p.ploc TInt x)
+          { e = EInt z; ety = TInt; eloc = p.ploc };
+        mk (PVar x)
+    | PAs (q, x) ->
+        let q = go q in
+        mk (PAs (q, bind p x))
+    | POr _ -> assert false
+    | PTuple l -> mk (PTuple (List.map go l))
+    | PSome q -> mk (PSome (go q))
+    | PCons (a, b) ->
+        let a = go a in
+        mk (PCons (a, go b))
+    | PRecord fs -> mk (PRecord (List.map (fun (f, p) -> (f, go p)) fs))
+    | PConstr (c, args) -> mk (PConstr (c, List.map go args))
+  in
+  let p = go p in
+  (p, List.rev !conds)
+
+let conj (l : Syntax.expr list) : Syntax.expr option =
+  match l with
+  | [] -> None
+  | x :: xs ->
+      Some
+        (List.fold_left
+           (fun acc (y : Syntax.expr) ->
+             { e = EBinop (Arith And, acc, y); ety = TBool; eloc = y.eloc })
+           x xs)
 
 (* ---------------------------------------------------------------- *)
 (* Expressions *)
@@ -246,14 +430,6 @@ let cmp_ops = [ ("<", Lt); ("<=", Le); (">", Gt); (">=", Ge) ]
 
 let bit_ops =
   [ ("land", Land); ("lor", Lor); ("lxor", Lxor); ("lsl", Lsl); ("asr", Asr) ]
-
-(** Types on which [=] and [<>] are allowed: structural equality coincides in
-    OCaml and Lean. *)
-let rec eq_ty = function
-  | TInt | TBool | TUnit | TSty | TData _ -> true
-  | TTuple l -> List.for_all eq_ty l
-  | TOption t -> eq_ty t
-  | TTerm | TKind | TFloat | TVar | TList _ -> false
 
 let rec expr env ?expected (e : expression) : Syntax.expr =
   let loc = e.pexp_loc in
@@ -294,6 +470,40 @@ let rec expr env ?expected (e : expression) : Syntax.expr =
       let h = expr env ?expected:inner h in
       let tl = expr env ~expected:(TList h.ety) tl in
       mk tl.ety (ECons (h, tl))
+  | Pexp_construct ({ txt = Lident name; _ }, arg)
+    when match Option.bind (find_constr name) node_of_op with
+         | None -> false
+         | Some (_, operands) ->
+             let op = Option.get (find_constr name) in
+             let nargs =
+               match arg with
+               | None -> 0
+               | Some { pexp_desc = Pexp_tuple l; _ } -> List.length l
+               | Some _ -> 1
+             in
+             nargs = List.length op.c_args + List.length operands ->
+      let op = Option.get (find_constr name) in
+      let kc, operand_tys = Option.get (node_of_op op) in
+      let args =
+        match arg with
+        | Some { pexp_desc = Pexp_tuple l; _ } -> l
+        | Some a -> [ a ]
+        | None -> []
+      in
+      let nparams = List.length op.c_args in
+      let params = List.filteri (fun i _ -> i < nparams) args in
+      let operands = List.filteri (fun i _ -> i >= nparams) args in
+      let params =
+        List.map2 (fun a e -> expr env ~expected:(arg_ty a) e) op.c_args params
+      in
+      let operands =
+        List.map2 (fun t e -> expr env ~expected:t e) operand_tys operands
+      in
+      mk TKind
+        (EConstr
+           ( kc,
+             { e = EConstr (op, params); ety = op.c_res; eloc = loc }
+             :: operands ))
   | Pexp_construct ({ txt = Lident name; _ }, arg) -> (
       match find_constr name with
       | None -> error loc "unknown constructor %s" name
@@ -393,7 +603,7 @@ let rec expr env ?expected (e : expression) : Syntax.expr =
         | Pexp_tuple l -> List.map (expr env) l
         | _ -> [ expr env scrut ]
       in
-      let cases = List.map (case env ?expected scruts) cases in
+      let cases = List.concat_map (case env ?expected scruts) cases in
       let ety =
         match cases with
         | [] -> error loc "empty match"
@@ -438,13 +648,13 @@ let rec expr env ?expected (e : expression) : Syntax.expr =
       expr env ~expected:t e
   | _ -> error loc "unsupported expression"
 
-and case env ?expected scruts (c : Ppxlib.case) : Syntax.case =
+and case env ?expected scruts (c : Ppxlib.case) : Syntax.case list =
   let loc = c.pc_lhs.ppat_loc in
   (* the rule name is written after the pattern; when the pattern is a tuple
      without parentheses, it is attached to its last component *)
   let rule, lhs =
     match rule_name_of_attrs c.pc_lhs.ppat_attributes with
-    | Some r -> (Some r, { c.pc_lhs with ppat_attributes = [] })
+    | Some r -> (Some r, strip_attr "r" c.pc_lhs)
     | None -> (
         match c.pc_lhs.ppat_desc with
         | Ppat_tuple l -> (
@@ -452,7 +662,7 @@ and case env ?expected scruts (c : Ppxlib.case) : Syntax.case =
             let last = List.hd rev in
             match rule_name_of_attrs last.ppat_attributes with
             | Some r ->
-                let last = { last with ppat_attributes = [] } in
+                let last = strip_attr "r" last in
                 ( Some r,
                   {
                     c.pc_lhs with
@@ -470,7 +680,17 @@ and case env ?expected scruts (c : Ppxlib.case) : Syntax.case =
   let env = add_binders env pat in
   let guard = Option.map (expr env ~expected:TBool) c.pc_guard in
   let body = expr env ?expected c.pc_rhs in
-  { pat; guard; body; rule; cloc = loc }
+  List.map
+    (fun alt ->
+      let pat, conds = linearize alt in
+      {
+        pat;
+        guard = conj (conds @ Option.to_list guard);
+        body;
+        rule;
+        cloc = loc;
+      })
+    (alternatives pat)
 
 and param_of loc (p : function_param) =
   match p.pparam_desc with
@@ -550,7 +770,14 @@ let program (str : structure) : program =
         match si.pstr_desc with
         | Pstr_primitive vd ->
             let pargs, pret = arrow_of_core vd.pval_type in
-            ({ pname = vd.pval_name.txt; pargs; pret } :: prims, raws)
+            ( {
+                pname = vd.pval_name.txt;
+                pargs;
+                pret;
+                oracle = vd.pval_prim = [ "oracle" ];
+              }
+              :: prims,
+              raws )
         | Pstr_value (_, [ vb ]) -> (prims, raw_fn vb :: raws)
         | Pstr_value _ -> error si.pstr_loc "one function per let"
         | _ -> error si.pstr_loc "unsupported top-level item")

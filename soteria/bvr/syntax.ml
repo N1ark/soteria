@@ -248,5 +248,5 @@ type fn = {
   floc : Location.t;
 }
 
-type prim = { pname : string; pargs : ty list; pret : ty }
+type prim = { pname : string; pargs : ty list; pret : ty; oracle : bool }
 type program = { prims : prim list; fns : fn list }

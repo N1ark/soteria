@@ -262,7 +262,15 @@ theorem sem_eq.r_add_add.proof : sem_eq.r_add_add.Stmt := by
       (fun _ _ a1 b1 a2 b2 h1 h2 h3 h4 => ⟨_, _, _, _, h1, h3, h4, h2, by grind⟩)
 
 theorem sem_eq.r_mul_const.proof : sem_eq.r_mul_const.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [sem_eq.r_mul_const] at h
+  rcases orElse_eq_some4 h with h | h | h | h <;> split at h <;>
+    simp only [reduceCtorEq, Option.ite_none_right_eq_some, Option.some.injEq] at h <;>
+    obtain ⟨hck, rfl⟩ := h
+  · exact Refines.eq_mul_const hO (Or.inl ⟨rfl, rfl⟩) hck
+  · exact Refines.eq_mul_const hO (Or.inr ⟨rfl, rfl⟩) hck
+  · exact Refines.trans Refines.eq_symm (Refines.eq_mul_const hO (Or.inl ⟨rfl, rfl⟩) hck)
+  · exact Refines.trans Refines.eq_symm (Refines.eq_mul_const hO (Or.inr ⟨rfl, rfl⟩) hck)
 
 theorem sem_eq.r_ite_ite.proof : sem_eq.r_ite_ite.Stmt := by
   intro FS O hO v1 v2 res h

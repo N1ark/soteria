@@ -991,8 +991,9 @@ theorem TB_div_inv {s a b t n} (h : TB (.mk (.binop (.div s) a b) t) n) : 0 < n 
   TB_arith_inv (op := .div s) trivial h
 
 /-- Rewrites the size of a term of known width. -/
-macro "rsz " h:term : tactic =>
-  `(tactic| ((try rw [TB_size $h]); (try rw [TB_mk_size $h]); (try rw [TB_sz $h])))
+macro "rsz " h:term:max loc:(Lean.Parser.Tactic.location)? : tactic =>
+  `(tactic| (try rw [TB_size $h] $(loc)?) <;> (try rw [TB_mk_size $h] $(loc)?) <;>
+    (try rw [TB_sz $h] $(loc)?))
 
 @[simp] theorem bvz_zero' {n : Nat} (s : Bool) : bvz s (0#n) = 0 := by
   cases s <;> simp [bvz]
@@ -1001,6 +1002,13 @@ theorem bvz_false_one {n : Nat} (hn : 0 < n) : bvz false (1#n) = 1 := by
   simp only [bvz, Bool.false_eq_true, ite_false, BitVec.toNat_ofNat]
   have : 1 < 2 ^ n := Nat.one_lt_two_pow (by omega)
   rw [Nat.mod_eq_of_lt this]; rfl
+
+theorem Refines.ite_split {FS : FloatSem} {spec a b : Term} {c : Prop} [Decidable c]
+    (h1 : c → Refines FS spec a) (h2 : ¬c → Refines FS spec b) :
+    Refines FS spec (if c then a else b) := by
+  split
+  · exact h1 ‹_›
+  · exact h2 ‹_›
 
 end CompareL
 end Bvr

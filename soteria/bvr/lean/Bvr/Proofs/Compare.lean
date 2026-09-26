@@ -514,19 +514,375 @@ theorem bv_lt.r_max_r.proof : bv_lt.r_max_r.Stmt := by
   · have : bvz s x ≠ bvz s y := fun h => e (bvz_inj.1 h)
     simp [e]; omega
 
--- UNSOUND: when c1 = 0. Take signed = true, 8 bits, v1 = BitVec 0 and v2 = Mul (checked_signed,
--- x, BitVec 0) with x ↦ 0#8. c1 = c2 = 0, so the rule returns bv_lt true (bv_div true v1 vc1) x.
--- The spec evaluates to 0 <s 0 = false, but bv_div true 0 0 is smtSDiv 0 0 = -1, and -1 <s 0 is
--- true.
 theorem bv_lt.r_const_mul.proof : bv_lt.r_const_mul.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_lt.r_const_mul] at h
+  replace h := orElse_eq_some h
+  rcases h with h | h <;> split at h <;> (try split at h) <;>
+    simp only [Option.some.injEq, reduceCtorEq] at h <;> rename_i hc <;> subst h <;>
+    rw [Bool.and_eq_true] at hc <;> obtain ⟨hc, hc0⟩ := hc <;> have hc0 := of_decide_eq_true hc0
+  · refine Refines.ite_split (fun hA => Refines.ite_split (fun hneg => Refines.ite_split (fun hsp => ?_) (fun hsp => ?_)) (fun hneg => ?_)) (fun hA => Refines.ite_split (fun hneg => ?_) (fun hneg => ?_))
+    · refine cmp_refines_lt (fun N hN h1 h2 => TBool_true) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xx, xc, ex, ec, hy, hr1, hr2⟩ := eval_mul_inv s hc e2
+      have hC1 := lit_val' s (TB_mul_inv h2).2.2 ec
+      have hC2 := lit_val' s h1 e1
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h2).2.2 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hsp
+      simp only [TB_size h1, hC1, hC2] at hsp
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      obtain ⟨rfl, hs1, hs2⟩ := hsp
+      rw [hs1] at hy hr1 hr2
+      have := two_pow_succ_pred (N := n) hn0
+      simp only [min_for_eq, max_for_eq, ite_true] at *
+      simp; omega
+    · refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_lt hO hN (TB_mul_inv h2).2.1 (TB_O_div hO hN h1 (TB_mul_inv h2).2.2)) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xx, xc, ex, ec, hy, hr1, hr2⟩ := eval_mul_inv s hc e2
+      have hC1 := lit_val' s (TB_mul_inv h2).2.2 ec
+      have hC2 := lit_val' s h1 e1
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h2).2.2 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hsp
+      simp only [TB_size h1, hC1, hC2] at hsp
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_lt hO hN (TB_mul_inv h2).2.1 (TB_O_div hO hN h1 (TB_mul_inv h2).2.2) ex (eval_O_div hO hN h1 (TB_mul_inv h2).2.2 e1 ec), bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s x) (bvz s xc) (bvz s xx) hnz
+    · refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_lt hO hN (TB_O_div hO hN h1 (TB_mul_inv h2).2.2) (TB_mul_inv h2).2.1) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xx, xc, ex, ec, hy, hr1, hr2⟩ := eval_mul_inv s hc e2
+      have hC1 := lit_val' s (TB_mul_inv h2).2.2 ec
+      have hC2 := lit_val' s h1 e1
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h2).2.2 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_lt hO hN (TB_O_div hO hN h1 (TB_mul_inv h2).2.2) (TB_mul_inv h2).2.1 (eval_O_div hO hN h1 (TB_mul_inv h2).2.2 e1 ec) ex, bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s x) (bvz s xc) (bvz s xx) hnz
+    · refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_leq hO hN (TB_mul_inv h2).2.1 (TB_O_div hO hN h1 (TB_mul_inv h2).2.2)) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xx, xc, ex, ec, hy, hr1, hr2⟩ := eval_mul_inv s hc e2
+      have hC1 := lit_val' s (TB_mul_inv h2).2.2 ec
+      have hC2 := lit_val' s h1 e1
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h2).2.2 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_leq hO hN (TB_mul_inv h2).2.1 (TB_O_div hO hN h1 (TB_mul_inv h2).2.2) ex (eval_O_div hO hN h1 (TB_mul_inv h2).2.2 e1 ec), bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s x) (bvz s xc) (bvz s xx) hnz
+    · refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_leq hO hN (TB_O_div hO hN h1 (TB_mul_inv h2).2.2) (TB_mul_inv h2).2.1) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xx, xc, ex, ec, hy, hr1, hr2⟩ := eval_mul_inv s hc e2
+      have hC1 := lit_val' s (TB_mul_inv h2).2.2 ec
+      have hC2 := lit_val' s h1 e1
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h2).2.2 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_leq hO hN (TB_O_div hO hN h1 (TB_mul_inv h2).2.2) (TB_mul_inv h2).2.1 (eval_O_div hO hN h1 (TB_mul_inv h2).2.2 e1 ec) ex, bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s x) (bvz s xc) (bvz s xx) hnz
+  · refine Refines.ite_split (fun hA => Refines.ite_split (fun hneg => Refines.ite_split (fun hsp => ?_) (fun hsp => ?_)) (fun hneg => ?_)) (fun hA => Refines.ite_split (fun hneg => ?_) (fun hneg => ?_))
+    · refine cmp_refines_lt (fun N hN h1 h2 => TBool_true) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xc, xx, ec, ex, hy, hr1, hr2⟩ := eval_mul_inv s hc e2
+      rw [Int.mul_comm] at hy hr1 hr2
+      have hC1 := lit_val' s (TB_mul_inv h2).2.1 ec
+      have hC2 := lit_val' s h1 e1
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h2).2.1 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hsp
+      simp only [TB_size h1, hC1, hC2] at hsp
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      obtain ⟨rfl, hs1, hs2⟩ := hsp
+      rw [hs1] at hy hr1 hr2
+      have := two_pow_succ_pred (N := n) hn0
+      simp only [min_for_eq, max_for_eq, ite_true] at *
+      simp; omega
+    · refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_lt hO hN (TB_mul_inv h2).2.2 (TB_O_div hO hN h1 (TB_mul_inv h2).2.1)) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xc, xx, ec, ex, hy, hr1, hr2⟩ := eval_mul_inv s hc e2
+      rw [Int.mul_comm] at hy hr1 hr2
+      have hC1 := lit_val' s (TB_mul_inv h2).2.1 ec
+      have hC2 := lit_val' s h1 e1
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h2).2.1 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hsp
+      simp only [TB_size h1, hC1, hC2] at hsp
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_lt hO hN (TB_mul_inv h2).2.2 (TB_O_div hO hN h1 (TB_mul_inv h2).2.1) ex (eval_O_div hO hN h1 (TB_mul_inv h2).2.1 e1 ec), bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s x) (bvz s xc) (bvz s xx) hnz
+    · refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_lt hO hN (TB_O_div hO hN h1 (TB_mul_inv h2).2.1) (TB_mul_inv h2).2.2) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xc, xx, ec, ex, hy, hr1, hr2⟩ := eval_mul_inv s hc e2
+      rw [Int.mul_comm] at hy hr1 hr2
+      have hC1 := lit_val' s (TB_mul_inv h2).2.1 ec
+      have hC2 := lit_val' s h1 e1
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h2).2.1 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_lt hO hN (TB_O_div hO hN h1 (TB_mul_inv h2).2.1) (TB_mul_inv h2).2.2 (eval_O_div hO hN h1 (TB_mul_inv h2).2.1 e1 ec) ex, bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s x) (bvz s xc) (bvz s xx) hnz
+    · refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_leq hO hN (TB_mul_inv h2).2.2 (TB_O_div hO hN h1 (TB_mul_inv h2).2.1)) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xc, xx, ec, ex, hy, hr1, hr2⟩ := eval_mul_inv s hc e2
+      rw [Int.mul_comm] at hy hr1 hr2
+      have hC1 := lit_val' s (TB_mul_inv h2).2.1 ec
+      have hC2 := lit_val' s h1 e1
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h2).2.1 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_leq hO hN (TB_mul_inv h2).2.2 (TB_O_div hO hN h1 (TB_mul_inv h2).2.1) ex (eval_O_div hO hN h1 (TB_mul_inv h2).2.1 e1 ec), bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s x) (bvz s xc) (bvz s xx) hnz
+    · refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_leq hO hN (TB_O_div hO hN h1 (TB_mul_inv h2).2.1) (TB_mul_inv h2).2.2) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xc, xx, ec, ex, hy, hr1, hr2⟩ := eval_mul_inv s hc e2
+      rw [Int.mul_comm] at hy hr1 hr2
+      have hC1 := lit_val' s (TB_mul_inv h2).2.1 ec
+      have hC2 := lit_val' s h1 e1
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h2).2.1 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_leq hO hN (TB_O_div hO hN h1 (TB_mul_inv h2).2.1) (TB_mul_inv h2).2.2 (eval_O_div hO hN h1 (TB_mul_inv h2).2.1 e1 ec) ex, bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s x) (bvz s xc) (bvz s xx) hnz
 
--- UNSOUND: when c1 = 0. Take signed = false, 8 bits, v1 = Mul (checked_unsigned, x, BitVec 0)
--- and v2 = BitVec 0 with x ↦ 0#8. c1 = c2 = 0 (divisible), so the rule returns
--- bv_lt false x (bv_div false v2 vc1). The spec evaluates to 0 <u 0 = false, but
--- bv_div false 0 0 is smtUDiv 0 0 = 255, and 0 <u 255 is true.
 theorem bv_lt.r_mul_const.proof : bv_lt.r_mul_const.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_lt.r_mul_const] at h
+  replace h := orElse_eq_some h
+  rcases h with h | h <;> split at h <;> (try split at h) <;>
+    simp only [Option.some.injEq, reduceCtorEq] at h <;> rename_i hc <;> subst h <;>
+    rw [Bool.and_eq_true] at hc <;> obtain ⟨hc, hc0⟩ := hc <;> have hc0 := of_decide_eq_true hc0
+  · refine Refines.ite_split (fun hA => Refines.ite_split (fun hneg => Refines.ite_split (fun hsp => ?_) (fun hsp => ?_)) (fun hneg => ?_)) (fun hA => Refines.ite_split (fun hneg => ?_) (fun hneg => ?_))
+    · refine cmp_refines_lt (fun N hN h1 h2 => TBool_false) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xx, xc, ex, ec, hy, hr1, hr2⟩ := eval_mul_inv s hc e1
+      have hC1 := lit_val' s (TB_mul_inv h1).2.2 ec
+      have hC2 := lit_val' s h2 e2
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h1).2.2 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hsp
+      simp only [TB_size h1, hC1, hC2] at hsp
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      obtain ⟨rfl, hs1, hs2⟩ := hsp
+      rw [hs1] at hy hr1 hr2
+      have := two_pow_succ_pred (N := n) hn0
+      simp only [min_for_eq, max_for_eq, ite_true] at *
+      simp; omega
+    · refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_lt hO hN (TB_O_div hO hN h2 (TB_mul_inv h1).2.2) (TB_mul_inv h1).2.1) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xx, xc, ex, ec, hy, hr1, hr2⟩ := eval_mul_inv s hc e1
+      have hC1 := lit_val' s (TB_mul_inv h1).2.2 ec
+      have hC2 := lit_val' s h2 e2
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h1).2.2 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hsp
+      simp only [TB_size h1, hC1, hC2] at hsp
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_lt hO hN (TB_O_div hO hN h2 (TB_mul_inv h1).2.2) (TB_mul_inv h1).2.1 (eval_O_div hO hN h2 (TB_mul_inv h1).2.2 e2 ec) ex, bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s y) (bvz s xc) (bvz s xx) hnz
+    · refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_lt hO hN (TB_mul_inv h1).2.1 (TB_O_div hO hN h2 (TB_mul_inv h1).2.2)) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xx, xc, ex, ec, hy, hr1, hr2⟩ := eval_mul_inv s hc e1
+      have hC1 := lit_val' s (TB_mul_inv h1).2.2 ec
+      have hC2 := lit_val' s h2 e2
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h1).2.2 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_lt hO hN (TB_mul_inv h1).2.1 (TB_O_div hO hN h2 (TB_mul_inv h1).2.2) ex (eval_O_div hO hN h2 (TB_mul_inv h1).2.2 e2 ec), bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s y) (bvz s xc) (bvz s xx) hnz
+    · refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_leq hO hN (TB_O_div hO hN h2 (TB_mul_inv h1).2.2) (TB_mul_inv h1).2.1) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xx, xc, ex, ec, hy, hr1, hr2⟩ := eval_mul_inv s hc e1
+      have hC1 := lit_val' s (TB_mul_inv h1).2.2 ec
+      have hC2 := lit_val' s h2 e2
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h1).2.2 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_leq hO hN (TB_O_div hO hN h2 (TB_mul_inv h1).2.2) (TB_mul_inv h1).2.1 (eval_O_div hO hN h2 (TB_mul_inv h1).2.2 e2 ec) ex, bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s y) (bvz s xc) (bvz s xx) hnz
+    · refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_leq hO hN (TB_mul_inv h1).2.1 (TB_O_div hO hN h2 (TB_mul_inv h1).2.2)) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xx, xc, ex, ec, hy, hr1, hr2⟩ := eval_mul_inv s hc e1
+      have hC1 := lit_val' s (TB_mul_inv h1).2.2 ec
+      have hC2 := lit_val' s h2 e2
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h1).2.2 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_leq hO hN (TB_mul_inv h1).2.1 (TB_O_div hO hN h2 (TB_mul_inv h1).2.2) ex (eval_O_div hO hN h2 (TB_mul_inv h1).2.2 e2 ec), bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s y) (bvz s xc) (bvz s xx) hnz
+  · refine Refines.ite_split (fun hA => Refines.ite_split (fun hneg => Refines.ite_split (fun hsp => ?_) (fun hsp => ?_)) (fun hneg => ?_)) (fun hA => Refines.ite_split (fun hneg => ?_) (fun hneg => ?_))
+    · refine cmp_refines_lt (fun N hN h1 h2 => TBool_false) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xc, xx, ec, ex, hy, hr1, hr2⟩ := eval_mul_inv s hc e1
+      rw [Int.mul_comm] at hy hr1 hr2
+      have hC1 := lit_val' s (TB_mul_inv h1).2.1 ec
+      have hC2 := lit_val' s h2 e2
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h1).2.1 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hsp
+      simp only [TB_size h1, hC1, hC2] at hsp
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      obtain ⟨rfl, hs1, hs2⟩ := hsp
+      rw [hs1] at hy hr1 hr2
+      have := two_pow_succ_pred (N := n) hn0
+      simp only [min_for_eq, max_for_eq, ite_true] at *
+      simp; omega
+    · refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_lt hO hN (TB_O_div hO hN h2 (TB_mul_inv h1).2.1) (TB_mul_inv h1).2.2) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xc, xx, ec, ex, hy, hr1, hr2⟩ := eval_mul_inv s hc e1
+      rw [Int.mul_comm] at hy hr1 hr2
+      have hC1 := lit_val' s (TB_mul_inv h1).2.1 ec
+      have hC2 := lit_val' s h2 e2
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h1).2.1 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hsp
+      simp only [TB_size h1, hC1, hC2] at hsp
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_lt hO hN (TB_O_div hO hN h2 (TB_mul_inv h1).2.1) (TB_mul_inv h1).2.2 (eval_O_div hO hN h2 (TB_mul_inv h1).2.1 e2 ec) ex, bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s y) (bvz s xc) (bvz s xx) hnz
+    · refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_lt hO hN (TB_mul_inv h1).2.2 (TB_O_div hO hN h2 (TB_mul_inv h1).2.1)) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xc, xx, ec, ex, hy, hr1, hr2⟩ := eval_mul_inv s hc e1
+      rw [Int.mul_comm] at hy hr1 hr2
+      have hC1 := lit_val' s (TB_mul_inv h1).2.1 ec
+      have hC2 := lit_val' s h2 e2
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h1).2.1 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_lt hO hN (TB_mul_inv h1).2.2 (TB_O_div hO hN h2 (TB_mul_inv h1).2.1) ex (eval_O_div hO hN h2 (TB_mul_inv h1).2.1 e2 ec), bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s y) (bvz s xc) (bvz s xx) hnz
+    · refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_leq hO hN (TB_O_div hO hN h2 (TB_mul_inv h1).2.1) (TB_mul_inv h1).2.2) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xc, xx, ec, ex, hy, hr1, hr2⟩ := eval_mul_inv s hc e1
+      rw [Int.mul_comm] at hy hr1 hr2
+      have hC1 := lit_val' s (TB_mul_inv h1).2.1 ec
+      have hC2 := lit_val' s h2 e2
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h1).2.1 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_leq hO hN (TB_O_div hO hN h2 (TB_mul_inv h1).2.1) (TB_mul_inv h1).2.2 (eval_O_div hO hN h2 (TB_mul_inv h1).2.1 e2 ec) ex, bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s y) (bvz s xc) (bvz s xx) hnz
+    · refine cmp_refines_lt (fun N hN h1 h2 => TBool_O_leq hO hN (TB_mul_inv h1).2.2 (TB_O_div hO hN h2 (TB_mul_inv h1).2.1)) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xc, xx, ec, ex, hy, hr1, hr2⟩ := eval_mul_inv s hc e1
+      rw [Int.mul_comm] at hy hr1 hr2
+      have hC1 := lit_val' s (TB_mul_inv h1).2.1 ec
+      have hC2 := lit_val' s h2 e2
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h1).2.1 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_leq hO hN (TB_mul_inv h1).2.2 (TB_O_div hO hN h2 (TB_mul_inv h1).2.1) ex (eval_O_div hO hN h2 (TB_mul_inv h1).2.1 e2 ec), bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s y) (bvz s xc) (bvz s xx) hnz
 
 -- UNSOUND: when a is negative (signed). Take signed = true, 8 bits, v1 = Mul (checked_signed,
 -- a, x), v2 = Mul (checked_signed, a, y) with a = BitVec 255 (-1, so sure_neq a 0), x ↦ 1#8 and
@@ -1079,19 +1435,539 @@ theorem bv_leq.r_max_r.proof : bv_leq.r_max_r.Stmt := by
   simp only [eval_v_true, eval_v_false, Option.some.injEq, Val.bool.injEq]
   symm; simp only [decide_eq_true_eq, decide_eq_false_iff_not]; omega
 
--- UNSOUND: when c1 = 0. Take signed = false, 8 bits, v1 = BitVec 0 and v2 = Mul
--- (checked_unsigned, x, BitVec 0) with x ↦ 0#8. c1 = c2 = 0 (divisible), so the rule returns
--- bv_leq false (bv_div false v1 vc1) x. The spec evaluates to 0 ≤u 0 = true, but
--- bv_div false 0 0 is smtUDiv 0 0 = 255, and 255 ≤u 0 is false.
 theorem bv_leq.r_const_mul.proof : bv_leq.r_const_mul.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_leq.r_const_mul] at h
+  replace h := orElse_eq_some h
+  rcases h with h | h <;> split at h <;> (try split at h) <;>
+    simp only [Option.some.injEq, reduceCtorEq] at h <;> rename_i hc <;> subst h <;>
+    rw [Bool.and_eq_true] at hc <;> obtain ⟨hc, hc0⟩ := hc <;> have hc0 := of_decide_eq_true hc0
+  · refine Refines.ite_split (fun hA => Refines.ite_split (fun hneg => Refines.ite_split (fun hsp => ?_) (fun hsp => ?_)) (fun hneg => ?_)) (fun hA => Refines.ite_split (fun hneg => Refines.ite_split (fun hc2 => ?_) (fun hc2 => ?_)) (fun hneg => Refines.ite_split (fun hc2 => ?_) (fun hc2 => ?_)))
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_true) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xx, xc, ex, ec, hy, hr1, hr2⟩ := eval_mul_inv s hc e2
+      have hC1 := lit_val' s (TB_mul_inv h2).2.2 ec
+      have hC2 := lit_val' s h1 e1
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h2).2.2 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hsp
+      simp only [TB_size h1, hC1, hC2] at hsp
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      obtain ⟨rfl, hs1, hs2⟩ := hsp
+      rw [hs1] at hy hr1 hr2
+      have := two_pow_succ_pred (N := n) hn0
+      simp only [min_for_eq, max_for_eq, ite_true] at *
+      simp; omega
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_leq hO hN (TB_mul_inv h2).2.1 (TB_O_div hO hN h1 (TB_mul_inv h2).2.2)) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xx, xc, ex, ec, hy, hr1, hr2⟩ := eval_mul_inv s hc e2
+      have hC1 := lit_val' s (TB_mul_inv h2).2.2 ec
+      have hC2 := lit_val' s h1 e1
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h2).2.2 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hsp
+      simp only [TB_size h1, hC1, hC2] at hsp
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_leq hO hN (TB_mul_inv h2).2.1 (TB_O_div hO hN h1 (TB_mul_inv h2).2.2) ex (eval_O_div hO hN h1 (TB_mul_inv h2).2.2 e1 ec), bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s x) (bvz s xc) (bvz s xx) hnz
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_leq hO hN (TB_O_div hO hN h1 (TB_mul_inv h2).2.2) (TB_mul_inv h2).2.1) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xx, xc, ex, ec, hy, hr1, hr2⟩ := eval_mul_inv s hc e2
+      have hC1 := lit_val' s (TB_mul_inv h2).2.2 ec
+      have hC2 := lit_val' s h1 e1
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h2).2.2 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_leq hO hN (TB_O_div hO hN h1 (TB_mul_inv h2).2.2) (TB_mul_inv h2).2.1 (eval_O_div hO hN h1 (TB_mul_inv h2).2.2 e1 ec) ex, bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s x) (bvz s xc) (bvz s xx) hnz
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_leq hO hN (TB_mul_inv h2).2.1 (TB_O_div hO hN h1 (TB_mul_inv h2).2.2)) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xx, xc, ex, ec, hy, hr1, hr2⟩ := eval_mul_inv s hc e2
+      have hC1 := lit_val' s (TB_mul_inv h2).2.2 ec
+      have hC2 := lit_val' s h1 e1
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h2).2.2 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hc2
+      simp only [TB_size h1, hC1, hC2] at hc2
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_leq hO hN (TB_mul_inv h2).2.1 (TB_O_div hO hN h1 (TB_mul_inv h2).2.2) ex (eval_O_div hO hN h1 (TB_mul_inv h2).2.2 e1 ec), bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s x) (bvz s xc) (bvz s xx) hnz
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_lt hO hN (TB_mul_inv h2).2.1 (TB_O_div hO hN h1 (TB_mul_inv h2).2.2)) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xx, xc, ex, ec, hy, hr1, hr2⟩ := eval_mul_inv s hc e2
+      have hC1 := lit_val' s (TB_mul_inv h2).2.2 ec
+      have hC2 := lit_val' s h1 e1
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h2).2.2 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hc2
+      simp only [TB_size h1, hC1, hC2] at hc2
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_lt hO hN (TB_mul_inv h2).2.1 (TB_O_div hO hN h1 (TB_mul_inv h2).2.2) ex (eval_O_div hO hN h1 (TB_mul_inv h2).2.2 e1 ec), bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s x) (bvz s xc) (bvz s xx) hnz
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_leq hO hN (TB_O_div hO hN h1 (TB_mul_inv h2).2.2) (TB_mul_inv h2).2.1) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xx, xc, ex, ec, hy, hr1, hr2⟩ := eval_mul_inv s hc e2
+      have hC1 := lit_val' s (TB_mul_inv h2).2.2 ec
+      have hC2 := lit_val' s h1 e1
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h2).2.2 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hc2
+      simp only [TB_size h1, hC1, hC2] at hc2
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_leq hO hN (TB_O_div hO hN h1 (TB_mul_inv h2).2.2) (TB_mul_inv h2).2.1 (eval_O_div hO hN h1 (TB_mul_inv h2).2.2 e1 ec) ex, bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s x) (bvz s xc) (bvz s xx) hnz
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_lt hO hN (TB_O_div hO hN h1 (TB_mul_inv h2).2.2) (TB_mul_inv h2).2.1) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xx, xc, ex, ec, hy, hr1, hr2⟩ := eval_mul_inv s hc e2
+      have hC1 := lit_val' s (TB_mul_inv h2).2.2 ec
+      have hC2 := lit_val' s h1 e1
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h2).2.2 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hc2
+      simp only [TB_size h1, hC1, hC2] at hc2
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_lt hO hN (TB_O_div hO hN h1 (TB_mul_inv h2).2.2) (TB_mul_inv h2).2.1 (eval_O_div hO hN h1 (TB_mul_inv h2).2.2 e1 ec) ex, bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s x) (bvz s xc) (bvz s xx) hnz
+  · refine Refines.ite_split (fun hA => Refines.ite_split (fun hneg => Refines.ite_split (fun hsp => ?_) (fun hsp => ?_)) (fun hneg => ?_)) (fun hA => Refines.ite_split (fun hneg => Refines.ite_split (fun hc2 => ?_) (fun hc2 => ?_)) (fun hneg => Refines.ite_split (fun hc2 => ?_) (fun hc2 => ?_)))
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_true) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xc, xx, ec, ex, hy, hr1, hr2⟩ := eval_mul_inv s hc e2
+      rw [Int.mul_comm] at hy hr1 hr2
+      have hC1 := lit_val' s (TB_mul_inv h2).2.1 ec
+      have hC2 := lit_val' s h1 e1
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h2).2.1 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hsp
+      simp only [TB_size h1, hC1, hC2] at hsp
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      obtain ⟨rfl, hs1, hs2⟩ := hsp
+      rw [hs1] at hy hr1 hr2
+      have := two_pow_succ_pred (N := n) hn0
+      simp only [min_for_eq, max_for_eq, ite_true] at *
+      simp; omega
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_leq hO hN (TB_mul_inv h2).2.2 (TB_O_div hO hN h1 (TB_mul_inv h2).2.1)) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xc, xx, ec, ex, hy, hr1, hr2⟩ := eval_mul_inv s hc e2
+      rw [Int.mul_comm] at hy hr1 hr2
+      have hC1 := lit_val' s (TB_mul_inv h2).2.1 ec
+      have hC2 := lit_val' s h1 e1
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h2).2.1 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hsp
+      simp only [TB_size h1, hC1, hC2] at hsp
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_leq hO hN (TB_mul_inv h2).2.2 (TB_O_div hO hN h1 (TB_mul_inv h2).2.1) ex (eval_O_div hO hN h1 (TB_mul_inv h2).2.1 e1 ec), bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s x) (bvz s xc) (bvz s xx) hnz
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_leq hO hN (TB_O_div hO hN h1 (TB_mul_inv h2).2.1) (TB_mul_inv h2).2.2) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xc, xx, ec, ex, hy, hr1, hr2⟩ := eval_mul_inv s hc e2
+      rw [Int.mul_comm] at hy hr1 hr2
+      have hC1 := lit_val' s (TB_mul_inv h2).2.1 ec
+      have hC2 := lit_val' s h1 e1
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h2).2.1 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_leq hO hN (TB_O_div hO hN h1 (TB_mul_inv h2).2.1) (TB_mul_inv h2).2.2 (eval_O_div hO hN h1 (TB_mul_inv h2).2.1 e1 ec) ex, bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s x) (bvz s xc) (bvz s xx) hnz
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_leq hO hN (TB_mul_inv h2).2.2 (TB_O_div hO hN h1 (TB_mul_inv h2).2.1)) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xc, xx, ec, ex, hy, hr1, hr2⟩ := eval_mul_inv s hc e2
+      rw [Int.mul_comm] at hy hr1 hr2
+      have hC1 := lit_val' s (TB_mul_inv h2).2.1 ec
+      have hC2 := lit_val' s h1 e1
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h2).2.1 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hc2
+      simp only [TB_size h1, hC1, hC2] at hc2
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_leq hO hN (TB_mul_inv h2).2.2 (TB_O_div hO hN h1 (TB_mul_inv h2).2.1) ex (eval_O_div hO hN h1 (TB_mul_inv h2).2.1 e1 ec), bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s x) (bvz s xc) (bvz s xx) hnz
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_lt hO hN (TB_mul_inv h2).2.2 (TB_O_div hO hN h1 (TB_mul_inv h2).2.1)) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xc, xx, ec, ex, hy, hr1, hr2⟩ := eval_mul_inv s hc e2
+      rw [Int.mul_comm] at hy hr1 hr2
+      have hC1 := lit_val' s (TB_mul_inv h2).2.1 ec
+      have hC2 := lit_val' s h1 e1
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h2).2.1 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hc2
+      simp only [TB_size h1, hC1, hC2] at hc2
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_lt hO hN (TB_mul_inv h2).2.2 (TB_O_div hO hN h1 (TB_mul_inv h2).2.1) ex (eval_O_div hO hN h1 (TB_mul_inv h2).2.1 e1 ec), bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s x) (bvz s xc) (bvz s xx) hnz
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_leq hO hN (TB_O_div hO hN h1 (TB_mul_inv h2).2.1) (TB_mul_inv h2).2.2) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xc, xx, ec, ex, hy, hr1, hr2⟩ := eval_mul_inv s hc e2
+      rw [Int.mul_comm] at hy hr1 hr2
+      have hC1 := lit_val' s (TB_mul_inv h2).2.1 ec
+      have hC2 := lit_val' s h1 e1
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h2).2.1 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hc2
+      simp only [TB_size h1, hC1, hC2] at hc2
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_leq hO hN (TB_O_div hO hN h1 (TB_mul_inv h2).2.1) (TB_mul_inv h2).2.2 (eval_O_div hO hN h1 (TB_mul_inv h2).2.1 e1 ec) ex, bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s x) (bvz s xc) (bvz s xx) hnz
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_lt hO hN (TB_O_div hO hN h1 (TB_mul_inv h2).2.1) (TB_mul_inv h2).2.2) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xc, xx, ec, ex, hy, hr1, hr2⟩ := eval_mul_inv s hc e2
+      rw [Int.mul_comm] at hy hr1 hr2
+      have hC1 := lit_val' s (TB_mul_inv h2).2.1 ec
+      have hC2 := lit_val' s h1 e1
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h2).2.1 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hc2
+      simp only [TB_size h1, hC1, hC2] at hc2
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_lt hO hN (TB_O_div hO hN h1 (TB_mul_inv h2).2.1) (TB_mul_inv h2).2.2 (eval_O_div hO hN h1 (TB_mul_inv h2).2.1 e1 ec) ex, bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s x) (bvz s xc) (bvz s xx) hnz
 
--- UNSOUND: when c1 = 0. Take signed = true, 8 bits, v1 = Mul (checked_signed, x, BitVec 0) and
--- v2 = BitVec 0 with x ↦ 0#8. c1 = c2 = 0 (divisible), so the rule returns
--- bv_leq true x (bv_div true v2 vc1). The spec evaluates to 0 ≤s 0 = true, but
--- bv_div true 0 0 is smtSDiv 0 0 = -1, and 0 ≤s -1 is false.
 theorem bv_leq.r_mul_const.proof : bv_leq.r_mul_const.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_leq.r_mul_const] at h
+  replace h := orElse_eq_some h
+  rcases h with h | h <;> split at h <;> (try split at h) <;>
+    simp only [Option.some.injEq, reduceCtorEq] at h <;> rename_i hc <;> subst h <;>
+    rw [Bool.and_eq_true] at hc <;> obtain ⟨hc, hc0⟩ := hc <;> have hc0 := of_decide_eq_true hc0
+  · refine Refines.ite_split (fun hA => Refines.ite_split (fun hneg => Refines.ite_split (fun hsp => ?_) (fun hsp => ?_)) (fun hneg => ?_)) (fun hA => Refines.ite_split (fun hneg => Refines.ite_split (fun hc2 => ?_) (fun hc2 => ?_)) (fun hneg => Refines.ite_split (fun hc2 => ?_) (fun hc2 => ?_)))
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_false) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xx, xc, ex, ec, hy, hr1, hr2⟩ := eval_mul_inv s hc e1
+      have hC1 := lit_val' s (TB_mul_inv h1).2.2 ec
+      have hC2 := lit_val' s h2 e2
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h1).2.2 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hsp
+      simp only [TB_size h1, hC1, hC2] at hsp
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      obtain ⟨rfl, hs1, hs2⟩ := hsp
+      rw [hs1] at hy hr1 hr2
+      have := two_pow_succ_pred (N := n) hn0
+      simp only [min_for_eq, max_for_eq, ite_true] at *
+      simp; omega
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_leq hO hN (TB_O_div hO hN h2 (TB_mul_inv h1).2.2) (TB_mul_inv h1).2.1) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xx, xc, ex, ec, hy, hr1, hr2⟩ := eval_mul_inv s hc e1
+      have hC1 := lit_val' s (TB_mul_inv h1).2.2 ec
+      have hC2 := lit_val' s h2 e2
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h1).2.2 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hsp
+      simp only [TB_size h1, hC1, hC2] at hsp
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_leq hO hN (TB_O_div hO hN h2 (TB_mul_inv h1).2.2) (TB_mul_inv h1).2.1 (eval_O_div hO hN h2 (TB_mul_inv h1).2.2 e2 ec) ex, bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s y) (bvz s xc) (bvz s xx) hnz
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_leq hO hN (TB_mul_inv h1).2.1 (TB_O_div hO hN h2 (TB_mul_inv h1).2.2)) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xx, xc, ex, ec, hy, hr1, hr2⟩ := eval_mul_inv s hc e1
+      have hC1 := lit_val' s (TB_mul_inv h1).2.2 ec
+      have hC2 := lit_val' s h2 e2
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h1).2.2 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_leq hO hN (TB_mul_inv h1).2.1 (TB_O_div hO hN h2 (TB_mul_inv h1).2.2) ex (eval_O_div hO hN h2 (TB_mul_inv h1).2.2 e2 ec), bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s y) (bvz s xc) (bvz s xx) hnz
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_lt hO hN (TB_O_div hO hN h2 (TB_mul_inv h1).2.2) (TB_mul_inv h1).2.1) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xx, xc, ex, ec, hy, hr1, hr2⟩ := eval_mul_inv s hc e1
+      have hC1 := lit_val' s (TB_mul_inv h1).2.2 ec
+      have hC2 := lit_val' s h2 e2
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h1).2.2 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hc2
+      simp only [TB_size h1, hC1, hC2] at hc2
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_lt hO hN (TB_O_div hO hN h2 (TB_mul_inv h1).2.2) (TB_mul_inv h1).2.1 (eval_O_div hO hN h2 (TB_mul_inv h1).2.2 e2 ec) ex, bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s y) (bvz s xc) (bvz s xx) hnz
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_leq hO hN (TB_O_div hO hN h2 (TB_mul_inv h1).2.2) (TB_mul_inv h1).2.1) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xx, xc, ex, ec, hy, hr1, hr2⟩ := eval_mul_inv s hc e1
+      have hC1 := lit_val' s (TB_mul_inv h1).2.2 ec
+      have hC2 := lit_val' s h2 e2
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h1).2.2 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hc2
+      simp only [TB_size h1, hC1, hC2] at hc2
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_leq hO hN (TB_O_div hO hN h2 (TB_mul_inv h1).2.2) (TB_mul_inv h1).2.1 (eval_O_div hO hN h2 (TB_mul_inv h1).2.2 e2 ec) ex, bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s y) (bvz s xc) (bvz s xx) hnz
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_lt hO hN (TB_mul_inv h1).2.1 (TB_O_div hO hN h2 (TB_mul_inv h1).2.2)) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xx, xc, ex, ec, hy, hr1, hr2⟩ := eval_mul_inv s hc e1
+      have hC1 := lit_val' s (TB_mul_inv h1).2.2 ec
+      have hC2 := lit_val' s h2 e2
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h1).2.2 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hc2
+      simp only [TB_size h1, hC1, hC2] at hc2
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_lt hO hN (TB_mul_inv h1).2.1 (TB_O_div hO hN h2 (TB_mul_inv h1).2.2) ex (eval_O_div hO hN h2 (TB_mul_inv h1).2.2 e2 ec), bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s y) (bvz s xc) (bvz s xx) hnz
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_leq hO hN (TB_mul_inv h1).2.1 (TB_O_div hO hN h2 (TB_mul_inv h1).2.2)) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xx, xc, ex, ec, hy, hr1, hr2⟩ := eval_mul_inv s hc e1
+      have hC1 := lit_val' s (TB_mul_inv h1).2.2 ec
+      have hC2 := lit_val' s h2 e2
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h1).2.2 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hc2
+      simp only [TB_size h1, hC1, hC2] at hc2
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_leq hO hN (TB_mul_inv h1).2.1 (TB_O_div hO hN h2 (TB_mul_inv h1).2.2) ex (eval_O_div hO hN h2 (TB_mul_inv h1).2.2 e2 ec), bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s y) (bvz s xc) (bvz s xx) hnz
+  · refine Refines.ite_split (fun hA => Refines.ite_split (fun hneg => Refines.ite_split (fun hsp => ?_) (fun hsp => ?_)) (fun hneg => ?_)) (fun hA => Refines.ite_split (fun hneg => Refines.ite_split (fun hc2 => ?_) (fun hc2 => ?_)) (fun hneg => Refines.ite_split (fun hc2 => ?_) (fun hc2 => ?_)))
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_false) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xc, xx, ec, ex, hy, hr1, hr2⟩ := eval_mul_inv s hc e1
+      rw [Int.mul_comm] at hy hr1 hr2
+      have hC1 := lit_val' s (TB_mul_inv h1).2.1 ec
+      have hC2 := lit_val' s h2 e2
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h1).2.1 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hsp
+      simp only [TB_size h1, hC1, hC2] at hsp
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      obtain ⟨rfl, hs1, hs2⟩ := hsp
+      rw [hs1] at hy hr1 hr2
+      have := two_pow_succ_pred (N := n) hn0
+      simp only [min_for_eq, max_for_eq, ite_true] at *
+      simp; omega
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_leq hO hN (TB_O_div hO hN h2 (TB_mul_inv h1).2.1) (TB_mul_inv h1).2.2) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xc, xx, ec, ex, hy, hr1, hr2⟩ := eval_mul_inv s hc e1
+      rw [Int.mul_comm] at hy hr1 hr2
+      have hC1 := lit_val' s (TB_mul_inv h1).2.1 ec
+      have hC2 := lit_val' s h2 e2
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h1).2.1 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hsp
+      simp only [TB_size h1, hC1, hC2] at hsp
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_leq hO hN (TB_O_div hO hN h2 (TB_mul_inv h1).2.1) (TB_mul_inv h1).2.2 (eval_O_div hO hN h2 (TB_mul_inv h1).2.1 e2 ec) ex, bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s y) (bvz s xc) (bvz s xx) hnz
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_leq hO hN (TB_mul_inv h1).2.2 (TB_O_div hO hN h2 (TB_mul_inv h1).2.1)) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xc, xx, ec, ex, hy, hr1, hr2⟩ := eval_mul_inv s hc e1
+      rw [Int.mul_comm] at hy hr1 hr2
+      have hC1 := lit_val' s (TB_mul_inv h1).2.1 ec
+      have hC2 := lit_val' s h2 e2
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h1).2.1 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_leq hO hN (TB_mul_inv h1).2.2 (TB_O_div hO hN h2 (TB_mul_inv h1).2.1) ex (eval_O_div hO hN h2 (TB_mul_inv h1).2.1 e2 ec), bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s y) (bvz s xc) (bvz s xx) hnz
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_lt hO hN (TB_O_div hO hN h2 (TB_mul_inv h1).2.1) (TB_mul_inv h1).2.2) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xc, xx, ec, ex, hy, hr1, hr2⟩ := eval_mul_inv s hc e1
+      rw [Int.mul_comm] at hy hr1 hr2
+      have hC1 := lit_val' s (TB_mul_inv h1).2.1 ec
+      have hC2 := lit_val' s h2 e2
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h1).2.1 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hc2
+      simp only [TB_size h1, hC1, hC2] at hc2
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_lt hO hN (TB_O_div hO hN h2 (TB_mul_inv h1).2.1) (TB_mul_inv h1).2.2 (eval_O_div hO hN h2 (TB_mul_inv h1).2.1 e2 ec) ex, bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s y) (bvz s xc) (bvz s xx) hnz
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_leq hO hN (TB_O_div hO hN h2 (TB_mul_inv h1).2.1) (TB_mul_inv h1).2.2) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xc, xx, ec, ex, hy, hr1, hr2⟩ := eval_mul_inv s hc e1
+      rw [Int.mul_comm] at hy hr1 hr2
+      have hC1 := lit_val' s (TB_mul_inv h1).2.1 ec
+      have hC2 := lit_val' s h2 e2
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h1).2.1 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hc2
+      simp only [TB_size h1, hC1, hC2] at hc2
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_leq hO hN (TB_O_div hO hN h2 (TB_mul_inv h1).2.1) (TB_mul_inv h1).2.2 (eval_O_div hO hN h2 (TB_mul_inv h1).2.1 e2 ec) ex, bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s y) (bvz s xc) (bvz s xx) hnz
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_lt hO hN (TB_mul_inv h1).2.2 (TB_O_div hO hN h2 (TB_mul_inv h1).2.1)) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xc, xx, ec, ex, hy, hr1, hr2⟩ := eval_mul_inv s hc e1
+      rw [Int.mul_comm] at hy hr1 hr2
+      have hC1 := lit_val' s (TB_mul_inv h1).2.1 ec
+      have hC2 := lit_val' s h2 e2
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h1).2.1 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hc2
+      simp only [TB_size h1, hC1, hC2] at hc2
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_lt hO hN (TB_mul_inv h1).2.2 (TB_O_div hO hN h2 (TB_mul_inv h1).2.1) ex (eval_O_div hO hN h2 (TB_mul_inv h1).2.1 e2 ec), bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s y) (bvz s xc) (bvz s xx) hnz
+    · refine cmp_refines_leq (fun N hN h1 h2 => TBool_O_leq hO hN (TB_mul_inv h1).2.2 (TB_O_div hO hN h2 (TB_mul_inv h1).2.1)) (fun ρ N n x y hN h1 h2 hn hn0 e1 e2 => ?_)
+      subst hn
+      obtain ⟨xc, xx, ec, ex, hy, hr1, hr2⟩ := eval_mul_inv s hc e1
+      rw [Int.mul_comm] at hy hr1 hr2
+      have hC1 := lit_val' s (TB_mul_inv h1).2.1 ec
+      have hC2 := lit_val' s h2 e2
+      have hnz := lit_bvz_ne_zero s (TB_mul_inv h1).2.1 ec hc0
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hA
+      simp only [TB_size h1, hC1, hC2] at hA
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hneg
+      simp only [TB_size h1, hC1, hC2] at hneg
+      simp only [divisible, decide_eq_true_eq, decide_eq_false_iff_not, Bool.or_eq_true, Bool.and_eq_true, Bool.not_eq_true', not_or] at hc2
+      simp only [TB_size h1, hC1, hC2] at hc2
+      have rx := bvz_range hn0 s xx; have rc := bvz_range hn0 s xc
+      have r1 := bvz_range hn0 s x; have r2 := bvz_range hn0 s y
+      rw [eval_O_leq hO hN (TB_mul_inv h1).2.2 (TB_O_div hO hN h2 (TB_mul_inv h1).2.1) ex (eval_O_div hO hN h2 (TB_mul_inv h1).2.1 e2 ec), bvz_div hn0 s hnz (by rintro ⟨hs1, hs2, hs3⟩; first | exact hsp ⟨hs1, hs3, hs2⟩ | exact hA (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | exact hA.1 (by rw [hs3]; exact Int.neg_dvd.2 (Int.one_dvd _)) | omega), hy]
+      simp only [Option.some.injEq, Val.bool.injEq, decide_eq_decide]
+      clear rx rc r1 r2 hr1 hr2 hC1 hC2
+      tdiv_omega (bvz s y) (bvz s xc) (bvz s xx) hnz
 
 -- UNSOUND: when a is negative (signed). Take signed = true, 8 bits, v1 = Mul (checked_signed,
 -- a, x), v2 = Mul (checked_signed, a, y) with a = BitVec 255 (-1, so sure_neq a 0), x ↦ 1#8 and

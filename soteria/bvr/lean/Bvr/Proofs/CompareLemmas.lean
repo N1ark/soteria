@@ -1448,5 +1448,91 @@ theorem lt_zero_aux_sound (K : Nat) : ∀ (v : Term), sizeOf v < K → ∀ {N : 
 
 end O
 
+/-! ## Division by a constant -/
+
+theorem tdiv_core (C2 C1 X : Int) (h : C1 ≠ 0) :
+    C2 = C2.tdiv C1 * C1 + C2.tmod C1 ∧ (0 ≤ C2 → 0 ≤ C2.tmod C1) ∧
+    (C2 ≤ 0 → C2.tmod C1 ≤ 0) ∧ (C2.tmod C1 = 0 ↔ C1 ∣ C2) ∧
+    (0 < C1 → -C1 < C2.tmod C1 ∧ C2.tmod C1 < C1) ∧
+    (C1 < 0 → C1 < C2.tmod C1 ∧ C2.tmod C1 < -C1) ∧
+    (X ≤ C2.tdiv C1 - 1 → (0 < C1 → X * C1 ≤ C2.tdiv C1 * C1 - C1) ∧
+      (C1 < 0 → C2.tdiv C1 * C1 - C1 ≤ X * C1)) ∧
+    (C2.tdiv C1 + 1 ≤ X → (0 < C1 → C2.tdiv C1 * C1 + C1 ≤ X * C1) ∧
+      (C1 < 0 → X * C1 ≤ C2.tdiv C1 * C1 + C1)) ∧
+    (X = C2.tdiv C1 → X * C1 = C2.tdiv C1 * C1) := by
+  have e := Int.tmod_add_tdiv_mul C2 C1
+  refine ⟨by omega, fun h => Int.tmod_nonneg _ h, fun h => ?_, ?_, fun h => ?_, fun h => ?_,
+    fun hx => ⟨fun hc => ?_, fun hc => ?_⟩, fun hx => ⟨fun hc => ?_, fun hc => ?_⟩,
+    fun hx => by rw [hx]⟩
+  · have := Int.tmod_nonneg C1 (show 0 ≤ -C2 by omega)
+    rw [Int.neg_tmod] at this; omega
+  · exact ⟨fun h => Int.dvd_of_tmod_eq_zero h, fun h => Int.tmod_eq_zero_of_dvd h⟩
+  · exact ⟨Int.lt_tmod_of_pos _ h, Int.tmod_lt_of_pos _ h⟩
+  · have h1 := Int.lt_tmod_of_pos C2 (show 0 < -C1 by omega)
+    have h2 := Int.tmod_lt_of_pos C2 (show 0 < -C1 by omega)
+    rw [Int.tmod_neg] at h1 h2; omega
+  · have := Int.mul_le_mul_of_nonneg_right hx (Int.le_of_lt hc)
+    rw [Int.sub_mul, Int.one_mul] at this; exact this
+  · have := Int.mul_le_mul_of_nonpos_right hx (Int.le_of_lt hc)
+    rw [Int.sub_mul, Int.one_mul] at this; exact this
+  · have := Int.mul_le_mul_of_nonneg_right hx (Int.le_of_lt hc)
+    rw [Int.add_mul, Int.one_mul] at this; exact this
+  · have := Int.mul_le_mul_of_nonpos_right hx (Int.le_of_lt hc)
+    rw [Int.add_mul, Int.one_mul] at this; exact this
+
+/-- Solves a comparison of [X * C1] with [C2], given the quotient. -/
+macro "tdiv_omega " C2:term:max C1:term:max X:term:max h:term:max : tactic =>
+  `(tactic| (obtain ⟨e1, e2, e3, e4, e5, e6, e7, e8, e9⟩ := tdiv_core $C2 $C1 $X $h
+             generalize Int.tmod $C2 $C1 = r at *
+             generalize Int.tdiv $C2 $C1 = D at *
+             rcases Int.lt_or_gt_of_ne $h with hs | hs
+             · have b := e6 hs; clear e5 e6
+               rcases Int.lt_trichotomy $X D with hX | hX | hX
+               · have := (e7 (by omega)).2 hs; clear e7 e8 e9; omega
+               · have := e9 hX; clear e7 e8 e9; omega
+               · have := (e8 (by omega)).2 hs; clear e7 e8 e9; omega
+             · have b := e5 hs; clear e5 e6
+               rcases Int.lt_trichotomy $X D with hX | hX | hX
+               · have := (e7 (by omega)).1 hs; clear e7 e8 e9; omega
+               · have := e9 hX; clear e7 e8 e9; omega
+               · have := (e8 (by omega)).1 hs; clear e7 e8 e9; omega))
+
+theorem smtSDiv_of_ne {n : Nat} {x y : BitVec n} (hy : y ≠ 0#n) : x.smtSDiv y = x.sdiv y := by
+  have hy' : -y ≠ 0#n := fun h => hy (BitVec.neg_eq_zero_iff.1 h)
+  rw [BitVec.smtSDiv_eq, BitVec.sdiv]
+  rcases x.msb <;> rcases y.msb <;> simp [BitVec.smtUDiv_eq, hy, hy']
+
+theorem bvz_div {n : Nat} (hn : 0 < n) (s : Bool) {x y : BitVec n} (hy : bvz s y ≠ 0)
+    (hov : ¬ (s = true ∧ bvz s x = min_for s n ∧ bvz s y = -1)) :
+    bvz s (if s then x.smtSDiv y else x.smtUDiv y) = (bvz s x).tdiv (bvz s y) := by
+  have hy0 : y ≠ 0#n := by rintro rfl; simp at hy
+  cases s
+  · simp only [Bool.false_eq_true, ite_false, BitVec.smtUDiv_eq, hy0, bvz, BitVec.toNat_udiv]
+    rw [Int.tdiv_eq_ediv_of_nonneg (by omega)]; simp
+  · simp only [ite_true, smtSDiv_of_ne hy0, bvz]
+    apply BitVec.toInt_sdiv_of_ne_or_ne
+    by_cases hx : x = BitVec.intMin n
+    · right; rintro rfl
+      apply hov
+      refine ⟨rfl, ?_, ?_⟩
+      · rw [min_for_eq]; simp only [bvz, ite_true]; exact (eq_intMin_iff hn).1 hx
+      · simp only [bvz, ite_true, BitVec.neg_one_eq_allOnes, BitVec.toInt_allOnes, hn, ite_true]
+    · exact Or.inl hx
+
+theorem lit_bvz_ne_zero {FS ρ z t N n} {x : BitVec n} (s : Bool) (h : TB (.mk (.bitVec z) t) N)
+    (e : eval FS ρ (.mk (.bitVec z) t) = some (.bv n x)) (hz : z ≠ 0) : bvz s x ≠ 0 := by
+  obtain ⟨rfl, -, hn, h0, h1, -, hf, -⟩ := lit_val h e
+  simp only [bv_to_z_false] at hf
+  cases s
+  · omega
+  · rcases bvz_true_cases hn x with ⟨-, e'⟩ | ⟨-, e'⟩ <;> omega
+
+/-- `decide`, whatever its instance (the model may use classical ones). -/
+theorem dec_true_iff {p : Prop} {i : Decidable p} : (@decide p i = true) = p := by
+  cases i <;> simp_all
+
+theorem dec_false_iff {p : Prop} {i : Decidable p} : (@decide p i = false) = ¬p := by
+  cases i <;> simp_all
+
 end CompareL
 end Bvr

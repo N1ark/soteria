@@ -304,7 +304,34 @@ theorem bv_and.r_masks.proof : bv_and.r_masks.Stmt := by
           (fun k c10 c20 => ofInt_zland c10 c20)))
 
 theorem bv_and.r_mask_or_mask.proof : bv_and.r_mask_or_mask.Stmt := by
-  sorry
+  intro FS O hO v1 v2 res h
+  simp only [bv_and.r_mask_or_mask] at h
+  have C := fun {n} (x y : BitVec n) => BitVec.and_comm x y
+  have Co := fun {n} (x y : BitVec n) => BitVec.or_comm x y
+  have chain : ∀ M N P X : Term,
+      Refines FS (bv_or.spec (bv_and.spec M N) (bv_and.spec X (bv_and.spec M P)))
+        (O.bv_or (O.bv_and M N) (O.bv_and X (O.bv_and M P))) := fun M N P X =>
+    Refines.trans (Refines.binop_ty (fun a => ty a) (fun a b h => h) (hO.bv_and _ _)
+      (Refines.trans (Refines.binop_ty (fun a => .bitVector (size a))
+        (fun a b h => by simp [size, ty, h]) Refines.refl (hO.bv_and _ _)) (hO.bv_and _ _)))
+      (hO.bv_or _ _)
+  rcases orElse_eq_some8 h with h | h | h | h | h | h | h | h <;> split at h <;>
+    (try simp at h) <;> (try simp only [Option.some.injEq] at h) <;> subst h <;>
+    refine Refines.trans ?_ (chain _ _ _ _)
+  · exact and_mask_or_mask (fun k h1 _ => h1)
+  · exact Refines.trans (BitOp.and.congr Refines.refl
+      (BitOp.or.congr Refines.refl (BitOp.and.comm C))) (and_mask_or_mask (fun k h1 _ => h1))
+  · exact Refines.trans (BitOp.and.congr Refines.refl (BitOp.or.comm Co)) (and_mask_or_mask (fun k h1 _ => h1))
+  · exact Refines.trans (BitOp.and.congr Refines.refl (Refines.trans (BitOp.or.comm Co)
+      (BitOp.or.congr Refines.refl (BitOp.and.comm C)))) (and_mask_or_mask (fun k h1 _ => h1))
+  · exact Refines.trans (BitOp.and.comm C) (and_mask_or_mask (fun k _ h2 => h2))
+  · exact Refines.trans (BitOp.and.comm C) (Refines.trans (BitOp.and.congr Refines.refl
+      (BitOp.or.congr Refines.refl (BitOp.and.comm C))) (and_mask_or_mask (fun k _ h2 => h2)))
+  · exact Refines.trans (BitOp.and.comm C) (Refines.trans
+      (BitOp.and.congr Refines.refl (BitOp.or.comm Co)) (and_mask_or_mask (fun k _ h2 => h2)))
+  · exact Refines.trans (BitOp.and.comm C) (Refines.trans (BitOp.and.congr Refines.refl
+      (Refines.trans (BitOp.or.comm Co) (BitOp.or.congr Refines.refl (BitOp.and.comm C))))
+      (and_mask_or_mask (fun k _ h2 => h2)))
 
 theorem bv_and.r_mask_or.proof : bv_and.r_mask_or.Stmt := by
   intro FS O hO v1 v2 res h

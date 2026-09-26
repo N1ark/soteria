@@ -1547,5 +1547,62 @@ theorem and_lit_or_lit_zero {FS} {m o N : Int} {x T1 T2 T3 t}
     simp at h' ⊢
     grind
 
+/-! ## A mask of an or of a literal and a masked value -/
+
+theorem and_mask_or_mask {FS} {m c p : Int} {x T1 T2 T3 T4 T5 T' t}
+    (hT' : ∀ k : Int, T1 = .bitVector k → T2 = .bitVector k → T' = .bitVector k) :
+    Refines FS (.mk (.binop .bitAnd (.mk (.bitVec m) T1) (.mk (.binop .bitOr (.mk (.bitVec c) T4)
+      (.mk (.binop .bitAnd (.mk (.bitVec p) T5) x) T3)) T2)) t)
+      (bv_or.spec (bv_and.spec (.mk (.bitVec m) T') (.mk (.bitVec c) T4))
+        (bv_and.spec x (bv_and.spec (.mk (.bitVec m) T') (.mk (.bitVec p) T5)))) := by
+  have key : ∀ {k : Int}, 0 < k → T1 = .bitVector k → T2 = .bitVector k →
+      (Term.mk (.bitVec m) T1).WT → (Term.mk (Kind.bitVec m) T').WT ∧ T' = .bitVector k := by
+    intro k hk h1 h2 w1
+    obtain rfl := hT' k h1 h2
+    subst h1
+    obtain ⟨_, m0, m1⟩ := lit_inv w1 k rfl
+    exact ⟨lit_WT hk m0 m1, rfl⟩
+  refine Refines.intro (fun w => ?_) (fun ρ u w w' e => ?_)
+  · obtain ⟨k, hk, h1, h2, ht, w1, w2⟩ := (BitOp.and (FS := FS)).WT.1 w
+    obtain ⟨k2, hk2, h4, h3, h5, w4, w3⟩ := (BitOp.or (FS := FS)).WT.1 w2
+    obtain ⟨k3, hk3, h5', hx, h6, w5, wx⟩ := (BitOp.and (FS := FS)).WT.1 w3
+    simp only [Term.ty_mk] at h1 h2 h3 h4 h5 h5' h6
+    subst h1 h2 ht
+    simp only [Ty.bitVector.injEq] at h5; subst h5
+    subst h4 h3
+    simp only [Ty.bitVector.injEq] at h6; subst h6
+    subst h5'
+    obtain ⟨wm, hm⟩ := key hk rfl rfl w1
+    subst hm
+    refine ⟨(BitOp.or (FS := FS)).WT.2 ⟨k, hk, by simp [bv_and.spec, size, ty, size_of_ty],
+      by simp [bv_and.spec, size, ty, size_of_ty, hx], by simp [bv_and.spec, size, ty, size_of_ty],
+      (BitOp.and (FS := FS)).WT.2 ⟨k, hk, rfl, rfl, by simp [size, ty, size_of_ty], wm, w4⟩,
+      (BitOp.and (FS := FS)).WT.2 ⟨k, hk, hx, by simp [bv_and.spec, size, ty, size_of_ty],
+        by simp [size, ty, size_of_ty, hx],
+        wx, (BitOp.and (FS := FS)).WT.2 ⟨k, hk, rfl, rfl, by simp [size, ty, size_of_ty], wm, w5⟩⟩⟩,
+      by simp [bv_or.spec, bv_and.spec, ty, size, size_of_ty]⟩
+  · obtain ⟨k, hk, h1, h2, ht, w1, w2⟩ := (BitOp.and (FS := FS)).WT.1 w
+    simp only [Term.ty_mk] at h1 h2
+    obtain ⟨wm, hm⟩ := key hk h1 h2 w1
+    obtain ⟨K, a1, y, ea1, ey, rfl⟩ := BitOp.and.eval_eq_some e
+    obtain ⟨K', a2, z, ea2, ez, hy⟩ := BitOp.or.eval_eq_some ey
+    obtain ⟨rfl, rfl⟩ := Val.bv_inj hy
+    obtain ⟨K'', a3, x', ea3, ex, hz⟩ := BitOp.and.eval_eq_some ez
+    obtain ⟨rfl, rfl⟩ := Val.bv_inj hz
+    obtain ⟨hK, -⟩ := lit_val ea1 h1
+    obtain ⟨rfl, -, -⟩ := lit_val₀ ea1
+    have em : eval FS ρ (Term.mk (.bitVec m) T') = some (.bv K (BitVec.ofInt K m)) := by
+      rw [eval_lit' wm hm, hK]
+    obtain ⟨-, wa, wb⟩ := WT_binop.1 w'
+    obtain ⟨-, wa1, wa2⟩ := WT_binop.1 wa
+    obtain ⟨-, wb1, wb2⟩ := WT_binop.1 wb
+    obtain ⟨-, wb21, wb22⟩ := WT_binop.1 wb2
+    rw [bv_or.spec, BitOp.or.eval_of w' (BitOp.and.eval_of wa em ea2)
+      (BitOp.and.eval_of wb ex (BitOp.and.eval_of wb2 em ea3))]
+    congr 2
+    ext i hi
+    simp
+    grind
+
 end BitwiseL
 end Bvr

@@ -1000,21 +1000,52 @@ theorem bv_mul.r_default.proof : bv_mul.r_default.Stmt := by
   simp only [bv_mul.r_default] at h; simp at h; subst h
   exact Refines.commut_binop (.mul c)
 
+-- UNSOUND: the literals are divided with `tdiv`, for which `tdiv l 0 = 0`, but division by zero
+-- follows SMT-LIB (`x /u 0` is all ones, `x /s 0` is -1 or 1). Take 8 bits, `signed = false`,
+-- v1 = 5 and v2 = 0. The spec `5 /u 0` is `some 0xff`, and the result is the literal 0.
 theorem bv_div.r_lits.proof : bv_div.r_lits.Stmt := by
   sorry
 
 theorem bv_div.r_one.proof : bv_div.r_one.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_div.r_one] at h; split at h <;> simp at h; obtain ⟨rfl, rfl⟩ := h
+  refine Refines.arith_intro (.div s) (fun n wa wb hT => wa) (fun n wa wb hT ρ x y v hx hy e => ?_)
+  rw [lit_eval_eq wb hy] at e
+  simp [evBinop, bvBin] at e
+  rw [hx, ← e]
+  have hn : 0 < n.toNat := by have := wa.2.2; omega
+  cases s
+  · simp [BitVec.smtUDiv_eq, one_ne_zero' hn, BitVec.udiv_one]
+  · simp [smtSDiv_of_ne_zero (one_ne_zero' hn)]
 
 theorem bv_div.r_mul_lits.proof : bv_div.r_mul_lits.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_div.r_mul_lits] at h; split at h <;> simp at h; subst h
+  rename_i c l Tl r Tr T z T2
+  have hm := hO.bv_mul c (.mk (.bitVec l) Tl) (.mk (.bitVec r) Tr)
+  refine Refines.trans (Refines.binop (Refines.trans (Refines.retype (fun w => ?_)) hm)
+    Refines.refl (fun w => ?_)) (hO.bv_div _ _ _)
+  · obtain ⟨n, wa, wb, rfl⟩ := (WT_arith (.mul c)).1 w
+    obtain ⟨rfl, -⟩ := BV_lit wa; rfl
+  · obtain ⟨n, wa, wb, rfl⟩ := (WT_arith (.div s)).1 w
+    have := BV_arith_inv (.mul c) wa
+    have := (BV_arith (.mul c) hm this.1 this.2.1).2.1
+    simp [this]
 
+-- UNSOUND: `divisible 0 0` holds, and then the rule replaces a division by zero with a
+-- multiplication by `tdiv 0 0 = 0`. Take 8 bits, `signed = false`, v1 = Mul (checked_unsigned,
+-- 0, x), v2 = 0, with x = 1 (take `O` returning the raw spec terms). The spec is
+-- `(0 *u 1) /u 0 = some 0xff`, and the result is `x *u 0 = some 0`.
 theorem bv_div.r_mul_div.proof : bv_div.r_mul_div.Stmt := by
   sorry
 
 theorem bv_div.r_div_mul.proof : bv_div.r_div_mul.Stmt := by
   sorry
 
+-- UNSOUND: when the inner divisor is zero, `x / 0` is all ones (SMT-LIB), and dividing it again
+-- differs from dividing `x` by `0 * d = 0`. Take 8 bits, `signed = false`, v1 = Div (false, x, 0),
+-- v2 = 2, with x = 5 (take `O` returning the raw spec terms); `overflows_mul false 8 0 2` is false.
+-- The spec is `(5 /u 0) /u 2 = 0xff /u 2 = some 0x7f`, and the result is `x /u 0 = some 0xff`.
 theorem bv_div.r_div_div.proof : bv_div.r_div_div.Stmt := by
   sorry
 
@@ -1022,7 +1053,9 @@ theorem bv_div.r_zext.proof : bv_div.r_zext.Stmt := by
   sorry
 
 theorem bv_div.r_default.proof : bv_div.r_default.Stmt := by
-  sorry
+  intro FS O hO s v1 v2 res h
+  simp only [bv_div.r_default] at h; simp at h; subst h
+  exact Refines.refl
 
 theorem bv_add_overflows.r_lits.proof : bv_add_overflows.r_lits.Stmt := by
   sorry

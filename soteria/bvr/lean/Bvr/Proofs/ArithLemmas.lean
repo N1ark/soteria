@@ -889,5 +889,26 @@ theorem smul_neg_swap {w : Nat} {C X : BitVec w} (hC : C ≠ BitVec.intMin w)
   rw [Int.neg_mul]; rw [Int.mul_neg] at h; omega
 
 
+theorem smtSDiv_of_ne_zero {w : Nat} {x y : BitVec w} (h : y ≠ 0#w) : x.smtSDiv y = x.sdiv y := by
+  have h' : -y ≠ 0#w := by intro e; apply h; rw [← BitVec.neg_neg (x := y), e]; simp
+  rw [BitVec.smtSDiv_eq, BitVec.sdiv_eq]
+  cases x.msb <;> cases y.msb <;> simp [BitVec.smtUDiv_eq, h, h'] <;> rfl
+
+theorem one_ne_zero' {w : Nat} (hw : 0 < w) : (1#w) ≠ 0#w := by
+  intro e; have := congrArg BitVec.toNat e
+  simp [Nat.one_mod_eq_one] at this; omega
+
+theorem Val.bv_congr {n m : Nat} {x : BitVec n} {y : BitVec m} (h : n = m) (hv : x.toNat = y.toNat) :
+    Val.bv n x = Val.bv m y := by
+  subst h; rw [BitVec.eq_of_toNat_eq hv]
+
+
+theorem Refines.retype {FS k t t'} (h : (Term.mk k t).WT → t' = t) :
+    Refines FS (.mk k t) (.mk k t') := by
+  refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
+  · obtain rfl := h w; exact ⟨w, rfl⟩
+  · obtain rfl := h w; exact e
+
+
 end ArithL
 end Bvr

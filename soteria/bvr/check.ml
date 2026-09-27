@@ -18,6 +18,7 @@ let pp_loc ft (loc : Location.t) =
 let rec ty_of_core (ct : core_type) : Syntax.ty =
   match ct.ptyp_desc with
   | Ptyp_constr ({ txt = Lident "int"; _ }, []) -> TInt
+  | Ptyp_constr ({ txt = Lident "bv"; _ }, []) -> TBv
   | Ptyp_constr ({ txt = Lident "bool"; _ }, []) -> TBool
   | Ptyp_constr ({ txt = Lident "unit"; _ }, []) -> TUnit
   | Ptyp_constr ({ txt = Lident "t"; _ }, []) -> TTerm
@@ -69,6 +70,10 @@ let find_global env loc name =
 
 (* ---------------------------------------------------------------- *)
 (* Patterns *)
+
+(** Whether the function being checked is a [[@cases]] one, where [BitVec x]
+    binds [x : bv]. *)
+let cases_mode = ref false
 
 let rule_name_of_attrs (attrs : attributes) =
   List.find_map
@@ -234,6 +239,10 @@ and pat' (expected : Syntax.ty) (p : pattern) : Syntax.pat =
       match expected with
       | TList t -> mk (PCons (pat t h, pat expected tl))
       | _ -> error loc ":: at type %a" pp_ty expected)
+  | Ppat_construct
+      ({ txt = Lident "BitVec"; _ }, Some (_, { ppat_desc = Ppat_var x; _ }))
+    when !cases_mode && expected = TTerm ->
+      mk (PLit x.txt)
   | Ppat_construct ({ txt = Lident name; _ }, arg) -> (
       match find_constr name with
       | None -> error loc "unknown constructor %s" name
@@ -285,6 +294,7 @@ and binders (p : Syntax.pat) : (string * (Syntax.ty * bool)) list =
   match p.p with
   | PAny | PInt _ | PBool _ | PUnit | PNone | PNil -> []
   | PVar x -> [ (x, (p.pty, false)) ]
+  | PLit x -> [ (x, (TBv, false)) ]
   | PAs (p', x) -> (x, (p.pty, false)) :: binders p'
   | POr (p1, _) -> binders p1
   | PTuple l -> List.concat_map binders l
@@ -299,6 +309,18 @@ and binders (p : Syntax.pat) : (string * (Syntax.ty * bool)) list =
              | Small, PVar x -> [ (x, (TInt, true)) ]
              | _ -> binders p)
            c.c_args args)
+
+(** Variables bound by [PLit] patterns: the pattern binds them to the literal
+    term, and the backends rebind them to its value. *)
+let rec lit_binders (p : Syntax.pat) : string list =
+  match p.p with
+  | PLit x -> [ x ]
+  | PAny | PVar _ | PInt _ | PBool _ | PUnit | PNone | PNil -> []
+  | PAs (q, _) | PSome q -> lit_binders q
+  | POr (a, _) -> lit_binders a
+  | PTuple l | PConstr (_, l) -> List.concat_map lit_binders l
+  | PCons (a, b) -> lit_binders a @ lit_binders b
+  | PRecord l -> List.concat_map (fun (_, q) -> lit_binders q) l
 
 let no_shadow env loc x =
   if List.mem_assoc x env.globals then
@@ -319,7 +341,7 @@ let rec eq_ty = function
   | TInt | TBool | TUnit | TSty | TData _ -> true
   | TTuple l -> List.for_all eq_ty l
   | TOption t -> eq_ty t
-  | TTerm | TKind | TFloat | TVar | TList _ -> false
+  | TTerm | TKind | TFloat | TVar | TBv | TList _ -> false
 
 (* ---------------------------------------------------------------- *)
 (* Desugaring of patterns
@@ -341,7 +363,7 @@ let rec product = function
 let rec alternatives (p : Syntax.pat) : Syntax.pat list =
   let mk d = { p with p = d } in
   match p.p with
-  | PAny | PVar _ | PInt _ | PBool _ | PUnit | PNone | PNil -> [ p ]
+  | PAny | PVar _ | PLit _ | PInt _ | PBool _ | PUnit | PNone | PNil -> [ p ]
   | POr (a, b) -> alternatives a @ alternatives b
   | PAs (q, x) -> List.map (fun q -> mk (PAs (q, x))) (alternatives q)
   | PTuple l ->
@@ -395,6 +417,11 @@ let linearize (p : Syntax.pat) : Syntax.pat * Syntax.expr list =
     match p.p with
     | PAny | PBool _ | PUnit | PNone | PNil -> p
     | PVar x -> mk (PVar (bind p x))
+    | PLit x ->
+        if Hashtbl.mem seen x then
+          error p.ploc "%s: repeated bit-vector literal variable" x;
+        Hashtbl.add seen x ();
+        p
     | PInt z ->
         let x = fresh () in
         eq p.ploc TInt (v p.ploc TInt x)
@@ -530,9 +557,24 @@ let rec expr env ?expected (e : expression) : Syntax.expr =
           let k = expr env ~expected:TKind k in
           let t = expr env ~expected:TSty t in
           mk TTerm (ENode (k, t))
-      | ("+" | "-" | "*"), [ a; b ] ->
-          let a = expr env ~expected:TInt a and b = expr env ~expected:TInt b in
-          mk TInt (EBinop (Arith (List.assoc op int_ops), a, b))
+      | ("+" | "-" | "*"), [ a; b ] -> (
+          let a = expr env a in
+          match a.ety with
+          | TBv ->
+              (* modular arithmetic on bit-vector values *)
+              let b = expr env ~expected:TBv b in
+              let f =
+                match op with
+                | "+" -> "lit_add"
+                | "-" -> "lit_sub"
+                | _ -> "lit_mul"
+              in
+              ignore (find_global env loc f);
+              mk TBv (ECall (f, [ a; b ]))
+          | _ ->
+              expect a.eloc ~expected:TInt a.ety;
+              let b = expr env ~expected:TInt b in
+              mk TInt (EBinop (Arith (List.assoc op int_ops), a, b)))
       | ("<" | "<=" | ">" | ">="), [ a; b ] ->
           let a = expr env ~expected:TInt a and b = expr env ~expected:TInt b in
           mk TBool (EBinop (Arith (List.assoc op cmp_ops), a, b))
@@ -551,7 +593,15 @@ let rec expr env ?expected (e : expression) : Syntax.expr =
           let a = expr env ~expected:TInt a and b = expr env ~expected:TInt b in
           mk TInt (EBinop (Bit (List.assoc op bit_ops), a, b))
       | "not", [ a ] -> mk TBool (EUnop (Not, expr env ~expected:TBool a))
-      | ("~-" | "-"), [ a ] -> mk TInt (EUnop (Neg, expr env ~expected:TInt a))
+      | ("~-" | "-"), [ a ] -> (
+          let a = expr env a in
+          match a.ety with
+          | TBv ->
+              ignore (find_global env loc "lit_neg");
+              mk TBv (ECall ("lit_neg", [ a ]))
+          | _ ->
+              expect a.eloc ~expected:TInt a.ety;
+              mk TInt (EUnop (Neg, a)))
       | "lognot", [ a ] -> mk TInt (EUnop (Lognot, expr env ~expected:TInt a))
       | f, args -> (
           let check_args (s : sig_) =
@@ -730,6 +780,7 @@ type raw_fn = {
   rparams : (string * Syntax.ty) list;
   rret : Syntax.ty;
   rspec : expression option;
+  rcases : bool;
   rbody : expression;
   rloc : Location.t;
 }
@@ -742,6 +793,7 @@ let raw_fn (vb : value_binding) =
     | _ -> error loc "expected a function name"
   in
   let rspec = spec_of_attrs vb.pvb_attributes in
+  let rcases = has_attr "cases" vb.pvb_attributes in
   match vb.pvb_expr.pexp_desc with
   | Pexp_function (params, Some ret, Pfunction_body rbody) ->
       {
@@ -749,6 +801,7 @@ let raw_fn (vb : value_binding) =
         rparams = List.map (param_of loc) params;
         rret = ret_of ret;
         rspec;
+        rcases;
         rbody;
         rloc = loc;
       }
@@ -761,6 +814,7 @@ let raw_fn (vb : value_binding) =
             rparams = [];
             rret = ty_of_core typ;
             rspec;
+            rcases;
             rbody = vb.pvb_expr;
             rloc = loc;
           }
@@ -805,7 +859,11 @@ let program (str : structure) : program =
       (fun r ->
         List.iter (fun (x, _) -> no_shadow env0 r.rloc x) r.rparams;
         let env = { env0 with vars = r.rparams } in
+        if r.rcases && Option.is_none r.rspec then
+          error r.rloc "%s: [@cases] needs a spec" r.rname;
+        cases_mode := r.rcases;
         let body = expr env ~expected:r.rret r.rbody in
+        cases_mode := false;
         let spec =
           Option.map
             (fun s ->
@@ -820,6 +878,7 @@ let program (str : structure) : program =
           params = r.rparams;
           ret = r.rret;
           spec;
+          cases = r.rcases;
           body;
           floc = r.rloc;
         })

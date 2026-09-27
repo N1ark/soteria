@@ -21,8 +21,12 @@ let[@spec BvNot v <| ty v] bv_not (v : t) : t =
 ```
 
 - Parameters and results are annotated. Types: `t` (terms), `ty`, `kind`,
-  `int` (arbitrary precision, `Z.t`), `bool`, `checked`, `rm`, `fp`, `fc`,
-  `float`, `var`, tuples, `option`, `list`.
+  `int` (arbitrary precision, `Z.t`), `bv` (a bit-vector value, which knows
+  its width), `bool`, `checked`, `rm`, `fp`, `fc`, `float`, `var`, tuples,
+  `option`, `list`.
+- `+`, `-`, `*` and unary `-` on `bv`s are modular, at the width of their
+  first operand. `lit l` is the literal term of `l`, `to_z signed l` reads
+  `l` as an integer, `of_z n z` is `z mod 2^n` (see `prelude.bvr`).
 - `[@spec e]` makes the function a *rule function*: its result must refine the
   raw term `e`. Every case of its top-level `match` is a rule named with
   `[@r name]`; each rule gets its own Lean proof obligation.

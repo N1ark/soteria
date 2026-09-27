@@ -137,6 +137,31 @@ def overflows_mul (signed : Bool) (n : Int) (l : Int) (r : Int) : Bool :=
   (let res := ((bv_to_z signed n l) * (bv_to_z signed n r));
   ((decide (res < (min_for signed n))) || (decide (res > (max_for signed n)))))
 
+def is_int_min (l : BvVal) : Bool :=
+  (decide ((to_z true l) = (min_for true (width l))))
+
+def add_overflows (signed : Bool) (l : BvVal) (r : BvVal) : Bool :=
+  (let n := (width l);
+  (let res := ((to_z signed l) + (to_z signed r));
+  ((decide (res < (min_for signed n))) || (decide (res > (max_for signed n))))))
+
+def sub_overflows (signed : Bool) (l : BvVal) (r : BvVal) : Bool :=
+  (let n := (width l);
+  (let res := ((to_z signed l) - (to_z signed r));
+  ((decide (res < (min_for signed n))) || (decide (res > (max_for signed n))))))
+
+def mul_overflows (signed : Bool) (l : BvVal) (r : BvVal) : Bool :=
+  (let n := (width l);
+  (let res := ((to_z signed l) * (to_z signed r));
+  ((decide (res < (min_for signed n))) || (decide (res > (max_for signed n))))))
+
+def fold_checked (c : Checked) (a : BvVal) (b : BvVal) (is_add : Bool) : Checked :=
+  (let keep := fun (signed : Bool) =>
+    ((checked_has signed c) && (! (if is_add
+                                  then (add_overflows signed a b)
+                                  else (sub_overflows signed a b))));
+  ({ signed := (keep true), unsigned := (keep false) } : Checked))
+
 def mask_checked_after_fold (c : Checked) (a : Term) (b : Term) (is_add : Bool) : Checked :=
   ((firstSome [(match a, b with
                  | (Term.mk (Kind.bitVec za) _), (Term.mk (Kind.bitVec zb) _) =>

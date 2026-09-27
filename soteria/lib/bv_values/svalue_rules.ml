@@ -7,6 +7,7 @@ module type PRIMS = sig
   type ext
   type ext_ty
   type t = (ghost, ext, ext_ty) Svalue_ast.t
+  type bv
   val node : (ghost, ext, ext_ty) Svalue_ast.t_kind -> ext_ty Svalue_ast.ty -> t
   val equal_ty : ext_ty Svalue_ast.ty -> ext_ty Svalue_ast.ty -> bool
   val equal : t -> t -> bool
@@ -23,6 +24,17 @@ module type PRIMS = sig
   val bv_one : Z.t -> t
   val v_true : t
   val v_false : t
+  val bv_of_lit : t -> bv
+  val lit : bv -> t
+  val width : bv -> Z.t
+  val to_z : bool -> bv -> Z.t
+  val of_z : Z.t -> Z.t -> bv
+  val lit_add : bv -> bv -> bv
+  val lit_sub : bv -> bv -> bv
+  val lit_mul : bv -> bv -> bv
+  val lit_neg : bv -> bv
+  val lit_udiv : bv -> bv -> bv
+  val lit_sdiv : bv -> bv -> bv
   val signed_extract : Z.t -> Z.t -> Z.t -> Z.t
   val popcount : Z.t -> Z.t
   val log2 : Z.t -> Z.t
@@ -165,6 +177,31 @@ module Make (P : PRIMS) = struct
   let overflows_mul (signed : bool) (n : Z.t) (l : Z.t) (r : Z.t) : bool =
       (let res = (Z.mul (bv_to_z signed n l) (bv_to_z signed n r)) in
       ((Z.lt res (min_for signed n)) || (Z.gt res (max_for signed n))))
+  
+  let is_int_min (l : bv) : bool =
+      ((Z.equal (P.to_z true l) (min_for true (P.width l))))
+  
+  let add_overflows (signed : bool) (l : bv) (r : bv) : bool =
+      (let n = (P.width l) in
+      (let res = (Z.add (P.to_z signed l) (P.to_z signed r)) in
+      ((Z.lt res (min_for signed n)) || (Z.gt res (max_for signed n)))))
+  
+  let sub_overflows (signed : bool) (l : bv) (r : bv) : bool =
+      (let n = (P.width l) in
+      (let res = (Z.sub (P.to_z signed l) (P.to_z signed r)) in
+      ((Z.lt res (min_for signed n)) || (Z.gt res (max_for signed n)))))
+  
+  let mul_overflows (signed : bool) (l : bv) (r : bv) : bool =
+      (let n = (P.width l) in
+      (let res = (Z.mul (P.to_z signed l) (P.to_z signed r)) in
+      ((Z.lt res (min_for signed n)) || (Z.gt res (max_for signed n)))))
+  
+  let fold_checked (c : Svalue_ast.checked) (a : bv) (b : bv) (is_add : bool) : Svalue_ast.checked =
+      (let keep (signed : bool) =
+        ((checked_has signed c) && (not (if is_add
+                                        then (add_overflows signed a b)
+                                        else (sub_overflows signed a b)))) in
+      { Svalue_ast.signed = (keep true); Svalue_ast.unsigned = (keep false) })
   
   let mask_checked_after_fold (c : Svalue_ast.checked) (a : t) (b : t) (is_add : bool) : Svalue_ast.checked =
       (match a, b with

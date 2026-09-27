@@ -37,6 +37,31 @@ external bv_one : int -> t = ""
 external v_true : t = ""
 external v_false : t = ""
 
+(* Bit-vector values: a width, and a value of that width *)
+
+(* [bv_of_lit v] is the value of the bit-vector literal [v]; fails otherwise. *)
+external bv_of_lit : t -> bv = ""
+
+(* [lit l] is the literal of type [TBitVector (width l)] whose value is [l]. *)
+external lit : bv -> t = ""
+external width : bv -> int = ""
+
+(* [to_z signed l] is [l] read as a signed or unsigned integer. *)
+external to_z : bool -> bv -> int = ""
+
+(* [of_z n z] is [z mod 2^n], of width [n]. *)
+external of_z : int -> int -> bv = ""
+
+(* Modular arithmetic, at the width of the first operand; [+], [-], [*] and
+   unary [-] on [bv]s stand for these. Division is SMT-LIB's: by zero, it gives
+   all ones (and 1 for a negative signed dividend). *)
+external lit_add : bv -> bv -> bv = ""
+external lit_sub : bv -> bv -> bv = ""
+external lit_mul : bv -> bv -> bv = ""
+external lit_neg : bv -> bv = ""
+external lit_udiv : bv -> bv -> bv = ""
+external lit_sdiv : bv -> bv -> bv = ""
+
 (* Integers *)
 external signed_extract : int -> int -> int -> int = ""
 external popcount : int -> int = ""
@@ -164,6 +189,35 @@ let overflows_sub (signed : bool) (n : int) (l : int) (r : int) : bool =
 let overflows_mul (signed : bool) (n : int) (l : int) (r : int) : bool =
   let res = bv_to_z signed n l * bv_to_z signed n r in
   res < min_for signed n || res > max_for signed n
+
+(* Bit-vector values *)
+
+let is_int_min (l : bv) : bool = to_z true l = min_for true (width l)
+
+(* whether [l op r] overflows, as integers of [l]'s width *)
+let add_overflows (signed : bool) (l : bv) (r : bv) : bool =
+  let n = width l in
+  let res = to_z signed l + to_z signed r in
+  res < min_for signed n || res > max_for signed n
+
+let sub_overflows (signed : bool) (l : bv) (r : bv) : bool =
+  let n = width l in
+  let res = to_z signed l - to_z signed r in
+  res < min_for signed n || res > max_for signed n
+
+let mul_overflows (signed : bool) (l : bv) (r : bv) : bool =
+  let n = width l in
+  let res = to_z signed l * to_z signed r in
+  res < min_for signed n || res > max_for signed n
+
+(* The checks of [c] that survive folding the constants [a] and [b] into
+   [a + b] (or [a - b]): see [mask_checked_after_fold]. *)
+let fold_checked (c : checked) (a : bv) (b : bv) (is_add : bool) : checked =
+  let keep (signed : bool) =
+    checked_has signed c
+    && not (if is_add then add_overflows signed a b else sub_overflows signed a b)
+  in
+  { signed = keep true; unsigned = keep false }
 
 (* Re-associating a checked add/sub folds two of its constants ([a], [b]) into
    a single one. The rebuilt operation can overflow even when the originals

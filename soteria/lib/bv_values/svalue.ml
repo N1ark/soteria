@@ -428,6 +428,35 @@ module Make (V : Value_ext) () = struct
     let bv_one n = bv_one (Z.to_int n)
     let v_true = v_true
     let v_false = v_false
+
+    type bv = { w : int; z : Z.t }
+
+    let bv_of_lit v =
+      match v.node.kind with
+      | BitVec z -> { w = size_of v.node.ty; z }
+      | _ -> L.failwith "bv_of_lit: not a literal"
+
+    let lit l = mk_bv (Z.of_int l.w) l.z
+    let width l = Z.of_int l.w
+    let to_z signed l = if signed then Z.signed_extract l.z 0 l.w else l.z
+    let masked w z = { w; z = Z.extract z 0 w }
+    let of_z n z = masked (Z.to_int n) z
+    let lit_add a b = masked a.w (Z.add a.z b.z)
+    let lit_sub a b = masked a.w (Z.sub a.z b.z)
+    let lit_mul a b = masked a.w (Z.mul a.z b.z)
+    let lit_neg a = masked a.w (Z.neg a.z)
+
+    let lit_udiv a b =
+      let d = Z.extract b.z 0 a.w in
+      if Z.equal d Z.zero then masked a.w Z.minus_one
+      else masked a.w (Z.div a.z d)
+
+    let lit_sdiv a b =
+      let n = Z.signed_extract a.z 0 a.w and d = Z.signed_extract b.z 0 a.w in
+      if Z.equal d Z.zero then
+        masked a.w (if Z.lt n Z.zero then Z.one else Z.minus_one)
+      else masked a.w (Z.div n d)
+
     let signed_extract z o l = Z.signed_extract z (Z.to_int o) (Z.to_int l)
     let popcount z = Z.of_int (Z.popcount z)
     let log2 z = Z.of_int (Z.log2 z)

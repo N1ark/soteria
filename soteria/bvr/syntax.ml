@@ -3,6 +3,7 @@
 
 type ty =
   | TInt  (** mathematical integers: [Z.t] in OCaml, [Int] in Lean *)
+  | TBv  (** a bit-vector value, which knows its width *)
   | TBool
   | TUnit
   | TTerm  (** svalues *)
@@ -18,6 +19,7 @@ type ty =
 
 let rec pp_ty ft = function
   | TInt -> Fmt.string ft "int"
+  | TBv -> Fmt.string ft "bv"
   | TBool -> Fmt.string ft "bool"
   | TUnit -> Fmt.string ft "unit"
   | TTerm -> Fmt.string ft "t"
@@ -203,6 +205,9 @@ and pat_desc =
   | PNil
   | PCons of pat * pat
   | PRecord of (string * pat) list  (** partial [checked] records *)
+  | PLit of string
+      (** in [[@cases]] functions, [BitVec x]: a bit-vector literal, whose value
+          is bound to [x] as a [bv] *)
 
 type expr = { e : expr_desc; ety : ty; eloc : Location.t }
 
@@ -244,6 +249,9 @@ type fn = {
   ret : ty;
   spec : expr option;
       (** for rule functions, the raw term the result must refine *)
+  cases : bool;
+      (** [[@cases]]: literals are bound as [bv]s, and the rules are proved per
+          alternative *)
   body : expr;
   floc : Location.t;
 }

@@ -20,6 +20,7 @@ let constr_path (c : constr) =
 
 let rec ocaml_ty ft = function
   | TInt -> pf ft "Z.t"
+  | TBv -> pf ft "bv"
   | TBool -> pf ft "bool"
   | TUnit -> pf ft "unit"
   | TTerm -> pf ft "t"
@@ -61,6 +62,10 @@ let rec pat ft (p : pat) =
   match p.p with
   | PAny -> pf ft "_"
   | PVar x -> pf ft "%s" x
+  | PLit x ->
+      pf ft
+        "({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec _; _ }; _ } as %s)"
+        x
   | PAs (p', x) -> pf ft "(%a as %s)" pat p' x
   | POr (a, b) -> pf ft "(%a | %a)" pat a pat b
   | PInt z -> pf ft "%s" (Z.to_string z)
@@ -177,7 +182,10 @@ let rec expr ctx ft (e : expr) =
   | EAssert (c, body) -> pf ft "@[<v>(assert %a;@ %a)@]" expr c expr body
 
 and small_lets ft p =
-  List.iter (fun x -> pf ft "let %s = Z.of_int %s in@ " x x) (small_binders p)
+  List.iter (fun x -> pf ft "let %s = Z.of_int %s in@ " x x) (small_binders p);
+  List.iter
+    (fun x -> pf ft "let %s = P.bv_of_lit %s in@ " x x)
+    (Check.lit_binders p)
 
 and case ctx ft (c : case) =
   let guard ft = function
@@ -281,6 +289,7 @@ let program ~sources ft (p : program) =
   pf ft "[@@@@@@warning \"-a\"]@ @ ";
   pf ft "@[<v 2>module type PRIMS = sig@ type ghost@ type ext@ type ext_ty@ ";
   pf ft "type t = (ghost, ext, ext_ty) Svalue_ast.t@ ";
+  pf ft "type bv@ ";
   pf ft
     "val node : (ghost, ext, ext_ty) Svalue_ast.t_kind -> ext_ty Svalue_ast.ty \
      -> t@ ";

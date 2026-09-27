@@ -128,6 +128,7 @@ let classify (p : program) =
 
 let rec lean_ty ft = function
   | TInt -> pf ft "Int"
+  | TBv -> pf ft "BvVal"
   | TBool -> pf ft "Bool"
   | TUnit -> pf ft "Unit"
   | TTerm -> pf ft "Term"
@@ -157,6 +158,7 @@ let rec pat ft (p : pat) =
   match p.p with
   | PAny -> pf ft "_"
   | PVar x -> pf ft "%s" (id x)
+  | PLit x -> pf ft "%s@(Term.mk (Kind.bitVec _) _)" (id x)
   | PAs (q, x) -> pf ft "%s@%a" (id x) pat q
   | POr _ -> failwith "gen_lean: or-pattern after desugaring"
   | PInt z -> pf ft "(%s : Int)" (Z.to_string z)
@@ -258,6 +260,28 @@ let rec expr ctx ft (e : expr) =
   | EField (e, f) -> pf ft "%a.%s" expr e f
   | EAssert (_, body) -> expr ft body
 
+(** Rebinds the variables of [PLit] patterns to their values. *)
+and lit_lets ft (p : pat) =
+  List.iter
+    (fun x -> pf ft "let %s := bv_of_lit %s;@ " (id x) (id x))
+    (Check.lit_binders p)
+
+(** Prints [k] after the [lit_lets] of [p], if any. *)
+and with_lits p k ft () =
+  if Check.lit_binders p = [] then k ft ()
+  else pf ft "@[<hv>(%a%a)@]" lit_lets p k ()
+
+(** A case's result: [some body], under its guard. *)
+and guarded ctx (c : case) ft () =
+  with_lits c.pat
+    (fun ft () ->
+      match c.guard with
+      | None -> pf ft "some (%a)" (expr ctx) c.body
+      | Some g ->
+          pf ft "@[<hv>(if %a@ then some (%a)@ else none)@]" (expr ctx) g
+            (expr ctx) c.body)
+    ft ()
+
 (** Whether a pattern matches every value of its type. *)
 and irrefutable (p : pat) =
   match p.p with
@@ -298,13 +322,7 @@ and discriminants ctx (scruts, (cases : case list)) =
 and match_ ctx ft (scruts, cases) =
   let d, p, wild = discriminants ctx (scruts, cases) in
   let alt ft (c : case) =
-    let rhs ft () =
-      match c.guard with
-      | None -> pf ft "some (%a)" (expr ctx) c.body
-      | Some g ->
-          pf ft "@[<hv>(if %a@ then some (%a)@ else none)@]" (expr ctx) g
-            (expr ctx) c.body
-    in
+    let rhs = guarded ctx c in
     if irrefutable c.pat then
       pf ft "@[<hv 2>(match %a with@ | %a =>@ %a)@]" d () p c.pat rhs ()
     else
@@ -317,7 +335,8 @@ and match_ ctx ft (scruts, cases) =
         ( List.rev rest,
           fun ft () ->
             pf ft "@[<hv 2>(match %a with@ | %a =>@ %a)@]" d () p c.pat
-              (expr ctx) c.body )
+              (with_lits c.pat (fun ft () -> expr ctx ft c.body))
+              () )
     | _ -> (cases, fun ft () -> pf ft "Inhabited.default")
   in
   match alts with
@@ -389,13 +408,7 @@ let rule_def ctx ft (f : fn) (pre, scruts, grp) =
   let name = rule_name f grp in
   let d, p, wild = discriminants ctx (scruts, grp) in
   let alt ft (c : case) =
-    let rhs ft () =
-      match c.guard with
-      | None -> pf ft "some (%a)" (expr ctx) c.body
-      | Some g ->
-          pf ft "@[<hv>(if %a@ then some (%a)@ else none)@]" (expr ctx) g
-            (expr ctx) c.body
-    in
+    let rhs = guarded ctx c in
     if scruts = [] then rhs ft ()
     else if irrefutable c.pat then
       pf ft "@[<hv 2>(match %a with@ | %a =>@ %a)@]" d () p c.pat rhs ()

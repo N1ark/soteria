@@ -105,6 +105,32 @@ def bv_one (n : Int) : Term := .mk (.bitVec 1) (.bitVector n)
 def v_true : Term := .mk (.bool true) .bool
 def v_false : Term := .mk (.bool false) .bool
 
+/-! ## Bit-vector values -/
+
+/-- A bit-vector value, of width `w`. -/
+structure BvVal where
+  w : Nat
+  x : BitVec w
+
+def bv_of_lit : Term → BvVal
+  | .mk (.bitVec z) t => ⟨(size_of_ty t).toNat, BitVec.ofInt _ z⟩
+  | _ => ⟨0, 0⟩
+
+def lit (l : BvVal) : Term := .mk (.bitVec l.x.toNat) (.bitVector l.w)
+def width (l : BvVal) : Int := l.w
+def to_z (signed : Bool) (l : BvVal) : Int := if signed then l.x.toInt else l.x.toNat
+def of_z (n z : Int) : BvVal := ⟨n.toNat, BitVec.ofInt _ z⟩
+
+/-! The operations are at the width of their first operand (the other one is
+truncated or extended to it, which is what the OCaml masking does). -/
+
+def lit_add (a b : BvVal) : BvVal := ⟨a.w, a.x + b.x.setWidth a.w⟩
+def lit_sub (a b : BvVal) : BvVal := ⟨a.w, a.x - b.x.setWidth a.w⟩
+def lit_mul (a b : BvVal) : BvVal := ⟨a.w, a.x * b.x.setWidth a.w⟩
+def lit_neg (a : BvVal) : BvVal := ⟨a.w, -a.x⟩
+def lit_udiv (a b : BvVal) : BvVal := ⟨a.w, a.x.smtUDiv (b.x.setWidth a.w)⟩
+def lit_sdiv (a b : BvVal) : BvVal := ⟨a.w, a.x.smtSDiv (b.x.setWidth a.w)⟩
+
 /-! ## Floats, as Floatml's `AnyFloat` -/
 
 def fp_size (p : Prec) : Int := p.size

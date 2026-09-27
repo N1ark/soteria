@@ -960,7 +960,7 @@ module Make (P : PRIMS) = struct
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (ck1)), (({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec _; _ }; _ } as k1) as v_k1), r1); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (ck2)), (({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec _; _ }; _ } as k2) as v_k2), r2); _ }; _ })
         when (let k1 = P.bv_of_lit k1 in
         let k2 = P.bv_of_lit k2 in
-        ((checked_meet (checked_meet checked ck1) ck2).Svalue_ast.unsigned && ((udivides k1 k2) || (udivides k2 k1)))) ->
+        ((checked_meet (checked_meet checked ck1) ck2).Svalue_ast.unsigned && (((not (Z.equal (P.to_z false k1) Z.zero)) || (not (Z.equal (P.to_z false k2) Z.zero))) && ((udivides k1 k2) || (udivides k2 k1))))) ->
         let k1 = P.bv_of_lit k1 in
         let k2 = P.bv_of_lit k2 in
         (let checked = (checked_unsigned ()) in
@@ -972,7 +972,7 @@ module Make (P : PRIMS) = struct
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (ck1)), (({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec _; _ }; _ } as k1) as v_k1), r1); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (ck2)), r2, (({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec _; _ }; _ } as k2) as v_k2)); _ }; _ })
         when (let k1 = P.bv_of_lit k1 in
         let k2 = P.bv_of_lit k2 in
-        ((checked_meet (checked_meet checked ck1) ck2).Svalue_ast.unsigned && ((udivides k1 k2) || (udivides k2 k1)))) ->
+        ((checked_meet (checked_meet checked ck1) ck2).Svalue_ast.unsigned && (((not (Z.equal (P.to_z false k1) Z.zero)) || (not (Z.equal (P.to_z false k2) Z.zero))) && ((udivides k1 k2) || (udivides k2 k1))))) ->
         let k1 = P.bv_of_lit k1 in
         let k2 = P.bv_of_lit k2 in
         (let checked = (checked_unsigned ()) in
@@ -984,7 +984,7 @@ module Make (P : PRIMS) = struct
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (ck1)), r1, (({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec _; _ }; _ } as k1) as v_k1)); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (ck2)), (({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec _; _ }; _ } as k2) as v_k2), r2); _ }; _ })
         when (let k1 = P.bv_of_lit k1 in
         let k2 = P.bv_of_lit k2 in
-        ((checked_meet (checked_meet checked ck1) ck2).Svalue_ast.unsigned && ((udivides k1 k2) || (udivides k2 k1)))) ->
+        ((checked_meet (checked_meet checked ck1) ck2).Svalue_ast.unsigned && (((not (Z.equal (P.to_z false k1) Z.zero)) || (not (Z.equal (P.to_z false k2) Z.zero))) && ((udivides k1 k2) || (udivides k2 k1))))) ->
         let k1 = P.bv_of_lit k1 in
         let k2 = P.bv_of_lit k2 in
         (let checked = (checked_unsigned ()) in
@@ -996,7 +996,7 @@ module Make (P : PRIMS) = struct
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (ck1)), r1, (({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec _; _ }; _ } as k1) as v_k1)); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (ck2)), r2, (({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec _; _ }; _ } as k2) as v_k2)); _ }; _ })
         when (let k1 = P.bv_of_lit k1 in
         let k2 = P.bv_of_lit k2 in
-        ((checked_meet (checked_meet checked ck1) ck2).Svalue_ast.unsigned && ((udivides k1 k2) || (udivides k2 k1)))) ->
+        ((checked_meet (checked_meet checked ck1) ck2).Svalue_ast.unsigned && (((not (Z.equal (P.to_z false k1) Z.zero)) || (not (Z.equal (P.to_z false k2) Z.zero))) && ((udivides k1 k2) || (udivides k2 k1))))) ->
         let k1 = P.bv_of_lit k1 in
         let k2 = P.bv_of_lit k2 in
         (let checked = (checked_unsigned ()) in

@@ -57,6 +57,7 @@ let[@spec Add (checked, v1, v2) <| ty v1] [@cases] bv_add (checked : checked)
   | ( Mul (ck1, (BitVec k1 as v_k1), r1) [@comm],
       Mul (ck2, (BitVec k2 as v_k2), r2) [@comm] ) [@r factor_const]
     when (checked_meet (checked_meet checked ck1) ck2).unsigned
+         && (to_z false k1 <> 0 || to_z false k2 <> 0)
          && (udivides k1 k2 || udivides k2 k1) ->
       let checked = checked_unsigned in
       if udivides k1 k2 then

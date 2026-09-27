@@ -1975,7 +1975,7 @@ def bv_add.r_factor_const (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) 
     | (Term.mk (Kind.binop (Binop.mul ck1) v_k1@k1@(Term.mk (Kind.bitVec _) _) r1) _), (Term.mk (Kind.binop (Binop.mul ck2) v_k2@k2@(Term.mk (Kind.bitVec _) _) r2) _) =>
     (let k1 := bv_of_lit k1;
     let k2 := bv_of_lit k2;
-    (whenSome ((checked_meet (checked_meet checked ck1) ck2).unsigned && ((udivides k1 k2) || (udivides k2 k1)))
+    (whenSome ((checked_meet (checked_meet checked ck1) ck2).unsigned && (((decide ((to_z false k1) ≠ (0 : Int))) || (decide ((to_z false k2) ≠ (0 : Int)))) && ((udivides k1 k2) || (udivides k2 k1))))
     ((let checked := checked_unsigned;
      (if (udivides k1 k2)
      then (let common := (lit (lit_udiv k2 k1));
@@ -1987,7 +1987,7 @@ def bv_add.r_factor_const (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) 
         | (Term.mk (Kind.binop (Binop.mul ck1) v_k1@k1@(Term.mk (Kind.bitVec _) _) r1) _), (Term.mk (Kind.binop (Binop.mul ck2) r2 v_k2@k2@(Term.mk (Kind.bitVec _) _)) _) =>
         (let k1 := bv_of_lit k1;
         let k2 := bv_of_lit k2;
-        (whenSome ((checked_meet (checked_meet checked ck1) ck2).unsigned && ((udivides k1 k2) || (udivides k2 k1)))
+        (whenSome ((checked_meet (checked_meet checked ck1) ck2).unsigned && (((decide ((to_z false k1) ≠ (0 : Int))) || (decide ((to_z false k2) ≠ (0 : Int)))) && ((udivides k1 k2) || (udivides k2 k1))))
         ((let checked := checked_unsigned;
          (if (udivides k1 k2)
          then (let common := (lit (lit_udiv k2 k1));
@@ -1999,7 +1999,7 @@ def bv_add.r_factor_const (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) 
         | (Term.mk (Kind.binop (Binop.mul ck1) r1 v_k1@k1@(Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.binop (Binop.mul ck2) v_k2@k2@(Term.mk (Kind.bitVec _) _) r2) _) =>
         (let k1 := bv_of_lit k1;
         let k2 := bv_of_lit k2;
-        (whenSome ((checked_meet (checked_meet checked ck1) ck2).unsigned && ((udivides k1 k2) || (udivides k2 k1)))
+        (whenSome ((checked_meet (checked_meet checked ck1) ck2).unsigned && (((decide ((to_z false k1) ≠ (0 : Int))) || (decide ((to_z false k2) ≠ (0 : Int)))) && ((udivides k1 k2) || (udivides k2 k1))))
         ((let checked := checked_unsigned;
          (if (udivides k1 k2)
          then (let common := (lit (lit_udiv k2 k1));
@@ -2011,7 +2011,7 @@ def bv_add.r_factor_const (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) 
         | (Term.mk (Kind.binop (Binop.mul ck1) r1 v_k1@k1@(Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.binop (Binop.mul ck2) r2 v_k2@k2@(Term.mk (Kind.bitVec _) _)) _) =>
         (let k1 := bv_of_lit k1;
         let k2 := bv_of_lit k2;
-        (whenSome ((checked_meet (checked_meet checked ck1) ck2).unsigned && ((udivides k1 k2) || (udivides k2 k1)))
+        (whenSome ((checked_meet (checked_meet checked ck1) ck2).unsigned && (((decide ((to_z false k1) ≠ (0 : Int))) || (decide ((to_z false k2) ≠ (0 : Int)))) && ((udivides k1 k2) || (udivides k2 k1))))
         ((let checked := checked_unsigned;
          (if (udivides k1 k2)
          then (let common := (lit (lit_udiv k2 k1));

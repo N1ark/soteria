@@ -1482,6 +1482,7 @@ module Make (V : Value_ext) () = struct
       | ( Binop (Mul ck1, r1, ({ node = { kind = BitVec l1; _ }; _ } as v_l1)),
           Binop (Mul ck2, r2, ({ node = { kind = BitVec l2; _ }; _ } as v_l2)) )
         when (checked_meet (checked_meet checked ck1) ck2).unsigned
+             && Stdlib.not (Z.equal l1 Z.zero && Z.equal l2 Z.zero)
              && (Z.divisible l1 l2 || Z.divisible l2 l1) ->
           let checked = checked_unsigned in
           if Z.divisible l2 l1 then

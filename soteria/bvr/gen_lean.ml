@@ -757,8 +757,8 @@ let model ~sources ft (p : program) =
   (* specs *)
   List.iter
     (fun f ->
-      pf ft "@[<v 2>def %s.spec %a : Term :=@ %a@]@ @ " f.name params f
-        (expr ctx) (Option.get f.spec))
+      pf ft "@[<v 2>@@[bvr_spec] def %s.spec %a : Term :=@ %a@]@ @ " f.name
+        params f (expr ctx) (Option.get f.spec))
     (rule_fns ctx);
   (* rules and steps *)
   List.iter

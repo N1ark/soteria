@@ -493,184 +493,184 @@ def signed_to_unsigned_cmp (O : Ops) (is_leq : Bool) (c_on_left : Bool) (c : Int
 
 end
 
-def b_and.spec (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def b_and.spec (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop Binop.and_ v1 v2) Ty.bool)
 
-def b_or.spec (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def b_or.spec (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop Binop.or_ v1 v2) Ty.bool)
 
-def b_not.spec (sv : Term) : Term :=
+@[bvr_spec] def b_not.spec (sv : Term) : Term :=
   (Term.mk (Kind.unop Unop.not_ sv) Ty.bool)
 
-def b_ite.spec (guard : Term) (if_ : Term) (else_ : Term) : Term :=
+@[bvr_spec] def b_ite.spec (guard : Term) (if_ : Term) (else_ : Term) : Term :=
   (Term.mk (Kind.triop Triop.ite guard if_ else_) (ty if_))
 
-def sem_eq.spec (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def sem_eq.spec (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop Binop.eq v1 v2) Ty.bool)
 
-def b_mk_exists.spec (binders : (List (Int × Ty))) (body : Term) : Term :=
+@[bvr_spec] def b_mk_exists.spec (binders : (List (Int × Ty))) (body : Term) : Term :=
   (Term.mk (Kind.exists_ binders body) Ty.bool)
 
-def sem_eq_untyped.spec (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def sem_eq_untyped.spec (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop Binop.eq v1 v2) Ty.bool)
 
-def b_distinct.spec (l : (List Term)) : Term :=
+@[bvr_spec] def b_distinct.spec (l : (List Term)) : Term :=
   (Term.mk (Kind.nop Nop.distinct l) Ty.bool)
 
-def bv_of_bool.spec (n : Int) (b : Term) : Term :=
+@[bvr_spec] def bv_of_bool.spec (n : Int) (b : Term) : Term :=
   (Term.mk (Kind.unop (Unop.bvOfBool n) b) (Ty.bitVector n))
 
-def bv_to_bool.spec (v : Term) : Term :=
+@[bvr_spec] def bv_to_bool.spec (v : Term) : Term :=
   (Term.mk (Kind.unop Unop.not_ (Term.mk (Kind.binop Binop.eq v (bv_zero (size v))) Ty.bool)) Ty.bool)
 
-def bv_not_bool.spec (v : Term) : Term :=
+@[bvr_spec] def bv_not_bool.spec (v : Term) : Term :=
   (Term.mk (Kind.unop (Unop.bvOfBool (size v)) (Term.mk (Kind.binop Binop.eq v (bv_zero (size v))) Ty.bool)) (Ty.bitVector (size v)))
 
-def bv_add.spec (checked : Checked) (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def bv_add.spec (checked : Checked) (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop (Binop.add checked) v1 v2) (ty v1))
 
-def bv_sub.spec (checked : Checked) (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def bv_sub.spec (checked : Checked) (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop (Binop.sub checked) v1 v2) (ty v1))
 
-def bv_neg.spec (checked : Bool) (v : Term) : Term :=
+@[bvr_spec] def bv_neg.spec (checked : Bool) (v : Term) : Term :=
   (Term.mk (Kind.unop (Unop.neg checked) v) (ty v))
 
-def bv_mod.spec (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def bv_mod.spec (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop Binop.mod_ v1 v2) (ty v1))
 
-def bv_rem.spec (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def bv_rem.spec (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop (Binop.rem signed) v1 v2) (ty v1))
 
-def bv_not.spec (v : Term) : Term :=
+@[bvr_spec] def bv_not.spec (v : Term) : Term :=
   (Term.mk (Kind.unop Unop.bvNot v) (ty v))
 
-def bv_and.spec (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def bv_and.spec (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop Binop.bitAnd v1 v2) (Ty.bitVector (size v1)))
 
-def bv_or.spec (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def bv_or.spec (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop Binop.bitOr v1 v2) (ty v1))
 
-def bv_xor.spec (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def bv_xor.spec (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop Binop.bitXor v1 v2) (ty v1))
 
-def bv_extract.spec (from_ : Int) (to_ : Int) (v : Term) : Term :=
+@[bvr_spec] def bv_extract.spec (from_ : Int) (to_ : Int) (v : Term) : Term :=
   (Term.mk (Kind.unop (Unop.bvExtract from_ to_) v) (Ty.bitVector ((to_ - from_) + (1 : Int))))
 
-def bv_extend.spec (signed : Bool) (extend_by : Int) (v : Term) : Term :=
+@[bvr_spec] def bv_extend.spec (signed : Bool) (extend_by : Int) (v : Term) : Term :=
   (Term.mk (Kind.unop (Unop.bvExtend signed extend_by) v) (Ty.bitVector ((size v) + extend_by)))
 
-def bv_concat.spec (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def bv_concat.spec (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop Binop.bvConcat v1 v2) (Ty.bitVector ((size v1) + (size v2))))
 
-def bv_shl.spec (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def bv_shl.spec (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop Binop.shl v1 v2) (ty v1))
 
-def bv_lshr.spec (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def bv_lshr.spec (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop Binop.lShr v1 v2) (ty v1))
 
-def bv_ashr.spec (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def bv_ashr.spec (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop Binop.aShr v1 v2) (ty v1))
 
-def bv_mul.spec (checked : Checked) (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def bv_mul.spec (checked : Checked) (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop (Binop.mul checked) v1 v2) (ty v1))
 
-def bv_div.spec (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def bv_div.spec (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop (Binop.div signed) v1 v2) (ty v1))
 
-def bv_lt.spec (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def bv_lt.spec (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool)
 
-def bv_leq.spec (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def bv_leq.spec (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool)
 
-def bv_add_overflows.spec (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def bv_add_overflows.spec (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop (Binop.addOvf signed) v1 v2) Ty.bool)
 
-def bv_mul_overflows.spec (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def bv_mul_overflows.spec (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop (Binop.mulOvf signed) v1 v2) Ty.bool)
 
-def bv_neg_overflows.spec (v : Term) : Term :=
+@[bvr_spec] def bv_neg_overflows.spec (v : Term) : Term :=
   (Term.mk (Kind.binop Binop.eq (mk_masked (size v) (min_for true (size v))) v) Ty.bool)
 
-def bv_sub_overflows.spec (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def bv_sub_overflows.spec (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop (Binop.subOvf signed) v1 v2) Ty.bool)
 
-def bv_of_float.spec (rounding : RM) (signed : Bool) (sz : Int) (v : Term) : Term :=
+@[bvr_spec] def bv_of_float.spec (rounding : RM) (signed : Bool) (sz : Int) (v : Term) : Term :=
   (Term.mk (Kind.unop (Unop.bvOfFloat rounding signed sz) v) (Ty.bitVector sz))
 
-def bv_to_float.spec (rounding : RM) (signed : Bool) (fp : Prec) (v : Term) : Term :=
+@[bvr_spec] def bv_to_float.spec (rounding : RM) (signed : Bool) (fp : Prec) (v : Term) : Term :=
   (Term.mk (Kind.unop (Unop.floatOfBv rounding signed fp) v) (Ty.float fp))
 
-def bv_to_float_raw.spec (v : Term) : Term :=
+@[bvr_spec] def bv_to_float_raw.spec (v : Term) : Term :=
   (Term.mk (Kind.unop (Unop.floatOfBvRaw (fp_of_size (size v))) v) (Ty.float (fp_of_size (size v))))
 
-def float_is_floatclass.spec (fc : FClass) (sv : Term) : Term :=
+@[bvr_spec] def float_is_floatclass.spec (fc : FClass) (sv : Term) : Term :=
   (Term.mk (Kind.unop (Unop.fIs fc) sv) Ty.bool)
 
-def float_is_negative.spec (v : Term) : Term :=
+@[bvr_spec] def float_is_negative.spec (v : Term) : Term :=
   (Term.mk (Kind.unop Unop.fIsNeg v) Ty.bool)
 
-def float_is_positive.spec (v : Term) : Term :=
+@[bvr_spec] def float_is_positive.spec (v : Term) : Term :=
   (Term.mk (Kind.unop Unop.fIsPos v) Ty.bool)
 
-def float_cast.spec (rounding : RM) (fp : Prec) (v : Term) : Term :=
+@[bvr_spec] def float_cast.spec (rounding : RM) (fp : Prec) (v : Term) : Term :=
   (Term.mk (Kind.unop (Unop.floatOfFloat rounding fp) v) (Ty.float fp))
 
-def float_eq.spec (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def float_eq.spec (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop Binop.fEq v1 v2) Ty.bool)
 
-def float_lt.spec (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def float_lt.spec (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop Binop.fLt v1 v2) Ty.bool)
 
-def float_leq.spec (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def float_leq.spec (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop Binop.fLeq v1 v2) Ty.bool)
 
-def float_add.spec (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def float_add.spec (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop Binop.fAdd v1 v2) (ty v1))
 
-def float_sub.spec (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def float_sub.spec (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop Binop.fSub v1 v2) (ty v1))
 
-def float_div.spec (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def float_div.spec (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop Binop.fDiv v1 v2) (ty v1))
 
-def float_mul.spec (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def float_mul.spec (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop Binop.fMul v1 v2) (ty v1))
 
-def float_rem.spec (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def float_rem.spec (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop Binop.fRem v1 v2) (ty v1))
 
-def float_abs.spec (v : Term) : Term :=
+@[bvr_spec] def float_abs.spec (v : Term) : Term :=
   (Term.mk (Kind.unop Unop.fAbs v) (ty v))
 
-def float_neg.spec (v : Term) : Term :=
+@[bvr_spec] def float_neg.spec (v : Term) : Term :=
   (Term.mk (Kind.unop Unop.fNeg v) (ty v))
 
-def float_fma.spec (a : Term) (b : Term) (c : Term) : Term :=
+@[bvr_spec] def float_fma.spec (a : Term) (b : Term) (c : Term) : Term :=
   (Term.mk (Kind.triop Triop.fma a b c) (ty a))
 
-def float_fmod_of_rem.spec (r : Term) (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def float_fmod_of_rem.spec (r : Term) (v1 : Term) (v2 : Term) : Term :=
   (raw_fmod_of_rem r v1 v2)
 
-def float_fmod.spec (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def float_fmod.spec (v1 : Term) (v2 : Term) : Term :=
   (raw_fmod_of_rem (Term.mk (Kind.binop Binop.fRem v1 v2) (ty v1)) v1 v2)
 
-def float_min.spec (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def float_min.spec (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop Binop.fMin v1 v2) (ty v1))
 
-def float_max.spec (v1 : Term) (v2 : Term) : Term :=
+@[bvr_spec] def float_max.spec (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop Binop.fMax v1 v2) (ty v1))
 
-def float_sqrt.spec (v : Term) : Term :=
+@[bvr_spec] def float_sqrt.spec (v : Term) : Term :=
   (Term.mk (Kind.unop Unop.fSqrt v) (ty v))
 
-def float_round.spec (rm : RM) (sv : Term) : Term :=
+@[bvr_spec] def float_round.spec (rm : RM) (sv : Term) : Term :=
   (Term.mk (Kind.unop (Unop.fRound rm) sv) (ty sv))
 
-def ptr_loc.spec (p : Term) : Term :=
+@[bvr_spec] def ptr_loc.spec (p : Term) : Term :=
   (Term.mk (Kind.unop Unop.getPtrLoc p) (Ty.loc (size p)))
 
-def ptr_ofs.spec (p : Term) : Term :=
+@[bvr_spec] def ptr_ofs.spec (p : Term) : Term :=
   (Term.mk (Kind.unop Unop.getPtrOfs p) (Ty.bitVector (size p)))
 
 def b_and.r_same (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=

@@ -75,6 +75,30 @@ let find_global env loc name =
     binds [x : bv]. *)
 let cases_mode = ref false
 
+let pid_counter = ref 0
+
+let next_pid () =
+  incr pid_counter;
+  !pid_counter
+
+(** Binary operators whose operands [[@comm]] may swap in [[@cases]] functions,
+    where the swapped alternative is proved from the other by commutativity.
+    Elsewhere, [[@comm]] just matches both orders. *)
+let commutative =
+  [
+    "Add";
+    "Mul";
+    "BitAnd";
+    "BitOr";
+    "BitXor";
+    "And";
+    "Or";
+    "Eq";
+    "FEq";
+    "AddOvf";
+    "MulOvf";
+  ]
+
 let rule_name_of_attrs (attrs : attributes) =
   List.find_map
     (fun (a : attribute) ->
@@ -145,20 +169,34 @@ let rec pat (expected : Syntax.ty) (p : pattern) : Syntax.pat =
       match q.p with
       | PTuple [ a; b ] -> PTuple [ b; a ]
       | PConstr (({ c_name = "Binop"; _ } as c), [ op; a; b ]) ->
+          (match op.p with
+          | PConstr (o, _)
+            when !cases_mode && not (List.mem o.c_name commutative) ->
+              error p.ppat_loc "[@comm]: %s is not commutative" o.c_name
+          | PConstr _ -> ()
+          | _ -> error p.ppat_loc "[@comm]: unknown operator");
           PConstr (c, [ op; b; a ])
       | _ -> error p.ppat_loc "[@comm] applies to pairs and binary operators"
     in
-    { q with p = POr (q, { q with p = swapped }) }
+    { q with p = PComm (q, { q with p = swapped }); pid = next_pid () }
   else pat' expected p
 
 and pat' (expected : Syntax.ty) (p : pattern) : Syntax.pat =
   let loc = p.ppat_loc in
-  let mk d = { p = d; pty = expected; ploc = loc } in
+  let mk d = { p = d; pty = expected; ploc = loc; pid = next_pid () } in
   let lit_node kname arg_pat =
     let c = Option.get (find_constr kname) in
     mk
       (PConstr
-         (c, [ { p = arg_pat; pty = arg_ty (List.hd c.c_args); ploc = loc } ]))
+         ( c,
+           [
+             {
+               p = arg_pat;
+               pty = arg_ty (List.hd c.c_args);
+               ploc = loc;
+               pid = next_pid ();
+             };
+           ] ))
   in
   match p.ppat_desc with
   | Ppat_constant (Pconst_integer (s, None)) when expected = TTerm ->
@@ -187,7 +225,14 @@ and pat' (expected : Syntax.ty) (p : pattern) : Syntax.pat =
       let params = List.filteri (fun i _ -> i < nparams) args in
       let operands = List.filteri (fun i _ -> i >= nparams) args in
       let params = List.map2 (fun a p -> pat (arg_ty a) p) op.c_args params in
-      let op_pat = { p = PConstr (op, params); pty = op.c_res; ploc = loc } in
+      let op_pat =
+        {
+          p = PConstr (op, params);
+          pty = op.c_res;
+          ploc = loc;
+          pid = next_pid ();
+        }
+      in
       let operands = List.map2 pat operand_tys operands in
       mk (PConstr (kc, op_pat :: operands))
   | Ppat_any -> mk PAny
@@ -296,7 +341,7 @@ and binders (p : Syntax.pat) : (string * (Syntax.ty * bool)) list =
   | PVar x -> [ (x, (p.pty, false)) ]
   | PLit x -> [ (x, (TBv, false)) ]
   | PAs (p', x) -> (x, (p.pty, false)) :: binders p'
-  | POr (p1, _) -> binders p1
+  | POr (p1, _) | PComm (p1, _) -> binders p1
   | PTuple l -> List.concat_map binders l
   | PSome p -> binders p
   | PCons (a, b) -> binders a @ binders b
@@ -317,7 +362,7 @@ let rec lit_binders (p : Syntax.pat) : string list =
   | PLit x -> [ x ]
   | PAny | PVar _ | PInt _ | PBool _ | PUnit | PNone | PNil -> []
   | PAs (q, _) | PSome q -> lit_binders q
-  | POr (a, _) -> lit_binders a
+  | POr (a, _) | PComm (a, _) -> lit_binders a
   | PTuple l | PConstr (_, l) -> List.concat_map lit_binders l
   | PCons (a, b) -> lit_binders a @ lit_binders b
   | PRecord l -> List.concat_map (fun (_, q) -> lit_binders q) l
@@ -360,77 +405,104 @@ let rec product = function
       let rest = product xs in
       List.concat_map (fun a -> List.map (fun r -> a :: r) rest) x
 
-let rec alternatives (p : Syntax.pat) : Syntax.pat list =
+(** The alternatives of a pattern, each with the choices made (see
+    [Syntax.case.alt]). *)
+let rec alternatives (p : Syntax.pat) :
+    (Syntax.pat * (int * int * bool) list) list =
   let mk d = { p with p = d } in
+  let one d = [ (mk d, []) ] in
+  let prod l =
+    List.map
+      (fun choices -> (List.map fst choices, List.concat_map snd choices))
+      (product (List.map alternatives l))
+  in
   match p.p with
-  | PAny | PVar _ | PLit _ | PInt _ | PBool _ | PUnit | PNone | PNil -> [ p ]
-  | POr (a, b) -> alternatives a @ alternatives b
-  | PAs (q, x) -> List.map (fun q -> mk (PAs (q, x))) (alternatives q)
-  | PTuple l ->
-      List.map (fun l -> mk (PTuple l)) (product (List.map alternatives l))
-  | PSome q -> List.map (fun q -> mk (PSome q)) (alternatives q)
+  | PAny | PVar _ | PLit _ | PInt _ | PBool _ | PUnit | PNone | PNil -> one p.p
+  | POr (a, b) | PComm (a, b) ->
+      let comm = match p.p with PComm _ -> true | _ -> false in
+      let side i q =
+        List.map (fun (q, t) -> (q, (p.pid, i, comm) :: t)) (alternatives q)
+      in
+      side 0 a @ side 1 b
+  | PAs (q, x) -> List.map (fun (q, t) -> (mk (PAs (q, x)), t)) (alternatives q)
+  | PTuple l -> List.map (fun (l, t) -> (mk (PTuple l), t)) (prod l)
+  | PSome q -> List.map (fun (q, t) -> (mk (PSome q), t)) (alternatives q)
   | PCons (a, b) ->
       List.map
-        (function [ a; b ] -> mk (PCons (a, b)) | _ -> assert false)
-        (product [ alternatives a; alternatives b ])
+        (function [ a; b ], t -> (mk (PCons (a, b)), t) | _ -> assert false)
+        (prod [ a; b ])
   | PRecord fs ->
       List.map
-        (fun ps -> mk (PRecord (List.combine (List.map fst fs) ps)))
-        (product (List.map (fun (_, p) -> alternatives p) fs))
+        (fun (ps, t) -> (mk (PRecord (List.combine (List.map fst fs) ps)), t))
+        (prod (List.map snd fs))
   | PConstr (c, args) ->
-      List.map
-        (fun l -> mk (PConstr (c, l)))
-        (product (List.map alternatives args))
+      List.map (fun (l, t) -> (mk (PConstr (c, l)), t)) (prod args)
 
-let fresh_counter = ref 0
-
-(* Fresh names are numbered per case, so that changing a rule does not rename
-   the variables of the others in the generated code. *)
+(* A repeated variable keeps its name at its occurrence of smallest [pid], and
+   fresh names are made from [pid]s: the alternatives of a [[@comm]] pattern
+   then name the same subpatterns the same way, whatever their order, and
+   generated names are stable (pids are numbered per case). The constraints are
+   ordered by [pid] too. *)
 let linearize (p : Syntax.pat) : Syntax.pat * Syntax.expr list =
-  fresh_counter := 0;
-  let seen = Hashtbl.create 8 and conds = ref [] in
-  let fresh () =
-    incr fresh_counter;
-    Printf.sprintf "bvr__%d" !fresh_counter
+  let keeper = Hashtbl.create 8 and conds = ref [] in
+  let rec collect (p : Syntax.pat) =
+    let note x =
+      match Hashtbl.find_opt keeper x with
+      | Some q when q <= p.pid -> ()
+      | _ -> Hashtbl.replace keeper x p.pid
+    in
+    match p.p with
+    | PVar x -> note x
+    | PAs (q, x) ->
+        note x;
+        collect q
+    | PLit _ | PAny | PInt _ | PBool _ | PUnit | PNone | PNil -> ()
+    | POr _ | PComm _ -> assert false
+    | PTuple l | PConstr (_, l) -> List.iter collect l
+    | PSome q -> collect q
+    | PCons (a, b) ->
+        collect a;
+        collect b
+    | PRecord fs -> List.iter (fun (_, q) -> collect q) fs
   in
+  collect p;
+  let fresh (p : Syntax.pat) = Printf.sprintf "bvr__%d" p.pid in
   let v loc t x = { e = EVar x; ety = t; eloc = loc } in
-  let eq loc t a b =
+  let eq (p : Syntax.pat) t a b =
     let d =
       match t with
       | TTerm -> ECall ("equal", [ a; b ])
       | t when eq_ty t -> EBinop (Arith Eq, a, b)
-      | t -> error loc "non-linear pattern at type %a" pp_ty t
+      | t -> error p.ploc "non-linear pattern at type %a" pp_ty t
     in
-    conds := { e = d; ety = TBool; eloc = loc } :: !conds
+    conds := (p.pid, { e = d; ety = TBool; eloc = p.ploc }) :: !conds
   in
   let bind (p : Syntax.pat) x =
-    if Hashtbl.mem seen x then (
-      let x' = fresh () in
-      eq p.ploc p.pty (v p.ploc p.pty x) (v p.ploc p.pty x');
-      x')
-    else (
-      Hashtbl.add seen x ();
-      x)
+    if Hashtbl.find keeper x = p.pid then x
+    else
+      let x' = fresh p in
+      eq p p.pty (v p.ploc p.pty x) (v p.ploc p.pty x');
+      x'
   in
+  let lits = Hashtbl.create 8 in
   let rec go (p : Syntax.pat) : Syntax.pat =
     let mk d = { p with p = d } in
     match p.p with
     | PAny | PBool _ | PUnit | PNone | PNil -> p
     | PVar x -> mk (PVar (bind p x))
     | PLit x ->
-        if Hashtbl.mem seen x then
+        if Hashtbl.mem lits x || Hashtbl.mem keeper x then
           error p.ploc "%s: repeated bit-vector literal variable" x;
-        Hashtbl.add seen x ();
+        Hashtbl.add lits x ();
         p
     | PInt z ->
-        let x = fresh () in
-        eq p.ploc TInt (v p.ploc TInt x)
-          { e = EInt z; ety = TInt; eloc = p.ploc };
+        let x = fresh p in
+        eq p TInt (v p.ploc TInt x) { e = EInt z; ety = TInt; eloc = p.ploc };
         mk (PVar x)
     | PAs (q, x) ->
         let q = go q in
         mk (PAs (q, bind p x))
-    | POr _ -> assert false
+    | POr _ | PComm _ -> assert false
     | PTuple l -> mk (PTuple (List.map go l))
     | PSome q -> mk (PSome (go q))
     | PCons (a, b) ->
@@ -440,7 +512,7 @@ let linearize (p : Syntax.pat) : Syntax.pat * Syntax.expr list =
     | PConstr (c, args) -> mk (PConstr (c, List.map go args))
   in
   let p = go p in
-  (p, List.rev !conds)
+  (p, List.map snd (List.sort (fun (a, _) (b, _) -> compare a b) !conds))
 
 let conj (l : Syntax.expr list) : Syntax.expr option =
   match l with
@@ -724,6 +796,8 @@ and case env ?expected scruts (c : Ppxlib.case) : Syntax.case list =
             | None -> (None, c.pc_lhs))
         | _ -> (None, c.pc_lhs))
   in
+  (* numbered per case, so that the generated names are stable *)
+  pid_counter := 0;
   let sty =
     match scruts with
     | [ s ] -> s.ety
@@ -734,14 +808,15 @@ and case env ?expected scruts (c : Ppxlib.case) : Syntax.case list =
   let guard = Option.map (expr env ~expected:TBool) c.pc_guard in
   let body = expr env ?expected c.pc_rhs in
   List.map
-    (fun alt ->
-      let pat, conds = linearize alt in
+    (fun (p, alt) ->
+      let pat, conds = linearize p in
       {
         pat;
         guard = conj (conds @ Option.to_list guard);
         body;
         rule;
         cloc = loc;
+        alt;
       })
     (alternatives pat)
 

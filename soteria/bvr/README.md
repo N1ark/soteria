@@ -35,6 +35,23 @@ let[@spec BvNot v <| ty v] bv_not (v : t) : t =
   `svalue.ml` and in `lean/Bvr/Prims.lean`; `= "oracle"` declares one that
   the Lean model takes as a parameter (Floatml's arithmetic).
 
+## `[@cases]` functions
+
+A rule function marked `[@cases]` (`let[@spec e] [@cases] f ...`) is proved per
+alternative of its rules, rather than per rule:
+
+- `BitVec l` binds `l : bv`, the value of the literal.
+- Each alternative of a rule (after expanding or-patterns and `[@comm]`) has
+  its own statement, over the variables of its pattern and with its guard as
+  a hypothesis: `f.r_name.aI.Stmt`. The statement of the rule is proved from
+  them by generated code.
+- An alternative that only swaps operands of commutative operators (or the two
+  arguments of the function) is proved from the unswapped one by generated
+  code, if its guard and body do not depend on the swap. `[@comm]` is only
+  allowed on commutative operators there.
+- It may only match on its parameters, with no `let` before the match, and
+  its pattern variables may not shadow the parameters it does not match on.
+
 ## Terms
 
 - `k <| ty` builds a raw node, without simplification.

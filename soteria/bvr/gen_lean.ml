@@ -160,7 +160,7 @@ let rec pat ft (p : pat) =
   | PVar x -> pf ft "%s" (id x)
   | PLit x -> pf ft "%s@(Term.mk (Kind.bitVec _) _)" (id x)
   | PAs (q, x) -> pf ft "%s@%a" (id x) pat q
-  | POr _ -> failwith "gen_lean: or-pattern after desugaring"
+  | POr _ | PComm _ -> failwith "gen_lean: or-pattern after desugaring"
   | PInt z -> pf ft "(%s : Int)" (Z.to_string z)
   | PBool b -> pf ft "%b" b
   | PUnit -> pf ft "()"
@@ -187,10 +187,26 @@ let rec pat ft (p : pat) =
 (* ---------------------------------------------------------------- *)
 (* Expressions *)
 
+(** Variables printed as given terms: the scrutinees and [as]/[PLit] binders of
+    a [[@cases]] alternative, in its statement. *)
+let subst : (string * string) list ref = ref []
+
+(** [k ()] with the variables [xs] bound, hence not substituted. *)
+let binding xs k =
+  let saved = !subst in
+  subst := List.filter (fun (x, _) -> not (List.mem x xs)) saved;
+  Fun.protect ~finally:(fun () -> subst := saved) k
+
+(** Whether the rule being printed belongs to a [[@cases]] function. *)
+let cases_style = ref false
+
 let rec expr ctx ft (e : expr) =
   let expr = expr ctx in
   match e.e with
-  | EVar x -> pf ft "%s" (id x)
+  | EVar x -> (
+      match List.assoc_opt x !subst with
+      | Some t -> pf ft "%s" t
+      | None -> pf ft "%s" (id x))
   | EInt z -> pf ft "(%s : Int)" (Z.to_string z)
   | EBool b -> pf ft "%b" b
   | EUnit -> pf ft "()"
@@ -241,13 +257,22 @@ let rec expr ctx ft (e : expr) =
   | EIf (c, a, b) ->
       pf ft "@[<hv>(if %a@ then %a@ else %a)@]" expr c expr a expr b
   | ELet ({ p = PVar x; _ }, rhs, body) ->
-      pf ft "@[<v>(let %s := %a;@ %a)@]" (id x) expr rhs expr body
+      pf ft "@[<v>(let %s := %a;@ %a)@]" (id x) expr rhs
+        (fun ft () -> binding [ x ] (fun () -> expr ft body))
+        ()
   | ELet (p, rhs, body) ->
-      pf ft "@[<v>(match %a with@ | %a =>@;<1 2>%a)@]" expr rhs pat p expr body
+      pf ft "@[<v>(match %a with@ | %a =>@;<1 2>%a)@]" expr rhs pat p
+        (fun ft () -> binding (pat_names p) (fun () -> expr ft body))
+        ()
   | ELetFun (f, params, fbody, body) ->
       pf ft "@[<v>(let %s := fun %a =>@;<1 2>%a;@ %a)@]" (id f)
         (list ~sep:" " (fun ft (x, t) -> pf ft "(%s : %a)" (id x) lean_ty t))
-        params expr fbody expr body
+        params
+        (fun ft () ->
+          binding (f :: List.map fst params) (fun () -> expr ft fbody))
+        ()
+        (fun ft () -> binding [ f ] (fun () -> expr ft body))
+        ()
   | EMatch (scruts, cases) -> match_ ctx ft (scruts, cases)
   | ETuple l -> pf ft "(%a)" (list expr) l
   | ESome e -> pf ft "(some %a)" expr e
@@ -259,6 +284,8 @@ let rec expr ctx ft (e : expr) =
         (List.assoc "signed" fs) expr (List.assoc "unsigned" fs)
   | EField (e, f) -> pf ft "%a.%s" expr e f
   | EAssert (_, body) -> expr ft body
+
+and pat_names p = List.map fst (Check.binders p)
 
 (** Rebinds the variables of [PLit] patterns to their values. *)
 and lit_lets ft (p : pat) =
@@ -273,14 +300,19 @@ and with_lits p k ft () =
 
 (** A case's result: [some body], under its guard. *)
 and guarded ctx (c : case) ft () =
-  with_lits c.pat
-    (fun ft () ->
-      match c.guard with
-      | None -> pf ft "some (%a)" (expr ctx) c.body
-      | Some g ->
-          pf ft "@[<hv>(if %a@ then some (%a)@ else none)@]" (expr ctx) g
-            (expr ctx) c.body)
-    ft ()
+  binding (pat_names c.pat) (fun () ->
+      with_lits c.pat
+        (fun ft () ->
+          match c.guard with
+          | None when !cases_style ->
+              pf ft "@[<hv>(whenSome true@ (%a))@]" (expr ctx) c.body
+          | None -> pf ft "some (%a)" (expr ctx) c.body
+          | Some g when !cases_style ->
+              pf ft "@[<hv>(whenSome %a@ (%a))@]" (expr ctx) g (expr ctx) c.body
+          | Some g ->
+              pf ft "@[<hv>(if %a@ then some (%a)@ else none)@]" (expr ctx) g
+                (expr ctx) c.body)
+        ft ())
 
 (** Whether a pattern matches every value of its type. *)
 and irrefutable (p : pat) =
@@ -335,7 +367,9 @@ and match_ ctx ft (scruts, cases) =
         ( List.rev rest,
           fun ft () ->
             pf ft "@[<hv 2>(match %a with@ | %a =>@ %a)@]" d () p c.pat
-              (with_lits c.pat (fun ft () -> expr ctx ft c.body))
+              (fun ft () ->
+                binding (pat_names c.pat) (fun () ->
+                    with_lits c.pat (fun ft () -> expr ctx ft c.body) ft ()))
               () )
     | _ -> (cases, fun ft () -> pf ft "Inhabited.default")
   in
@@ -375,11 +409,12 @@ let rec split_body (e : expr) : (expr -> expr) * expr list * case list list =
         [
           [
             {
-              pat = { p = PAny; pty = TUnit; ploc = e.eloc };
+              pat = { p = PAny; pty = TUnit; ploc = e.eloc; pid = 0 };
               guard = None;
               body = e;
               rule = Some "main";
               cloc = e.eloc;
+              alt = [];
             };
           ];
         ] )
@@ -405,6 +440,8 @@ let arrow ft (f : fn) =
 
 (** The Lean function for one rule. *)
 let rule_def ctx ft (f : fn) (pre, scruts, grp) =
+  cases_style := f.cases;
+  Fun.protect ~finally:(fun () -> cases_style := false) @@ fun () ->
   let name = rule_name f grp in
   let d, p, wild = discriminants ctx (scruts, grp) in
   let alt ft (c : case) =
@@ -430,6 +467,213 @@ let rule_def ctx ft (f : fn) (pre, scruts, grp) =
 let rules (f : fn) =
   let pre, scruts, groups = split_body f.body in
   List.map (fun g -> (pre, scruts, g)) groups
+
+(* ---------------------------------------------------------------- *)
+(* [[@cases]]: one statement per alternative ("arm") of a rule *)
+
+(** An arm's statement: its binders (name, Lean type), the substitution of the
+    scrutinees and pattern aliases, and for each substituted name the [pid] of
+    the pattern it stands for. *)
+type arm = {
+  a_case : case;
+  a_binders : (string * string) list;
+  a_subst : (string * (string * int)) list;
+  a_body_subst : (string * string) list;
+      (** [a_subst] without the names that the pattern rebinds *)
+}
+
+let ty_str t = Fmt.str "%a" lean_ty t
+
+(** The term a pattern matches, with its wildcards named after their [pid]. *)
+let pat_term (p : pat) =
+  let binders = ref [] and subst = ref [] in
+  let bind x t = binders := !binders @ [ (x, t) ] in
+  let rec go (p : pat) =
+    match p.p with
+    | PAny ->
+        let x = Printf.sprintf "w__%d" p.pid in
+        bind x (ty_str p.pty);
+        x
+    | PVar x ->
+        bind (id x) (ty_str p.pty);
+        id x
+    | PLit x ->
+        let z = x ^ "__z" and t = x ^ "__T" in
+        bind z "Int";
+        bind t "Ty";
+        let term = Printf.sprintf "(Term.mk (Kind.bitVec %s) %s)" z t in
+        subst := (x, (Printf.sprintf "(bv_of_lit %s)" term, p.pid)) :: !subst;
+        term
+    | PAs (q, x) ->
+        let t = go q in
+        subst := (x, (t, q.pid)) :: !subst;
+        t
+    | PInt z -> Printf.sprintf "(%s : Int)" (Z.to_string z)
+    | PBool b -> string_of_bool b
+    | PUnit -> "()"
+    | PTuple l -> "(" ^ String.concat ", " (List.map go l) ^ ")"
+    | PSome q -> "(some " ^ go q ^ ")"
+    | PNone -> "none"
+    | PNil -> "[]"
+    | PCons (h, t) ->
+        let h = go h in
+        "(" ^ h ^ " :: " ^ go t ^ ")"
+    | PRecord fs ->
+        let field f =
+          match List.assoc_opt f fs with
+          | Some q -> go q
+          | None ->
+              let x = Printf.sprintf "%s__%d" f p.pid in
+              bind x "Bool";
+              x
+        in
+        let sg = field "signed" in
+        "⟨" ^ sg ^ ", " ^ field "unsigned" ^ "⟩"
+    | PConstr (c, args) ->
+        let args = List.map go args in
+        let inner =
+          if args = [] then c.c_lean
+          else "(" ^ String.concat " " (c.c_lean :: args) ^ ")"
+        in
+        if p.pty = TTerm then (
+          let t = Printf.sprintf "t__%d" p.pid in
+          bind t "Ty";
+          "(Term.mk " ^ inner ^ " " ^ t ^ ")")
+        else inner
+    | POr _ | PComm _ -> failwith "gen_lean: or-pattern after desugaring"
+  in
+  let t = go p in
+  (t, !binders, !subst)
+
+let cases_error (f : fn) loc fmt =
+  Fmt.kstr (fun s -> raise (Check.Error (loc, f.name ^ ": " ^ s))) fmt
+
+let arm_of (f : fn) scruts (c : case) : arm =
+  let scrut_params =
+    List.map
+      (fun (e : expr) ->
+        match e.e with
+        | EVar x when List.mem_assoc x f.params -> x
+        | _ -> cases_error f e.eloc "[@cases] matches on parameters only")
+      scruts
+  in
+  let pats =
+    match (scrut_params, c.pat.p) with
+    | [ _ ], _ -> [ c.pat ]
+    | _, PTuple l -> l
+    | _, PAny -> List.map (fun _ -> c.pat) scrut_params
+    | _ -> cases_error f c.cloc "unexpected pattern"
+  in
+  let substituted = ref [] and binders = ref [] and subst = ref [] in
+  List.iter2
+    (fun x (p : pat) ->
+      match p.p with
+      | PAny -> ()
+      | PVar y -> subst := (y, (id x, p.pid)) :: !subst
+      | _ ->
+          let t, bs, sb = pat_term p in
+          substituted := x :: !substituted;
+          binders := !binders @ bs;
+          subst := ((x, (t, p.pid)) :: sb) @ !subst)
+    scrut_params pats;
+  let params =
+    List.filter_map
+      (fun (x, t) ->
+        if List.mem x !substituted then None else Some (id x, ty_str t))
+      f.params
+  in
+  List.iter
+    (fun (x, _) ->
+      if List.mem_assoc x params then
+        cases_error f c.cloc "pattern variable %s shadows a parameter" x)
+    !binders;
+  (* in the guard and body, pattern variables shadow the scrutinees they are
+     part of *)
+  let names = List.map fst !binders in
+  let body_subst =
+    List.filter_map
+      (fun (x, (t, _)) -> if List.mem (id x) names then None else Some (x, t))
+      !subst
+  in
+  {
+    a_case = c;
+    a_binders = params @ !binders;
+    a_subst = !subst;
+    a_body_subst = body_subst;
+  }
+
+(** Arms of a rule function, per rule. *)
+let arms (f : fn) =
+  List.map
+    (fun (pre, scruts, grp) ->
+      if (pre { f.body with e = EUnit }).e <> EUnit then
+        cases_error f f.floc "[@cases]: no let before the match";
+      (rule_name f grp, List.map (arm_of f scruts) grp))
+    (rules f)
+
+(** Whether [x] occurs in [e] other than as the argument of [ty] or [size] (when
+    [ty_ok]), where it is not rebound. *)
+let rec occurs ~ty_ok x (e : expr) =
+  let go = occurs ~ty_ok x in
+  match e.e with
+  | EVar y -> x = y
+  | ECall (("ty" | "size"), [ { e = EVar y; _ } ]) when y = x -> not ty_ok
+  | EInt _ | EBool _ | EUnit | ENone | ENil -> false
+  | ECall (_, l) | EConstr (_, l) | ELocalCall (_, l) | ETuple l ->
+      List.exists go l
+  | ENode (a, b) | EBinop (_, a, b) | ECons (a, b) | EAssert (a, b) ->
+      go a || go b
+  | EUnop (_, a) | ESome a | EField (a, _) -> go a
+  | EIf (a, b, c) -> go a || go b || go c
+  | ERecord l -> List.exists (fun (_, e) -> go e) l
+  | ELet (p, a, b) -> go a || ((not (List.mem x (pat_names p))) && go b)
+  | ELetFun (g, ps, a, b) ->
+      ((not (List.mem x (g :: List.map fst ps))) && go a) || (g <> x && go b)
+  | EMatch (scruts, cases) ->
+      List.exists go scruts
+      || List.exists
+           (fun (c : case) ->
+             (not (List.mem x (pat_names c.pat)))
+             && (Option.fold ~none:false ~some:go c.guard || go c.body))
+           cases
+
+(** The arm that the arm [a] is derived from by commutativity, if any: the one
+    of the same source case that takes the same or-pattern choices and no
+    [[@comm]] swap, when [a]'s guard and body do not depend on the swaps. *)
+let derived_from (grp : arm list) (a : arm) =
+  let c = a.a_case in
+  if not (List.exists (fun (_, i, comm) -> comm && i = 1) c.alt) then None
+  else
+    let norm l = List.sort compare l in
+    let base_alt =
+      norm
+        (List.map
+           (fun (p, i, comm) -> (p, (if comm then 0 else i), comm))
+           c.alt)
+    in
+    match
+      List.find_opt
+        (fun b -> b.a_case.cloc = c.cloc && norm b.a_case.alt = base_alt)
+        grp
+    with
+    | None -> None
+    | Some b ->
+        let names =
+          List.sort_uniq compare
+            (List.map fst a.a_subst @ List.map fst b.a_subst)
+        in
+        let independent x =
+          match (List.assoc_opt x a.a_subst, List.assoc_opt x b.a_subst) with
+          | Some (t, _), Some (t', _) when t = t' -> true
+          | Some (_, p), Some (_, p') ->
+              let ty_ok = p = p' in
+              let e = c.body and g = c.guard in
+              not
+                (occurs ~ty_ok x e
+                || Option.fold ~none:false ~some:(occurs ~ty_ok x) g)
+          | _ -> false
+        in
+        if List.for_all independent names then Some b else None
 
 (* ---------------------------------------------------------------- *)
 (* Files *)
@@ -546,6 +790,37 @@ let model ~sources ft (p : program) =
      opsStep (opsN orc n)@]@ @ ";
   pf ft "end Bvr@]@."
 
+let arm_name f r i = Printf.sprintf "%s.r_%s.a%d" f.name (id r) (i + 1)
+
+(** The statement of an arm: under its guard, the spec at the matched arguments
+    is refined by the body. *)
+let arm_stmt ctx ft f r i (a : arm) =
+  let c = a.a_case in
+  let with_subst s k =
+    subst := s;
+    Fun.protect ~finally:(fun () -> subst := []) k
+  in
+  pf ft
+    "@[<v 2>def %s.Stmt : Prop :=@ ∀ (FS : FloatSem) (O : Ops), O.Sound FS →@ "
+    (arm_name f r i);
+  pf ft "∀ %a,@ "
+    (list ~sep:" " (fun ft (x, t) -> pf ft "(%s : %s)" x t))
+    a.a_binders;
+  with_subst a.a_body_subst (fun () ->
+      Option.iter (fun g -> pf ft "%a = true →@ " (expr ctx) g) c.guard);
+  let spec_args =
+    with_subst
+      (List.map (fun (x, (t, _)) -> (x, t)) a.a_subst)
+      (fun () ->
+        List.map
+          (fun (x, _) -> Fmt.str "%a" (expr ctx) { c.body with e = EVar x })
+          f.params)
+  in
+  pf ft "Refines FS (%s.spec %s)@ (%a)@]@ @ " f.name
+    (String.concat " " spec_args)
+    (fun ft () -> with_subst a.a_body_subst (fun () -> expr ctx ft c.body))
+    ()
+
 let statements ~sources ft (p : program) =
   let ctx = classify p in
   header ~sources ft [ "Bvr.Semantics" ];
@@ -569,13 +844,65 @@ let statements ~sources ft (p : program) =
              O.Sound FS →@ ∀ %a (res : Term), %s.r_%s O %a = some res →@ \
              Refines FS (%s.spec %a) res@]@ @ "
             f.name n params f f.name n args f f.name args f)
-        (rules f))
+        (rules f);
+      if f.cases then
+        List.iter
+          (fun (r, arms) ->
+            List.iteri (fun i a -> arm_stmt ctx ft f r i a) arms)
+          (arms f))
     (rule_fns ctx);
   pf ft "end Bvr@]@."
 
+(** The proofs of the rules of a [[@cases]] function from those of its arms, and
+    of the arms derived by commutativity. *)
+let cases_proofs ft (f : fn) =
+  List.iter
+    (fun (r, arms) ->
+      List.iteri
+        (fun i a ->
+          match derived_from arms a with
+          | None -> ()
+          | Some b ->
+              let j =
+                let rec find k = function
+                  | x :: _ when x == b -> k
+                  | _ :: l -> find (k + 1) l
+                  | [] -> assert false
+                in
+                find 0 arms
+              in
+              let hg = if a.a_case.guard = None then "" else " hg" in
+              pf ft
+                "@[<v 2>theorem %s.proof : %s.Stmt := by@ intro FS O hO %a%s@ \
+                 exact Refines.trans@   (by simp only [%s.spec, ty, \
+                 Term.ty_mk]; bvr_comm)@   (%s.proof FS O hO %a%s)@]@ @ "
+                (arm_name f r i) (arm_name f r i)
+                (list ~sep:" " (fun ft (x, _) -> pf ft "%s" x))
+                a.a_binders hg f.name (arm_name f r j)
+                (list ~sep:" " (fun ft (x, _) -> pf ft "%s" x))
+                b.a_binders hg)
+        arms;
+      (* the alternatives come out of [repeat' rcases] in order *)
+      pf ft
+        "@[<v 2>theorem %s.r_%s.proof : %s.r_%s.Stmt := by@ intro FS O hO %a \
+         res h@ simp only [%s.r_%s] at h@ repeat' rcases Lib.orElse_some h \
+         with h | h@ %a@]@ @ "
+        f.name (id r) f.name (id r) args f f.name (id r)
+        (Format.pp_print_list
+           ~pp_sep:(fun ft () -> pf ft "@ ")
+           (fun ft i -> pf ft "· bvr_arm h (%s.proof FS O hO)" (arm_name f r i)))
+        (List.init (List.length arms) Fun.id))
+    (arms f)
+
 let soundness ~sources ~proofs ft (p : program) =
   let ctx = classify p in
+  let proofs =
+    if List.exists (fun f -> f.cases) (rule_fns ctx) then
+      "Bvr.Lib.Cases" :: proofs
+    else proofs
+  in
   header ~sources ft ("Bvr.Statements" :: proofs);
+  List.iter (fun f -> if f.cases then cases_proofs ft f) (rule_fns ctx);
   List.iter
     (fun f ->
       pf ft

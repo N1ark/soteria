@@ -67,7 +67,7 @@ let rec pat ft (p : pat) =
         "({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec _; _ }; _ } as %s)"
         x
   | PAs (p', x) -> pf ft "(%a as %s)" pat p' x
-  | POr (a, b) -> pf ft "(%a | %a)" pat a pat b
+  | POr (a, b) | PComm (a, b) -> pf ft "(%a | %a)" pat a pat b
   | PInt z -> pf ft "%s" (Z.to_string z)
   | PBool b -> pf ft "%b" b
   | PUnit -> pf ft "()"

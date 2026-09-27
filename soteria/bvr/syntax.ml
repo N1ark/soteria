@@ -186,13 +186,21 @@ and bitop = Land | Lor | Lxor | Lsl | Asr
 
 type binop' = Arith of binop | Bit of bitop
 
-type pat = { p : pat_desc; pty : ty; ploc : Location.t }
+type pat = {
+  p : pat_desc;
+  pty : ty;
+  ploc : Location.t;
+  pid : int;
+      (** unique to the pattern node, and shared by its copy in the swapped
+          alternative of a [[@comm]] pattern *)
+}
 
 and pat_desc =
   | PAny
   | PVar of string
   | PAs of pat * string
   | POr of pat * pat
+  | PComm of pat * pat  (** [p [@comm]]: [p], or [p] with operands swapped *)
   | PInt of Z.t
   | PBool of bool
   | PUnit
@@ -241,6 +249,9 @@ and case = {
   body : expr;
   rule : string option;
   cloc : Location.t;
+  alt : (int * int * bool) list;
+      (** the alternative of the source case: for each or-pattern (and [[@comm]]
+          pattern, flagged) taken, its [pid] and the side chosen *)
 }
 
 type fn = {

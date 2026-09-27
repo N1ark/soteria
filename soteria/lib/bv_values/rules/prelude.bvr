@@ -210,32 +210,19 @@ let mul_overflows (signed : bool) (l : bv) (r : bv) : bool =
   let res = to_z signed l * to_z signed r in
   res < min_for signed n || res > max_for signed n
 
-(* The checks of [c] that survive folding the constants [a] and [b] into
-   [a + b] (or [a - b]): see [mask_checked_after_fold]. *)
+(* whether [d] divides [n], as unsigned integers *)
+let udivides (d : bv) (n : bv) : bool = divisible (to_z false n) (to_z false d)
+
+(* Re-associating a checked add/sub folds two of its constants ([a], [b]) into
+   a single one. The rebuilt operation can overflow even when the originals
+   didn't (the fold wraps), so the [checked] flag only survives in a
+   signedness where that constant fold does not itself overflow. *)
 let fold_checked (c : checked) (a : bv) (b : bv) (is_add : bool) : checked =
   let keep (signed : bool) =
     checked_has signed c
     && not (if is_add then add_overflows signed a b else sub_overflows signed a b)
   in
   { signed = keep true; unsigned = keep false }
-
-(* Re-associating a checked add/sub folds two of its constants ([a], [b]) into
-   a single one. The rebuilt operation can overflow even when the originals
-   didn't (the fold wraps), so the [checked] flag only survives in a
-   signedness where that constant fold does not itself overflow. *)
-let mask_checked_after_fold (c : checked) (a : t) (b : t) (is_add : bool) :
-    checked =
-  match (a, b) with
-  | BitVec za, BitVec zb ->
-      let n = size a in
-      let keep (signed : bool) =
-        checked_has signed c
-        && not
-             (if is_add then overflows_add signed n za zb
-              else overflows_sub signed n za zb)
-      in
-      { signed = keep true; unsigned = keep false }
-  | _ -> unchecked
 
 let rec sure_neq (a : t) (b : t) : bool =
   (not (ty a = ty b))

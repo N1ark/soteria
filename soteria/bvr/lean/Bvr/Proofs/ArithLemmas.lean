@@ -723,15 +723,6 @@ theorem umul_assoc_ok (h1 : x.umulOverflow y = false) (h2 : (x * y).umulOverflow
 
 end Ovf
 
-theorem mask_lits {c : Checked} {za zb : Int} {Ta Tb : Ty} {is_add : Bool} :
-    mask_checked_after_fold c (.mk (.bitVec za) Ta) (.mk (.bitVec zb) Tb) is_add =
-      { signed := c.signed && !(if is_add then overflows_add true (size_of_ty Ta) za zb
-          else overflows_sub true (size_of_ty Ta) za zb),
-        unsigned := c.unsigned && !(if is_add then overflows_add false (size_of_ty Ta) za zb
-          else overflows_sub false (size_of_ty Ta) za zb) } := by
-  simp [mask_checked_after_fold, firstSome, checked_has, HOrElse.hOrElse, OrElse.orElse,
-    Option.orElse]
-
 /-! ## Generic refinement lemmas for the arithmetic rules -/
 
 theorem Refines.arith_intro {FS op a b T r} (hop : IsArith op)

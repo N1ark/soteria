@@ -162,6 +162,9 @@ end Bvr
 
 namespace Bvr
 
+/-- A guarded result, as the alternatives of `[@cases]` rules are written. -/
+def whenSome {α : Type} (c : Bool) (a : α) : Option α := if c then some a else none
+
 /-- The first of a list of options that is [some]. -/
 def firstSome {α : Type} : List (Option α) → Option α
   | [] => none

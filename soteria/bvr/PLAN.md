@@ -82,3 +82,29 @@ so it reads like the code it replaces:
    concat, shifts, mul/div/rem, comparisons, overflow, float/ptr).
    Rules found unsound get the smallest fix, with a regression test,
    in their own commit.
+
+## Proof redesign (prototype on `bv_add`, `bv_sub`, `bv_mul`, `bv_div`)
+
+The first proofs spent most of their length on plumbing: inverting the rule's
+`match`, typing, casts between `Int` widths and `BitVec`, and re-proving each
+`[@comm]` alternative. Functions marked `[@cases]` are proved differently:
+
+- Literals: `BitVec l` binds `l : bv`, a bit-vector value that knows its width.
+  `+ - *` on `bv` are modular (primitives `lit_add`, ...), `lit l` rebuilds
+  the literal term, `to_z` / `of_z` convert explicitly where integer reasoning
+  is intended. Helpers with a BitVec meaning (`add_overflows`, `is_int_min`,
+  ...) are defined in bvr and bridged once, in Lean, to Lean's `BitVec`
+  predicates.
+- Statements: one per alternative ("arm") of a rule, over the pattern's
+  variables, with the guard as a hypothesis. The statement of the rule itself
+  is proved from its arms by a generated proof.
+- `[@comm]`: an arm whose pattern only swaps operands of commutative operators
+  (or the two arguments of a symmetric spec) is derived from the unswapped arm
+  by a generated proof, when its guard and body do not depend on the swap.
+  `[@comm]` is rejected on operators that are not commutative.
+- Lean library (`Bvr/Lib`): a typed view of bit-vector terms (`evalBV`) that
+  turns value goals into `BitVec n` equations; equivalence of terms with
+  commutativity and congruence lemmas; lifting of `O` calls to specs; tactics.
+
+Once measured on these four functions, the other areas move to it and the
+per-area lemma files are merged into `Bvr/Lib`.

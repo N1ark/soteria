@@ -2,28 +2,28 @@
 
 let fp_of (v : t) : fp = fp_of_ty (ty v)
 
-let[@spec FIs (fc, sv) <| TBool] float_is_floatclass (fc : fc) (sv : t) : t =
+let[@spec FIs (fc, sv) <| TBool] [@cases] float_is_floatclass (fc : fc) (sv : t) : t =
   match sv with
   | Float f [@r lit] -> of_bool (f_is_class fc f)
   | _ [@r default] -> FIs (fc, sv) <| TBool
 
-let[@spec FIsNeg v <| TBool] float_is_negative (v : t) : t =
+let[@spec FIsNeg v <| TBool] [@cases] float_is_negative (v : t) : t =
   match v with
   | Float f [@r lit] -> of_bool (f_is_negative f)
   | _ [@r default] -> FIsNeg v <| TBool
 
-let[@spec FIsPos v <| TBool] float_is_positive (v : t) : t =
+let[@spec FIsPos v <| TBool] [@cases] float_is_positive (v : t) : t =
   match v with
   | Float f [@r lit] -> of_bool (f_is_positive f)
   | _ [@r default] -> FIsPos v <| TBool
 
-let[@spec FloatOfFloat (rounding, fp, v) <| TFloat fp] float_cast
+let[@spec FloatOfFloat (rounding, fp, v) <| TFloat fp] [@cases] float_cast
     (rounding : rm) (fp : fp) (v : t) : t =
   match v with
   | Float f [@r lit] -> Float (f_convert rounding fp f) <| TFloat fp
   | _ [@r default] -> FloatOfFloat (rounding, fp, v) <| TFloat fp
 
-let[@spec FEq (v1, v2) <| TBool] float_eq (v1 : t) (v2 : t) : t =
+let[@spec FEq (v1, v2) <| TBool] [@cases] float_eq (v1 : t) (v2 : t) : t =
   match (v1, v2) with
   | Float f1, Float f2 [@r lits] -> of_bool (f_eq f1 f2)
   | v, v [@r same] -> b_not (float_is_floatclass NaN v1)
@@ -38,54 +38,54 @@ let[@spec FEq (v1, v2) <| TBool] float_eq (v1 : t) (v2 : t) : t =
       else sem_eq v1 v2
   | _ [@r default] -> mk_commut_binop FEq v1 v2 <| TBool
 
-let[@spec FLt (v1, v2) <| TBool] float_lt (v1 : t) (v2 : t) : t =
+let[@spec FLt (v1, v2) <| TBool] [@cases] float_lt (v1 : t) (v2 : t) : t =
   match (v1, v2) with
   | Float f1, Float f2 [@r lits] -> of_bool (f_lt f1 f2)
   | _ [@r default] -> FLt (v1, v2) <| TBool
 
-let[@spec FLeq (v1, v2) <| TBool] float_leq (v1 : t) (v2 : t) : t =
+let[@spec FLeq (v1, v2) <| TBool] [@cases] float_leq (v1 : t) (v2 : t) : t =
   match (v1, v2) with
   | Float f1, Float f2 [@r lits] -> of_bool (f_le f1 f2)
   | _ [@r default] -> FLeq (v1, v2) <| TBool
 
-let[@spec FAdd (v1, v2) <| ty v1] float_add (v1 : t) (v2 : t) : t =
+let[@spec FAdd (v1, v2) <| ty v1] [@cases] float_add (v1 : t) (v2 : t) : t =
   match (v1, v2) with
   | Float f1, Float f2 [@r lits] -> Float (f_add f1 f2) <| ty v1
   | _ [@r default] -> FAdd (v1, v2) <| ty v1
 
-let[@spec FSub (v1, v2) <| ty v1] float_sub (v1 : t) (v2 : t) : t =
+let[@spec FSub (v1, v2) <| ty v1] [@cases] float_sub (v1 : t) (v2 : t) : t =
   match (v1, v2) with
   | Float f1, Float f2 [@r lits] -> Float (f_sub f1 f2) <| ty v1
   | _ [@r default] -> FSub (v1, v2) <| ty v1
 
-let[@spec FDiv (v1, v2) <| ty v1] float_div (v1 : t) (v2 : t) : t =
+let[@spec FDiv (v1, v2) <| ty v1] [@cases] float_div (v1 : t) (v2 : t) : t =
   match (v1, v2) with
   | Float f1, Float f2 [@r lits] -> Float (f_div f1 f2) <| ty v1
   | _ [@r default] -> FDiv (v1, v2) <| ty v1
 
-let[@spec FMul (v1, v2) <| ty v1] float_mul (v1 : t) (v2 : t) : t =
+let[@spec FMul (v1, v2) <| ty v1] [@cases] float_mul (v1 : t) (v2 : t) : t =
   match (v1, v2) with
   | Float f1, Float f2 [@r lits] -> Float (f_mul f1 f2) <| ty v1
   | _ [@r default] -> FMul (v1, v2) <| ty v1
 
-let[@spec FRem (v1, v2) <| ty v1] float_rem (v1 : t) (v2 : t) : t =
+let[@spec FRem (v1, v2) <| ty v1] [@cases] float_rem (v1 : t) (v2 : t) : t =
   match (v1, v2) with
   | Float f1, Float f2 [@r lits] -> Float (f_rem f1 f2) <| ty v1
   | _ [@r default] -> FRem (v1, v2) <| ty v1
 
-let[@spec FAbs v <| ty v] float_abs (v : t) : t =
+let[@spec FAbs v <| ty v] [@cases] float_abs (v : t) : t =
   match v with
   | Float f [@r lit] -> Float (f_abs f) <| ty v
   | FAbs _ [@r abs] -> v
   | _ [@r default] -> FAbs v <| ty v
 
-let[@spec FNeg v <| ty v] float_neg (v : t) : t =
+let[@spec FNeg v <| ty v] [@cases] float_neg (v : t) : t =
   match v with
   | Float f [@r lit] -> Float (f_neg f) <| ty v
   | FNeg v [@r neg] -> v
   | _ [@r default] -> FNeg v <| ty v
 
-let[@spec Fma (a, b, c) <| ty a] float_fma (a : t) (b : t) (c : t) : t =
+let[@spec Fma (a, b, c) <| ty a] [@cases] float_fma (a : t) (b : t) (c : t) : t =
   match (a, b, c) with
   | Float fa, Float fb, Float fc [@r lits] -> Float (f_fma fa fb fc) <| ty a
   | _ [@r default] -> Fma (a, b, c) <| ty a
@@ -105,16 +105,15 @@ let raw_fmod_of_rem (r : t) (v1 : t) (v2 : t) : t =
 
 (* [fmod] given an already-computed IEEE remainder, so a caller that has a
    cheaper way to obtain one can reuse it. *)
-let[@spec raw_fmod_of_rem r v1 v2] float_fmod_of_rem (r : t) (v1 : t) (v2 : t) : t
+let[@spec raw_fmod_of_rem r v1 v2] [@cases] float_fmod_of_rem (r : t) (v1 : t) (v2 : t) : t
     =
-  let correction =
-    b_ite (float_is_negative v1) (float_neg (float_abs v2)) (float_abs v2)
-  in
   b_ite
     (sem_eq (float_is_negative r) (float_is_negative v1))
-    r (float_add r correction)
+    r
+    (float_add r
+       (b_ite (float_is_negative v1) (float_neg (float_abs v2)) (float_abs v2)))
 
-let[@spec raw_fmod_of_rem (FRem (v1, v2) <| ty v1) v1 v2] float_fmod
+let[@spec raw_fmod_of_rem (FRem (v1, v2) <| ty v1) v1 v2] [@cases] float_fmod
     (v1 : t) (v2 : t) : t =
   match (v1, v2) with
   | Float f1, Float f2 [@r lits] -> Float (f_fmod f1 f2) <| ty v1
@@ -122,22 +121,22 @@ let[@spec raw_fmod_of_rem (FRem (v1, v2) <| ty v1) v1 v2] float_fmod
 
 (* [fp.min]/[fp.max]: the non-NaN argument wins, and which of [-0.0] and [+0.0]
    is returned is left unspecified. *)
-let[@spec FMin (v1, v2) <| ty v1] float_min (v1 : t) (v2 : t) : t =
+let[@spec FMin (v1, v2) <| ty v1] [@cases] float_min (v1 : t) (v2 : t) : t =
   match (v1, v2) with
   | Float f1, Float f2 [@r lits] -> Float (f_min f1 f2) <| ty v1
   | _ [@r default] -> FMin (v1, v2) <| ty v1
 
-let[@spec FMax (v1, v2) <| ty v1] float_max (v1 : t) (v2 : t) : t =
+let[@spec FMax (v1, v2) <| ty v1] [@cases] float_max (v1 : t) (v2 : t) : t =
   match (v1, v2) with
   | Float f1, Float f2 [@r lits] -> Float (f_max f1 f2) <| ty v1
   | _ [@r default] -> FMax (v1, v2) <| ty v1
 
-let[@spec FSqrt v <| ty v] float_sqrt (v : t) : t =
+let[@spec FSqrt v <| ty v] [@cases] float_sqrt (v : t) : t =
   match v with
   | Float f [@r lit] -> Float (f_sqrt f) <| ty v
   | _ [@r default] -> FSqrt v <| ty v
 
-let[@spec FRound (rm, sv) <| ty sv] float_round (rm : rm) (sv : t) : t =
+let[@spec FRound (rm, sv) <| ty sv] [@cases] float_round (rm : rm) (sv : t) : t =
   match sv with
   | Float f [@r lit] -> Float (f_round rm f) <| ty sv
   | _ [@r default] -> FRound (rm, sv) <| ty sv

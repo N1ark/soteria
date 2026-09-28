@@ -1,26 +1,27 @@
 (* Bit-vectors: conversions, arithmetic and bitwise operations *)
 
-let[@spec BvOfBool (n, b) <| TBitVector n] bv_of_bool (n : int) (b : t) : t =
+let[@spec BvOfBool (n, b) <| TBitVector n] [@cases] bv_of_bool (n : int) (b : t)
+    : t =
   match b with
   | true [@r true_] -> bv_one n
   | false [@r false_] -> bv_zero n
   | _ [@r default] -> BvOfBool (n, b) <| TBitVector n
 
-let[@spec Not (Eq (v, bv_zero (size v)) <| TBool) <| TBool] bv_to_bool (v : t) :
-    t =
+let[@spec Not (Eq (v, bv_zero (size v)) <| TBool) <| TBool] [@cases] bv_to_bool
+    (v : t) : t =
   match v with
-  | BitVec z [@r lit] -> of_bool (not (z = 0))
+  | BitVec z [@r lit] -> of_bool (not (to_z false z = 0))
   | BvOfBool (_, b) [@r of_bool] -> b
   | _ [@r default] -> b_not (sem_eq v (bv_zero (size v)))
 
 let[@spec
      BvOfBool (size v, Eq (v, bv_zero (size v)) <| TBool) <| TBitVector (size v)]
-    bv_not_bool (v : t) : t =
-  let n = size v in
+    [@cases] bv_not_bool (v : t) : t =
   match v with
-  | BitVec z [@r lit] -> if z = 0 then bv_one n else bv_zero n
+  | BitVec z [@r lit] ->
+      if to_z false z = 0 then bv_one (size v) else bv_zero (size v)
   | BvOfBool (n, g) [@r of_bool] -> bv_of_bool n (b_not g)
-  | _ [@r default] -> bv_of_bool n (sem_eq v (bv_zero n))
+  | _ [@r default] -> bv_of_bool (size v) (sem_eq v (bv_zero (size v)))
 
 let[@spec Add (checked, v1, v2) <| ty v1] [@cases] bv_add (checked : checked)
     (v1 : t) (v2 : t) : t =
@@ -278,14 +279,12 @@ let[@spec BitXor (v1, v2) <| ty v1] [@cases] bv_xor (v1 : t) (v2 : t) : t =
 
 (* [bv_extract from_ to_ v] covers the bits of [v] from index [from_] to index
    [to_], inclusive. [0 <= from_ <= to_ < size v] must hold. *)
-let[@spec BvExtract (from_, to_, v) <| TBitVector (to_ - from_ + 1)] bv_extract
-    (from_ : int) (to_ : int) (v : t) : t =
-  let prev_size = size v in
-  assert (0 <= from_ && from_ <= to_ && to_ < prev_size);
-  let sz = to_ - from_ + 1 in
+let[@spec BvExtract (from_, to_, v) <| TBitVector (to_ - from_ + 1)] [@cases]
+    bv_extract (from_ : int) (to_ : int) (v : t) : t =
+  assert (0 <= from_ && from_ <= to_ && to_ < size v);
   match v with
-  | BitVec bv [@r lit] -> mk_masked sz (bv asr from_)
-  | _ [@r full] when from_ = 0 && to_ = prev_size - 1 -> v
+  | BitVec bv [@r lit] -> lit (lit_extract from_ to_ bv)
+  | _ [@r full] when from_ = 0 && to_ = size v - 1 -> v
   | BitAnd (v1, v2) [@r and_] ->
       bv_and (bv_extract from_ to_ v1) (bv_extract from_ to_ v2)
   | BitOr (v1, v2) [@r or_] ->
@@ -293,12 +292,13 @@ let[@spec BvExtract (from_, to_, v) <| TBitVector (to_ - from_ + 1)] bv_extract
   | BitXor (v1, v2) [@r xor] ->
       bv_xor (bv_extract from_ to_ v1) (bv_extract from_ to_ v2)
   | Shl (v1, BitVec shift) [@r shl] ->
+      let shift = to_z false shift in
       if from_ >= shift then
         (* All extracted bits come from the original v1, shifted *)
         bv_extract (from_ - shift) (to_ - shift) v1
       else if to_ < shift then
         (* All extracted bits are zeros introduced by the shift *)
-        bv_zero sz
+        bv_zero (to_ - from_ + 1)
       else
         (* Some bits are zeros, some are from v1: bits [from_, shift-1] are 0,
            bits [shift, to_] come from v1[0, to_-shift] *)
@@ -306,11 +306,13 @@ let[@spec BvExtract (from_, to_, v) <| TBitVector (to_ - from_ + 1)] bv_extract
         let low_zeros = bv_zero (shift - from_) in
         bv_concat high_part low_zeros
   | LShr (v1, BitVec shift) [@r lshr] ->
+      let shift = to_z false shift in
+      let prev_size = size v in
       (* after a right shift by [shift], bit i of the result is bit (i+shift)
          of the original if i+shift < prev_size, else 0 *)
       if from_ + shift >= prev_size then
         (* All extracted bits are zeros introduced by the shift *)
-        bv_zero sz
+        bv_zero (to_ - from_ + 1)
       else if to_ + shift < prev_size then
         (* All extracted bits come from the original v1, shifted *)
         bv_extract (from_ + shift) (to_ + shift) v1
@@ -323,29 +325,29 @@ let[@spec BvExtract (from_, to_, v) <| TBitVector (to_ - from_ + 1)] bv_extract
         bv_concat high_zeros low_part
   | Ite (b, l, r) [@r ite] ->
       b_ite b (bv_extract from_ to_ l) (bv_extract from_ to_ r)
-  | BvExtend (false, by, _) [@r zext_high] when from_ >= prev_size - by ->
+  | BvExtend (false, by, _) [@r zext_high] when from_ >= size v - by ->
       (* zero extension, and we're extracting only the extended bits *)
-      bv_zero sz
-  | BvExtend (true, by, v) [@r sext_bit]
-    when from_ >= prev_size - by && from_ = to_ ->
+      bv_zero (to_ - from_ + 1)
+  | BvExtend (true, by, x) [@r sext_bit]
+    when from_ >= size v - by && from_ = to_ ->
       (* sign extension, and we're extracting an extended bit: msb of the prev
          value *)
-      bv_extract (size v - 1) (size v - 1) v
-  | BvExtend (signed, _, v) [@r ext_low] when from_ = 0 ->
+      bv_extract (size x - 1) (size x - 1) x
+  | BvExtend (signed, _, x) [@r ext_low] when from_ = 0 ->
       (* extracting from the beginning of an extended value *)
-      let orig_size = size v in
+      let orig_size = size x in
       if to_ = orig_size - 1 then (* extracting exactly the original bits *)
-        v
+        x
       else if to_ < orig_size then
         (* extracting subset of original bits *)
-        bv_extract from_ to_ v
+        bv_extract from_ to_ x
       else (* we can reduce the extend *)
-        bv_extend signed (to_ - orig_size + 1) v
-  | BvExtend (_, by, v) [@r ext_orig] when to_ <= prev_size - by - 1 ->
+        bv_extend signed (to_ - orig_size + 1) x
+  | BvExtend (_, by, x) [@r ext_orig] when to_ <= size v - by - 1 ->
       (* extracting from original bits *)
-      bv_extract from_ to_ v
-  | BvExtract (prev_from_, _, v) [@r extract] ->
-      bv_extract (prev_from_ + from_) (prev_from_ + to_) v
+      bv_extract from_ to_ x
+  | BvExtract (prev_from_, _, x) [@r extract] ->
+      bv_extract (prev_from_ + from_) (prev_from_ + to_) x
   | BvConcat (l, r) [@r concat] ->
       let size_r = size r in
       if from_ >= size_r then bv_extract (from_ - size_r) (to_ - size_r) l
@@ -357,31 +359,31 @@ let[@spec BvExtract (from_, to_, v) <| TBitVector (to_ - from_ + 1)] bv_extract
   | Add (_, l, r) [@r add_low] when from_ = 0 ->
       bv_add unchecked (bv_extract from_ to_ l) (bv_extract from_ to_ r)
   (* adding a constant whose lowest set bit is above [to_] *)
-  | Add (_, BitVec n, x) [@comm] [@r add_const] when to_ < lsb n ->
+  | Add (_, BitVec n, x) [@comm] [@r add_const]
+    when to_ < lsb (to_z false n) ->
       bv_extract from_ to_ x
-  | Mul (_, BitVec n, _) [@r mul_pow2] when is_pow2 n && to_ < log2 n ->
-      bv_zero sz
+  | Mul (_, BitVec n, _) [@r mul_pow2]
+    when is_pow2 (to_z false n) && to_ < log2 (to_z false n) ->
+      bv_zero (to_ - from_ + 1)
   | Mul (_, l, r) [@r mul_low] when from_ = 0 ->
       (* i think the extraction is necessarily unchecked? *)
       bv_mul unchecked (bv_extract from_ to_ l) (bv_extract from_ to_ r)
   | Rem (false, l, BitVec n) [@r urem]
-    when from_ = 0 && is_pow2 n && log2 n < to_ ->
+    when from_ = 0 && is_pow2 (to_z false n) && log2 (to_z false n) < to_ ->
       (* extract[0,N](X % 2^M) when M < N can be pushed down *)
-      bv_rem false (bv_extract from_ to_ l) (mk_bv (to_ + 1) n)
-  | _ [@r default] -> BvExtract (from_, to_, v) <| TBitVector sz
+      bv_rem false (bv_extract from_ to_ l) (lit (lit_extract from_ to_ n))
+  | _ [@r default] -> BvExtract (from_, to_, v) <| TBitVector (to_ - from_ + 1)
 
 let[@spec BvExtend (signed, extend_by, v) <| TBitVector (size v + extend_by)]
-    bv_extend (signed : bool) (extend_by : int) (v : t) : t =
+    [@cases] bv_extend (signed : bool) (extend_by : int) (v : t) : t =
   assert (is_bv (ty v));
-  let n = size v in
-  let to_ = n + extend_by in
   assert (extend_by > 0);
   match v with
   | BitVec bv [@r lit] ->
       if signed then (* Sign extend: replicate the MSB *)
-        mk_masked to_ (signed_extract bv 0 n)
+        lit (lit_sext extend_by bv)
       else (* Zero extend: do nothing *)
-        mk_bv to_ bv
+        lit (lit_zext extend_by bv)
   | BvExtend (s, prev_by, v) [@r extend] when s = signed ->
       (* combine extensions *)
       bv_extend signed (prev_by + extend_by) v
@@ -389,25 +391,24 @@ let[@spec BvExtend (signed, extend_by, v) <| TBitVector (size v + extend_by)]
       b_ite b (bv_extend signed extend_by l) (bv_extend signed extend_by r)
   (* can't extend if signed && n == 1, as it should be all 1s *)
   | BvOfBool (n, b) [@r of_bool] when (not signed) || n > 1 ->
-      bv_of_bool to_ b
-  | _ [@r default] -> BvExtend (signed, extend_by, v) <| TBitVector to_
+      bv_of_bool (size v + extend_by) b
+  | _ [@r default] ->
+      BvExtend (signed, extend_by, v) <| TBitVector (size v + extend_by)
 
 (* [bv_concat v1 v2] for [v1] of size [n] and [v2] of size [m] is a bitvector
    of size [n + m] where the first [m] bits are [v2] and the following [n] are
    [v1] *)
-let[@spec BvConcat (v1, v2) <| TBitVector (size v1 + size v2)] bv_concat
-    (v1 : t) (v2 : t) : t =
-  let n1 = size v1 in
-  let n2 = size v2 in
+let[@spec BvConcat (v1, v2) <| TBitVector (size v1 + size v2)] [@cases]
+    bv_concat (v1 : t) (v2 : t) : t =
   match (v1, v2) with
-  | BitVec l, BitVec r [@r lits] -> mk_masked (n1 + n2) (r + (l lsl n2))
+  | BitVec l, BitVec r [@r lits] -> lit (lit_concat l r)
   | BvExtract (from1, to1, v), BvExtract (from2, to2, v) [@r extracts]
     when to2 + 1 = from1 ->
       bv_extract from2 to1 v
   (* safeguard: to avoid infinite loops, we keep bv-concats of extracts
      left-dominant *)
   | BvExtract _, BvConcat (BvExtract _, BvExtract _) [@r extract_extracts] ->
-      BvConcat (v1, v2) <| TBitVector (n1 + n2)
+      BvConcat (v1, v2) <| TBitVector (size v1 + size v2)
   (* We re-order (extract A ++ (extract B ++ X)) to ((extract A ++ extract B)
      ++ X) *)
   | BvExtract (_, _, x), BvConcat ((BvExtract (_, _, x) as left), right)
@@ -420,7 +421,7 @@ let[@spec BvConcat (v1, v2) <| TBitVector (size v1 + size v2)] bv_concat
       bv_concat left (bv_concat right v2)
   | Ite (b, l1, r1), Ite (b, l2, r2) [@r ites] ->
       b_ite b (bv_concat l1 l2) (bv_concat r1 r2)
-  | _ [@r default] -> BvConcat (v1, v2) <| TBitVector (n1 + n2)
+  | _ [@r default] -> BvConcat (v1, v2) <| TBitVector (size v1 + size v2)
 
 let[@spec Shl (v1, v2) <| ty v1] [@cases] bv_shl (v1 : t) (v2 : t) : t =
   match (v1, v2) with
@@ -982,8 +983,8 @@ let[@spec SubOvf (signed, v1, v2) <| TBool] bv_sub_overflows (signed : bool)
 
 (* Float-bit-vector conversions *)
 
-let[@spec BvOfFloat (rounding, signed, sz, v) <| TBitVector sz] bv_of_float
-    (rounding : rm) (signed : bool) (sz : int) (v : t) : t =
+let[@spec BvOfFloat (rounding, signed, sz, v) <| TBitVector sz] [@cases]
+    bv_of_float (rounding : rm) (signed : bool) (sz : int) (v : t) : t =
   match v with
   | Float f [@r lit] -> (
       match f_to_int rounding signed sz f with
@@ -993,19 +994,22 @@ let[@spec BvOfFloat (rounding, signed, sz, v) <| TBitVector sz] bv_of_float
       | None -> BvOfFloat (rounding, signed, sz, v) <| TBitVector sz)
   | _ [@r default] -> BvOfFloat (rounding, signed, sz, v) <| TBitVector sz
 
-let[@spec FloatOfBv (rounding, signed, fp, v) <| TFloat fp] bv_to_float
+let[@spec FloatOfBv (rounding, signed, fp, v) <| TFloat fp] [@cases] bv_to_float
     (rounding : rm) (signed : bool) (fp : fp) (v : t) : t =
   match v with
   | BitVec z [@r lit] -> (
-      match f_of_int rounding signed fp (size v) z with
+      match f_of_int rounding signed fp (size v) (to_z false z) with
       | Some f -> Float f <| TFloat fp
       | None -> FloatOfBv (rounding, signed, fp, v) <| TFloat fp)
   | _ [@r default] -> FloatOfBv (rounding, signed, fp, v) <| TFloat fp
 
 let[@spec
      FloatOfBvRaw (fp_of_size (size v), v) <| TFloat (fp_of_size (size v))]
-    bv_to_float_raw (v : t) : t =
-  let fp = fp_of_size (size v) in
+    [@cases] bv_to_float_raw (v : t) : t =
   match v with
-  | BitVec z [@r lit] -> Float (f_of_bits fp z) <| TFloat fp
-  | _ [@r default] -> FloatOfBvRaw (fp, v) <| TFloat fp
+  | BitVec z [@r lit] ->
+      let fp = fp_of_size (size v) in
+      Float (f_of_bits fp (to_z false z)) <| TFloat fp
+  | _ [@r default] ->
+      let fp = fp_of_size (size v) in
+      FloatOfBvRaw (fp, v) <| TFloat fp

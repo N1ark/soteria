@@ -1323,6 +1323,11 @@ def bv_and.r_mask_or.Stmt : Prop :=
   ∀ (v1 : Term) (v2 : Term) (res : Term), bv_and.r_mask_or O v1 v2 = some res →
   Refines FS (bv_and.spec v1 v2) res
 
+def bv_and.r_mask_or_disj.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (v2 : Term) (res : Term), bv_and.r_mask_or_disj O v1 v2 = some res →
+  Refines FS (bv_and.spec v1 v2) res
+
 def bv_and.r_right_mask.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
   ∀ (v1 : Term) (v2 : Term) (res : Term), bv_and.r_right_mask O v1 v2 = some res →
@@ -1352,6 +1357,257 @@ def bv_and.r_default.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
   ∀ (v1 : Term) (v2 : Term) (res : Term), bv_and.r_default O v1 v2 = some res →
   Refines FS (bv_and.spec v1 v2) res
+
+def bv_and.r_lits.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (l__z : Int) (l__T : Ty) (r__z : Int) (r__T : Ty),
+  Refines FS (bv_and.spec (Term.mk (Kind.bitVec l__z) l__T) (Term.mk (Kind.bitVec r__z) r__T))
+  ((lit (lit_and (bv_of_lit (Term.mk (Kind.bitVec l__z) l__T)) (bv_of_lit (Term.mk (Kind.bitVec r__z) r__T)))))
+
+def bv_and.r_zero_l.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v2 : Term) (bvr__1 : Int) (t__2 : Ty),
+  (decide (bvr__1 = (0 : Int))) = true →
+  Refines FS (bv_and.spec (Term.mk (Kind.bitVec bvr__1) t__2) v2)
+  ((Term.mk (Kind.bitVec bvr__1) t__2))
+
+def bv_and.r_zero_r.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (bvr__2 : Int) (t__3 : Ty),
+  (decide (bvr__2 = (0 : Int))) = true →
+  Refines FS (bv_and.spec v1 (Term.mk (Kind.bitVec bvr__2) t__3))
+  ((Term.mk (Kind.bitVec bvr__2) t__3))
+
+def bv_and.r_ones_l.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v2 : Term) (mask__z : Int) (mask__T : Ty),
+  (is_ones (bv_of_lit (Term.mk (Kind.bitVec mask__z) mask__T))) = true →
+  Refines FS (bv_and.spec (Term.mk (Kind.bitVec mask__z) mask__T) v2)
+  (v2)
+
+def bv_and.r_ones_r.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (mask__z : Int) (mask__T : Ty),
+  (is_ones (bv_of_lit (Term.mk (Kind.bitVec mask__z) mask__T))) = true →
+  Refines FS (bv_and.spec v1 (Term.mk (Kind.bitVec mask__z) mask__T))
+  (v1)
+
+def bv_and.r_lshr_mask.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (w__2 : Term) (shift__z : Int) (shift__T : Ty) (t__4 : Ty) (mask__z : Int) (mask__T : Ty),
+  ((decide ((to_z false (bv_of_lit (Term.mk (Kind.bitVec shift__z) shift__T))) < (size (Term.mk (Kind.binop Binop.lShr w__2 (Term.mk (Kind.bitVec shift__z) shift__T)) t__4)))) && (bits_in (lit_lshr (ones (size (Term.mk (Kind.binop Binop.lShr w__2 (Term.mk (Kind.bitVec shift__z) shift__T)) t__4))) (bv_of_lit (Term.mk (Kind.bitVec shift__z) shift__T))) (bv_of_lit (Term.mk (Kind.bitVec mask__z) mask__T)))) = true →
+  Refines FS (bv_and.spec (Term.mk (Kind.binop Binop.lShr w__2 (Term.mk (Kind.bitVec shift__z) shift__T)) t__4) (Term.mk (Kind.bitVec mask__z) mask__T))
+  ((Term.mk (kind (Term.mk (Kind.binop Binop.lShr w__2 (Term.mk (Kind.bitVec shift__z) shift__T)) t__4)) (Ty.bitVector (size (Term.mk (Kind.binop Binop.lShr w__2 (Term.mk (Kind.bitVec shift__z) shift__T)) t__4)))))
+
+def bv_and.r_lshr_mask.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (mask__z : Int) (mask__T : Ty) (w__2 : Term) (shift__z : Int) (shift__T : Ty) (t__4 : Ty),
+  ((decide ((to_z false (bv_of_lit (Term.mk (Kind.bitVec shift__z) shift__T))) < (size (Term.mk (Kind.bitVec mask__z) mask__T)))) && (bits_in (lit_lshr (ones (size (Term.mk (Kind.bitVec mask__z) mask__T))) (bv_of_lit (Term.mk (Kind.bitVec shift__z) shift__T))) (bv_of_lit (Term.mk (Kind.bitVec mask__z) mask__T)))) = true →
+  Refines FS (bv_and.spec (Term.mk (Kind.bitVec mask__z) mask__T) (Term.mk (Kind.binop Binop.lShr w__2 (Term.mk (Kind.bitVec shift__z) shift__T)) t__4))
+  ((Term.mk (kind (Term.mk (Kind.binop Binop.lShr w__2 (Term.mk (Kind.bitVec shift__z) shift__T)) t__4)) (Ty.bitVector (size (Term.mk (Kind.bitVec mask__z) mask__T)))))
+
+def bv_and.r_ite_r.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (w__1 : Int) (t__2 : Ty) (b : Term) (l : Term) (r : Term) (t__7 : Ty),
+  Refines FS (bv_and.spec (Term.mk (Kind.bitVec w__1) t__2) (Term.mk (Kind.triop Triop.ite b l r) t__7))
+  ((O.b_ite b (O.bv_and (Term.mk (Kind.bitVec w__1) t__2) l) (O.bv_and (Term.mk (Kind.bitVec w__1) t__2) r)))
+
+def bv_and.r_ite_l.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (b : Term) (l : Term) (r : Term) (t__5 : Ty) (w__6 : Int) (t__7 : Ty),
+  Refines FS (bv_and.spec (Term.mk (Kind.triop Triop.ite b l r) t__5) (Term.mk (Kind.bitVec w__6) t__7))
+  ((O.b_ite b (O.bv_and l (Term.mk (Kind.bitVec w__6) t__7)) (O.bv_and r (Term.mk (Kind.bitVec w__6) t__7))))
+
+def bv_and.r_masks.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (m1__z : Int) (m1__T : Ty) (x : Term) (m2__z : Int) (m2__T : Ty) (t__5 : Ty),
+  Refines FS (bv_and.spec (Term.mk (Kind.bitVec m1__z) m1__T) (Term.mk (Kind.binop Binop.bitAnd x (Term.mk (Kind.bitVec m2__z) m2__T)) t__5))
+  ((O.bv_and x (lit (lit_and (bv_of_lit (Term.mk (Kind.bitVec m1__z) m1__T)) (bv_of_lit (Term.mk (Kind.bitVec m2__z) m2__T))))))
+
+def bv_and.r_masks.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (m1__z : Int) (m1__T : Ty) (m2__z : Int) (m2__T : Ty) (x : Term) (t__5 : Ty),
+  Refines FS (bv_and.spec (Term.mk (Kind.bitVec m1__z) m1__T) (Term.mk (Kind.binop Binop.bitAnd (Term.mk (Kind.bitVec m2__z) m2__T) x) t__5))
+  ((O.bv_and x (lit (lit_and (bv_of_lit (Term.mk (Kind.bitVec m1__z) m1__T)) (bv_of_lit (Term.mk (Kind.bitVec m2__z) m2__T))))))
+
+def bv_and.r_masks.a3.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (x : Term) (m2__z : Int) (m2__T : Ty) (t__5 : Ty) (m1__z : Int) (m1__T : Ty),
+  Refines FS (bv_and.spec (Term.mk (Kind.binop Binop.bitAnd x (Term.mk (Kind.bitVec m2__z) m2__T)) t__5) (Term.mk (Kind.bitVec m1__z) m1__T))
+  ((O.bv_and x (lit (lit_and (bv_of_lit (Term.mk (Kind.bitVec m1__z) m1__T)) (bv_of_lit (Term.mk (Kind.bitVec m2__z) m2__T))))))
+
+def bv_and.r_masks.a4.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (m2__z : Int) (m2__T : Ty) (x : Term) (t__5 : Ty) (m1__z : Int) (m1__T : Ty),
+  Refines FS (bv_and.spec (Term.mk (Kind.binop Binop.bitAnd (Term.mk (Kind.bitVec m2__z) m2__T) x) t__5) (Term.mk (Kind.bitVec m1__z) m1__T))
+  ((O.bv_and x (lit (lit_and (bv_of_lit (Term.mk (Kind.bitVec m1__z) m1__T)) (bv_of_lit (Term.mk (Kind.bitVec m2__z) m2__T))))))
+
+def bv_and.r_mask_or_mask.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (w__1 : Int) (t__2 : Ty) (w__5 : Int) (t__6 : Ty) (w__9 : Int) (t__10 : Ty) (x : Term) (t__13 : Ty) (t__15 : Ty),
+  Refines FS (bv_and.spec (Term.mk (Kind.bitVec w__1) t__2) (Term.mk (Kind.binop Binop.bitOr (Term.mk (Kind.bitVec w__5) t__6) (Term.mk (Kind.binop Binop.bitAnd (Term.mk (Kind.bitVec w__9) t__10) x) t__13)) t__15))
+  ((let vty := (ty (Term.mk (Kind.bitVec w__1) t__2));
+   (let m := (Term.mk (kind (Term.mk (Kind.bitVec w__1) t__2)) vty);
+   (O.bv_or (O.bv_and m (Term.mk (Kind.bitVec w__5) t__6)) (O.bv_and x (O.bv_and m (Term.mk (Kind.bitVec w__9) t__10)))))))
+
+def bv_and.r_mask_or_mask.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (w__1 : Int) (t__2 : Ty) (w__5 : Int) (t__6 : Ty) (x : Term) (w__9 : Int) (t__10 : Ty) (t__13 : Ty) (t__15 : Ty),
+  Refines FS (bv_and.spec (Term.mk (Kind.bitVec w__1) t__2) (Term.mk (Kind.binop Binop.bitOr (Term.mk (Kind.bitVec w__5) t__6) (Term.mk (Kind.binop Binop.bitAnd x (Term.mk (Kind.bitVec w__9) t__10)) t__13)) t__15))
+  ((let vty := (ty (Term.mk (Kind.bitVec w__1) t__2));
+   (let m := (Term.mk (kind (Term.mk (Kind.bitVec w__1) t__2)) vty);
+   (O.bv_or (O.bv_and m (Term.mk (Kind.bitVec w__5) t__6)) (O.bv_and x (O.bv_and m (Term.mk (Kind.bitVec w__9) t__10)))))))
+
+def bv_and.r_mask_or_mask.a3.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (w__1 : Int) (t__2 : Ty) (w__9 : Int) (t__10 : Ty) (x : Term) (t__13 : Ty) (w__5 : Int) (t__6 : Ty) (t__15 : Ty),
+  Refines FS (bv_and.spec (Term.mk (Kind.bitVec w__1) t__2) (Term.mk (Kind.binop Binop.bitOr (Term.mk (Kind.binop Binop.bitAnd (Term.mk (Kind.bitVec w__9) t__10) x) t__13) (Term.mk (Kind.bitVec w__5) t__6)) t__15))
+  ((let vty := (ty (Term.mk (Kind.bitVec w__1) t__2));
+   (let m := (Term.mk (kind (Term.mk (Kind.bitVec w__1) t__2)) vty);
+   (O.bv_or (O.bv_and m (Term.mk (Kind.bitVec w__5) t__6)) (O.bv_and x (O.bv_and m (Term.mk (Kind.bitVec w__9) t__10)))))))
+
+def bv_and.r_mask_or_mask.a4.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (w__1 : Int) (t__2 : Ty) (x : Term) (w__9 : Int) (t__10 : Ty) (t__13 : Ty) (w__5 : Int) (t__6 : Ty) (t__15 : Ty),
+  Refines FS (bv_and.spec (Term.mk (Kind.bitVec w__1) t__2) (Term.mk (Kind.binop Binop.bitOr (Term.mk (Kind.binop Binop.bitAnd x (Term.mk (Kind.bitVec w__9) t__10)) t__13) (Term.mk (Kind.bitVec w__5) t__6)) t__15))
+  ((let vty := (ty (Term.mk (Kind.bitVec w__1) t__2));
+   (let m := (Term.mk (kind (Term.mk (Kind.bitVec w__1) t__2)) vty);
+   (O.bv_or (O.bv_and m (Term.mk (Kind.bitVec w__5) t__6)) (O.bv_and x (O.bv_and m (Term.mk (Kind.bitVec w__9) t__10)))))))
+
+def bv_and.r_mask_or_mask.a5.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (w__5 : Int) (t__6 : Ty) (w__9 : Int) (t__10 : Ty) (x : Term) (t__13 : Ty) (t__15 : Ty) (w__1 : Int) (t__2 : Ty),
+  Refines FS (bv_and.spec (Term.mk (Kind.binop Binop.bitOr (Term.mk (Kind.bitVec w__5) t__6) (Term.mk (Kind.binop Binop.bitAnd (Term.mk (Kind.bitVec w__9) t__10) x) t__13)) t__15) (Term.mk (Kind.bitVec w__1) t__2))
+  ((let vty := (ty (Term.mk (Kind.binop Binop.bitOr (Term.mk (Kind.bitVec w__5) t__6) (Term.mk (Kind.binop Binop.bitAnd (Term.mk (Kind.bitVec w__9) t__10) x) t__13)) t__15));
+   (let m := (Term.mk (kind (Term.mk (Kind.bitVec w__1) t__2)) vty);
+   (O.bv_or (O.bv_and m (Term.mk (Kind.bitVec w__5) t__6)) (O.bv_and x (O.bv_and m (Term.mk (Kind.bitVec w__9) t__10)))))))
+
+def bv_and.r_mask_or_mask.a6.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (w__5 : Int) (t__6 : Ty) (x : Term) (w__9 : Int) (t__10 : Ty) (t__13 : Ty) (t__15 : Ty) (w__1 : Int) (t__2 : Ty),
+  Refines FS (bv_and.spec (Term.mk (Kind.binop Binop.bitOr (Term.mk (Kind.bitVec w__5) t__6) (Term.mk (Kind.binop Binop.bitAnd x (Term.mk (Kind.bitVec w__9) t__10)) t__13)) t__15) (Term.mk (Kind.bitVec w__1) t__2))
+  ((let vty := (ty (Term.mk (Kind.binop Binop.bitOr (Term.mk (Kind.bitVec w__5) t__6) (Term.mk (Kind.binop Binop.bitAnd x (Term.mk (Kind.bitVec w__9) t__10)) t__13)) t__15));
+   (let m := (Term.mk (kind (Term.mk (Kind.bitVec w__1) t__2)) vty);
+   (O.bv_or (O.bv_and m (Term.mk (Kind.bitVec w__5) t__6)) (O.bv_and x (O.bv_and m (Term.mk (Kind.bitVec w__9) t__10)))))))
+
+def bv_and.r_mask_or_mask.a7.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (w__9 : Int) (t__10 : Ty) (x : Term) (t__13 : Ty) (w__5 : Int) (t__6 : Ty) (t__15 : Ty) (w__1 : Int) (t__2 : Ty),
+  Refines FS (bv_and.spec (Term.mk (Kind.binop Binop.bitOr (Term.mk (Kind.binop Binop.bitAnd (Term.mk (Kind.bitVec w__9) t__10) x) t__13) (Term.mk (Kind.bitVec w__5) t__6)) t__15) (Term.mk (Kind.bitVec w__1) t__2))
+  ((let vty := (ty (Term.mk (Kind.binop Binop.bitOr (Term.mk (Kind.binop Binop.bitAnd (Term.mk (Kind.bitVec w__9) t__10) x) t__13) (Term.mk (Kind.bitVec w__5) t__6)) t__15));
+   (let m := (Term.mk (kind (Term.mk (Kind.bitVec w__1) t__2)) vty);
+   (O.bv_or (O.bv_and m (Term.mk (Kind.bitVec w__5) t__6)) (O.bv_and x (O.bv_and m (Term.mk (Kind.bitVec w__9) t__10)))))))
+
+def bv_and.r_mask_or_mask.a8.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (x : Term) (w__9 : Int) (t__10 : Ty) (t__13 : Ty) (w__5 : Int) (t__6 : Ty) (t__15 : Ty) (w__1 : Int) (t__2 : Ty),
+  Refines FS (bv_and.spec (Term.mk (Kind.binop Binop.bitOr (Term.mk (Kind.binop Binop.bitAnd x (Term.mk (Kind.bitVec w__9) t__10)) t__13) (Term.mk (Kind.bitVec w__5) t__6)) t__15) (Term.mk (Kind.bitVec w__1) t__2))
+  ((let vty := (ty (Term.mk (Kind.binop Binop.bitOr (Term.mk (Kind.binop Binop.bitAnd x (Term.mk (Kind.bitVec w__9) t__10)) t__13) (Term.mk (Kind.bitVec w__5) t__6)) t__15));
+   (let m := (Term.mk (kind (Term.mk (Kind.bitVec w__1) t__2)) vty);
+   (O.bv_or (O.bv_and m (Term.mk (Kind.bitVec w__5) t__6)) (O.bv_and x (O.bv_and m (Term.mk (Kind.bitVec w__9) t__10)))))))
+
+def bv_and.r_mask_or.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (m_and__z : Int) (m_and__T : Ty) (w__3 : Term) (m_or__z : Int) (m_or__T : Ty) (t__5 : Ty),
+  (bits_in (bv_of_lit (Term.mk (Kind.bitVec m_and__z) m_and__T)) (bv_of_lit (Term.mk (Kind.bitVec m_or__z) m_or__T))) = true →
+  Refines FS (bv_and.spec (Term.mk (Kind.bitVec m_and__z) m_and__T) (Term.mk (Kind.binop Binop.bitOr w__3 (Term.mk (Kind.bitVec m_or__z) m_or__T)) t__5))
+  ((lit (bv_of_lit (Term.mk (Kind.bitVec m_and__z) m_and__T))))
+
+def bv_and.r_mask_or.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (m_and__z : Int) (m_and__T : Ty) (m_or__z : Int) (m_or__T : Ty) (w__3 : Term) (t__5 : Ty),
+  (bits_in (bv_of_lit (Term.mk (Kind.bitVec m_and__z) m_and__T)) (bv_of_lit (Term.mk (Kind.bitVec m_or__z) m_or__T))) = true →
+  Refines FS (bv_and.spec (Term.mk (Kind.bitVec m_and__z) m_and__T) (Term.mk (Kind.binop Binop.bitOr (Term.mk (Kind.bitVec m_or__z) m_or__T) w__3) t__5))
+  ((lit (bv_of_lit (Term.mk (Kind.bitVec m_and__z) m_and__T))))
+
+def bv_and.r_mask_or.a3.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (w__3 : Term) (m_or__z : Int) (m_or__T : Ty) (t__5 : Ty) (m_and__z : Int) (m_and__T : Ty),
+  (bits_in (bv_of_lit (Term.mk (Kind.bitVec m_and__z) m_and__T)) (bv_of_lit (Term.mk (Kind.bitVec m_or__z) m_or__T))) = true →
+  Refines FS (bv_and.spec (Term.mk (Kind.binop Binop.bitOr w__3 (Term.mk (Kind.bitVec m_or__z) m_or__T)) t__5) (Term.mk (Kind.bitVec m_and__z) m_and__T))
+  ((lit (bv_of_lit (Term.mk (Kind.bitVec m_and__z) m_and__T))))
+
+def bv_and.r_mask_or.a4.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (m_or__z : Int) (m_or__T : Ty) (w__3 : Term) (t__5 : Ty) (m_and__z : Int) (m_and__T : Ty),
+  (bits_in (bv_of_lit (Term.mk (Kind.bitVec m_and__z) m_and__T)) (bv_of_lit (Term.mk (Kind.bitVec m_or__z) m_or__T))) = true →
+  Refines FS (bv_and.spec (Term.mk (Kind.binop Binop.bitOr (Term.mk (Kind.bitVec m_or__z) m_or__T) w__3) t__5) (Term.mk (Kind.bitVec m_and__z) m_and__T))
+  ((lit (bv_of_lit (Term.mk (Kind.bitVec m_and__z) m_and__T))))
+
+def bv_and.r_mask_or_disj.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (m_and__z : Int) (m_and__T : Ty) (x : Term) (m_or__z : Int) (m_or__T : Ty) (t__5 : Ty),
+  (disjoint (bv_of_lit (Term.mk (Kind.bitVec m_and__z) m_and__T)) (bv_of_lit (Term.mk (Kind.bitVec m_or__z) m_or__T))) = true →
+  Refines FS (bv_and.spec (Term.mk (Kind.bitVec m_and__z) m_and__T) (Term.mk (Kind.binop Binop.bitOr x (Term.mk (Kind.bitVec m_or__z) m_or__T)) t__5))
+  ((O.bv_and x (lit (bv_of_lit (Term.mk (Kind.bitVec m_and__z) m_and__T)))))
+
+def bv_and.r_mask_or_disj.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (m_and__z : Int) (m_and__T : Ty) (m_or__z : Int) (m_or__T : Ty) (x : Term) (t__5 : Ty),
+  (disjoint (bv_of_lit (Term.mk (Kind.bitVec m_and__z) m_and__T)) (bv_of_lit (Term.mk (Kind.bitVec m_or__z) m_or__T))) = true →
+  Refines FS (bv_and.spec (Term.mk (Kind.bitVec m_and__z) m_and__T) (Term.mk (Kind.binop Binop.bitOr (Term.mk (Kind.bitVec m_or__z) m_or__T) x) t__5))
+  ((O.bv_and x (lit (bv_of_lit (Term.mk (Kind.bitVec m_and__z) m_and__T)))))
+
+def bv_and.r_mask_or_disj.a3.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (x : Term) (m_or__z : Int) (m_or__T : Ty) (t__5 : Ty) (m_and__z : Int) (m_and__T : Ty),
+  (disjoint (bv_of_lit (Term.mk (Kind.bitVec m_and__z) m_and__T)) (bv_of_lit (Term.mk (Kind.bitVec m_or__z) m_or__T))) = true →
+  Refines FS (bv_and.spec (Term.mk (Kind.binop Binop.bitOr x (Term.mk (Kind.bitVec m_or__z) m_or__T)) t__5) (Term.mk (Kind.bitVec m_and__z) m_and__T))
+  ((O.bv_and x (lit (bv_of_lit (Term.mk (Kind.bitVec m_and__z) m_and__T)))))
+
+def bv_and.r_mask_or_disj.a4.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (m_or__z : Int) (m_or__T : Ty) (x : Term) (t__5 : Ty) (m_and__z : Int) (m_and__T : Ty),
+  (disjoint (bv_of_lit (Term.mk (Kind.bitVec m_and__z) m_and__T)) (bv_of_lit (Term.mk (Kind.bitVec m_or__z) m_or__T))) = true →
+  Refines FS (bv_and.spec (Term.mk (Kind.binop Binop.bitOr (Term.mk (Kind.bitVec m_or__z) m_or__T) x) t__5) (Term.mk (Kind.bitVec m_and__z) m_and__T))
+  ((O.bv_and x (lit (bv_of_lit (Term.mk (Kind.bitVec m_and__z) m_and__T)))))
+
+def bv_and.r_right_mask.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (mask__z : Int) (mask__T : Ty) (l : Term) (r : Term) (t__6 : Ty),
+  (is_right_mask (to_z false (bv_of_lit (Term.mk (Kind.bitVec mask__z) mask__T)))) = true →
+  Refines FS (bv_and.spec (Term.mk (Kind.bitVec mask__z) mask__T) (Term.mk (Kind.binop Binop.bitAnd l r) t__6))
+  ((O.bv_and (O.bv_and (Term.mk (Kind.bitVec mask__z) mask__T) l) (O.bv_and (Term.mk (Kind.bitVec mask__z) mask__T) r)))
+
+def bv_and.r_right_mask.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (l : Term) (r : Term) (t__6 : Ty) (mask__z : Int) (mask__T : Ty),
+  (is_right_mask (to_z false (bv_of_lit (Term.mk (Kind.bitVec mask__z) mask__T)))) = true →
+  Refines FS (bv_and.spec (Term.mk (Kind.binop Binop.bitAnd l r) t__6) (Term.mk (Kind.bitVec mask__z) mask__T))
+  ((O.bv_and (O.bv_and (Term.mk (Kind.bitVec mask__z) mask__T) l) (O.bv_and (Term.mk (Kind.bitVec mask__z) mask__T) r)))
+
+def bv_and.r_of_bool_r.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (bvr__1 : Int) (t__2 : Ty) (w__3 : Int) (w__5 : Term) (t__6 : Ty),
+  (decide (bvr__1 = (1 : Int))) = true →
+  Refines FS (bv_and.spec (Term.mk (Kind.bitVec bvr__1) t__2) (Term.mk (Kind.unop (Unop.bvOfBool w__3) w__5) t__6))
+  ((Term.mk (Kind.unop (Unop.bvOfBool w__3) w__5) t__6))
+
+def bv_and.r_of_bool_l.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (w__1 : Int) (w__3 : Term) (t__4 : Ty) (bvr__5 : Int) (t__6 : Ty),
+  (decide (bvr__5 = (1 : Int))) = true →
+  Refines FS (bv_and.spec (Term.mk (Kind.unop (Unop.bvOfBool w__1) w__3) t__4) (Term.mk (Kind.bitVec bvr__5) t__6))
+  ((Term.mk (Kind.unop (Unop.bvOfBool w__1) w__3) t__4))
+
+def bv_and.r_of_bools.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (w__1 : Int) (b1 : Term) (t__4 : Ty) (w__5 : Int) (b2 : Term) (t__8 : Ty),
+  Refines FS (bv_and.spec (Term.mk (Kind.unop (Unop.bvOfBool w__1) b1) t__4) (Term.mk (Kind.unop (Unop.bvOfBool w__5) b2) t__8))
+  ((O.bv_of_bool (size (Term.mk (Kind.unop (Unop.bvOfBool w__1) b1) t__4)) (O.b_and b1 b2)))
+
+def bv_and.r_ites.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (b1 : Term) (l1 : Term) (bvr__4 : Int) (t__5 : Ty) (t__6 : Ty) (b2 : Term) (l2 : Term) (bvr__10 : Int) (t__11 : Ty) (t__12 : Ty),
+  ((decide (bvr__4 = (0 : Int))) && (decide (bvr__10 = (0 : Int)))) = true →
+  Refines FS (bv_and.spec (Term.mk (Kind.triop Triop.ite b1 l1 (Term.mk (Kind.bitVec bvr__4) t__5)) t__6) (Term.mk (Kind.triop Triop.ite b2 l2 (Term.mk (Kind.bitVec bvr__10) t__11)) t__12))
+  ((O.b_ite (O.b_and b1 b2) (O.bv_and l1 l2) (bv_zero (size (Term.mk (Kind.triop Triop.ite b1 l1 (Term.mk (Kind.bitVec bvr__4) t__5)) t__6)))))
+
+def bv_and.r_default.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (v2 : Term),
+  Refines FS (bv_and.spec v1 v2)
+  ((Term.mk (mk_commut_binop O Binop.bitAnd v1 v2) (Ty.bitVector (size v1))))
 
 def bv_or.r_lits.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
@@ -1398,6 +1654,111 @@ def bv_or.r_default.Stmt : Prop :=
   ∀ (v1 : Term) (v2 : Term) (res : Term), bv_or.r_default O v1 v2 = some res →
   Refines FS (bv_or.spec v1 v2) res
 
+def bv_or.r_lits.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (l__z : Int) (l__T : Ty) (r__z : Int) (r__T : Ty),
+  Refines FS (bv_or.spec (Term.mk (Kind.bitVec l__z) l__T) (Term.mk (Kind.bitVec r__z) r__T))
+  ((lit (lit_or (bv_of_lit (Term.mk (Kind.bitVec l__z) l__T)) (bv_of_lit (Term.mk (Kind.bitVec r__z) r__T)))))
+
+def bv_or.r_zero_l.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v2 : Term) (bvr__1 : Int) (t__2 : Ty),
+  (decide (bvr__1 = (0 : Int))) = true →
+  Refines FS (bv_or.spec (Term.mk (Kind.bitVec bvr__1) t__2) v2)
+  (v2)
+
+def bv_or.r_zero_r.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (bvr__2 : Int) (t__3 : Ty),
+  (decide (bvr__2 = (0 : Int))) = true →
+  Refines FS (bv_or.spec v1 (Term.mk (Kind.bitVec bvr__2) t__3))
+  (v1)
+
+def bv_or.r_same.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (v2 : Term),
+  (equal v1 v2) = true →
+  Refines FS (bv_or.spec v1 v2)
+  (v1)
+
+def bv_or.r_mask_and.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (m1__z : Int) (m1__T : Ty) (w__3 : Term) (m2__z : Int) (m2__T : Ty) (t__5 : Ty),
+  (bits_in (bv_of_lit (Term.mk (Kind.bitVec m2__z) m2__T)) (bv_of_lit (Term.mk (Kind.bitVec m1__z) m1__T))) = true →
+  Refines FS (bv_or.spec (Term.mk (Kind.bitVec m1__z) m1__T) (Term.mk (Kind.binop Binop.bitAnd w__3 (Term.mk (Kind.bitVec m2__z) m2__T)) t__5))
+  ((lit (bv_of_lit (Term.mk (Kind.bitVec m1__z) m1__T))))
+
+def bv_or.r_mask_and.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (m1__z : Int) (m1__T : Ty) (m2__z : Int) (m2__T : Ty) (w__3 : Term) (t__5 : Ty),
+  (bits_in (bv_of_lit (Term.mk (Kind.bitVec m2__z) m2__T)) (bv_of_lit (Term.mk (Kind.bitVec m1__z) m1__T))) = true →
+  Refines FS (bv_or.spec (Term.mk (Kind.bitVec m1__z) m1__T) (Term.mk (Kind.binop Binop.bitAnd (Term.mk (Kind.bitVec m2__z) m2__T) w__3) t__5))
+  ((lit (bv_of_lit (Term.mk (Kind.bitVec m1__z) m1__T))))
+
+def bv_or.r_mask_and.a3.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (w__3 : Term) (m2__z : Int) (m2__T : Ty) (t__5 : Ty) (m1__z : Int) (m1__T : Ty),
+  (bits_in (bv_of_lit (Term.mk (Kind.bitVec m2__z) m2__T)) (bv_of_lit (Term.mk (Kind.bitVec m1__z) m1__T))) = true →
+  Refines FS (bv_or.spec (Term.mk (Kind.binop Binop.bitAnd w__3 (Term.mk (Kind.bitVec m2__z) m2__T)) t__5) (Term.mk (Kind.bitVec m1__z) m1__T))
+  ((lit (bv_of_lit (Term.mk (Kind.bitVec m1__z) m1__T))))
+
+def bv_or.r_mask_and.a4.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (m2__z : Int) (m2__T : Ty) (w__3 : Term) (t__5 : Ty) (m1__z : Int) (m1__T : Ty),
+  (bits_in (bv_of_lit (Term.mk (Kind.bitVec m2__z) m2__T)) (bv_of_lit (Term.mk (Kind.bitVec m1__z) m1__T))) = true →
+  Refines FS (bv_or.spec (Term.mk (Kind.binop Binop.bitAnd (Term.mk (Kind.bitVec m2__z) m2__T) w__3) t__5) (Term.mk (Kind.bitVec m1__z) m1__T))
+  ((lit (bv_of_lit (Term.mk (Kind.bitVec m1__z) m1__T))))
+
+def bv_or.r_masks.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (m1__z : Int) (m1__T : Ty) (x : Term) (m2__z : Int) (m2__T : Ty) (t__5 : Ty),
+  Refines FS (bv_or.spec (Term.mk (Kind.bitVec m1__z) m1__T) (Term.mk (Kind.binop Binop.bitOr x (Term.mk (Kind.bitVec m2__z) m2__T)) t__5))
+  ((O.bv_or x (lit (lit_or (bv_of_lit (Term.mk (Kind.bitVec m1__z) m1__T)) (bv_of_lit (Term.mk (Kind.bitVec m2__z) m2__T))))))
+
+def bv_or.r_masks.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (m1__z : Int) (m1__T : Ty) (m2__z : Int) (m2__T : Ty) (x : Term) (t__5 : Ty),
+  Refines FS (bv_or.spec (Term.mk (Kind.bitVec m1__z) m1__T) (Term.mk (Kind.binop Binop.bitOr (Term.mk (Kind.bitVec m2__z) m2__T) x) t__5))
+  ((O.bv_or x (lit (lit_or (bv_of_lit (Term.mk (Kind.bitVec m1__z) m1__T)) (bv_of_lit (Term.mk (Kind.bitVec m2__z) m2__T))))))
+
+def bv_or.r_masks.a3.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (x : Term) (m2__z : Int) (m2__T : Ty) (t__5 : Ty) (m1__z : Int) (m1__T : Ty),
+  Refines FS (bv_or.spec (Term.mk (Kind.binop Binop.bitOr x (Term.mk (Kind.bitVec m2__z) m2__T)) t__5) (Term.mk (Kind.bitVec m1__z) m1__T))
+  ((O.bv_or x (lit (lit_or (bv_of_lit (Term.mk (Kind.bitVec m1__z) m1__T)) (bv_of_lit (Term.mk (Kind.bitVec m2__z) m2__T))))))
+
+def bv_or.r_masks.a4.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (m2__z : Int) (m2__T : Ty) (x : Term) (t__5 : Ty) (m1__z : Int) (m1__T : Ty),
+  Refines FS (bv_or.spec (Term.mk (Kind.binop Binop.bitOr (Term.mk (Kind.bitVec m2__z) m2__T) x) t__5) (Term.mk (Kind.bitVec m1__z) m1__T))
+  ((O.bv_or x (lit (lit_or (bv_of_lit (Term.mk (Kind.bitVec m1__z) m1__T)) (bv_of_lit (Term.mk (Kind.bitVec m2__z) m2__T))))))
+
+def bv_or.r_extend_shl.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (nx : Int) (base : Term) (t__5 : Ty) (w__8 : Int) (tail : Term) (t__11 : Ty) (shift__z : Int) (shift__T : Ty) (t__13 : Ty),
+  ((decide ((to_z false (bv_of_lit (Term.mk (Kind.bitVec shift__z) shift__T))) = (size base))) && (decide (nx > (0 : Int)))) = true →
+  Refines FS (bv_or.spec (Term.mk (Kind.unop (Unop.bvExtend false nx) base) t__5) (Term.mk (Kind.binop Binop.shl (Term.mk (Kind.unop (Unop.bvExtend false w__8) tail) t__11) (Term.mk (Kind.bitVec shift__z) shift__T)) t__13))
+  ((let tail_size := (size tail);
+   (if (decide (nx = tail_size))
+   then (O.bv_concat tail base)
+   else (if (decide (nx > tail_size))
+        then (let new_base := (O.bv_concat tail base);
+             (O.bv_extend false (nx - tail_size) new_base))
+        else (let new_tail := (O.bv_extract (0 : Int) (nx - (1 : Int)) tail);
+             (O.bv_concat new_tail base))))))
+
+def bv_or.r_of_bools.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (n : Int) (b1 : Term) (t__4 : Ty) (w__5 : Int) (b2 : Term) (t__8 : Ty),
+  Refines FS (bv_or.spec (Term.mk (Kind.unop (Unop.bvOfBool n) b1) t__4) (Term.mk (Kind.unop (Unop.bvOfBool w__5) b2) t__8))
+  ((O.bv_of_bool n (O.b_or b1 b2)))
+
+def bv_or.r_default.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (v2 : Term),
+  Refines FS (bv_or.spec v1 v2)
+  ((Term.mk (mk_commut_binop O Binop.bitOr v1 v2) (ty v1)))
+
 def bv_xor.r_lits.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
   ∀ (v1 : Term) (v2 : Term) (res : Term), bv_xor.r_lits O v1 v2 = some res →
@@ -1422,6 +1783,38 @@ def bv_xor.r_default.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
   ∀ (v1 : Term) (v2 : Term) (res : Term), bv_xor.r_default O v1 v2 = some res →
   Refines FS (bv_xor.spec v1 v2) res
+
+def bv_xor.r_lits.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (l__z : Int) (l__T : Ty) (r__z : Int) (r__T : Ty),
+  Refines FS (bv_xor.spec (Term.mk (Kind.bitVec l__z) l__T) (Term.mk (Kind.bitVec r__z) r__T))
+  ((lit (lit_xor (bv_of_lit (Term.mk (Kind.bitVec l__z) l__T)) (bv_of_lit (Term.mk (Kind.bitVec r__z) r__T)))))
+
+def bv_xor.r_zero_l.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v2 : Term) (bvr__1 : Int) (t__2 : Ty),
+  (decide (bvr__1 = (0 : Int))) = true →
+  Refines FS (bv_xor.spec (Term.mk (Kind.bitVec bvr__1) t__2) v2)
+  (v2)
+
+def bv_xor.r_zero_r.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (bvr__2 : Int) (t__3 : Ty),
+  (decide (bvr__2 = (0 : Int))) = true →
+  Refines FS (bv_xor.spec v1 (Term.mk (Kind.bitVec bvr__2) t__3))
+  (v1)
+
+def bv_xor.r_of_bools.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (n : Int) (b1 : Term) (t__4 : Ty) (w__5 : Int) (b2 : Term) (t__8 : Ty),
+  Refines FS (bv_xor.spec (Term.mk (Kind.unop (Unop.bvOfBool n) b1) t__4) (Term.mk (Kind.unop (Unop.bvOfBool w__5) b2) t__8))
+  ((O.bv_of_bool n (O.b_not (O.sem_eq b1 b2))))
+
+def bv_xor.r_default.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (v2 : Term),
+  Refines FS (bv_xor.spec v1 v2)
+  ((Term.mk (mk_commut_binop O Binop.bitXor v1 v2) (ty v1)))
 
 def bv_extract.r_lit.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
@@ -1623,6 +2016,72 @@ def bv_shl.r_default.Stmt : Prop :=
   ∀ (v1 : Term) (v2 : Term) (res : Term), bv_shl.r_default O v1 v2 = some res →
   Refines FS (bv_shl.spec v1 v2) res
 
+def bv_shl.r_lits.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (l__z : Int) (l__T : Ty) (r__z : Int) (r__T : Ty),
+  Refines FS (bv_shl.spec (Term.mk (Kind.bitVec l__z) l__T) (Term.mk (Kind.bitVec r__z) r__T))
+  ((lit (lit_shl (bv_of_lit (Term.mk (Kind.bitVec l__z) l__T)) (bv_of_lit (Term.mk (Kind.bitVec r__z) r__T)))))
+
+def bv_shl.r_zero.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (bvr__2 : Int) (t__3 : Ty),
+  (decide (bvr__2 = (0 : Int))) = true →
+  Refines FS (bv_shl.spec v1 (Term.mk (Kind.bitVec bvr__2) t__3))
+  (v1)
+
+def bv_shl.r_big.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (s__z : Int) (s__T : Ty),
+  (decide ((to_z false (bv_of_lit (Term.mk (Kind.bitVec s__z) s__T))) ≥ (size v1))) = true →
+  Refines FS (bv_shl.spec v1 (Term.mk (Kind.bitVec s__z) s__T))
+  ((bv_zero (size v1)))
+
+def bv_shl.r_shl.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v : Term) (s1__z : Int) (s1__T : Ty) (t__4 : Ty) (s2__z : Int) (s2__T : Ty),
+  Refines FS (bv_shl.spec (Term.mk (Kind.binop Binop.shl v (Term.mk (Kind.bitVec s1__z) s1__T)) t__4) (Term.mk (Kind.bitVec s2__z) s2__T))
+  ((let n := (size (Term.mk (Kind.binop Binop.shl v (Term.mk (Kind.bitVec s1__z) s1__T)) t__4));
+   (O.bv_shl v (lit (of_z n (zmin ((to_z false (bv_of_lit (Term.mk (Kind.bitVec s1__z) s1__T))) + (to_z false (bv_of_lit (Term.mk (Kind.bitVec s2__z) s2__T)))) n))))))
+
+def bv_shl.r_lshr.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (x : Term) (sr__z : Int) (sr__T : Ty) (t__4 : Ty) (sl__z : Int) (sl__T : Ty),
+  Refines FS (bv_shl.spec (Term.mk (Kind.binop Binop.lShr x (Term.mk (Kind.bitVec sr__z) sr__T)) t__4) (Term.mk (Kind.bitVec sl__z) sl__T))
+  ((let n := (size (Term.mk (Kind.binop Binop.lShr x (Term.mk (Kind.bitVec sr__z) sr__T)) t__4));
+   (if (decide ((to_z false (bv_of_lit (Term.mk (Kind.bitVec sl__z) sl__T))) ≤ (to_z false (bv_of_lit (Term.mk (Kind.bitVec sr__z) sr__T)))))
+   then (O.bv_and (O.bv_lshr x (lit (lit_sub (bv_of_lit (Term.mk (Kind.bitVec sr__z) sr__T)) (bv_of_lit (Term.mk (Kind.bitVec sl__z) sl__T))))) (lit (lit_shl (ones n) (bv_of_lit (Term.mk (Kind.bitVec sl__z) sl__T)))))
+   else (O.bv_shl (O.bv_and x (lit (lit_shl (ones n) (bv_of_lit (Term.mk (Kind.bitVec sr__z) sr__T))))) (lit (lit_sub (bv_of_lit (Term.mk (Kind.bitVec sl__z) sl__T)) (bv_of_lit (Term.mk (Kind.bitVec sr__z) sr__T))))))))
+
+def bv_shl.r_and_mask.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (x : Term) (mask__z : Int) (mask__T : Ty) (t__4 : Ty) (s__z : Int) (s__T : Ty),
+  Refines FS (bv_shl.spec (Term.mk (Kind.binop Binop.bitAnd x (Term.mk (Kind.bitVec mask__z) mask__T)) t__4) (Term.mk (Kind.bitVec s__z) s__T))
+  ((O.bv_and (O.bv_shl x (Term.mk (Kind.bitVec s__z) s__T)) (lit (lit_shl (bv_of_lit (Term.mk (Kind.bitVec mask__z) mask__T)) (bv_of_lit (Term.mk (Kind.bitVec s__z) s__T))))))
+
+def bv_shl.r_and_mask.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (mask__z : Int) (mask__T : Ty) (x : Term) (t__4 : Ty) (s__z : Int) (s__T : Ty),
+  Refines FS (bv_shl.spec (Term.mk (Kind.binop Binop.bitAnd (Term.mk (Kind.bitVec mask__z) mask__T) x) t__4) (Term.mk (Kind.bitVec s__z) s__T))
+  ((O.bv_and (O.bv_shl x (Term.mk (Kind.bitVec s__z) s__T)) (lit (lit_shl (bv_of_lit (Term.mk (Kind.bitVec mask__z) mask__T)) (bv_of_lit (Term.mk (Kind.bitVec s__z) s__T))))))
+
+def bv_shl.r_or_mask.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (x : Term) (mask__z : Int) (mask__T : Ty) (t__4 : Ty) (s__z : Int) (s__T : Ty),
+  Refines FS (bv_shl.spec (Term.mk (Kind.binop Binop.bitOr x (Term.mk (Kind.bitVec mask__z) mask__T)) t__4) (Term.mk (Kind.bitVec s__z) s__T))
+  ((O.bv_or (O.bv_shl x (Term.mk (Kind.bitVec s__z) s__T)) (lit (lit_shl (bv_of_lit (Term.mk (Kind.bitVec mask__z) mask__T)) (bv_of_lit (Term.mk (Kind.bitVec s__z) s__T))))))
+
+def bv_shl.r_or_mask.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (mask__z : Int) (mask__T : Ty) (x : Term) (t__4 : Ty) (s__z : Int) (s__T : Ty),
+  Refines FS (bv_shl.spec (Term.mk (Kind.binop Binop.bitOr (Term.mk (Kind.bitVec mask__z) mask__T) x) t__4) (Term.mk (Kind.bitVec s__z) s__T))
+  ((O.bv_or (O.bv_shl x (Term.mk (Kind.bitVec s__z) s__T)) (lit (lit_shl (bv_of_lit (Term.mk (Kind.bitVec mask__z) mask__T)) (bv_of_lit (Term.mk (Kind.bitVec s__z) s__T))))))
+
+def bv_shl.r_default.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (v2 : Term),
+  Refines FS (bv_shl.spec v1 v2)
+  ((Term.mk (Kind.binop Binop.shl v1 v2) (ty v1)))
+
 def bv_lshr.r_lits.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
   ∀ (v1 : Term) (v2 : Term) (res : Term), bv_lshr.r_lits O v1 v2 = some res →
@@ -1658,6 +2117,63 @@ def bv_lshr.r_default.Stmt : Prop :=
   ∀ (v1 : Term) (v2 : Term) (res : Term), bv_lshr.r_default O v1 v2 = some res →
   Refines FS (bv_lshr.spec v1 v2) res
 
+def bv_lshr.r_lits.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (l__z : Int) (l__T : Ty) (r__z : Int) (r__T : Ty),
+  Refines FS (bv_lshr.spec (Term.mk (Kind.bitVec l__z) l__T) (Term.mk (Kind.bitVec r__z) r__T))
+  ((lit (lit_lshr (bv_of_lit (Term.mk (Kind.bitVec l__z) l__T)) (bv_of_lit (Term.mk (Kind.bitVec r__z) r__T)))))
+
+def bv_lshr.r_zero.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (bvr__2 : Int) (t__3 : Ty),
+  (decide (bvr__2 = (0 : Int))) = true →
+  Refines FS (bv_lshr.spec v1 (Term.mk (Kind.bitVec bvr__2) t__3))
+  (v1)
+
+def bv_lshr.r_big.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (s__z : Int) (s__T : Ty),
+  (decide ((to_z false (bv_of_lit (Term.mk (Kind.bitVec s__z) s__T))) ≥ (size v1))) = true →
+  Refines FS (bv_lshr.spec v1 (Term.mk (Kind.bitVec s__z) s__T))
+  ((bv_zero (size v1)))
+
+def bv_lshr.r_lshr.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v : Term) (s1__z : Int) (s1__T : Ty) (t__4 : Ty) (s2__z : Int) (s2__T : Ty),
+  Refines FS (bv_lshr.spec (Term.mk (Kind.binop Binop.lShr v (Term.mk (Kind.bitVec s1__z) s1__T)) t__4) (Term.mk (Kind.bitVec s2__z) s2__T))
+  ((let n := (size (Term.mk (Kind.binop Binop.lShr v (Term.mk (Kind.bitVec s1__z) s1__T)) t__4));
+   (O.bv_lshr v (lit (of_z n (zmin ((to_z false (bv_of_lit (Term.mk (Kind.bitVec s1__z) s1__T))) + (to_z false (bv_of_lit (Term.mk (Kind.bitVec s2__z) s2__T)))) n))))))
+
+def bv_lshr.r_and_mask.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (x : Term) (mask__z : Int) (mask__T : Ty) (t__4 : Ty) (s__z : Int) (s__T : Ty),
+  Refines FS (bv_lshr.spec (Term.mk (Kind.binop Binop.bitAnd x (Term.mk (Kind.bitVec mask__z) mask__T)) t__4) (Term.mk (Kind.bitVec s__z) s__T))
+  ((O.bv_and (O.bv_lshr x (Term.mk (Kind.bitVec s__z) s__T)) (lit (lit_lshr (bv_of_lit (Term.mk (Kind.bitVec mask__z) mask__T)) (bv_of_lit (Term.mk (Kind.bitVec s__z) s__T))))))
+
+def bv_lshr.r_and_mask.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (mask__z : Int) (mask__T : Ty) (x : Term) (t__4 : Ty) (s__z : Int) (s__T : Ty),
+  Refines FS (bv_lshr.spec (Term.mk (Kind.binop Binop.bitAnd (Term.mk (Kind.bitVec mask__z) mask__T) x) t__4) (Term.mk (Kind.bitVec s__z) s__T))
+  ((O.bv_and (O.bv_lshr x (Term.mk (Kind.bitVec s__z) s__T)) (lit (lit_lshr (bv_of_lit (Term.mk (Kind.bitVec mask__z) mask__T)) (bv_of_lit (Term.mk (Kind.bitVec s__z) s__T))))))
+
+def bv_lshr.r_or_mask.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (x : Term) (mask__z : Int) (mask__T : Ty) (t__4 : Ty) (s__z : Int) (s__T : Ty),
+  Refines FS (bv_lshr.spec (Term.mk (Kind.binop Binop.bitOr x (Term.mk (Kind.bitVec mask__z) mask__T)) t__4) (Term.mk (Kind.bitVec s__z) s__T))
+  ((O.bv_or (O.bv_lshr x (Term.mk (Kind.bitVec s__z) s__T)) (lit (lit_lshr (bv_of_lit (Term.mk (Kind.bitVec mask__z) mask__T)) (bv_of_lit (Term.mk (Kind.bitVec s__z) s__T))))))
+
+def bv_lshr.r_or_mask.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (mask__z : Int) (mask__T : Ty) (x : Term) (t__4 : Ty) (s__z : Int) (s__T : Ty),
+  Refines FS (bv_lshr.spec (Term.mk (Kind.binop Binop.bitOr (Term.mk (Kind.bitVec mask__z) mask__T) x) t__4) (Term.mk (Kind.bitVec s__z) s__T))
+  ((O.bv_or (O.bv_lshr x (Term.mk (Kind.bitVec s__z) s__T)) (lit (lit_lshr (bv_of_lit (Term.mk (Kind.bitVec mask__z) mask__T)) (bv_of_lit (Term.mk (Kind.bitVec s__z) s__T))))))
+
+def bv_lshr.r_default.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (v2 : Term),
+  Refines FS (bv_lshr.spec v1 v2)
+  ((Term.mk (Kind.binop Binop.lShr v1 v2) (ty v1)))
+
 def bv_ashr.r_lits.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
   ∀ (v1 : Term) (v2 : Term) (res : Term), bv_ashr.r_lits O v1 v2 = some res →
@@ -1682,6 +2198,40 @@ def bv_ashr.r_default.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
   ∀ (v1 : Term) (v2 : Term) (res : Term), bv_ashr.r_default O v1 v2 = some res →
   Refines FS (bv_ashr.spec v1 v2) res
+
+def bv_ashr.r_lits.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (l__z : Int) (l__T : Ty) (r__z : Int) (r__T : Ty),
+  Refines FS (bv_ashr.spec (Term.mk (Kind.bitVec l__z) l__T) (Term.mk (Kind.bitVec r__z) r__T))
+  ((lit (lit_ashr (bv_of_lit (Term.mk (Kind.bitVec l__z) l__T)) (bv_of_lit (Term.mk (Kind.bitVec r__z) r__T)))))
+
+def bv_ashr.r_zero.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (bvr__2 : Int) (t__3 : Ty),
+  (decide (bvr__2 = (0 : Int))) = true →
+  Refines FS (bv_ashr.spec v1 (Term.mk (Kind.bitVec bvr__2) t__3))
+  (v1)
+
+def bv_ashr.r_big.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (s__z : Int) (s__T : Ty),
+  (decide ((to_z false (bv_of_lit (Term.mk (Kind.bitVec s__z) s__T))) ≥ (size v1))) = true →
+  Refines FS (bv_ashr.spec v1 (Term.mk (Kind.bitVec s__z) s__T))
+  ((let sz := (size v1);
+   (O.bv_ashr v1 (lit (of_z sz (sz - (1 : Int)))))))
+
+def bv_ashr.r_ashr.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v : Term) (s1__z : Int) (s1__T : Ty) (t__4 : Ty) (s2__z : Int) (s2__T : Ty),
+  Refines FS (bv_ashr.spec (Term.mk (Kind.binop Binop.aShr v (Term.mk (Kind.bitVec s1__z) s1__T)) t__4) (Term.mk (Kind.bitVec s2__z) s2__T))
+  ((let sz := (size (Term.mk (Kind.binop Binop.aShr v (Term.mk (Kind.bitVec s1__z) s1__T)) t__4));
+   (O.bv_ashr v (lit (of_z sz (zmin ((to_z false (bv_of_lit (Term.mk (Kind.bitVec s1__z) s1__T))) + (to_z false (bv_of_lit (Term.mk (Kind.bitVec s2__z) s2__T)))) (sz - (1 : Int))))))))
+
+def bv_ashr.r_default.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (v2 : Term),
+  Refines FS (bv_ashr.spec v1 v2)
+  ((Term.mk (Kind.binop Binop.aShr v1 v2) (ty v1)))
 
 def bv_mul.r_lits.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →

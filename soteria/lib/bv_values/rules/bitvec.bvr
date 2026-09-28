@@ -187,30 +187,27 @@ let[@spec BvNot v <| ty v] [@cases] bv_not (v : t) : t =
   | Ite (b, l, r) [@r ite] -> b_ite b (bv_not l) (bv_not r)
   | _ [@r default] -> BvNot v <| ty v
 
-let[@spec BitAnd (v1, v2) <| TBitVector (size v1)] bv_and (v1 : t) (v2 : t) : t
-    =
-  let n = size v1 in
-  assert (n = size v2);
+let[@spec BitAnd (v1, v2) <| TBitVector (size v1)] [@cases] bv_and (v1 : t)
+    (v2 : t) : t =
+  assert (size v1 = size v2);
   match (v1, v2) with
-  | BitVec l, BitVec r [@r lits] -> mk_bv n (l land r)
+  | BitVec l, BitVec r [@r lits] -> lit (l land r)
   | 0, _ [@r zero_l] -> v1
   | _, 0 [@r zero_r] -> v2
-  | BitVec mask, _ [@r ones_l] when covers_bitwidth n mask -> v2
-  | _, BitVec mask [@r ones_r] when covers_bitwidth n mask -> v1
+  | BitVec mask, _ [@r ones_l] when is_ones mask -> v2
+  | _, BitVec mask [@r ones_r] when is_ones mask -> v1
   (* For (x >> s) & m, the mask is irrelevant if it entirely covers [bitsize -
      s] *)
   | ((LShr (_, BitVec shift) as base), BitVec mask) [@comm] [@r lshr_mask]
-    when shift >= 0 && shift < n
+    when to_z false shift < size v1
          &&
-         let bitwidth = n - shift in
-         let low_mask = (1 lsl bitwidth) - 1 in
-         mask land low_mask = low_mask ->
-      kind base <| TBitVector n
+         bits_in (lit_lshr (ones (size v1)) shift) mask ->
+      kind base <| TBitVector (size v1)
   | BitVec _, Ite (b, l, r) [@r ite_r] -> b_ite b (bv_and v1 l) (bv_and v1 r)
   | Ite (b, l, r), BitVec _ [@r ite_l] -> b_ite b (bv_and l v2) (bv_and r v2)
   (* m1 & (x & m2) = x & (m1 & m2) *)
   | (BitVec m1, BitAnd (x, BitVec m2) [@comm]) [@comm] [@r masks] ->
-      bv_and x (mk_bv n (m1 land m2))
+      bv_and x (lit (m1 land m2))
   (* collapse M & (N | (P & X)) into (M & N) | (M & P & X) where M, N and P
      concrete *)
   | ( (BitVec _ as m),
@@ -219,50 +216,45 @@ let[@spec BitAnd (v1, v2) <| TBitVector (size v1)] bv_and (v1 : t) (v2 : t) : t
       let vty = ty v1 in
       let m = kind m <| vty in
       bv_or (bv_and m n) (bv_and x (bv_and m p))
-  (* M & (N | X) *)
-  | (BitVec m_and, BitOr (x, BitVec m_or) [@comm]) [@comm] [@r mask_or] ->
-      let overlap = m_and land m_or in
-      if overlap = m_and then
-        (* M & (N | X) when M & N == M ==> M (all bits already set by the
-           or) *)
-        mk_bv n m_and
-      else if overlap = 0 then
-        (* M & (N | X) when M & N == 0 ==> M & X (no bits set by the or) *)
-        bv_and x (mk_bv n m_and)
-      else (* give up *)
-        mk_commut_binop BitAnd v1 v2 <| TBitVector n
+  (* M & (N | X) when M & N == M ==> M (all bits already set by the or) *)
+  | (BitVec m_and, BitOr (_, BitVec m_or) [@comm]) [@comm] [@r mask_or]
+    when bits_in m_and m_or ->
+      lit m_and
+  (* M & (N | X) when M & N == 0 ==> M & X (no bits set by the or) *)
+  | (BitVec m_and, BitOr (x, BitVec m_or) [@comm]) [@comm] [@r mask_or_disj]
+    when disjoint m_and m_or ->
+      bv_and x (lit m_and)
   (* if it's a right mask, it's usually beneficial to propagate it *)
-  | (BitVec mask, BitAnd (l, r)) [@comm] [@r right_mask]
-    when is_right_mask mask ->
-      let mask = mk_bv (size v1) mask in
-      bv_and (bv_and mask l) (bv_and mask r)
+  | ((BitVec mask as v_mask), BitAnd (l, r)) [@comm] [@r right_mask]
+    when is_right_mask (to_z false mask) ->
+      bv_and (bv_and v_mask l) (bv_and v_mask r)
   | 1, BvOfBool _ [@r of_bool_r] -> v2
   | BvOfBool _, 1 [@r of_bool_l] -> v1
   | BvOfBool (_, b1), BvOfBool (_, b2) [@r of_bools] ->
-      bv_of_bool n (b_and b1 b2)
+      bv_of_bool (size v1) (b_and b1 b2)
   | Ite (b1, l1, 0), Ite (b2, l2, 0) [@r ites] ->
       b_ite (b_and b1 b2) (bv_and l1 l2) (bv_zero (size v1))
-  | _ [@r default] -> mk_commut_binop BitAnd v1 v2 <| TBitVector n
+  | _ [@r default] -> mk_commut_binop BitAnd v1 v2 <| TBitVector (size v1)
 
-let[@spec BitOr (v1, v2) <| ty v1] bv_or (v1 : t) (v2 : t) : t =
+let[@spec BitOr (v1, v2) <| ty v1] [@cases] bv_or (v1 : t) (v2 : t) : t =
   assert (is_bv (ty v1) && is_bv (ty v2));
   match (v1, v2) with
-  | BitVec l, BitVec r [@r lits] -> mk_bv (size v1) (l lor r)
+  | BitVec l, BitVec r [@r lits] -> lit (l lor r)
   | 0, _ [@r zero_l] -> v2
   | _, 0 [@r zero_r] -> v1
   | v, v [@r same] -> v1
   (* m1 | (x & m2) where m2 is a subset of m1's bits means the & is
      redundant *)
   | (BitVec m1, BitAnd (_, BitVec m2) [@comm]) [@comm] [@r mask_and]
-    when m1 land m2 = m2 ->
-      mk_bv (size v1) m1
+    when bits_in m2 m1 ->
+      lit m1
   (* m1 | (x | m2) = x | (m1 | m2) *)
   | (BitVec m1, BitOr (x, BitVec m2) [@comm]) [@comm] [@r masks] ->
-      bv_or x (mk_bv (size v1) (m1 lor m2))
+      bv_or x (lit (m1 lor m2))
   (* 0x0..0X..X | (0x0..0Y..Y << N) when N = |X..X| ==> 0x0..0Y..YX..X *)
   | ( BvExtend (false, nx, base),
       Shl (BvExtend (false, _, tail), BitVec shift) ) [@r extend_shl]
-    when shift = size base && nx > 0 ->
+    when to_z false shift = size base && nx > 0 ->
       let tail_size = size tail in
       if nx = tail_size then bv_concat tail base
       else if nx > tail_size then
@@ -275,9 +267,9 @@ let[@spec BitOr (v1, v2) <| ty v1] bv_or (v1 : t) (v2 : t) : t =
       bv_of_bool n (b_or b1 b2)
   | _ [@r default] -> mk_commut_binop BitOr v1 v2 <| ty v1
 
-let[@spec BitXor (v1, v2) <| ty v1] bv_xor (v1 : t) (v2 : t) : t =
+let[@spec BitXor (v1, v2) <| ty v1] [@cases] bv_xor (v1 : t) (v2 : t) : t =
   match (v1, v2) with
-  | BitVec l, BitVec r [@r lits] -> mk_bv (size v1) (l lxor r)
+  | BitVec l, BitVec r [@r lits] -> lit (l lxor r)
   | 0, _ [@r zero_l] -> v2
   | _, 0 [@r zero_r] -> v1
   | BvOfBool (n, b1), BvOfBool (_, b2) [@r of_bools] ->
@@ -430,57 +422,60 @@ let[@spec BvConcat (v1, v2) <| TBitVector (size v1 + size v2)] bv_concat
       b_ite b (bv_concat l1 l2) (bv_concat r1 r2)
   | _ [@r default] -> BvConcat (v1, v2) <| TBitVector (n1 + n2)
 
-let[@spec Shl (v1, v2) <| ty v1] bv_shl (v1 : t) (v2 : t) : t =
+let[@spec Shl (v1, v2) <| ty v1] [@cases] bv_shl (v1 : t) (v2 : t) : t =
   match (v1, v2) with
-  | BitVec l, BitVec r [@r lits] -> mk_masked (size v1) (l lsl r)
+  | BitVec l, BitVec r [@r lits] -> lit (l lsl r)
   | _, 0 [@r zero] -> v1
-  | _, BitVec s [@r big] when s >= size v1 -> bv_zero (size v1)
+  | _, BitVec s [@r big] when to_z false s >= size v1 -> bv_zero (size v1)
   | Shl (v, BitVec s1), BitVec s2 [@r shl] ->
-      bv_shl v (mk_bv (size v1) (zmin (s1 + s2) (size v1)))
+      let n = size v1 in
+      bv_shl v (lit (of_z n (zmin (to_z false s1 + to_z false s2) n)))
   | LShr (x, BitVec sr), BitVec sl [@r lshr] ->
       let n = size v1 in
-      if sl <= sr then
+      if to_z false sl <= to_z false sr then
         (* (x >> s1) << s2 where s2 < s1 = x >> (s1 - s2) & (mask with lower
            bits cleared) *)
-        let mask = lognot ((1 lsl sl) - 1) in
-        bv_and (bv_lshr x (mk_bv n (sr - sl))) (mk_masked n mask)
+        bv_and (bv_lshr x (lit (sr - sl))) (lit (ones n lsl sl))
       else
         (* (x >> s1) << s2 where s2 > s1 = x << (s2 - s1) & (mask with lower
            bits cleared) *)
-        let mask = lognot ((1 lsl sr) - 1) in
-        bv_shl (bv_and x (mk_masked n mask)) (mk_bv n (sl - sr))
+        bv_shl (bv_and x (lit (ones n lsl sr))) (lit (sl - sr))
   (* (x & mask) << s = (x << s) & (mask << s) *)
   | BitAnd (x, BitVec mask) [@comm], BitVec s [@r and_mask] ->
-      bv_and (bv_shl x v2) (mk_masked (size v1) (mask lsl s))
+      bv_and (bv_shl x v2) (lit (mask lsl s))
   (* (x | mask) << s = (x << s) | (mask << s) *)
   | BitOr (x, BitVec mask) [@comm], BitVec s [@r or_mask] ->
-      bv_or (bv_shl x v2) (mk_masked (size v1) (mask lsl s))
+      bv_or (bv_shl x v2) (lit (mask lsl s))
   | _ [@r default] -> Shl (v1, v2) <| ty v1
 
-let[@spec LShr (v1, v2) <| ty v1] bv_lshr (v1 : t) (v2 : t) : t =
+let[@spec LShr (v1, v2) <| ty v1] [@cases] bv_lshr (v1 : t) (v2 : t) : t =
   match (v1, v2) with
-  | BitVec l, BitVec r [@r lits] -> mk_masked (size v1) (l asr r)
+  | BitVec l, BitVec r [@r lits] -> lit (lit_lshr l r)
   | _, 0 [@r zero] -> v1
-  | _, BitVec s [@r big] when s >= size v1 -> bv_zero (size v1)
+  | _, BitVec s [@r big] when to_z false s >= size v1 -> bv_zero (size v1)
   | LShr (v, BitVec s1), BitVec s2 [@r lshr] ->
-      bv_lshr v (mk_bv (size v1) (zmin (s1 + s2) (size v1)))
+      let n = size v1 in
+      bv_lshr v (lit (of_z n (zmin (to_z false s1 + to_z false s2) n)))
   (* (x & mask) >> s = (x >> s) & (mask >> s) *)
   | BitAnd (x, BitVec mask) [@comm], BitVec s [@r and_mask] ->
-      bv_and (bv_lshr x v2) (mk_bv (size v1) (mask asr s))
+      bv_and (bv_lshr x v2) (lit (lit_lshr mask s))
   (* (x | mask) >> s = (x >> s) | (mask >> s) *)
   | BitOr (x, BitVec mask) [@comm], BitVec s [@r or_mask] ->
-      bv_or (bv_lshr x v2) (mk_bv (size v1) (mask asr s))
+      bv_or (bv_lshr x v2) (lit (lit_lshr mask s))
   | _ [@r default] -> LShr (v1, v2) <| ty v1
 
-let[@spec AShr (v1, v2) <| ty v1] bv_ashr (v1 : t) (v2 : t) : t =
-  let sz = size v1 in
+let[@spec AShr (v1, v2) <| ty v1] [@cases] bv_ashr (v1 : t) (v2 : t) : t =
+  (* fails early if [v1] is not a bit-vector *)
+  assert (size v1 > 0);
   match (v1, v2) with
-  | BitVec l, BitVec r [@r lits] ->
-      mk_masked sz (signed_extract l 0 sz asr r)
+  | BitVec l, BitVec r [@r lits] -> lit (lit_ashr l r)
   | _, 0 [@r zero] -> v1
-  | _, BitVec s [@r big] when s >= sz -> bv_ashr v1 (mk_masked sz (sz - 1))
+  | _, BitVec s [@r big] when to_z false s >= size v1 ->
+      let sz = size v1 in
+      bv_ashr v1 (lit (of_z sz (sz - 1)))
   | AShr (v, BitVec s1), BitVec s2 [@r ashr] ->
-      bv_ashr v (mk_bv sz (zmin (s1 + s2) (sz - 1)))
+      let sz = size v1 in
+      bv_ashr v (lit (of_z sz (zmin (to_z false s1 + to_z false s2) (sz - 1))))
   | _ [@r default] -> AShr (v1, v2) <| ty v1
 
 let[@spec Mul (checked, v1, v2) <| ty v1] [@cases] bv_mul (checked : checked)

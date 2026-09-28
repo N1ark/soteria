@@ -7,193 +7,193 @@
 (* {1 Primitives} *)
 
 (* Terms *)
-external equal : t -> t -> bool = ""
-external ty : t -> ty = ""
-external kind : t -> kind = ""
+prim equal : t -> t -> bool
+prim ty : t -> ty
+prim kind : t -> kind
 
 (* Whether [l] comes before [r] in the (arbitrary) hash-consing order. *)
-external tag_le : t -> t -> bool = "oracle"
+oracle tag_le : t -> t -> bool
 
 (* Sorts terms along the hash-consing order. *)
-external sort_by_tag : t list -> t list = "oracle"
+oracle sort_by_tag : t list -> t list
 
 (* The binders of [binders] that occur free in the body. *)
-external used_binders : (var * ty) list -> t -> (var * ty) list = ""
+prim used_binders : (var * ty) list -> t -> (var * ty) list
 
 (* The size of a bit-vector, location or pointer type; fails otherwise. *)
-external size_of_ty : ty -> int = ""
+prim size_of_ty : ty -> int
 
 (* The precision of a float type; fails otherwise. *)
-external fp_of_ty : ty -> fp = ""
+prim fp_of_ty : ty -> fp
 
 (* [mk_bv n z] is the bit-vector literal [z] of size [n]; asserts that [z] is
    in range. *)
-external mk_bv : int -> int -> t = ""
+prim mk_bv : int -> int -> t
 
 (* [mk_masked n z] is the bit-vector literal [z mod 2^n] of size [n]. *)
-external mk_masked : int -> int -> t = ""
-external bv_zero : int -> t = ""
-external bv_one : int -> t = ""
-external v_true : t = ""
-external v_false : t = ""
+prim mk_masked : int -> int -> t
+prim bv_zero : int -> t
+prim bv_one : int -> t
+prim v_true : t
+prim v_false : t
 
 (* Bit-vector values: a width, and a value of that width *)
 
 (* [bv_of_lit v] is the value of the bit-vector literal [v]; fails otherwise. *)
-external bv_of_lit : t -> bv = ""
+prim bv_of_lit : t -> bv
 
 (* [lit l] is the literal of type [TBitVector (width l)] whose value is [l]. *)
-external lit : bv -> t = ""
-external width : bv -> int = ""
+prim lit : bv -> t
+prim width : bv -> int
 
 (* [to_z signed l] is [l] read as a signed or unsigned integer. *)
-external to_z : bool -> bv -> int = ""
+prim to_z : bool -> bv -> int
 
 (* [of_z n z] is [z mod 2^n], of width [n]. *)
-external of_z : int -> int -> bv = ""
+prim of_z : int -> int -> bv
 
 (* Modular arithmetic, at the width of the first operand; [+], [-], [*] and
    unary [-] on [bv]s stand for these. Division is SMT-LIB's: by zero, it gives
    all ones (and 1 for a negative signed dividend). *)
-external lit_add : bv -> bv -> bv = ""
-external lit_sub : bv -> bv -> bv = ""
-external lit_mul : bv -> bv -> bv = ""
-external lit_neg : bv -> bv = ""
-external lit_udiv : bv -> bv -> bv = ""
-external lit_sdiv : bv -> bv -> bv = ""
+prim lit_add : bv -> bv -> bv
+prim lit_sub : bv -> bv -> bv
+prim lit_mul : bv -> bv -> bv
+prim lit_neg : bv -> bv
+prim lit_udiv : bv -> bv -> bv
+prim lit_sdiv : bv -> bv -> bv
 
 (* Bitwise operations and shifts, at the width of the first operand; [land],
    [lor], [lxor], [lognot] and [lsl] on [bv]s stand for the first five. Shifts
    by at least the width give 0 (all ones for a negative [lit_ashr]). *)
-external lit_and : bv -> bv -> bv = ""
-external lit_or : bv -> bv -> bv = ""
-external lit_xor : bv -> bv -> bv = ""
-external lit_not : bv -> bv = ""
-external lit_shl : bv -> bv -> bv = ""
-external lit_lshr : bv -> bv -> bv = ""
-external lit_ashr : bv -> bv -> bv = ""
+prim lit_and : bv -> bv -> bv
+prim lit_or : bv -> bv -> bv
+prim lit_xor : bv -> bv -> bv
+prim lit_not : bv -> bv
+prim lit_shl : bv -> bv -> bv
+prim lit_lshr : bv -> bv -> bv
+prim lit_ashr : bv -> bv -> bv
 
 (* Remainders, SMT-LIB's: by zero, they give the dividend. [lit_srem] takes the
    sign of the dividend and [lit_smod] that of the divisor. *)
-external lit_urem : bv -> bv -> bv = ""
-external lit_srem : bv -> bv -> bv = ""
-external lit_smod : bv -> bv -> bv = ""
+prim lit_urem : bv -> bv -> bv
+prim lit_srem : bv -> bv -> bv
+prim lit_smod : bv -> bv -> bv
 
 (* [lit_extract from_ to_ l] is bits [from_] to [to_] of [l], inclusive;
    [lit_zext k l] and [lit_sext k l] extend [l] by [k] bits; [lit_concat l r]
    has [l] in its high bits and [r] in its low bits. *)
-external lit_extract : int -> int -> bv -> bv = ""
-external lit_zext : int -> bv -> bv = ""
-external lit_sext : int -> bv -> bv = ""
-external lit_concat : bv -> bv -> bv = ""
+prim lit_extract : int -> int -> bv -> bv
+prim lit_zext : int -> bv -> bv
+prim lit_sext : int -> bv -> bv
+prim lit_concat : bv -> bv -> bv
 
 (* Integers *)
-external signed_extract : int -> int -> int -> int = ""
-external popcount : int -> int = ""
-external log2 : int -> int = ""
-external tdiv : int -> int -> int = ""
-external trem : int -> int -> int = ""
-external divisible : int -> int -> bool = ""
+prim signed_extract : int -> int -> int -> int
+prim popcount : int -> int
+prim log2 : int -> int
+prim tdiv : int -> int -> int
+prim trem : int -> int -> int
+prim divisible : int -> int -> bool
 
 (* Floats, see [Floatml.AnyFloat] *)
-external fp_size : fp -> int = ""
-external fp_of_size : int -> fp = ""
-external f_equal : float -> float -> bool = ""
-external f_bits_equal : float -> float -> bool = ""
-external f_to_bits : float -> int = ""
-external f_of_bits : fp -> int -> float = ""
-external f_nan : fp -> float = ""
-external f_is_class : fc -> float -> bool = ""
-external f_is_nan : float -> bool = ""
-external f_is_zero : float -> bool = ""
-external f_is_negative : float -> bool = ""
-external f_is_positive : float -> bool = ""
-external f_eq : float -> float -> bool = ""
-external f_lt : float -> float -> bool = ""
-external f_le : float -> float -> bool = ""
-external f_add : float -> float -> float = "oracle"
-external f_sub : float -> float -> float = "oracle"
-external f_mul : float -> float -> float = "oracle"
-external f_div : float -> float -> float = "oracle"
-external f_rem : float -> float -> float = "oracle"
-external f_fmod : float -> float -> float = "oracle"
-external f_min : float -> float -> float = "oracle"
-external f_max : float -> float -> float = "oracle"
-external f_fma : float -> float -> float -> float = "oracle"
-external f_abs : float -> float = ""
-external f_neg : float -> float = ""
-external f_sqrt : float -> float = "oracle"
-external f_round : rm -> float -> float = "oracle"
-external f_convert : rm -> fp -> float -> float = "oracle"
+prim fp_size : fp -> int
+prim fp_of_size : int -> fp
+prim f_equal : float -> float -> bool
+prim f_bits_equal : float -> float -> bool
+prim f_to_bits : float -> int
+prim f_of_bits : fp -> int -> float
+prim f_nan : fp -> float
+prim f_is_class : fc -> float -> bool
+prim f_is_nan : float -> bool
+prim f_is_zero : float -> bool
+prim f_is_negative : float -> bool
+prim f_is_positive : float -> bool
+prim f_eq : float -> float -> bool
+prim f_lt : float -> float -> bool
+prim f_le : float -> float -> bool
+oracle f_add : float -> float -> float
+oracle f_sub : float -> float -> float
+oracle f_mul : float -> float -> float
+oracle f_div : float -> float -> float
+oracle f_rem : float -> float -> float
+oracle f_fmod : float -> float -> float
+oracle f_min : float -> float -> float
+oracle f_max : float -> float -> float
+oracle f_fma : float -> float -> float -> float
+prim f_abs : float -> float
+prim f_neg : float -> float
+oracle f_sqrt : float -> float
+oracle f_round : rm -> float -> float
+oracle f_convert : rm -> fp -> float -> float
 
 (* [f_to_int rm signed size f] converts [f] to an integer of [size] bits, if
    that size is supported and the conversion is defined. *)
-external f_to_int : rm -> bool -> int -> float -> int option = "oracle"
+oracle f_to_int : rm -> bool -> int -> float -> int option
 
 (* [f_of_int rm signed fp size z] converts the [size]-bit integer [z] to a
    float, if that size is supported. *)
-external f_of_int : rm -> bool -> fp -> int -> int -> float option = "oracle"
+oracle f_of_int : rm -> bool -> fp -> int -> int -> float option
 
 (* {1 Helpers} *)
 
-let size (v : t) : int = size_of_ty (ty v)
-let is_bv (t : ty) : bool = match t with TBitVector _ -> true | _ -> false
-let zmin (a : int) (b : int) : int = if a <= b then a else b
-let zmax (a : int) (b : int) : int = if a >= b then a else b
-let of_bool (b : bool) : t = if b then v_true else v_false
+fn size (v : t) : int = size_of_ty (ty v)
+fn is_bv (t : ty) : bool = match t with TBitVector _ -> true | _ -> false
+fn zmin (a b : int) : int = if a <= b then a else b
+fn zmax (a b : int) : int = if a >= b then a else b
+fn of_bool (b : bool) : t = if b then v_true else v_false
 
 (* [mk_commut_binop op l r] puts commutative binary operators in some normal
    form where the element with the smallest tag is on the left. *)
-let mk_commut_binop (op : binop) (l : t) (r : t) : kind =
+fn mk_commut_binop (op : binop) (l r : t) : kind =
   if tag_le l r then Binop (op, l, r) else Binop (op, r, l)
 
 (* Checked flags *)
 
-let unchecked : checked = { signed = false; unsigned = false }
-let checked_both : checked = { signed = true; unsigned = true }
-let checked_signed : checked = { signed = true; unsigned = false }
-let checked_unsigned : checked = { signed = false; unsigned = true }
+fn unchecked : checked = { signed = false; unsigned = false }
+fn checked_both : checked = { signed = true; unsigned = true }
+fn checked_signed : checked = { signed = true; unsigned = false }
+fn checked_unsigned : checked = { signed = false; unsigned = true }
 
-let checked_of_signed (signed : bool) : checked =
+fn checked_of_signed (signed : bool) : checked =
   if signed then checked_signed else checked_unsigned
 
-let checked_has (signed : bool) (c : checked) : bool =
+fn checked_has (signed : bool) (c : checked) : bool =
   if signed then c.signed else c.unsigned
 
-let is_checked (c : checked) : bool = c.signed || c.unsigned
+fn is_checked (c : checked) : bool = c.signed || c.unsigned
 
-let checked_meet (a : checked) (b : checked) : checked =
+fn checked_meet (a b : checked) : checked =
   { signed = a.signed && b.signed; unsigned = a.unsigned && b.unsigned }
 
 (* Bit-vector integers *)
 
 (* [bv_to_z signed bits z] reads the bit-vector [z] of size [bits] as an
    integer, with the given signedness. *)
-let bv_to_z (signed : bool) (bits : int) (z : int) : int =
+fn bv_to_z (signed : bool) (bits z : int) : int =
   if signed then signed_extract z 0 bits else z
 
-let max_for (signed : bool) (n : int) : int =
+fn max_for (signed : bool) (n : int) : int =
   let n = if signed then n - 1 else n in
   (1 lsl n) - 1
 
-let min_for (signed : bool) (n : int) : int =
+fn min_for (signed : bool) (n : int) : int =
   if signed then -(1 lsl (n - 1)) else 0
 
 (* whether [z] is of the form [0*1+] *)
-let is_right_mask (z : int) : bool = z > 0 && popcount (z + 1) = 1
+fn is_right_mask (z : int) : bool = z > 0 && popcount (z + 1) = 1
 
 (* for [z] of the form [0*1{n}], [n] *)
-let right_mask_size (z : int) : int = log2 (z + 1)
+fn right_mask_size (z : int) : int = log2 (z + 1)
 
-let covers_bitwidth (bits : int) (z : int) : bool =
+fn covers_bitwidth (bits z : int) : bool =
   is_right_mask z && right_mask_size z = bits
 
-let is_pow2 (z : int) : bool = z > 0 && popcount z = 1
+fn is_pow2 (z : int) : bool = z > 0 && popcount z = 1
 
 (* the least significant bit of [z] that is set, or 128 if [z] is 0 *)
-let lsb (z : int) : int = if z = 0 then 128 else log2 (z land -z)
+fn lsb (z : int) : int = if z = 0 then 128 else log2 (z land -z)
 
-let rec msb_of (v : t) : int =
+fn msb_of (v : t) : int =
   match v with
   | BitVec z when z > 0 -> log2 z
   | 0 -> size v - 1
@@ -203,53 +203,53 @@ let rec msb_of (v : t) : int =
   | _ -> size v - 1
 
 (* whether [op l r] overflows, for [n]-bit bit-vectors *)
-let overflows_add (signed : bool) (n : int) (l : int) (r : int) : bool =
+fn overflows_add (signed : bool) (n l r : int) : bool =
   let res = bv_to_z signed n l + bv_to_z signed n r in
   res < min_for signed n || res > max_for signed n
 
-let overflows_sub (signed : bool) (n : int) (l : int) (r : int) : bool =
+fn overflows_sub (signed : bool) (n l r : int) : bool =
   let res = bv_to_z signed n l - bv_to_z signed n r in
   res < min_for signed n || res > max_for signed n
 
-let overflows_mul (signed : bool) (n : int) (l : int) (r : int) : bool =
+fn overflows_mul (signed : bool) (n l r : int) : bool =
   let res = bv_to_z signed n l * bv_to_z signed n r in
   res < min_for signed n || res > max_for signed n
 
 (* Bit-vector values *)
 
-let is_int_min (l : bv) : bool = to_z true l = min_for true (width l)
+fn is_int_min (l : bv) : bool = to_z true l = min_for true (width l)
 
 (* whether [l op r] overflows, as integers of [l]'s width *)
-let add_overflows (signed : bool) (l : bv) (r : bv) : bool =
+fn add_overflows (signed : bool) (l r : bv) : bool =
   let n = width l in
   let res = to_z signed l + to_z signed r in
   res < min_for signed n || res > max_for signed n
 
-let sub_overflows (signed : bool) (l : bv) (r : bv) : bool =
+fn sub_overflows (signed : bool) (l r : bv) : bool =
   let n = width l in
   let res = to_z signed l - to_z signed r in
   res < min_for signed n || res > max_for signed n
 
-let mul_overflows (signed : bool) (l : bv) (r : bv) : bool =
+fn mul_overflows (signed : bool) (l r : bv) : bool =
   let n = width l in
   let res = to_z signed l * to_z signed r in
   res < min_for signed n || res > max_for signed n
 
 (* whether [d] divides [n], as unsigned integers *)
-let udivides (d : bv) (n : bv) : bool = divisible (to_z false n) (to_z false d)
+fn udivides (d n : bv) : bool = divisible (to_z false n) (to_z false d)
 
 (* Re-associating a checked add/sub folds two of its constants ([a], [b]) into
    a single one. The rebuilt operation can overflow even when the originals
    didn't (the fold wraps), so the [checked] flag only survives in a
    signedness where that constant fold does not itself overflow. *)
-let fold_checked (c : checked) (a : bv) (b : bv) (is_add : bool) : checked =
+fn fold_checked (c : checked) (a b : bv) (is_add : bool) : checked =
   let keep (signed : bool) =
     checked_has signed c
     && not (if is_add then add_overflows signed a b else sub_overflows signed a b)
   in
   { signed = keep true; unsigned = keep false }
 
-let rec sure_neq (a : t) (b : t) : bool =
+fn sure_neq (a b : t) : bool =
   (not (ty a = ty b))
   ||
   match (a, b) with
@@ -262,27 +262,27 @@ let rec sure_neq (a : t) (b : t) : bool =
 (* Bitwise *)
 
 (* the value of width [n] with all bits set *)
-let ones (n : int) : bv = lognot (of_z n 0)
+fn ones (n : int) : bv = lognot (of_z n 0)
 
-let is_ones (l : bv) : bool = to_z true l = -1
+fn is_ones (l : bv) : bool = to_z true l = -1
 
 (* whether the bits set in [a] are all set in [b] *)
-let bits_in (a : bv) (b : bv) : bool = to_z false (a land b) = to_z false a
+fn bits_in (a b : bv) : bool = to_z false (a land b) = to_z false a
 
 (* whether no bit is set in both [a] and [b] *)
-let disjoint (a : bv) (b : bv) : bool = to_z false (a land b) = 0
+fn disjoint (a b : bv) : bool = to_z false (a land b) = 0
 
 (* Bool *)
 
-let at_most_one (l : t list) : bool =
+fn at_most_one (l : t list) : bool =
   match l with [] | [ _ ] -> true | _ -> false
 
-let no_binders (l : (var * ty) list) : bool =
+fn no_binders (l : (var * ty) list) : bool =
   match l with [] -> true | _ -> false
 
 (* For an upper bound [a < c] or [a <= c] on [a], the largest value of [a] that
    it allows, read as an integer in its signedness ([c - 1] for [a < c]). *)
-let upper_bound (v : t) : int =
+fn upper_bound (v : t) : int =
   match v with
   | Lt (s, _, (BitVec _ as c)) -> to_z s (bv_of_lit c) - 1
   | Leq (s, _, (BitVec _ as c)) -> to_z s (bv_of_lit c)
@@ -290,7 +290,7 @@ let upper_bound (v : t) : int =
 
 (* For a lower bound [c < a] or [c <= a] on [a], the smallest value of [a] that
    it allows ([c + 1] for [c < a]). *)
-let lower_bound (v : t) : int =
+fn lower_bound (v : t) : int =
   match v with
   | Lt (s, (BitVec _ as c), _) -> to_z s (bv_of_lit c) + 1
   | Leq (s, (BitVec _ as c), _) -> to_z s (bv_of_lit c)
@@ -299,8 +299,8 @@ let lower_bound (v : t) : int =
 (* Compare *)
 
 (* whether [l] is the least (resp. greatest) integer of its width *)
-let is_min_of (signed : bool) (l : bv) : bool =
+fn is_min_of (signed : bool) (l : bv) : bool =
   to_z signed l = min_for signed (width l)
 
-let is_max_of (signed : bool) (l : bv) : bool =
+fn is_max_of (signed : bool) (l : bv) : bool =
   to_z signed l = max_for signed (width l)

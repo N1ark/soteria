@@ -989,6 +989,11 @@ let parse_file file : structure =
   let ic = open_in_bin file in
   let lexbuf = Lexing.from_channel ic in
   Lexing.set_filename lexbuf file;
-  let str = Parse.implementation lexbuf in
-  close_in ic;
-  str
+  let at p = { loc_start = p; loc_end = p; loc_ghost = false } in
+  Fun.protect
+    ~finally:(fun () -> close_in ic)
+    (fun () ->
+      try Bvr_parser.file Bvr_lexer.token lexbuf with
+      | Bvr_lexer.Error (p, msg) -> raise (Error (at p, msg))
+      | Bvr_parser.Error ->
+          raise (Error (at lexbuf.lex_start_p, "syntax error")))

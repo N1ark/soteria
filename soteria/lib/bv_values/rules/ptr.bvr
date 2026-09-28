@@ -1,13 +1,13 @@
 (* Pointers *)
 
-let[@spec GetPtrLoc p <| TLoc (size p)] [@cases] ptr_loc (p : t) : t =
+rule ptr_loc (p : t) : GetPtrLoc p <| TLoc (size p) =
   match p with
-  | Ptr (l, _) [@r ptr] -> l
-  | _ [@r default] -> GetPtrLoc p <| TLoc (size p)
+  | ptr: Ptr (l, _) -> l
+  | default: _ -> GetPtrLoc p <| TLoc (size p)
 
-let[@spec GetPtrOfs p <| TBitVector (size p)] [@cases] ptr_ofs (p : t) : t =
+rule ptr_ofs (p : t) : GetPtrOfs p <| TBitVector (size p) =
   match p with
-  | Ptr (_, o) [@r ptr] -> o
-  | _ [@r default] ->
+  | ptr: Ptr (_, o) -> o
+  | default: _ ->
       let n = size p in
       GetPtrOfs p <| TBitVector n

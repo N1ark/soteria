@@ -7,38 +7,42 @@ The simplifying smart constructors of `Bv_values.Svalue` (`Bool.and_`,
 - `svalue_rules.ml`, the OCaml implementation (at build time, by dune), and
 - a Lean model with one soundness statement per rule (see `lean/`).
 
-bvr uses OCaml syntax, so editors and `ocamlformat`-style layouts work, but it
-is a small, pure, first-order language with its own typing.
+bvr is a small, pure, first-order language with its own typing. Its syntax is
+that of OCaml, apart from the declarations and rule names below; it is parsed
+by `bvr_parser.mly`.
 
 ## Functions
 
 ```ocaml
-let[@spec BvNot v <| ty v] bv_not (v : t) : t =
+rule bv_not (v : t) : BvNot v <| ty v =
   match v with
-  | BitVec bv [@r lit] -> mk_masked (size v) (lognot bv)
-  | Ite (b, l, r) [@r ite] -> b_ite b (bv_not l) (bv_not r)
-  | _ [@r default] -> BvNot v <| ty v
+  | lit: BitVec bv -> lit (lognot bv)
+  | ite: Ite (b, l, r) -> b_ite b (bv_not l) (bv_not r)
+  | default: _ -> BvNot v <| ty v
+
+fn size (v : t) : int = size_of_ty (ty v)
 ```
 
-- Parameters and results are annotated. Types: `t` (terms), `ty`, `kind`,
+- Parameters and results are annotated; `(v1 v2 : t)` stands for
+  `(v1 : t) (v2 : t)`. Types: `t` (terms), `ty`, `kind`,
   `int` (arbitrary precision, `Z.t`), `bv` (a bit-vector value, which knows
   its width), `bool`, `checked`, `rm`, `fp`, `fc`, `float`, `var`, tuples,
   `option`, `list`.
 - `+`, `-`, `*` and unary `-` on `bv`s are modular, at the width of their
   first operand. `lit l` is the literal term of `l`, `to_z signed l` reads
   `l` as an integer, `of_z n z` is `z mod 2^n` (see `prelude.bvr`).
-- `[@spec e]` makes the function a *rule function*: its result must refine the
-  raw term `e`. Every case of its top-level `match` is a rule named with
-  `[@r name]`; each rule gets its own Lean proof obligation.
-- Functions without a spec are helpers. All functions can call each other.
-- `external f : a -> b = ""` declares a primitive, implemented by hand in
-  `svalue.ml` and in `lean/Bvr/Prims.lean`; `= "oracle"` declares one that
-  the Lean model takes as a parameter (Floatml's arithmetic).
+- `rule f params : e = body` declares a *rule function*, which returns a term
+  that must refine the raw term `e` (its spec). Every case of its top-level
+  `match` is a rule, named by the label before its pattern (`lit:`).
+- `fn f params : ty = body` declares a helper. All functions can call each
+  other.
+- `prim f : a -> b` declares a primitive, implemented by hand in `svalue.ml`
+  and in `lean/Bvr/Prims.lean`; `oracle f : a -> b` declares one that the Lean
+  model takes as a parameter (Floatml's arithmetic).
 
-## `[@cases]` functions
+## Rules
 
-A rule function marked `[@cases]` (`let[@spec e] [@cases] f ...`) is proved per
-alternative of its rules, rather than per rule:
+Rule functions are proved per alternative of their rules:
 
 - `BitVec l` binds `l : bv`, the value of the literal.
 - Each alternative of a rule (after expanding or-patterns and `[@comm]`) has

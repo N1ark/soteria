@@ -1,11 +1,11 @@
 import Lean
-import Bvr.Lib.BV
+import Bvr.Lib.Den
 
 /-!
 # Meta-level tactics
 
 - `bvr_cases` splits on the values of the atoms of the goal and hypotheses:
-  the applications of `den`, `evalBV` and `evalB` that are left once the
+  the applications of `den`, `denB`, `evalBV` and `evalB` that are left once the
   structure of the terms is unfolded.
 - `bvr_split` destructs the conjunctions and existentials of the hypotheses.
 - `bvr_destruct_tys` destructs the term variables whose type is constrained.
@@ -17,7 +17,7 @@ open Lean Meta Elab Tactic
 
 private def isAtom (e : Expr) : Bool :=
   e.isAppOfArity ``Bvr.Lib.den 4 || e.isAppOfArity ``Bvr.Lib.evalBV 4 ||
-    e.isAppOfArity ``Bvr.Lib.evalB 3
+    e.isAppOfArity ``Bvr.Lib.evalB 3 || e.isAppOfArity ``Bvr.Lib.denB 3
 
 /-- Generalizes and case splits every atom. -/
 partial def caseAtoms (g : MVarId) : MetaM (List MVarId) := g.withContext do

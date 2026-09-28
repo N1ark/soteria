@@ -1,5 +1,5 @@
 import Bvr.Lib.Meta
-import Bvr.Lib.Lift
+import Bvr.Lifts
 import Bvr.Lib.Lit
 import Bvr.Lib.Ovf
 
@@ -95,7 +95,7 @@ macro "bvr_wt" : tactic => `(tactic| (
 
 /-- Unfolds the literals and the arithmetic on them. -/
 macro "bvr_lits" : tactic => `(tactic|
-  simp only [den, den_lit, bv_of_lit_bv, of_z_nat, lit_add_mk, lit_sub_mk, lit_mul_mk,
+  simp only [den, denB, den_lit, bv_of_lit_bv, of_z_nat, lit_add_mk, lit_sub_mk, lit_mul_mk,
     lit_neg_mk, lit_udiv_mk, lit_sdiv_mk, at_mk, at_of_z_self, width_mk, Term.ty_mk, to_z_mk, bv_zero, bv_one, mk_masked,
     mk_bv, size_of_ty_bitVector, Int.toNat_natCast] at *)
 
@@ -108,7 +108,7 @@ macro "bvr_flags" : tactic => `(tactic|
 /-- The value half of `Refines.den`, reduced to the facts on the values of the
 atoms. -/
 macro "bvr_sem_core" : tactic => `(tactic| (
-  intro n w ht ρ x h
+  first | intro n w ht ρ x h | intro w ρ x h
   have w' := w
   bvr_facts
   bvr_lits
@@ -130,6 +130,46 @@ macro "bvr_sem" : tactic => `(tactic| (
     | (bvr_ovf; done)
     | skip)))
 
+/-- Proves `Refines FS ?S body`, where `?S` is `body` with every call
+`O.f args` replaced by `f.spec args` (by the `lift_f` lemmas). -/
+partial def liftGoal : TacticM Unit := do
+  let g ← getMainGoal
+  let ty ← whnfR (← instantiateMVars (← g.getType))
+  let rhs := ty.getArg! 2
+  let fn := rhs.getAppFn
+  let lem := match fn with
+    | .const n _ =>
+        match n with
+        | .str (.str (.str .anonymous "Bvr") "Ops") f => some (Name.mkStr (Name.mkStr (Name.mkStr .anonymous "Bvr") "Lib") ("lift_" ++ f))
+        | _ => none
+    | _ => none
+  match lem with
+  | some l =>
+    if (← getEnv).contains l then
+      evalTactic (← `(tactic| apply $(mkIdent l) ‹Ops.Sound _ _›))
+      let gs ← getGoals
+      for g' in gs do
+        unless ← g'.isAssigned do
+          setGoals [g']
+          liftGoal
+      setGoals []
+      return
+    evalTactic (← `(tactic| exact Refines.refl))
+  | none => evalTactic (← `(tactic| exact Refines.refl))
+
+elab "bvr_lift" : tactic => do
+  let gs ← getGoals
+  let mut rest := []
+  for g in gs do
+    setGoals [g]
+    liftGoal
+    rest := rest ++ (← getGoals)
+  setGoals rest
+
+/-- Replaces the goal `Refines FS s body` by `Refines FS s S`, with the calls of
+`body` lifted to their specs in `S`. -/
+macro "bvr_lift_body" : tactic => `(tactic| (apply Refines.of_lift; case hl => bvr_lift))
+
 /-- Proves a fact on the natural values of constants in range. -/
 macro "bvr_nat" : tactic => `(tactic| (
   (try simp (disch := assumption) only [emod_two_pow_of_lt, toNat_ofInt_of_lt] at *)
@@ -148,7 +188,7 @@ macro "bvr_rule_core" : tactic => `(tactic| (
   all_goals (try bvr_lift_body)
   all_goals (try simp only [bvr_spec, ty])
   all_goals (try (first | exact Refines.refl | (bvr_comm; done)))
-  all_goals (try apply Refines.den)))
+  all_goals (try first | apply Refines.den | apply Refines.denB)))
 
 macro "bvr_rule" : tactic => `(tactic| (
   bvr_rule_core

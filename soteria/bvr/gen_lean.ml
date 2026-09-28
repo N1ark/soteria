@@ -853,6 +853,68 @@ let statements ~sources ft (p : program) =
     (rule_fns ctx);
   pf ft "end Bvr@]@."
 
+(** The user functions that [e] calls. *)
+let rec calls (e : expr) =
+  match e.e with
+  | EVar _ | EInt _ | EBool _ | EUnit | ENone | ENil -> []
+  | ECall (f, l) -> f :: List.concat_map calls l
+  | EConstr (_, l) | ELocalCall (_, l) | ETuple l -> List.concat_map calls l
+  | ENode (a, b) | EBinop (_, a, b) | ECons (a, b) | EAssert (a, b) ->
+      calls a @ calls b
+  | EUnop (_, a) | ESome a | EField (a, _) -> calls a
+  | EIf (a, b, c) -> calls a @ calls b @ calls c
+  | ERecord l -> List.concat_map (fun (_, e) -> calls e) l
+  | ELet (_, a, b) | ELetFun (_, _, a, b) -> calls a @ calls b
+  | EMatch (scruts, cases) ->
+      List.concat_map calls scruts
+      @ List.concat_map
+          (fun (c : case) ->
+            Option.fold ~none:[] ~some:calls c.guard @ calls c.body)
+          cases
+
+(** One lemma per rule function: its spec is monotone in its term arguments, so
+    a call of the function on terms that refine others refines the spec on
+    those. *)
+let lifts ~sources ft (p : program) =
+  let ctx = classify p in
+  header ~sources ft [ "Bvr.Lib.Lift" ];
+  pf ft "namespace Lib@ @ variable {FS : FloatSem} {O : Ops}@ @ ";
+  List.iter
+    (fun f ->
+      let term (_, t) = t = TTerm in
+      let prime (x, t) = if term (x, t) then id x ^ "'" else id x in
+      let helpers =
+        List.filter
+          (fun g -> List.exists (fun (h : fn) -> h.name = g) ctx.fns)
+          (calls (Option.get f.spec))
+        |> List.sort_uniq compare
+      in
+      pf ft "@[<v 2>theorem lift_%s (hO : O.Sound FS)" f.name;
+      List.iter
+        (fun (x, t) ->
+          if term (x, t) then pf ft " {%s %s' : Term}" (id x) (id x)
+          else pf ft " {%s : %a}" (id x) lean_ty t)
+        f.params;
+      List.iter
+        (fun (x, t) ->
+          if term (x, t) then
+            pf ft "@ (h_%s : Refines FS %s %s')" x (id x) (id x))
+        f.params;
+      pf ft " :@ Refines FS (%s.spec %s) (O.%s %s) :=@ " f.name
+        (String.concat " " (List.map (fun (x, _) -> id x) f.params))
+        f.name
+        (String.concat " " (List.map prime f.params));
+      if List.exists term f.params then
+        pf ft "Refines.trans (by simp only [%s]; bvr_congr) (hO.%s %s)@]@ @ "
+          (String.concat ", " ("bvr_spec" :: helpers))
+          f.name
+          (String.concat " " (List.map prime f.params))
+      else
+        pf ft "hO.%s %s@]@ @ " f.name
+          (String.concat " " (List.map prime f.params)))
+    (rule_fns ctx);
+  pf ft "end Lib@ @ end Bvr@]@."
+
 (** The proofs of the rules of a [[@cases]] function from those of its arms, and
     of the arms derived by commutativity. *)
 let cases_proofs ft (f : fn) =

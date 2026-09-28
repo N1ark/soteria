@@ -1,4 +1,4 @@
-import Bvr.Lib.BV
+import Bvr.Lib.Den
 
 /-!
 # Bit-vector values (`bv`) in terms

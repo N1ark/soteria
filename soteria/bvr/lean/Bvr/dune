@@ -5,7 +5,11 @@
 (rule
  (deps
   (glob_files %{project_root}/soteria/lib/bv_values/rules/*.bvr))
- (targets Model.lean.gen Statements.lean.gen Soundness.lean.gen)
+ (targets
+  Model.lean.gen
+  Statements.lean.gen
+  Lifts.lean.gen
+  Soundness.lean.gen)
  (action
   (progn
    (with-stdout-to
@@ -29,6 +33,16 @@
      %{project_root}/soteria/lib/bv_values/rules/float.bvr
      %{project_root}/soteria/lib/bv_values/rules/ptr.bvr))
    (with-stdout-to
+    Lifts.lean.gen
+    (run
+     %{exe:../../main.exe}
+     lean-lifts
+     %{project_root}/soteria/lib/bv_values/rules/prelude.bvr
+     %{project_root}/soteria/lib/bv_values/rules/bool.bvr
+     %{project_root}/soteria/lib/bv_values/rules/bitvec.bvr
+     %{project_root}/soteria/lib/bv_values/rules/float.bvr
+     %{project_root}/soteria/lib/bv_values/rules/ptr.bvr))
+   (with-stdout-to
     Soundness.lean.gen
     (run
      %{exe:../../main.exe}
@@ -45,4 +59,5 @@
   (progn
    (diff Model.lean Model.lean.gen)
    (diff Statements.lean Statements.lean.gen)
+   (diff Lifts.lean Lifts.lean.gen)
    (diff Soundness.lean Soundness.lean.gen))))

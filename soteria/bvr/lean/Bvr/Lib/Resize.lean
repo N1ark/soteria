@@ -246,6 +246,35 @@ end
 
 /-! ## Tactics -/
 
-open Lean Meta Elab Tactic
+/-- Proves the alternatives on literals of the float operations, by the
+oracle. -/
+macro "bvr_float" : tactic => `(tactic| (
+  intro FS O hO
+  intros
+  first
+    | exact Refines.float_bin_lits hO (by simp)
+    | exact Refines.funop_bits (by simp) (fun _ _ => rfl)
+    | exact Refines.funop_lit (by simp) (hO.orc.sqrt _)
+    | exact Refines.funop_lit (by simp) (hO.orc.round _ _)
+    | exact Refines.test_of_unop (fun w => ((WT_ftest (by simp)).1 w).2.1)
+        (by simp [evUnop, FloatLit.sem, f_is_class, f_is_negative, f_is_positive])
+    | exact Refines.fcmp_lits (by simp) fun hp => by
+        simp [evBinop, fBin, FloatLit.sem, f_eq, f_lt, f_le, FloatLit.cmp, hp]))
+
+/-- Proves the alternative on a pointer literal of `ptr_loc` (resp. `ptr_ofs`),
+whose spec is `spec`. -/
+macro "bvr_ptr " spec:ident : tactic => `(tactic| (
+  intro FS O hO l o T
+  refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
+  · obtain ⟨n, hn, hT, hl, ho, wl, wo⟩ := WT_ptr.1 (WT_unop.1 w).2
+    subst hT
+    simp [$spec:ident, hl, ho, wl, wo, size_of_ty]
+  · rw [$spec:ident, eval_unop w] at e
+    cases hp : eval FS ρ (Term.mk (Kind.ptr l o) T) with
+    | none => simp [hp] at e
+    | some pv =>
+      obtain ⟨n, x, y, h1, h2, hv⟩ := (eval_ptr_eq_some (WT_unop.1 w).2).1 hp
+      subst hv
+      rw [hp] at e; simp [evUnop] at e; subst e; first | exact h1 | exact h2))
 
 end Bvr.Lib

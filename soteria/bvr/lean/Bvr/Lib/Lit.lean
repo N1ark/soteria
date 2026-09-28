@@ -261,9 +261,6 @@ theorem lt_two_pow_log2 {z w : Int} (hz : 0 < z) (h : log2 z < w) : z < 2 ^ w.to
   have : ((z.toNat : Nat) : Int) < ((2 ^ w.toNat : Nat) : Int) := by exact_mod_cast (by omega)
   push_cast at this; omega
 
-theorem lt_two_pow_log2_succ {z : Int} (hz : 0 < z) : z < 2 ^ (log2 z + 1).toNat :=
-  lt_two_pow_log2 hz (by omega)
-
 theorem is_bv_iff {t : Ty} : is_bv t = true ↔ ∃ n, t = .bitVector n := by
   cases t <;> simp [is_bv, firstSome]
 

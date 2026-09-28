@@ -185,4 +185,16 @@ theorem setWidth_setWidth_of_ge {w l n : Nat} (x : BitVec w) (h : w ≤ l) :
   have := BitVec.lt_of_getLsbD h1
   omega
 
+/-- Proves the alternatives of the shifts on shifts. -/
+macro "bvr_shift" : tactic => `(tactic| (
+  bvr_rule_sem
+  all_goals bvr_amounts
+  all_goals first
+    | exact ashr_big_ok (by omega) _ (by omega)
+    | (rw [lshr_shl_le _ (by omega), sub_mod_two_pow (by omega) (by omega)]; done)
+    | (rw [lshr_shl_gt _ (by omega), sub_mod_two_pow (by omega) (by omega)]; done)
+    | ((first | rw [shl_shl] | rw [lshr_lshr] | rw [ashr_ashr])
+       congr 1
+       rw [zmin_emod (by omega) (by omega) (by omega)]; omega)))
+
 end Bvr.Lib

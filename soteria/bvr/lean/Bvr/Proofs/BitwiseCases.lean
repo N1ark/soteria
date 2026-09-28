@@ -52,29 +52,4 @@ theorem bv_or.r_extend_shl.a1.proof : bv_or.r_extend_shl.a1.Stmt := by
   · exact setWidth_setWidth_of_ge _ (by omega)
   · exact setWidth_append_extract _ _ (by omega)
 
-theorem bv_shl.r_shl.a1.proof : bv_shl.r_shl.a1.Stmt := by
-  bvr_rule_sem
-  all_goals bvr_amounts; rw [shl_shl]; congr 1
-  rw [zmin_emod (by omega) (by omega) (by omega)]; omega
-
-theorem bv_shl.r_lshr.a1.proof : bv_shl.r_lshr.a1.Stmt := by
-  bvr_rule_sem
-  all_goals bvr_amounts
-  · rw [lshr_shl_le _ (by omega), sub_mod_two_pow (by omega) (by omega)]
-  · rw [lshr_shl_gt _ (by omega), sub_mod_two_pow (by omega) (by omega)]
-
-theorem bv_lshr.r_lshr.a1.proof : bv_lshr.r_lshr.a1.Stmt := by
-  bvr_rule_sem
-  all_goals bvr_amounts; rw [lshr_lshr]; congr 1
-  rw [zmin_emod (by omega) (by omega) (by omega)]; omega
-
-theorem bv_ashr.r_big.a1.proof : bv_ashr.r_big.a1.Stmt := by
-  bvr_rule_sem
-  all_goals bvr_amounts; exact ashr_big_ok (by omega) _ (by omega)
-
-theorem bv_ashr.r_ashr.a1.proof : bv_ashr.r_ashr.a1.Stmt := by
-  bvr_rule_sem
-  all_goals bvr_amounts; rw [ashr_ashr]; congr 1
-  rw [zmin_emod (by omega) (by omega) (by omega)]; omega
-
 end Bvr

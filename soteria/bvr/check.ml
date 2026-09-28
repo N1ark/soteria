@@ -970,6 +970,190 @@ and ret_of = function
   | Pcoerce _ -> failwith "unsupported coercion"
 
 (* ---------------------------------------------------------------- *)
+(* Matching the spec of a rule *)
+
+(** The nodes of the infix operators on terms. *)
+let node_ops =
+  [
+    ("+", "Add");
+    ("-", "Sub");
+    ("*", "Mul");
+    ("land", "BitAnd");
+    ("lor", "BitOr");
+    ("lxor", "BitXor");
+    ("lsl", "Shl");
+    ("lsr", "LShr");
+    ("asr", "AShr");
+    ("++", "BvConcat");
+    ("&&", "And");
+    ("||", "Or");
+    ("==", "Eq");
+  ]
+
+(** Whether [x] occurs in [e], other than as the argument of [ty] or [size]. *)
+let mentions x (e : expression) =
+  let found = ref false in
+  object
+    inherit Ast_traverse.iter as super
+
+    method! expression e =
+      match e.pexp_desc with
+      | Pexp_apply
+          ( { pexp_desc = Pexp_ident { txt = Lident ("ty" | "size"); _ }; _ },
+            [ (_, { pexp_desc = Pexp_ident _; _ }) ] ) ->
+          ()
+      | Pexp_ident { txt = Lident y; _ } when y = x -> found := true
+      | _ -> super#expression e
+  end
+    #expression
+    e;
+  !found
+
+(** Whether two patterns are equal up to a renaming of their variables. *)
+let alpha_equal (p : pattern) (q : pattern) =
+  let ren = Hashtbl.create 8 in
+  let var x y =
+    match Hashtbl.find_opt ren x with
+    | Some y' -> y = y'
+    | None ->
+        Hashtbl.add ren x y;
+        true
+  in
+  let rec go (p : pattern) (q : pattern) =
+    match (p.ppat_desc, q.ppat_desc) with
+    | Ppat_any, Ppat_any -> true
+    | Ppat_var x, Ppat_var y -> var x.txt y.txt
+    | Ppat_alias (p, x), Ppat_alias (q, y) -> go p q && var x.txt y.txt
+    | Ppat_or (p1, p2), Ppat_or (q1, q2) -> go p1 q1 && go p2 q2
+    | Ppat_tuple l1, Ppat_tuple l2 ->
+        List.length l1 = List.length l2 && List.for_all2 go l1 l2
+    | Ppat_construct (c, a), Ppat_construct (d, b) -> (
+        Longident.name c.txt = Longident.name d.txt
+        &&
+        match (a, b) with
+        | None, None -> true
+        | Some (_, a), Some (_, b) -> go a b
+        | _ -> false)
+    | Ppat_constant a, Ppat_constant b -> a = b
+    | _ -> false
+  in
+  go p q
+  && List.length
+       (List.sort_uniq compare (Hashtbl.fold (fun _ y l -> y :: l) ren []))
+     = Hashtbl.length ren
+
+(** In a rule, [match v1 op v2 with | p op q -> e | ...], where [op] is the node
+    of the spec, matches the operands of the spec: it stands for
+    [match v1, v2 with | p, q -> e | ...], with [p] and [q] in either order when
+    [op] is commutative. *)
+let rec spec_match (spec : expression) (e : expression) =
+  match e.pexp_desc with
+  | Pexp_sequence (a, b) ->
+      { e with pexp_desc = Pexp_sequence (a, spec_match spec b) }
+  | Pexp_match
+      ( ({
+           pexp_desc =
+             Pexp_apply
+               ( { pexp_desc = Pexp_ident { txt = Lident op; _ }; _ },
+                 [ (_, a); (_, b) ] );
+           _;
+         } as scrut),
+        cases )
+    when List.mem_assoc op node_ops ->
+      let node = List.assoc op node_ops in
+      (match spec.pexp_desc with
+      | Pexp_apply
+          ( { pexp_desc = Pexp_ident { txt = Lident "<|"; _ }; _ },
+            [
+              (_, { pexp_desc = Pexp_construct ({ txt = Lident n; _ }, _); _ });
+              _;
+            ] )
+        when n = node ->
+          ()
+      | _ -> error scrut.pexp_loc "the spec of this rule is not a %s node" node);
+      let params =
+        List.map
+          (fun (x : expression) ->
+            match x.pexp_desc with
+            | Pexp_ident { txt = Lident x; _ } -> x
+            | _ -> error x.pexp_loc "expected a parameter")
+          [ a; b ]
+      in
+      let case (c : Ppxlib.case) =
+        let lhs = c.pc_lhs in
+        match lhs.ppat_desc with
+        | Ppat_any -> c
+        | Ppat_construct
+            ({ txt = Lident n; _ }, Some (_, { ppat_desc = Ppat_tuple l; _ }))
+          when n = node ->
+            let p, q =
+              match l with
+              | [ p; q ] | [ { ppat_desc = Ppat_any; _ }; p; q ] -> (p, q)
+              | _ -> error lhs.ppat_loc "the check of the spec is not matched"
+            in
+            count_vars lhs;
+            let once (p : pattern) =
+              match p.ppat_desc with
+              | Ppat_any -> true
+              | Ppat_var { txt; _ } -> Hashtbl.find case_vars txt = 1
+              | _ -> false
+            in
+            let symmetric =
+              alpha_equal
+                { lhs with ppat_desc = Ppat_tuple [ p; q ] }
+                { lhs with ppat_desc = Ppat_tuple [ q; p ] }
+            in
+            let swap =
+              List.mem node commutative
+              && (not (once p && once q))
+              && not symmetric
+            in
+            if swap then
+              List.iter
+                (fun x ->
+                  let body_uses =
+                    mentions x c.pc_rhs
+                    || Option.fold ~none:false ~some:(mentions x) c.pc_guard
+                  in
+                  if body_uses then
+                    error lhs.ppat_loc
+                      "the operands match in either order: name them rather \
+                       than %s"
+                      x)
+                params;
+            let attrs =
+              lhs.ppat_attributes
+              @
+              if swap then
+                [
+                  {
+                    attr_name = { txt = "comm"; loc = lhs.ppat_loc };
+                    attr_payload = PStr [];
+                    attr_loc = lhs.ppat_loc;
+                  };
+                ]
+              else []
+            in
+            {
+              c with
+              pc_lhs =
+                {
+                  lhs with
+                  ppat_desc = Ppat_tuple [ p; q ];
+                  ppat_attributes = attrs;
+                };
+            }
+        | _ -> error lhs.ppat_loc "expected a %s pattern" node
+      in
+      {
+        e with
+        pexp_desc =
+          Pexp_match
+            ({ scrut with pexp_desc = Pexp_tuple [ a; b ] }, List.map case cases);
+      }
+  | _ -> e
+
+(* ---------------------------------------------------------------- *)
 (* Top-level *)
 
 let spec_of_attrs (attrs : attributes) =
@@ -1069,7 +1253,12 @@ let program (str : structure) : program =
         if r.rcases && Option.is_none r.rspec then
           error r.rloc "%s: [@cases] needs a spec" r.rname;
         cases_mode := r.rcases;
-        let body = expr env ~expected:r.rret r.rbody in
+        let rbody =
+          match r.rspec with
+          | Some spec when r.rcases -> spec_match spec r.rbody
+          | _ -> r.rbody
+        in
+        let body = expr env ~expected:r.rret rbody in
         cases_mode := false;
         let spec =
           Option.map

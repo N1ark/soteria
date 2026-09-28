@@ -67,29 +67,29 @@ rule bv_add (checked : checked) (v1 v2 : t) : Add (checked, v1, v2) <| ty v1 =
   | default: _ -> mk_commut_binop (Add checked) v1 v2 <| ty v1
 
 rule bv_sub (checked : checked) (v1 v2 : t) : Sub (checked, v1, v2) <| ty v1 =
-  match (v1, v2) with
-  | lits: #l, #r -> l - r
-  | zero_r: _, 0 -> v1
-  | zero_l: 0, _ ->
+  match v1 - v2 with
+  | lits: #l - #r -> l - r
+  | zero_r: _ - 0 -> v1
+  | zero_l: 0 - _ ->
       (* 0 - x = -x; the subtraction overflows (signed) iff x = INT_MIN, so a
          signed-checked subtraction yields a signed-checked negation. *)
       bv_neg checked.signed v2
-  | same: v, v -> bv_zero (size v1)
-  | neg_r: _, -v2 -> v1 + v2
+  | same: v - v -> bv_zero (size v1)
+  | neg_r: _ - -v2 -> v1 + v2
   (* (k1 - s) - k2 = (k1 - k2) - s *)
-  | sub_const_l: Sub (c, #k1, s), #k2 ->
+  | sub_const_l: Sub (c, #k1, s) - #k2 ->
       let checked = fold_checked (checked_meet c checked) k1 k2 false in
       bv_sub checked (k1 - k2) s
   (* (s - k1) - k2 = s - (k1 + k2) *)
-  | sub_const_r: Sub (c, s, #k1), #k2 ->
+  | sub_const_r: Sub (c, s, #k1) - #k2 ->
       let checked = fold_checked (checked_meet c checked) k1 k2 true in
       bv_sub checked s (k1 + k2)
   (* k1 - (k2 + l) = (k1 - k2) - l *)
-  | const_add: #k1, Add (c, #k2, l) ->
+  | const_add: #k1 - Add (c, #k2, l) ->
       let checked = fold_checked (checked_meet c checked) k1 k2 false in
       bv_sub checked (k1 - k2) l
   (* (l + k1) - k2 = l + (k1 - k2) *)
-  | add_const: Add (c, #k1, l), #k2 ->
+  | add_const: Add (c, #k1, l) - #k2 ->
       (* if k1 < k2 there would be an overflow which causes problems since the
          operation can't be deemed checked anymore. *)
       if to_z false k1 < to_z false k2 then
@@ -99,19 +99,19 @@ rule bv_sub (checked : checked) (v1 v2 : t) : Sub (checked, v1, v2) <| ty v1 =
         let checked = fold_checked (checked_meet c checked) k1 k2 false in
         bv_add checked l (k1 - k2)
   (* (l + r) - l = r *)
-  | add_cancel_l: l + r, l -> r
-  | add_cancel_r: l + r, r -> l
+  | add_cancel_l: (l + r) - l -> r
+  | add_cancel_r: (l + r) - r -> l
   (* (l + r1) - (l + r2) = r1 - r2 *)
-  | add_add: l + r1, l + r2 -> r1 - r2
+  | add_add: (l + r1) - (l + r2) -> r1 - r2
   (* l - (l - r) = r *)
-  | sub_sub: l, l - r -> r
+  | sub_sub: l - (l - r) -> r
   (* distributing over a shared guard lets the branches cancel pairwise *)
-  | ite_ite: Ite (b, l, r), Ite (b, l', r') -> b_ite b (l - l') (r - r')
+  | ite_ite: Ite (b, l, r) - Ite (b, l', r') -> b_ite b (l - l') (r - r')
   (* only propagate down ites if we know it's concrete *)
-  | ite_l: Ite (b, l, r), #_ -> b_ite b (l - v2) (r - v2)
-  | ite_r: #_, Ite (b, l, r) -> b_ite b (v1 - l) (v1 - r)
-  | of_bool_l: BvOfBool (n, b), #_ -> b_ite b (bv_one n - v2) (-v2)
-  | of_bool_r: #_, BvOfBool (n, b) -> b_ite b (v1 - bv_one n) v1
+  | ite_l: Ite (b, l, r) - #_ -> b_ite b (l - v2) (r - v2)
+  | ite_r: #_ - Ite (b, l, r) -> b_ite b (v1 - l) (v1 - r)
+  | of_bool_l: BvOfBool (n, b) - #_ -> b_ite b (bv_one n - v2) (-v2)
+  | of_bool_r: #_ - BvOfBool (n, b) -> b_ite b (v1 - bv_one n) v1
   | default: _ -> Sub (checked, v1, v2) <| ty v1
 
 rule bv_neg (checked : bool) (v : t) : Neg (checked, v) <| ty v =
@@ -357,35 +357,35 @@ rule bv_extend (signed : bool) (extend_by : int) (v : t) :
    [v1] *)
 rule bv_concat (v1 v2 : t) :
     BvConcat (v1, v2) <| TBitVector (size v1 + size v2) =
-  match (v1, v2) with
-  | lits: #l, #r -> lit_concat l r
-  | extracts: BvExtract (from1, to1, v), BvExtract (from2, to2, v)
+  match v1 ++ v2 with
+  | lits: #l ++ #r -> lit_concat l r
+  | extracts: BvExtract (from1, to1, v) ++ BvExtract (from2, to2, v)
     when to2 + 1 = from1 ->
       bv_extract from2 to1 v
   (* safeguard: to avoid infinite loops, we keep bv-concats of extracts
      left-dominant *)
-  | extract_extracts: BvExtract _, BvExtract _ ++ BvExtract _ ->
+  | extract_extracts: BvExtract _ ++ (BvExtract _ ++ BvExtract _) ->
       BvConcat (v1, v2) <| TBitVector (size v1 + size v2)
   (* We re-order (extract A ++ (extract B ++ X)) to ((extract A ++ extract B)
      ++ X) *)
-  | assoc_l: BvExtract (_, _, x), (BvExtract (_, _, x) as left) ++ right ->
+  | assoc_l: BvExtract (_, _, x) ++ ((BvExtract (_, _, x) as left) ++ right) ->
       (v1 ++ left) ++ right
   (* We re-order ((X ++ extract A) ++ extract B) to (X ++ (extract A ++ extract
      B)) *)
-  | assoc_r: left ++ (BvExtract (_, _, x) as right), BvExtract (_, _, x) ->
+  | assoc_r: (left ++ (BvExtract (_, _, x) as right)) ++ BvExtract (_, _, x) ->
       left ++ (right ++ v2)
-  | ites: Ite (b, l1, r1), Ite (b, l2, r2) -> b_ite b (l1 ++ l2) (r1 ++ r2)
+  | ites: Ite (b, l1, r1) ++ Ite (b, l2, r2) -> b_ite b (l1 ++ l2) (r1 ++ r2)
   | default: _ -> BvConcat (v1, v2) <| TBitVector (size v1 + size v2)
 
 rule bv_shl (v1 v2 : t) : Shl (v1, v2) <| ty v1 =
-  match (v1, v2) with
-  | lits: #l, #r -> l lsl r
-  | zero: _, 0 -> v1
-  | big: _, #s when to_z false s >= size v1 -> bv_zero (size v1)
-  | shl: v lsl #s1, #s2 ->
+  match v1 lsl v2 with
+  | lits: #l lsl #r -> l lsl r
+  | zero: _ lsl 0 -> v1
+  | big: _ lsl #s when to_z false s >= size v1 -> bv_zero (size v1)
+  | shl: (v lsl #s1) lsl #s2 ->
       let n = size v1 in
       v lsl of_z n (zmin (to_z false s1 + to_z false s2) n)
-  | lshr: x lsr #sr, #sl ->
+  | lshr: (x lsr #sr) lsl #sl ->
       let n = size v1 in
       if to_z false sl <= to_z false sr then
         (* (x >> s1) << s2 where s2 < s1 = x >> (s1 - s2) & (mask with lower
@@ -396,35 +396,35 @@ rule bv_shl (v1 v2 : t) : Shl (v1, v2) <| ty v1 =
            bits cleared) *)
         (x land (ones n lsl sr)) lsl (sl - sr)
   (* (x & mask) << s = (x << s) & (mask << s) *)
-  | and_mask: x land #mask, #s -> (x lsl v2) land (mask lsl s)
+  | and_mask: (x land #mask) lsl #s -> (x lsl v2) land (mask lsl s)
   (* (x | mask) << s = (x << s) | (mask << s) *)
-  | or_mask: x lor #mask, #s -> (x lsl v2) lor (mask lsl s)
+  | or_mask: (x lor #mask) lsl #s -> (x lsl v2) lor (mask lsl s)
   | default: _ -> Shl (v1, v2) <| ty v1
 
 rule bv_lshr (v1 v2 : t) : LShr (v1, v2) <| ty v1 =
-  match (v1, v2) with
-  | lits: #l, #r -> l lsr r
-  | zero: _, 0 -> v1
-  | big: _, #s when to_z false s >= size v1 -> bv_zero (size v1)
-  | lshr: v lsr #s1, #s2 ->
+  match v1 lsr v2 with
+  | lits: #l lsr #r -> l lsr r
+  | zero: _ lsr 0 -> v1
+  | big: _ lsr #s when to_z false s >= size v1 -> bv_zero (size v1)
+  | lshr: (v lsr #s1) lsr #s2 ->
       let n = size v1 in
       v lsr of_z n (zmin (to_z false s1 + to_z false s2) n)
   (* (x & mask) >> s = (x >> s) & (mask >> s) *)
-  | and_mask: x land #mask, #s -> (x lsr v2) land (mask lsr s)
+  | and_mask: (x land #mask) lsr #s -> (x lsr v2) land (mask lsr s)
   (* (x | mask) >> s = (x >> s) | (mask >> s) *)
-  | or_mask: x lor #mask, #s -> (x lsr v2) lor (mask lsr s)
+  | or_mask: (x lor #mask) lsr #s -> (x lsr v2) lor (mask lsr s)
   | default: _ -> LShr (v1, v2) <| ty v1
 
 rule bv_ashr (v1 v2 : t) : AShr (v1, v2) <| ty v1 =
   (* fails early if [v1] is not a bit-vector *)
   assert (size v1 > 0);
-  match (v1, v2) with
-  | lits: #l, #r -> l asr r
-  | zero: _, 0 -> v1
-  | big: _, #s when to_z false s >= size v1 ->
+  match v1 asr v2 with
+  | lits: #l asr #r -> l asr r
+  | zero: _ asr 0 -> v1
+  | big: _ asr #s when to_z false s >= size v1 ->
       let sz = size v1 in
       v1 asr of_z sz (sz - 1)
-  | ashr: v asr #s1, #s2 ->
+  | ashr: (v asr #s1) asr #s2 ->
       let sz = size v1 in
       v asr of_z sz (zmin (to_z false s1 + to_z false s2) (sz - 1))
   | default: _ -> AShr (v1, v2) <| ty v1

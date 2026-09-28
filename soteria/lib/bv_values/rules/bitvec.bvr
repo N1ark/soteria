@@ -22,35 +22,32 @@ rule bv_not_bool (v : t) :
 
 rule bv_add (checked : checked) (v1 v2 : t) : Add (checked, v1, v2) <| ty v1 =
   assert (ty v1 = ty v2);
-  match (v1, v2) with
-  | lits: #l, #r -> l + r
-  | neg_l: -v1, _ -> v2 - v1
-  | neg_r: _, -v2 -> v1 - v2
-  | zero_r: _, 0 -> v1
-  | zero_l: 0, _ -> v2
+  match v1 + v2 with
+  | lits: #l + #r -> l + r
+  | neg: x + -y -> x - y
+  | zero: x + 0 -> x
   (* ~v + 1 = -v *)
-  | not_one: (1, ~v) [@comm] -> -v
+  | not_one: ~x + 1 -> -x
   (* (k1 + r) + k2 = (k1 + k2) + r *)
-  | add_const: Add (c, #k1, r), #k2 ->
+  | add_const: Add (c, #k1, r) + #k2 ->
       let checked = fold_checked (checked_meet checked c) k1 k2 true in
       bv_add checked (k1 + k2) r
   (* (l - k1) + k2 = l + (k2 - k1) *)
-  | sub_const_r: Sub (c, l, #k1), #k2 ->
+  | sub_const_r: Sub (c, l, #k1) + #k2 ->
       let checked = fold_checked (checked_meet checked c) k2 k1 false in
       bv_add checked l (k2 - k1)
   (* (k1 - r) + k2 = (k1 + k2) - r *)
-  | sub_const_l: Sub (c, #k1, r), #k2 ->
+  | sub_const_l: Sub (c, #k1, r) + #k2 ->
       let checked = fold_checked (checked_meet checked c) k1 k2 true in
       bv_sub checked (k1 + k2) r
   (* r + (l - r) = l *)
-  | sub_cancel_r: r, l - r -> l
-  | sub_cancel_l: l - r, r -> l
+  | sub_cancel: r + (l - r) -> l
   (* (a + b) + (c - a) = b + c (holds modulo 2^n) *)
-  | add_sub: (a + b, c - a) [@comm] -> b + c
+  | add_sub: (a + b) + (c - a) -> b + c
   (* a * b + a * c = a * (b + c) *)
-  | factor: a * b, a * c -> a * (b + c)
+  | factor: a * b + a * c -> a * (b + c)
   | factor_const:
-      Mul (ck1, (#k1 as v_k1), r1), Mul (ck2, (#k2 as v_k2), r2)
+      Mul (ck1, (#k1 as v_k1), r1) + Mul (ck2, (#k2 as v_k2), r2)
     when (checked_meet (checked_meet checked ck1) ck2).unsigned
          && (to_z false k1 <> 0 || to_z false k2 <> 0)
          && (udivides k1 k2 || udivides k2 k1) ->
@@ -62,7 +59,7 @@ rule bv_add (checked : checked) (v1 v2 : t) : Add (checked, v1, v2) <| ty v1 =
         let common = lit (lit_udiv k1 k2) in
         bv_mul checked v_k2 (bv_add checked r2 (bv_mul checked common r1))
   (* only propagate down ites if we know it's concrete *)
-  | ite: (Ite (b, l, r), (#_ as x)) [@comm] ->
+  | ite: Ite (b, l, r) + (#_ as x) ->
       b_ite b (bv_add checked l x) (bv_add checked r x)
   | default: _ -> mk_commut_binop (Add checked) v1 v2 <| ty v1
 
@@ -166,59 +163,54 @@ rule bv_not (v : t) : BvNot v <| ty v =
 
 rule bv_and (v1 v2 : t) : BitAnd (v1, v2) <| TBitVector (size v1) =
   assert (size v1 = size v2);
-  match (v1, v2) with
-  | lits: #l, #r -> l land r
-  | zero_l: 0, _ -> v1
-  | zero_r: _, 0 -> v2
-  | ones_l: #mask, _ when is_ones mask -> v2
-  | ones_r: _, #mask when is_ones mask -> v1
+  match v1 land v2 with
+  | lits: #l land #r -> l land r
+  | zero: _ land 0 -> bv_zero (size v1)
+  | ones: #mask land x when is_ones mask -> x
   (* For (x >> s) & m, the mask is irrelevant if it entirely covers [bitsize -
      s] *)
-  | lshr_mask: ((_ lsr #shift as base), #mask) [@comm]
+  | lshr_mask: (_ lsr #shift as base) land #mask
     when to_z false shift < size v1
-         &&
-         bits_in (ones (size v1) lsr shift) mask ->
+         && bits_in (ones (size v1) lsr shift) mask ->
       kind base <| TBitVector (size v1)
-  | ite_r: #_, Ite (b, l, r) -> b_ite b (v1 land l) (v1 land r)
-  | ite_l: Ite (b, l, r), #_ -> b_ite b (l land v2) (r land v2)
+  | ite: (#_ as k) land Ite (b, l, r) -> b_ite b (k land l) (k land r)
   (* m1 & (x & m2) = x & (m1 & m2) *)
-  | masks: (#m1, x land #m2) [@comm] -> x land (m1 land m2)
+  | masks: #m1 land (x land #m2) -> x land (m1 land m2)
   (* collapse M & (N | (P & X)) into (M & N) | (M & P & X) where M, N and P
      concrete *)
-  | mask_or_mask: ((#_ as m), (#_ as n) lor ((#_ as p) land x)) [@comm] ->
+  | mask_or_mask: (#_ as m) land ((#_ as n) lor ((#_ as p) land x)) ->
       let vty = ty v1 in
       let m = kind m <| vty in
       (m land n) lor (x land (m land p))
   (* M & (N | X) when M & N == M ==> M (all bits already set by the or) *)
-  | mask_or: (#m_and, _ lor #m_or) [@comm] when bits_in m_and m_or -> m_and
+  | mask_or: #m_and land (_ lor #m_or) when bits_in m_and m_or -> m_and
   (* M & (N | X) when M & N == 0 ==> M & X (no bits set by the or) *)
-  | mask_or_disj: (#m_and, x lor #m_or) [@comm] when disjoint m_and m_or ->
+  | mask_or_disj: #m_and land (x lor #m_or) when disjoint m_and m_or ->
       x land m_and
   (* if it's a right mask, it's usually beneficial to propagate it *)
-  | right_mask: ((#mask as v_mask), l land r) [@comm]
+  | right_mask: (#mask as v_mask) land (l land r)
     when is_right_mask (to_z false mask) ->
       (v_mask land l) land (v_mask land r)
-  | of_bool_r: 1, BvOfBool _ -> v2
-  | of_bool_l: BvOfBool _, 1 -> v1
-  | of_bools: BvOfBool (_, b1), BvOfBool (_, b2) -> bv_of_bool (size v1) (b1 && b2)
-  | ites: Ite (b1, l1, 0), Ite (b2, l2, 0) ->
+  | of_bool: 1 land (BvOfBool _ as b) -> b
+  | of_bools: BvOfBool (_, b1) land BvOfBool (_, b2) ->
+      bv_of_bool (size v1) (b1 && b2)
+  | ites: Ite (b1, l1, 0) land Ite (b2, l2, 0) ->
       b_ite (b1 && b2) (l1 land l2) (bv_zero (size v1))
   | default: _ -> mk_commut_binop BitAnd v1 v2 <| TBitVector (size v1)
 
 rule bv_or (v1 v2 : t) : BitOr (v1, v2) <| ty v1 =
   assert (is_bv (ty v1) && is_bv (ty v2));
-  match (v1, v2) with
-  | lits: #l, #r -> l lor r
-  | zero_l: 0, _ -> v2
-  | zero_r: _, 0 -> v1
-  | same: v, v -> v1
+  match v1 lor v2 with
+  | lits: #l lor #r -> l lor r
+  | zero: x lor 0 -> x
+  | same: v lor v -> v
   (* m1 | (x & m2) where m2 is a subset of m1's bits means the & is
      redundant *)
-  | mask_and: (#m1, _ land #m2) [@comm] when bits_in m2 m1 -> m1
+  | mask_and: #m1 lor (_ land #m2) when bits_in m2 m1 -> m1
   (* m1 | (x | m2) = x | (m1 | m2) *)
-  | masks: (#m1, x lor #m2) [@comm] -> x lor (m1 lor m2)
+  | masks: #m1 lor (x lor #m2) -> x lor (m1 lor m2)
   (* 0x0..0X..X | (0x0..0Y..Y << N) when N = |X..X| ==> 0x0..0Y..YX..X *)
-  | extend_shl: BvExtend (false, nx, base), BvExtend (false, _, tail) lsl #shift
+  | extend_shl: BvExtend (false, nx, base) lor (BvExtend (false, _, tail) lsl #shift)
     when to_z false shift = size base && nx > 0 ->
       let tail_size = size tail in
       if nx = tail_size then tail ++ base
@@ -228,15 +220,15 @@ rule bv_or (v1 v2 : t) : BitOr (v1, v2) <| ty v1 =
       else
         let new_tail = bv_extract 0 (nx - 1) tail in
         new_tail ++ base
-  | of_bools: BvOfBool (n, b1), BvOfBool (_, b2) -> bv_of_bool n (b1 || b2)
+  | of_bools: BvOfBool (n, b1) lor BvOfBool (_, b2) -> bv_of_bool n (b1 || b2)
   | default: _ -> mk_commut_binop BitOr v1 v2 <| ty v1
 
 rule bv_xor (v1 v2 : t) : BitXor (v1, v2) <| ty v1 =
-  match (v1, v2) with
-  | lits: #l, #r -> l lxor r
-  | zero_l: 0, _ -> v2
-  | zero_r: _, 0 -> v1
-  | of_bools: BvOfBool (n, b1), BvOfBool (_, b2) -> bv_of_bool n (not (b1 == b2))
+  match v1 lxor v2 with
+  | lits: #l lxor #r -> l lxor r
+  | zero: x lxor 0 -> x
+  | of_bools: BvOfBool (n, b1) lxor BvOfBool (_, b2) ->
+      bv_of_bool n (not (b1 == b2))
   | default: _ -> mk_commut_binop BitXor v1 v2 <| ty v1
 
 (* [bv_extract from_ to_ v] covers the bits of [v] from index [from_] to index
@@ -431,20 +423,17 @@ rule bv_ashr (v1 v2 : t) : AShr (v1, v2) <| ty v1 =
 
 rule bv_mul (checked : checked) (v1 v2 : t) : Mul (checked, v1, v2) <| ty v1 =
   assert (ty v1 = ty v2);
-  match (v1, v2) with
-  | lits: #l, #r -> l * r
-  | one_r: _, 1 -> v1
-  | one_l: 1, _ -> v2
-  | zero_r: _, 0 -> bv_zero (size v1)
-  | zero_l: 0, _ -> bv_zero (size v1)
+  match v1 * v2 with
+  | lits: #l * #r -> l * r
+  | one: x * 1 -> x
+  | zero: _ * 0 -> bv_zero (size v1)
   (* c * (-x) = (-c) * x (holds mod 2^n); with a checked negation (x <>
      INT_MIN) and c <> INT_MIN, the signed no-overflow guarantee carries over
      to the rebuilt product. *)
-  | neg: (#c, Neg (true, x)) [@comm] when not (is_int_min c) ->
+  | neg: #c * Neg (true, x) when not (is_int_min c) ->
       bv_mul (checked_meet checked checked_signed) (-c) x
   (* (x * n) * m = x * (n * m) *)
-  | mul_const: (Mul (ckm, x, #n), #m) [@comm]
-    when is_checked (checked_meet checked ckm) ->
+  | mul_const: Mul (ckm, x, #n) * #m when is_checked (checked_meet checked ckm) ->
       let checked = checked_meet checked ckm in
       (* the signed check only carries over if [n * m] does not overflow *)
       let checked =
@@ -453,7 +442,7 @@ rule bv_mul (checked : checked) (v1 v2 : t) : Mul (checked, v1, v2) <| ty v1 =
       in
       bv_mul checked x (n * m)
   (* only propagate down ites if we know it's concrete *)
-  | ite: (Ite (b, l, r), (#_ as x)) [@comm] -> b_ite b (l * x) (r * x)
+  | ite: Ite (b, l, r) * (#_ as x) -> b_ite b (l * x) (r * x)
   | default: _ -> mk_commut_binop (Mul checked) v1 v2 <| ty v1
 
 rule bv_div (signed : bool) (v1 v2 : t) : Div (signed, v1, v2) <| ty v1 =

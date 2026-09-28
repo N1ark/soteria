@@ -31,21 +31,16 @@ theorem b_and.r_false_.proof : b_and.r_false_.Stmt := by
   · bvr_arm h (b_and.r_false_.a1.ok FS O hO)
   · bvr_arm h (b_and.r_false_.a2.ok FS O hO)
 
-theorem b_and.r_true_l.a1.ok : b_and.r_true_l.a1.Stmt := bvr_proof% b_and.r_true_l.a1
+theorem b_and.r_true_.a1.ok : b_and.r_true_.a1.Stmt := bvr_proof% b_and.r_true_.a1
 
-theorem b_and.r_true_l.proof : b_and.r_true_l.Stmt := by
+theorem b_and.r_true_.a2.ok : b_and.r_true_.a2.Stmt := bvr_proof% b_and.r_true_.a2
+
+theorem b_and.r_true_.proof : b_and.r_true_.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [b_and.r_true_l] at h
+  simp only [b_and.r_true_] at h
   repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (b_and.r_true_l.a1.ok FS O hO)
-
-theorem b_and.r_true_r.a1.ok : b_and.r_true_r.a1.Stmt := bvr_proof% b_and.r_true_r.a1
-
-theorem b_and.r_true_r.proof : b_and.r_true_r.Stmt := by
-  intro FS O hO v1 v2 res h
-  simp only [b_and.r_true_r] at h
-  repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (b_and.r_true_r.a1.ok FS O hO)
+  · bvr_arm h (b_and.r_true_.a1.ok FS O hO)
+  · bvr_arm h (b_and.r_true_.a2.ok FS O hO)
 
 theorem b_and.r_not.a1.ok : b_and.r_not.a1.Stmt := bvr_proof% b_and.r_not.a1
 
@@ -58,57 +53,43 @@ theorem b_and.r_not.proof : b_and.r_not.Stmt := by
   · bvr_arm h (b_and.r_not.a1.ok FS O hO)
   · bvr_arm h (b_and.r_not.a2.ok FS O hO)
 
-theorem b_and.r_and_l.a1.ok : b_and.r_and_l.a1.Stmt := bvr_proof% b_and.r_and_l.a1
+theorem b_and.r_and_.a1.ok : b_and.r_and_.a1.Stmt := bvr_proof% b_and.r_and_.a1
 
-theorem b_and.r_and_l.a2.ok : b_and.r_and_l.a2.Stmt := bvr_proof% b_and.r_and_l.a2
+theorem b_and.r_and_.a2.ok : b_and.r_and_.a2.Stmt := bvr_proof% b_and.r_and_.a2
 
-theorem b_and.r_and_l.proof : b_and.r_and_l.Stmt := by
+theorem b_and.r_and_.a3.ok : b_and.r_and_.a3.Stmt := bvr_proof% b_and.r_and_.a3
+
+theorem b_and.r_and_.a4.ok : b_and.r_and_.a4.Stmt := bvr_proof% b_and.r_and_.a4
+
+theorem b_and.r_and_.proof : b_and.r_and_.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [b_and.r_and_l] at h
+  simp only [b_and.r_and_] at h
   repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (b_and.r_and_l.a1.ok FS O hO)
-  · bvr_arm h (b_and.r_and_l.a2.ok FS O hO)
+  · bvr_arm h (b_and.r_and_.a1.ok FS O hO)
+  · bvr_arm h (b_and.r_and_.a2.ok FS O hO)
+  · bvr_arm h (b_and.r_and_.a3.ok FS O hO)
+  · bvr_arm h (b_and.r_and_.a4.ok FS O hO)
 
-theorem b_and.r_and_r.a1.ok : b_and.r_and_r.a1.Stmt := bvr_proof% b_and.r_and_r.a1
+theorem b_and.r_or_.a1.ok : b_and.r_or_.a1.Stmt := bvr_proof% b_and.r_or_.a1
 
-theorem b_and.r_and_r.a2.ok : b_and.r_and_r.a2.Stmt := bvr_proof% b_and.r_and_r.a2
-
-theorem b_and.r_and_r.proof : b_and.r_and_r.Stmt := by
-  intro FS O hO v1 v2 res h
-  simp only [b_and.r_and_r] at h
-  repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (b_and.r_and_r.a1.ok FS O hO)
-  · bvr_arm h (b_and.r_and_r.a2.ok FS O hO)
-
-theorem b_and.r_or_l.a1.ok : b_and.r_or_l.a1.Stmt := bvr_proof% b_and.r_or_l.a1
-
-theorem b_and.r_or_l.a2.ok : b_and.r_or_l.a2.Stmt := by
+theorem b_and.r_or_.a2.ok : b_and.r_or_.a2.Stmt := by
   intro FS O hO v2 w__3 a t__4 hg
   exact Refines.trans
     (by simp only [b_and.spec, ty, Term.ty_mk]; bvr_comm)
-    (b_and.r_or_l.a1.ok FS O hO v2 a w__3 t__4 hg)
+    (b_and.r_or_.a1.ok FS O hO v2 a w__3 t__4 hg)
 
-theorem b_and.r_or_l.proof : b_and.r_or_l.Stmt := by
+theorem b_and.r_or_.a3.ok : b_and.r_or_.a3.Stmt := bvr_proof% b_and.r_or_.a3
+
+theorem b_and.r_or_.a4.ok : b_and.r_or_.a4.Stmt := bvr_proof% b_and.r_or_.a4
+
+theorem b_and.r_or_.proof : b_and.r_or_.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [b_and.r_or_l] at h
+  simp only [b_and.r_or_] at h
   repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (b_and.r_or_l.a1.ok FS O hO)
-  · bvr_arm h (b_and.r_or_l.a2.ok FS O hO)
-
-theorem b_and.r_or_r.a1.ok : b_and.r_or_r.a1.Stmt := bvr_proof% b_and.r_or_r.a1
-
-theorem b_and.r_or_r.a2.ok : b_and.r_or_r.a2.Stmt := by
-  intro FS O hO v1 w__4 bvr__3 t__5 hg
-  exact Refines.trans
-    (by simp only [b_and.spec, ty, Term.ty_mk]; bvr_comm)
-    (b_and.r_or_r.a1.ok FS O hO v1 bvr__3 w__4 t__5 hg)
-
-theorem b_and.r_or_r.proof : b_and.r_or_r.Stmt := by
-  intro FS O hO v1 v2 res h
-  simp only [b_and.r_or_r] at h
-  repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (b_and.r_or_r.a1.ok FS O hO)
-  · bvr_arm h (b_and.r_or_r.a2.ok FS O hO)
+  · bvr_arm h (b_and.r_or_.a1.ok FS O hO)
+  · bvr_arm h (b_and.r_or_.a2.ok FS O hO)
+  · bvr_arm h (b_and.r_or_.a3.ok FS O hO)
+  · bvr_arm h (b_and.r_or_.a4.ok FS O hO)
 
 theorem b_and.r_eq_neq.a1.ok : b_and.r_eq_neq.a1.Stmt := bvr_proof% b_and.r_eq_neq.a1
 
@@ -229,21 +210,16 @@ theorem b_or.r_true_.proof : b_or.r_true_.Stmt := by
   · bvr_arm h (b_or.r_true_.a1.ok FS O hO)
   · bvr_arm h (b_or.r_true_.a2.ok FS O hO)
 
-theorem b_or.r_false_l.a1.ok : b_or.r_false_l.a1.Stmt := bvr_proof% b_or.r_false_l.a1
+theorem b_or.r_false_.a1.ok : b_or.r_false_.a1.Stmt := bvr_proof% b_or.r_false_.a1
 
-theorem b_or.r_false_l.proof : b_or.r_false_l.Stmt := by
+theorem b_or.r_false_.a2.ok : b_or.r_false_.a2.Stmt := bvr_proof% b_or.r_false_.a2
+
+theorem b_or.r_false_.proof : b_or.r_false_.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [b_or.r_false_l] at h
+  simp only [b_or.r_false_] at h
   repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (b_or.r_false_l.a1.ok FS O hO)
-
-theorem b_or.r_false_r.a1.ok : b_or.r_false_r.a1.Stmt := bvr_proof% b_or.r_false_r.a1
-
-theorem b_or.r_false_r.proof : b_or.r_false_r.Stmt := by
-  intro FS O hO v1 v2 res h
-  simp only [b_or.r_false_r] at h
-  repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (b_or.r_false_r.a1.ok FS O hO)
+  · bvr_arm h (b_or.r_false_.a1.ok FS O hO)
+  · bvr_arm h (b_or.r_false_.a2.ok FS O hO)
 
 theorem b_or.r_not.a1.ok : b_or.r_not.a1.Stmt := bvr_proof% b_or.r_not.a1
 
@@ -279,57 +255,43 @@ theorem b_or.r_lt_leq.proof : b_or.r_lt_leq.Stmt := by
   · bvr_arm h (b_or.r_lt_leq.a1.ok FS O hO)
   · bvr_arm h (b_or.r_lt_leq.a2.ok FS O hO)
 
-theorem b_or.r_or_l.a1.ok : b_or.r_or_l.a1.Stmt := bvr_proof% b_or.r_or_l.a1
+theorem b_or.r_or_.a1.ok : b_or.r_or_.a1.Stmt := bvr_proof% b_or.r_or_.a1
 
-theorem b_or.r_or_l.a2.ok : b_or.r_or_l.a2.Stmt := bvr_proof% b_or.r_or_l.a2
+theorem b_or.r_or_.a2.ok : b_or.r_or_.a2.Stmt := bvr_proof% b_or.r_or_.a2
 
-theorem b_or.r_or_l.proof : b_or.r_or_l.Stmt := by
+theorem b_or.r_or_.a3.ok : b_or.r_or_.a3.Stmt := bvr_proof% b_or.r_or_.a3
+
+theorem b_or.r_or_.a4.ok : b_or.r_or_.a4.Stmt := bvr_proof% b_or.r_or_.a4
+
+theorem b_or.r_or_.proof : b_or.r_or_.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [b_or.r_or_l] at h
+  simp only [b_or.r_or_] at h
   repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (b_or.r_or_l.a1.ok FS O hO)
-  · bvr_arm h (b_or.r_or_l.a2.ok FS O hO)
+  · bvr_arm h (b_or.r_or_.a1.ok FS O hO)
+  · bvr_arm h (b_or.r_or_.a2.ok FS O hO)
+  · bvr_arm h (b_or.r_or_.a3.ok FS O hO)
+  · bvr_arm h (b_or.r_or_.a4.ok FS O hO)
 
-theorem b_or.r_or_r.a1.ok : b_or.r_or_r.a1.Stmt := bvr_proof% b_or.r_or_r.a1
+theorem b_or.r_and_.a1.ok : b_or.r_and_.a1.Stmt := bvr_proof% b_or.r_and_.a1
 
-theorem b_or.r_or_r.a2.ok : b_or.r_or_r.a2.Stmt := bvr_proof% b_or.r_or_r.a2
-
-theorem b_or.r_or_r.proof : b_or.r_or_r.Stmt := by
-  intro FS O hO v1 v2 res h
-  simp only [b_or.r_or_r] at h
-  repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (b_or.r_or_r.a1.ok FS O hO)
-  · bvr_arm h (b_or.r_or_r.a2.ok FS O hO)
-
-theorem b_or.r_and_l.a1.ok : b_or.r_and_l.a1.Stmt := bvr_proof% b_or.r_and_l.a1
-
-theorem b_or.r_and_l.a2.ok : b_or.r_and_l.a2.Stmt := by
+theorem b_or.r_and_.a2.ok : b_or.r_and_.a2.Stmt := by
   intro FS O hO v2 w__3 a t__4 hg
   exact Refines.trans
     (by simp only [b_or.spec, ty, Term.ty_mk]; bvr_comm)
-    (b_or.r_and_l.a1.ok FS O hO v2 a w__3 t__4 hg)
+    (b_or.r_and_.a1.ok FS O hO v2 a w__3 t__4 hg)
 
-theorem b_or.r_and_l.proof : b_or.r_and_l.Stmt := by
+theorem b_or.r_and_.a3.ok : b_or.r_and_.a3.Stmt := bvr_proof% b_or.r_and_.a3
+
+theorem b_or.r_and_.a4.ok : b_or.r_and_.a4.Stmt := bvr_proof% b_or.r_and_.a4
+
+theorem b_or.r_and_.proof : b_or.r_and_.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [b_or.r_and_l] at h
+  simp only [b_or.r_and_] at h
   repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (b_or.r_and_l.a1.ok FS O hO)
-  · bvr_arm h (b_or.r_and_l.a2.ok FS O hO)
-
-theorem b_or.r_and_r.a1.ok : b_or.r_and_r.a1.Stmt := bvr_proof% b_or.r_and_r.a1
-
-theorem b_or.r_and_r.a2.ok : b_or.r_and_r.a2.Stmt := by
-  intro FS O hO v1 w__4 bvr__3 t__5 hg
-  exact Refines.trans
-    (by simp only [b_or.spec, ty, Term.ty_mk]; bvr_comm)
-    (b_or.r_and_r.a1.ok FS O hO v1 bvr__3 w__4 t__5 hg)
-
-theorem b_or.r_and_r.proof : b_or.r_and_r.Stmt := by
-  intro FS O hO v1 v2 res h
-  simp only [b_or.r_and_r] at h
-  repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (b_or.r_and_r.a1.ok FS O hO)
-  · bvr_arm h (b_or.r_and_r.a2.ok FS O hO)
+  · bvr_arm h (b_or.r_and_.a1.ok FS O hO)
+  · bvr_arm h (b_or.r_and_.a2.ok FS O hO)
+  · bvr_arm h (b_or.r_and_.a3.ok FS O hO)
+  · bvr_arm h (b_or.r_and_.a4.ok FS O hO)
 
 theorem b_or.r_complementary.a1.ok : b_or.r_complementary.a1.Stmt := bvr_proof% b_or.r_complementary.a1
 
@@ -809,129 +771,115 @@ theorem sem_eq.r_floats.proof : sem_eq.r_floats.Stmt := by
   repeat' rcases Lib.orElse_some h with h | h
   · bvr_arm h (sem_eq.r_floats.a1.ok FS O hO)
 
-theorem sem_eq.r_neg_r.a1.ok : sem_eq.r_neg_r.a1.Stmt := bvr_proof% sem_eq.r_neg_r.a1
+theorem sem_eq.r_neg.a1.ok : sem_eq.r_neg.a1.Stmt := bvr_proof% sem_eq.r_neg.a1
 
-theorem sem_eq.r_neg_r.proof : sem_eq.r_neg_r.Stmt := by
-  intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_neg_r] at h
-  repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (sem_eq.r_neg_r.a1.ok FS O hO)
-
-theorem sem_eq.r_neg_l.a1.ok : sem_eq.r_neg_l.a1.Stmt := bvr_proof% sem_eq.r_neg_l.a1
-
-theorem sem_eq.r_neg_l.proof : sem_eq.r_neg_l.Stmt := by
-  intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_neg_l] at h
-  repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (sem_eq.r_neg_l.a1.ok FS O hO)
-
-theorem sem_eq.r_not_r.a1.ok : sem_eq.r_not_r.a1.Stmt := bvr_proof% sem_eq.r_not_r.a1
-
-theorem sem_eq.r_not_r.proof : sem_eq.r_not_r.Stmt := by
-  intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_not_r] at h
-  repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (sem_eq.r_not_r.a1.ok FS O hO)
-
-theorem sem_eq.r_not_l.a1.ok : sem_eq.r_not_l.a1.Stmt := bvr_proof% sem_eq.r_not_l.a1
-
-theorem sem_eq.r_not_l.proof : sem_eq.r_not_l.Stmt := by
-  intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_not_l] at h
-  repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (sem_eq.r_not_l.a1.ok FS O hO)
-
-theorem sem_eq.r_add_const_r.a1.ok : sem_eq.r_add_const_r.a1.Stmt := bvr_proof% sem_eq.r_add_const_r.a1
-
-theorem sem_eq.r_add_const_r.a2.ok : sem_eq.r_add_const_r.a2.Stmt := by
-  intro FS O hO w__1 t__2 w__3 r w__5 t__6 t__9
+theorem sem_eq.r_neg.a2.ok : sem_eq.r_neg.a2.Stmt := by
+  intro FS O hO w__4 x t__7 w__1 t__2
   exact Refines.trans
     (by simp only [sem_eq.spec, ty, Term.ty_mk]; bvr_comm)
-    (sem_eq.r_add_const_r.a1.ok FS O hO w__1 t__2 w__3 w__5 t__6 r t__9)
+    (sem_eq.r_neg.a1.ok FS O hO w__1 t__2 w__4 x t__7)
 
-theorem sem_eq.r_add_const_r.proof : sem_eq.r_add_const_r.Stmt := by
+theorem sem_eq.r_neg.proof : sem_eq.r_neg.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_add_const_r] at h
+  simp only [sem_eq.r_neg] at h
   repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (sem_eq.r_add_const_r.a1.ok FS O hO)
-  · bvr_arm h (sem_eq.r_add_const_r.a2.ok FS O hO)
+  · bvr_arm h (sem_eq.r_neg.a1.ok FS O hO)
+  · bvr_arm h (sem_eq.r_neg.a2.ok FS O hO)
 
-theorem sem_eq.r_add_const_l.a1.ok : sem_eq.r_add_const_l.a1.Stmt := bvr_proof% sem_eq.r_add_const_l.a1
+theorem sem_eq.r_not.a1.ok : sem_eq.r_not.a1.Stmt := bvr_proof% sem_eq.r_not.a1
 
-theorem sem_eq.r_add_const_l.a2.ok : sem_eq.r_add_const_l.a2.Stmt := by
-  intro FS O hO w__1 r w__3 t__4 t__7 w__9 t__10
+theorem sem_eq.r_not.a2.ok : sem_eq.r_not.a2.Stmt := by
+  intro FS O hO x t__6 w__1 t__2
   exact Refines.trans
     (by simp only [sem_eq.spec, ty, Term.ty_mk]; bvr_comm)
-    (sem_eq.r_add_const_l.a1.ok FS O hO w__1 w__3 t__4 r t__7 w__9 t__10)
+    (sem_eq.r_not.a1.ok FS O hO w__1 t__2 x t__6)
 
-theorem sem_eq.r_add_const_l.proof : sem_eq.r_add_const_l.Stmt := by
+theorem sem_eq.r_not.proof : sem_eq.r_not.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_add_const_l] at h
+  simp only [sem_eq.r_not] at h
   repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (sem_eq.r_add_const_l.a1.ok FS O hO)
-  · bvr_arm h (sem_eq.r_add_const_l.a2.ok FS O hO)
+  · bvr_arm h (sem_eq.r_not.a1.ok FS O hO)
+  · bvr_arm h (sem_eq.r_not.a2.ok FS O hO)
 
-theorem sem_eq.r_sub_const_r1.a1.ok : sem_eq.r_sub_const_r1.a1.Stmt := bvr_proof% sem_eq.r_sub_const_r1.a1
+theorem sem_eq.r_add_const.a1.ok : sem_eq.r_add_const.a1.Stmt := bvr_proof% sem_eq.r_add_const.a1
 
-theorem sem_eq.r_sub_const_r1.proof : sem_eq.r_sub_const_r1.Stmt := by
+theorem sem_eq.r_add_const.a2.ok : sem_eq.r_add_const.a2.Stmt := by
+  intro FS O hO w__1 t__2 w__4 r w__6 t__7 t__10
+  exact Refines.trans
+    (by simp only [sem_eq.spec, ty, Term.ty_mk]; bvr_comm)
+    (sem_eq.r_add_const.a1.ok FS O hO w__1 t__2 w__4 w__6 t__7 r t__10)
+
+theorem sem_eq.r_add_const.a3.ok : sem_eq.r_add_const.a3.Stmt := by
+  intro FS O hO w__4 w__6 t__7 r t__10 w__1 t__2
+  exact Refines.trans
+    (by simp only [sem_eq.spec, ty, Term.ty_mk]; bvr_comm)
+    (sem_eq.r_add_const.a1.ok FS O hO w__1 t__2 w__4 w__6 t__7 r t__10)
+
+theorem sem_eq.r_add_const.a4.ok : sem_eq.r_add_const.a4.Stmt := by
+  intro FS O hO w__4 r w__6 t__7 t__10 w__1 t__2
+  exact Refines.trans
+    (by simp only [sem_eq.spec, ty, Term.ty_mk]; bvr_comm)
+    (sem_eq.r_add_const.a1.ok FS O hO w__1 t__2 w__4 w__6 t__7 r t__10)
+
+theorem sem_eq.r_add_const.proof : sem_eq.r_add_const.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_sub_const_r1] at h
+  simp only [sem_eq.r_add_const] at h
   repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (sem_eq.r_sub_const_r1.a1.ok FS O hO)
+  · bvr_arm h (sem_eq.r_add_const.a1.ok FS O hO)
+  · bvr_arm h (sem_eq.r_add_const.a2.ok FS O hO)
+  · bvr_arm h (sem_eq.r_add_const.a3.ok FS O hO)
+  · bvr_arm h (sem_eq.r_add_const.a4.ok FS O hO)
 
-theorem sem_eq.r_sub_const_r2.a1.ok : sem_eq.r_sub_const_r2.a1.Stmt := bvr_proof% sem_eq.r_sub_const_r2.a1
+theorem sem_eq.r_sub_const1.a1.ok : sem_eq.r_sub_const1.a1.Stmt := bvr_proof% sem_eq.r_sub_const1.a1
 
-theorem sem_eq.r_sub_const_r2.proof : sem_eq.r_sub_const_r2.Stmt := by
+theorem sem_eq.r_sub_const1.a2.ok : sem_eq.r_sub_const1.a2.Stmt := by
+  intro FS O hO w__4 l w__7 t__8 t__10 w__1 t__2
+  exact Refines.trans
+    (by simp only [sem_eq.spec, ty, Term.ty_mk]; bvr_comm)
+    (sem_eq.r_sub_const1.a1.ok FS O hO w__1 t__2 w__4 l w__7 t__8 t__10)
+
+theorem sem_eq.r_sub_const1.proof : sem_eq.r_sub_const1.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_sub_const_r2] at h
+  simp only [sem_eq.r_sub_const1] at h
   repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (sem_eq.r_sub_const_r2.a1.ok FS O hO)
+  · bvr_arm h (sem_eq.r_sub_const1.a1.ok FS O hO)
+  · bvr_arm h (sem_eq.r_sub_const1.a2.ok FS O hO)
 
-theorem sem_eq.r_sub_const_l1.a1.ok : sem_eq.r_sub_const_l1.a1.Stmt := bvr_proof% sem_eq.r_sub_const_l1.a1
+theorem sem_eq.r_sub_const2.a1.ok : sem_eq.r_sub_const2.a1.Stmt := bvr_proof% sem_eq.r_sub_const2.a1
 
-theorem sem_eq.r_sub_const_l1.proof : sem_eq.r_sub_const_l1.Stmt := by
+theorem sem_eq.r_sub_const2.a2.ok : sem_eq.r_sub_const2.a2.Stmt := by
+  intro FS O hO w__4 w__6 t__7 r t__10 w__1 t__2
+  exact Refines.trans
+    (by simp only [sem_eq.spec, ty, Term.ty_mk]; bvr_comm)
+    (sem_eq.r_sub_const2.a1.ok FS O hO w__1 t__2 w__4 w__6 t__7 r t__10)
+
+theorem sem_eq.r_sub_const2.proof : sem_eq.r_sub_const2.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_sub_const_l1] at h
+  simp only [sem_eq.r_sub_const2] at h
   repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (sem_eq.r_sub_const_l1.a1.ok FS O hO)
+  · bvr_arm h (sem_eq.r_sub_const2.a1.ok FS O hO)
+  · bvr_arm h (sem_eq.r_sub_const2.a2.ok FS O hO)
 
-theorem sem_eq.r_sub_const_l2.a1.ok : sem_eq.r_sub_const_l2.a1.Stmt := bvr_proof% sem_eq.r_sub_const_l2.a1
+theorem sem_eq.r_self_add.a1.ok : sem_eq.r_self_add.a1.Stmt := bvr_proof% sem_eq.r_self_add.a1
 
-theorem sem_eq.r_sub_const_l2.proof : sem_eq.r_sub_const_l2.Stmt := by
-  intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_sub_const_l2] at h
-  repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (sem_eq.r_sub_const_l2.a1.ok FS O hO)
-
-theorem sem_eq.r_self_add_r.a1.ok : sem_eq.r_self_add_r.a1.Stmt := bvr_proof% sem_eq.r_self_add_r.a1
-
-theorem sem_eq.r_self_add_r.a2.ok : sem_eq.r_self_add_r.a2.Stmt := by
+theorem sem_eq.r_self_add.a2.ok : sem_eq.r_self_add.a2.Stmt := by
   intro FS O hO v1 w__2 bv__z bv__T bvr__4 t__6 hg
   exact Refines.trans
     (by simp only [sem_eq.spec, ty, Term.ty_mk]; bvr_comm)
-    (sem_eq.r_self_add_r.a1.ok FS O hO v1 w__2 bvr__4 bv__z bv__T t__6 hg)
+    (sem_eq.r_self_add.a1.ok FS O hO v1 w__2 bvr__4 bv__z bv__T t__6 hg)
 
-theorem sem_eq.r_self_add_r.proof : sem_eq.r_self_add_r.Stmt := by
+theorem sem_eq.r_self_add.a3.ok : sem_eq.r_self_add.a3.Stmt := bvr_proof% sem_eq.r_self_add.a3
+
+theorem sem_eq.r_self_add.a4.ok : sem_eq.r_self_add.a4.Stmt := bvr_proof% sem_eq.r_self_add.a4
+
+theorem sem_eq.r_self_add.proof : sem_eq.r_self_add.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_self_add_r] at h
+  simp only [sem_eq.r_self_add] at h
   repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (sem_eq.r_self_add_r.a1.ok FS O hO)
-  · bvr_arm h (sem_eq.r_self_add_r.a2.ok FS O hO)
-
-theorem sem_eq.r_self_add_l.a1.ok : sem_eq.r_self_add_l.a1.Stmt := bvr_proof% sem_eq.r_self_add_l.a1
-
-theorem sem_eq.r_self_add_l.a2.ok : sem_eq.r_self_add_l.a2.Stmt := by
-  intro FS O hO v2 w__1 bv__z bv__T x t__5 hg
-  exact Refines.trans
-    (by simp only [sem_eq.spec, ty, Term.ty_mk]; bvr_comm)
-    (sem_eq.r_self_add_l.a1.ok FS O hO v2 w__1 x bv__z bv__T t__5 hg)
-
-theorem sem_eq.r_self_add_l.proof : sem_eq.r_self_add_l.Stmt := by
-  intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_self_add_l] at h
-  repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (sem_eq.r_self_add_l.a1.ok FS O hO)
-  · bvr_arm h (sem_eq.r_self_add_l.a2.ok FS O hO)
+  · bvr_arm h (sem_eq.r_self_add.a1.ok FS O hO)
+  · bvr_arm h (sem_eq.r_self_add.a2.ok FS O hO)
+  · bvr_arm h (sem_eq.r_self_add.a3.ok FS O hO)
+  · bvr_arm h (sem_eq.r_self_add.a4.ok FS O hO)
 
 theorem sem_eq.r_add_add.a1.ok : sem_eq.r_add_add.a1.Stmt := bvr_proof% sem_eq.r_add_add.a1
 
@@ -1121,59 +1069,52 @@ theorem sem_eq.r_concat_concat.proof : sem_eq.r_concat_concat.Stmt := by
   repeat' rcases Lib.orElse_some h with h | h
   · bvr_arm h (sem_eq.r_concat_concat.a1.ok FS O hO)
 
-theorem sem_eq.r_ite_const_l.a1.ok : sem_eq.r_ite_const_l.a1.Stmt := bvr_proof% sem_eq.r_ite_const_l.a1
+theorem sem_eq.r_ite_const.a1.ok : sem_eq.r_ite_const.a1.Stmt := bvr_proof% sem_eq.r_ite_const.a1
 
-theorem sem_eq.r_ite_const_l.a2.ok : sem_eq.r_ite_const_l.a2.Stmt := bvr_proof% sem_eq.r_ite_const_l.a2
+theorem sem_eq.r_ite_const.a2.ok : sem_eq.r_ite_const.a2.Stmt := bvr_proof% sem_eq.r_ite_const.a2
 
-theorem sem_eq.r_ite_const_l.proof : sem_eq.r_ite_const_l.Stmt := by
+theorem sem_eq.r_ite_const.a3.ok : sem_eq.r_ite_const.a3.Stmt := by
+  intro FS O hO w__6 t__7 b l t t__5
+  exact Refines.trans
+    (by simp only [sem_eq.spec, ty, Term.ty_mk]; bvr_comm)
+    (sem_eq.r_ite_const.a1.ok FS O hO b l t t__5 w__6 t__7)
+
+theorem sem_eq.r_ite_const.a4.ok : sem_eq.r_ite_const.a4.Stmt := by
+  intro FS O hO w__8 t__9 b l t t__5
+  exact Refines.trans
+    (by simp only [sem_eq.spec, ty, Term.ty_mk]; bvr_comm)
+    (sem_eq.r_ite_const.a2.ok FS O hO b l t t__5 w__8 t__9)
+
+theorem sem_eq.r_ite_const.proof : sem_eq.r_ite_const.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_ite_const_l] at h
+  simp only [sem_eq.r_ite_const] at h
   repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (sem_eq.r_ite_const_l.a1.ok FS O hO)
-  · bvr_arm h (sem_eq.r_ite_const_l.a2.ok FS O hO)
+  · bvr_arm h (sem_eq.r_ite_const.a1.ok FS O hO)
+  · bvr_arm h (sem_eq.r_ite_const.a2.ok FS O hO)
+  · bvr_arm h (sem_eq.r_ite_const.a3.ok FS O hO)
+  · bvr_arm h (sem_eq.r_ite_const.a4.ok FS O hO)
 
-theorem sem_eq.r_ite_const_r.a1.ok : sem_eq.r_ite_const_r.a1.Stmt := bvr_proof% sem_eq.r_ite_const_r.a1
+theorem sem_eq.r_false_.a1.ok : sem_eq.r_false_.a1.Stmt := bvr_proof% sem_eq.r_false_.a1
 
-theorem sem_eq.r_ite_const_r.a2.ok : sem_eq.r_ite_const_r.a2.Stmt := bvr_proof% sem_eq.r_ite_const_r.a2
+theorem sem_eq.r_false_.a2.ok : sem_eq.r_false_.a2.Stmt := bvr_proof% sem_eq.r_false_.a2
 
-theorem sem_eq.r_ite_const_r.proof : sem_eq.r_ite_const_r.Stmt := by
+theorem sem_eq.r_false_.proof : sem_eq.r_false_.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_ite_const_r] at h
+  simp only [sem_eq.r_false_] at h
   repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (sem_eq.r_ite_const_r.a1.ok FS O hO)
-  · bvr_arm h (sem_eq.r_ite_const_r.a2.ok FS O hO)
+  · bvr_arm h (sem_eq.r_false_.a1.ok FS O hO)
+  · bvr_arm h (sem_eq.r_false_.a2.ok FS O hO)
 
-theorem sem_eq.r_false_l.a1.ok : sem_eq.r_false_l.a1.Stmt := bvr_proof% sem_eq.r_false_l.a1
+theorem sem_eq.r_true_.a1.ok : sem_eq.r_true_.a1.Stmt := bvr_proof% sem_eq.r_true_.a1
 
-theorem sem_eq.r_false_l.proof : sem_eq.r_false_l.Stmt := by
+theorem sem_eq.r_true_.a2.ok : sem_eq.r_true_.a2.Stmt := bvr_proof% sem_eq.r_true_.a2
+
+theorem sem_eq.r_true_.proof : sem_eq.r_true_.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_false_l] at h
+  simp only [sem_eq.r_true_] at h
   repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (sem_eq.r_false_l.a1.ok FS O hO)
-
-theorem sem_eq.r_false_r.a1.ok : sem_eq.r_false_r.a1.Stmt := bvr_proof% sem_eq.r_false_r.a1
-
-theorem sem_eq.r_false_r.proof : sem_eq.r_false_r.Stmt := by
-  intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_false_r] at h
-  repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (sem_eq.r_false_r.a1.ok FS O hO)
-
-theorem sem_eq.r_true_l.a1.ok : sem_eq.r_true_l.a1.Stmt := bvr_proof% sem_eq.r_true_l.a1
-
-theorem sem_eq.r_true_l.proof : sem_eq.r_true_l.Stmt := by
-  intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_true_l] at h
-  repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (sem_eq.r_true_l.a1.ok FS O hO)
-
-theorem sem_eq.r_true_r.a1.ok : sem_eq.r_true_r.a1.Stmt := bvr_proof% sem_eq.r_true_r.a1
-
-theorem sem_eq.r_true_r.proof : sem_eq.r_true_r.Stmt := by
-  intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_true_r] at h
-  repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (sem_eq.r_true_r.a1.ok FS O hO)
+  · bvr_arm h (sem_eq.r_true_.a1.ok FS O hO)
+  · bvr_arm h (sem_eq.r_true_.a2.ok FS O hO)
 
 theorem sem_eq.r_of_bools.a1.ok : sem_eq.r_of_bools.a1.Stmt := bvr_proof% sem_eq.r_of_bools.a1
 
@@ -1366,45 +1307,35 @@ theorem bv_add.r_lits.proof : bv_add.r_lits.Stmt := by
   repeat' rcases Lib.orElse_some h with h | h
   · bvr_arm h (bv_add.r_lits.a1.ok FS O hO)
 
-theorem bv_add.r_neg_l.a1.ok : bv_add.r_neg_l.a1.Stmt := bvr_proof% bv_add.r_neg_l.a1
+theorem bv_add.r_neg.a1.ok : bv_add.r_neg.a1.Stmt := bvr_proof% bv_add.r_neg.a1
 
-theorem bv_add.r_neg_l.proof : bv_add.r_neg_l.Stmt := by
+theorem bv_add.r_neg.a2.ok : bv_add.r_neg.a2.Stmt := bvr_proof% bv_add.r_neg.a2
+
+theorem bv_add.r_neg.proof : bv_add.r_neg.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_add.r_neg_l] at h
+  simp only [bv_add.r_neg] at h
   repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (bv_add.r_neg_l.a1.ok FS O hO)
+  · bvr_arm h (bv_add.r_neg.a1.ok FS O hO)
+  · bvr_arm h (bv_add.r_neg.a2.ok FS O hO)
 
-theorem bv_add.r_neg_r.a1.ok : bv_add.r_neg_r.a1.Stmt := bvr_proof% bv_add.r_neg_r.a1
+theorem bv_add.r_zero.a1.ok : bv_add.r_zero.a1.Stmt := bvr_proof% bv_add.r_zero.a1
 
-theorem bv_add.r_neg_r.proof : bv_add.r_neg_r.Stmt := by
+theorem bv_add.r_zero.a2.ok : bv_add.r_zero.a2.Stmt := bvr_proof% bv_add.r_zero.a2
+
+theorem bv_add.r_zero.proof : bv_add.r_zero.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_add.r_neg_r] at h
+  simp only [bv_add.r_zero] at h
   repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (bv_add.r_neg_r.a1.ok FS O hO)
-
-theorem bv_add.r_zero_r.a1.ok : bv_add.r_zero_r.a1.Stmt := bvr_proof% bv_add.r_zero_r.a1
-
-theorem bv_add.r_zero_r.proof : bv_add.r_zero_r.Stmt := by
-  intro FS O hO checked v1 v2 res h
-  simp only [bv_add.r_zero_r] at h
-  repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (bv_add.r_zero_r.a1.ok FS O hO)
-
-theorem bv_add.r_zero_l.a1.ok : bv_add.r_zero_l.a1.Stmt := bvr_proof% bv_add.r_zero_l.a1
-
-theorem bv_add.r_zero_l.proof : bv_add.r_zero_l.Stmt := by
-  intro FS O hO checked v1 v2 res h
-  simp only [bv_add.r_zero_l] at h
-  repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (bv_add.r_zero_l.a1.ok FS O hO)
+  · bvr_arm h (bv_add.r_zero.a1.ok FS O hO)
+  · bvr_arm h (bv_add.r_zero.a2.ok FS O hO)
 
 theorem bv_add.r_not_one.a1.ok : bv_add.r_not_one.a1.Stmt := bvr_proof% bv_add.r_not_one.a1
 
 theorem bv_add.r_not_one.a2.ok : bv_add.r_not_one.a2.Stmt := by
-  intro FS O hO checked v t__5 bvr__1 t__2 hg
+  intro FS O hO checked bvr__4 t__5 x t__3 hg
   exact Refines.trans
     (by simp only [bv_add.spec, ty, Term.ty_mk]; bvr_comm)
-    (bv_add.r_not_one.a1.ok FS O hO checked bvr__1 t__2 v t__5 hg)
+    (bv_add.r_not_one.a1.ok FS O hO checked x t__3 bvr__4 t__5 hg)
 
 theorem bv_add.r_not_one.proof : bv_add.r_not_one.Stmt := by
   intro FS O hO checked v1 v2 res h
@@ -1421,44 +1352,67 @@ theorem bv_add.r_add_const.a2.ok : bv_add.r_add_const.a2.Stmt := by
     (by simp only [bv_add.spec, ty, Term.ty_mk]; bvr_comm)
     (bv_add.r_add_const.a1.ok FS O hO checked c k1__z k1__T r t__5 k2__z k2__T)
 
+theorem bv_add.r_add_const.a3.ok : bv_add.r_add_const.a3.Stmt := by
+  intro FS O hO checked k2__z k2__T c k1__z k1__T r t__5
+  exact Refines.trans
+    (by simp only [bv_add.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_add.r_add_const.a1.ok FS O hO checked c k1__z k1__T r t__5 k2__z k2__T)
+
+theorem bv_add.r_add_const.a4.ok : bv_add.r_add_const.a4.Stmt := by
+  intro FS O hO checked k2__z k2__T c r k1__z k1__T t__5
+  exact Refines.trans
+    (by simp only [bv_add.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_add.r_add_const.a1.ok FS O hO checked c k1__z k1__T r t__5 k2__z k2__T)
+
 theorem bv_add.r_add_const.proof : bv_add.r_add_const.Stmt := by
   intro FS O hO checked v1 v2 res h
   simp only [bv_add.r_add_const] at h
   repeat' rcases Lib.orElse_some h with h | h
   · bvr_arm h (bv_add.r_add_const.a1.ok FS O hO)
   · bvr_arm h (bv_add.r_add_const.a2.ok FS O hO)
+  · bvr_arm h (bv_add.r_add_const.a3.ok FS O hO)
+  · bvr_arm h (bv_add.r_add_const.a4.ok FS O hO)
 
 theorem bv_add.r_sub_const_r.a1.ok : bv_add.r_sub_const_r.a1.Stmt := bvr_proof% bv_add.r_sub_const_r.a1
+
+theorem bv_add.r_sub_const_r.a2.ok : bv_add.r_sub_const_r.a2.Stmt := by
+  intro FS O hO checked k2__z k2__T c l k1__z k1__T t__5
+  exact Refines.trans
+    (by simp only [bv_add.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_add.r_sub_const_r.a1.ok FS O hO checked c l k1__z k1__T t__5 k2__z k2__T)
 
 theorem bv_add.r_sub_const_r.proof : bv_add.r_sub_const_r.Stmt := by
   intro FS O hO checked v1 v2 res h
   simp only [bv_add.r_sub_const_r] at h
   repeat' rcases Lib.orElse_some h with h | h
   · bvr_arm h (bv_add.r_sub_const_r.a1.ok FS O hO)
+  · bvr_arm h (bv_add.r_sub_const_r.a2.ok FS O hO)
 
 theorem bv_add.r_sub_const_l.a1.ok : bv_add.r_sub_const_l.a1.Stmt := bvr_proof% bv_add.r_sub_const_l.a1
+
+theorem bv_add.r_sub_const_l.a2.ok : bv_add.r_sub_const_l.a2.Stmt := by
+  intro FS O hO checked k2__z k2__T c k1__z k1__T r t__5
+  exact Refines.trans
+    (by simp only [bv_add.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_add.r_sub_const_l.a1.ok FS O hO checked c k1__z k1__T r t__5 k2__z k2__T)
 
 theorem bv_add.r_sub_const_l.proof : bv_add.r_sub_const_l.Stmt := by
   intro FS O hO checked v1 v2 res h
   simp only [bv_add.r_sub_const_l] at h
   repeat' rcases Lib.orElse_some h with h | h
   · bvr_arm h (bv_add.r_sub_const_l.a1.ok FS O hO)
+  · bvr_arm h (bv_add.r_sub_const_l.a2.ok FS O hO)
 
-theorem bv_add.r_sub_cancel_r.a1.ok : bv_add.r_sub_cancel_r.a1.Stmt := bvr_proof% bv_add.r_sub_cancel_r.a1
+theorem bv_add.r_sub_cancel.a1.ok : bv_add.r_sub_cancel.a1.Stmt := bvr_proof% bv_add.r_sub_cancel.a1
 
-theorem bv_add.r_sub_cancel_r.proof : bv_add.r_sub_cancel_r.Stmt := by
+theorem bv_add.r_sub_cancel.a2.ok : bv_add.r_sub_cancel.a2.Stmt := bvr_proof% bv_add.r_sub_cancel.a2
+
+theorem bv_add.r_sub_cancel.proof : bv_add.r_sub_cancel.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_add.r_sub_cancel_r] at h
+  simp only [bv_add.r_sub_cancel] at h
   repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (bv_add.r_sub_cancel_r.a1.ok FS O hO)
-
-theorem bv_add.r_sub_cancel_l.a1.ok : bv_add.r_sub_cancel_l.a1.Stmt := bvr_proof% bv_add.r_sub_cancel_l.a1
-
-theorem bv_add.r_sub_cancel_l.proof : bv_add.r_sub_cancel_l.Stmt := by
-  intro FS O hO checked v1 v2 res h
-  simp only [bv_add.r_sub_cancel_l] at h
-  repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (bv_add.r_sub_cancel_l.a1.ok FS O hO)
+  · bvr_arm h (bv_add.r_sub_cancel.a1.ok FS O hO)
+  · bvr_arm h (bv_add.r_sub_cancel.a2.ok FS O hO)
 
 theorem bv_add.r_add_sub.a1.ok : bv_add.r_add_sub.a1.Stmt := bvr_proof% bv_add.r_add_sub.a1
 
@@ -1922,37 +1876,27 @@ theorem bv_and.r_lits.proof : bv_and.r_lits.Stmt := by
   repeat' rcases Lib.orElse_some h with h | h
   · bvr_arm h (bv_and.r_lits.a1.ok FS O hO)
 
-theorem bv_and.r_zero_l.a1.ok : bv_and.r_zero_l.a1.Stmt := bvr_proof% bv_and.r_zero_l.a1
+theorem bv_and.r_zero.a1.ok : bv_and.r_zero.a1.Stmt := bvr_proof% bv_and.r_zero.a1
 
-theorem bv_and.r_zero_l.proof : bv_and.r_zero_l.Stmt := by
+theorem bv_and.r_zero.a2.ok : bv_and.r_zero.a2.Stmt := bvr_proof% bv_and.r_zero.a2
+
+theorem bv_and.r_zero.proof : bv_and.r_zero.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_and.r_zero_l] at h
+  simp only [bv_and.r_zero] at h
   repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (bv_and.r_zero_l.a1.ok FS O hO)
+  · bvr_arm h (bv_and.r_zero.a1.ok FS O hO)
+  · bvr_arm h (bv_and.r_zero.a2.ok FS O hO)
 
-theorem bv_and.r_zero_r.a1.ok : bv_and.r_zero_r.a1.Stmt := bvr_proof% bv_and.r_zero_r.a1
+theorem bv_and.r_ones.a1.ok : bv_and.r_ones.a1.Stmt := bvr_proof% bv_and.r_ones.a1
 
-theorem bv_and.r_zero_r.proof : bv_and.r_zero_r.Stmt := by
+theorem bv_and.r_ones.a2.ok : bv_and.r_ones.a2.Stmt := bvr_proof% bv_and.r_ones.a2
+
+theorem bv_and.r_ones.proof : bv_and.r_ones.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_and.r_zero_r] at h
+  simp only [bv_and.r_ones] at h
   repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (bv_and.r_zero_r.a1.ok FS O hO)
-
-theorem bv_and.r_ones_l.a1.ok : bv_and.r_ones_l.a1.Stmt := bvr_proof% bv_and.r_ones_l.a1
-
-theorem bv_and.r_ones_l.proof : bv_and.r_ones_l.Stmt := by
-  intro FS O hO v1 v2 res h
-  simp only [bv_and.r_ones_l] at h
-  repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (bv_and.r_ones_l.a1.ok FS O hO)
-
-theorem bv_and.r_ones_r.a1.ok : bv_and.r_ones_r.a1.Stmt := bvr_proof% bv_and.r_ones_r.a1
-
-theorem bv_and.r_ones_r.proof : bv_and.r_ones_r.Stmt := by
-  intro FS O hO v1 v2 res h
-  simp only [bv_and.r_ones_r] at h
-  repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (bv_and.r_ones_r.a1.ok FS O hO)
+  · bvr_arm h (bv_and.r_ones.a1.ok FS O hO)
+  · bvr_arm h (bv_and.r_ones.a2.ok FS O hO)
 
 theorem bv_and.r_lshr_mask.a1.ok : bv_and.r_lshr_mask.a1.Stmt := bvr_proof% bv_and.r_lshr_mask.a1
 
@@ -1965,21 +1909,20 @@ theorem bv_and.r_lshr_mask.proof : bv_and.r_lshr_mask.Stmt := by
   · bvr_arm h (bv_and.r_lshr_mask.a1.ok FS O hO)
   · bvr_arm h (bv_and.r_lshr_mask.a2.ok FS O hO)
 
-theorem bv_and.r_ite_r.a1.ok : bv_and.r_ite_r.a1.Stmt := bvr_proof% bv_and.r_ite_r.a1
+theorem bv_and.r_ite.a1.ok : bv_and.r_ite.a1.Stmt := bvr_proof% bv_and.r_ite.a1
 
-theorem bv_and.r_ite_r.proof : bv_and.r_ite_r.Stmt := by
+theorem bv_and.r_ite.a2.ok : bv_and.r_ite.a2.Stmt := by
+  intro FS O hO b l r t__8 w__1 t__2
+  exact Refines.trans
+    (by simp only [bv_and.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_and.r_ite.a1.ok FS O hO w__1 t__2 b l r t__8)
+
+theorem bv_and.r_ite.proof : bv_and.r_ite.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_and.r_ite_r] at h
+  simp only [bv_and.r_ite] at h
   repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (bv_and.r_ite_r.a1.ok FS O hO)
-
-theorem bv_and.r_ite_l.a1.ok : bv_and.r_ite_l.a1.Stmt := bvr_proof% bv_and.r_ite_l.a1
-
-theorem bv_and.r_ite_l.proof : bv_and.r_ite_l.Stmt := by
-  intro FS O hO v1 v2 res h
-  simp only [bv_and.r_ite_l] at h
-  repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (bv_and.r_ite_l.a1.ok FS O hO)
+  · bvr_arm h (bv_and.r_ite.a1.ok FS O hO)
+  · bvr_arm h (bv_and.r_ite.a2.ok FS O hO)
 
 theorem bv_and.r_masks.a1.ok : bv_and.r_masks.a1.Stmt := bvr_proof% bv_and.r_masks.a1
 
@@ -2124,21 +2067,20 @@ theorem bv_and.r_right_mask.proof : bv_and.r_right_mask.Stmt := by
   · bvr_arm h (bv_and.r_right_mask.a1.ok FS O hO)
   · bvr_arm h (bv_and.r_right_mask.a2.ok FS O hO)
 
-theorem bv_and.r_of_bool_r.a1.ok : bv_and.r_of_bool_r.a1.Stmt := bvr_proof% bv_and.r_of_bool_r.a1
+theorem bv_and.r_of_bool.a1.ok : bv_and.r_of_bool.a1.Stmt := bvr_proof% bv_and.r_of_bool.a1
 
-theorem bv_and.r_of_bool_r.proof : bv_and.r_of_bool_r.Stmt := by
+theorem bv_and.r_of_bool.a2.ok : bv_and.r_of_bool.a2.Stmt := by
+  intro FS O hO w__3 w__5 t__6 bvr__1 t__2 hg
+  exact Refines.trans
+    (by simp only [bv_and.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_and.r_of_bool.a1.ok FS O hO bvr__1 t__2 w__3 w__5 t__6 hg)
+
+theorem bv_and.r_of_bool.proof : bv_and.r_of_bool.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_and.r_of_bool_r] at h
+  simp only [bv_and.r_of_bool] at h
   repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (bv_and.r_of_bool_r.a1.ok FS O hO)
-
-theorem bv_and.r_of_bool_l.a1.ok : bv_and.r_of_bool_l.a1.Stmt := bvr_proof% bv_and.r_of_bool_l.a1
-
-theorem bv_and.r_of_bool_l.proof : bv_and.r_of_bool_l.Stmt := by
-  intro FS O hO v1 v2 res h
-  simp only [bv_and.r_of_bool_l] at h
-  repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (bv_and.r_of_bool_l.a1.ok FS O hO)
+  · bvr_arm h (bv_and.r_of_bool.a1.ok FS O hO)
+  · bvr_arm h (bv_and.r_of_bool.a2.ok FS O hO)
 
 theorem bv_and.r_of_bools.a1.ok : bv_and.r_of_bools.a1.Stmt := bvr_proof% bv_and.r_of_bools.a1
 
@@ -2172,21 +2114,16 @@ theorem bv_or.r_lits.proof : bv_or.r_lits.Stmt := by
   repeat' rcases Lib.orElse_some h with h | h
   · bvr_arm h (bv_or.r_lits.a1.ok FS O hO)
 
-theorem bv_or.r_zero_l.a1.ok : bv_or.r_zero_l.a1.Stmt := bvr_proof% bv_or.r_zero_l.a1
+theorem bv_or.r_zero.a1.ok : bv_or.r_zero.a1.Stmt := bvr_proof% bv_or.r_zero.a1
 
-theorem bv_or.r_zero_l.proof : bv_or.r_zero_l.Stmt := by
+theorem bv_or.r_zero.a2.ok : bv_or.r_zero.a2.Stmt := bvr_proof% bv_or.r_zero.a2
+
+theorem bv_or.r_zero.proof : bv_or.r_zero.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_or.r_zero_l] at h
+  simp only [bv_or.r_zero] at h
   repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (bv_or.r_zero_l.a1.ok FS O hO)
-
-theorem bv_or.r_zero_r.a1.ok : bv_or.r_zero_r.a1.Stmt := bvr_proof% bv_or.r_zero_r.a1
-
-theorem bv_or.r_zero_r.proof : bv_or.r_zero_r.Stmt := by
-  intro FS O hO v1 v2 res h
-  simp only [bv_or.r_zero_r] at h
-  repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (bv_or.r_zero_r.a1.ok FS O hO)
+  · bvr_arm h (bv_or.r_zero.a1.ok FS O hO)
+  · bvr_arm h (bv_or.r_zero.a2.ok FS O hO)
 
 theorem bv_or.r_same.a1.ok : bv_or.r_same.a1.Stmt := bvr_proof% bv_or.r_same.a1
 
@@ -2256,19 +2193,33 @@ theorem bv_or.r_masks.proof : bv_or.r_masks.Stmt := by
 
 theorem bv_or.r_extend_shl.a1.ok : bv_or.r_extend_shl.a1.Stmt := bvr_proof% bv_or.r_extend_shl.a1
 
+theorem bv_or.r_extend_shl.a2.ok : bv_or.r_extend_shl.a2.Stmt := by
+  intro FS O hO w__8 tail t__11 shift__z shift__T t__13 nx base t__5 hg
+  exact Refines.trans
+    (by simp only [bv_or.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_or.r_extend_shl.a1.ok FS O hO nx base t__5 w__8 tail t__11 shift__z shift__T t__13 hg)
+
 theorem bv_or.r_extend_shl.proof : bv_or.r_extend_shl.Stmt := by
   intro FS O hO v1 v2 res h
   simp only [bv_or.r_extend_shl] at h
   repeat' rcases Lib.orElse_some h with h | h
   · bvr_arm h (bv_or.r_extend_shl.a1.ok FS O hO)
+  · bvr_arm h (bv_or.r_extend_shl.a2.ok FS O hO)
 
 theorem bv_or.r_of_bools.a1.ok : bv_or.r_of_bools.a1.Stmt := bvr_proof% bv_or.r_of_bools.a1
+
+theorem bv_or.r_of_bools.a2.ok : bv_or.r_of_bools.a2.Stmt := by
+  intro FS O hO w__5 b2 t__8 n b1 t__4
+  exact Refines.trans
+    (by simp only [bv_or.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_or.r_of_bools.a1.ok FS O hO n b1 t__4 w__5 b2 t__8)
 
 theorem bv_or.r_of_bools.proof : bv_or.r_of_bools.Stmt := by
   intro FS O hO v1 v2 res h
   simp only [bv_or.r_of_bools] at h
   repeat' rcases Lib.orElse_some h with h | h
   · bvr_arm h (bv_or.r_of_bools.a1.ok FS O hO)
+  · bvr_arm h (bv_or.r_of_bools.a2.ok FS O hO)
 
 theorem bv_or.r_default.a1.ok : bv_or.r_default.a1.Stmt := bvr_proof% bv_or.r_default.a1
 
@@ -2286,29 +2237,31 @@ theorem bv_xor.r_lits.proof : bv_xor.r_lits.Stmt := by
   repeat' rcases Lib.orElse_some h with h | h
   · bvr_arm h (bv_xor.r_lits.a1.ok FS O hO)
 
-theorem bv_xor.r_zero_l.a1.ok : bv_xor.r_zero_l.a1.Stmt := bvr_proof% bv_xor.r_zero_l.a1
+theorem bv_xor.r_zero.a1.ok : bv_xor.r_zero.a1.Stmt := bvr_proof% bv_xor.r_zero.a1
 
-theorem bv_xor.r_zero_l.proof : bv_xor.r_zero_l.Stmt := by
+theorem bv_xor.r_zero.a2.ok : bv_xor.r_zero.a2.Stmt := bvr_proof% bv_xor.r_zero.a2
+
+theorem bv_xor.r_zero.proof : bv_xor.r_zero.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_xor.r_zero_l] at h
+  simp only [bv_xor.r_zero] at h
   repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (bv_xor.r_zero_l.a1.ok FS O hO)
-
-theorem bv_xor.r_zero_r.a1.ok : bv_xor.r_zero_r.a1.Stmt := bvr_proof% bv_xor.r_zero_r.a1
-
-theorem bv_xor.r_zero_r.proof : bv_xor.r_zero_r.Stmt := by
-  intro FS O hO v1 v2 res h
-  simp only [bv_xor.r_zero_r] at h
-  repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (bv_xor.r_zero_r.a1.ok FS O hO)
+  · bvr_arm h (bv_xor.r_zero.a1.ok FS O hO)
+  · bvr_arm h (bv_xor.r_zero.a2.ok FS O hO)
 
 theorem bv_xor.r_of_bools.a1.ok : bv_xor.r_of_bools.a1.Stmt := bvr_proof% bv_xor.r_of_bools.a1
+
+theorem bv_xor.r_of_bools.a2.ok : bv_xor.r_of_bools.a2.Stmt := by
+  intro FS O hO w__5 b2 t__8 n b1 t__4
+  exact Refines.trans
+    (by simp only [bv_xor.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_xor.r_of_bools.a1.ok FS O hO n b1 t__4 w__5 b2 t__8)
 
 theorem bv_xor.r_of_bools.proof : bv_xor.r_of_bools.Stmt := by
   intro FS O hO v1 v2 res h
   simp only [bv_xor.r_of_bools] at h
   repeat' rcases Lib.orElse_some h with h | h
   · bvr_arm h (bv_xor.r_of_bools.a1.ok FS O hO)
+  · bvr_arm h (bv_xor.r_of_bools.a2.ok FS O hO)
 
 theorem bv_xor.r_default.a1.ok : bv_xor.r_default.a1.Stmt := bvr_proof% bv_xor.r_default.a1
 
@@ -2784,37 +2737,27 @@ theorem bv_mul.r_lits.proof : bv_mul.r_lits.Stmt := by
   repeat' rcases Lib.orElse_some h with h | h
   · bvr_arm h (bv_mul.r_lits.a1.ok FS O hO)
 
-theorem bv_mul.r_one_r.a1.ok : bv_mul.r_one_r.a1.Stmt := bvr_proof% bv_mul.r_one_r.a1
+theorem bv_mul.r_one.a1.ok : bv_mul.r_one.a1.Stmt := bvr_proof% bv_mul.r_one.a1
 
-theorem bv_mul.r_one_r.proof : bv_mul.r_one_r.Stmt := by
+theorem bv_mul.r_one.a2.ok : bv_mul.r_one.a2.Stmt := bvr_proof% bv_mul.r_one.a2
+
+theorem bv_mul.r_one.proof : bv_mul.r_one.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_mul.r_one_r] at h
+  simp only [bv_mul.r_one] at h
   repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (bv_mul.r_one_r.a1.ok FS O hO)
+  · bvr_arm h (bv_mul.r_one.a1.ok FS O hO)
+  · bvr_arm h (bv_mul.r_one.a2.ok FS O hO)
 
-theorem bv_mul.r_one_l.a1.ok : bv_mul.r_one_l.a1.Stmt := bvr_proof% bv_mul.r_one_l.a1
+theorem bv_mul.r_zero.a1.ok : bv_mul.r_zero.a1.Stmt := bvr_proof% bv_mul.r_zero.a1
 
-theorem bv_mul.r_one_l.proof : bv_mul.r_one_l.Stmt := by
+theorem bv_mul.r_zero.a2.ok : bv_mul.r_zero.a2.Stmt := bvr_proof% bv_mul.r_zero.a2
+
+theorem bv_mul.r_zero.proof : bv_mul.r_zero.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_mul.r_one_l] at h
+  simp only [bv_mul.r_zero] at h
   repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (bv_mul.r_one_l.a1.ok FS O hO)
-
-theorem bv_mul.r_zero_r.a1.ok : bv_mul.r_zero_r.a1.Stmt := bvr_proof% bv_mul.r_zero_r.a1
-
-theorem bv_mul.r_zero_r.proof : bv_mul.r_zero_r.Stmt := by
-  intro FS O hO checked v1 v2 res h
-  simp only [bv_mul.r_zero_r] at h
-  repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (bv_mul.r_zero_r.a1.ok FS O hO)
-
-theorem bv_mul.r_zero_l.a1.ok : bv_mul.r_zero_l.a1.Stmt := bvr_proof% bv_mul.r_zero_l.a1
-
-theorem bv_mul.r_zero_l.proof : bv_mul.r_zero_l.Stmt := by
-  intro FS O hO checked v1 v2 res h
-  simp only [bv_mul.r_zero_l] at h
-  repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (bv_mul.r_zero_l.a1.ok FS O hO)
+  · bvr_arm h (bv_mul.r_zero.a1.ok FS O hO)
+  · bvr_arm h (bv_mul.r_zero.a2.ok FS O hO)
 
 theorem bv_mul.r_neg.a1.ok : bv_mul.r_neg.a1.Stmt := bvr_proof% bv_mul.r_neg.a1
 
@@ -4247,13 +4190,10 @@ theorem b_and.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term)
   unfold b_and.step
   refine Refines.firstSome_cons (fun res h => b_and.r_same.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => b_and.r_false_.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => b_and.r_true_l.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => b_and.r_true_r.proof FS O hO v1 v2 res h) ?_
+  refine Refines.firstSome_cons (fun res h => b_and.r_true_.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => b_and.r_not.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => b_and.r_and_l.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => b_and.r_and_r.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => b_and.r_or_l.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => b_and.r_or_r.proof FS O hO v1 v2 res h) ?_
+  refine Refines.firstSome_cons (fun res h => b_and.r_and_.proof FS O hO v1 v2 res h) ?_
+  refine Refines.firstSome_cons (fun res h => b_and.r_or_.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => b_and.r_eq_neq.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => b_and.r_eq_extracts.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => b_and.r_upper_bounds.proof FS O hO v1 v2 res h) ?_
@@ -4266,15 +4206,12 @@ theorem b_or.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) 
   unfold b_or.step
   refine Refines.firstSome_cons (fun res h => b_or.r_same.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => b_or.r_true_.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => b_or.r_false_l.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => b_or.r_false_r.proof FS O hO v1 v2 res h) ?_
+  refine Refines.firstSome_cons (fun res h => b_or.r_false_.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => b_or.r_not.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => b_or.r_lt_lt.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => b_or.r_lt_leq.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => b_or.r_or_l.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => b_or.r_or_r.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => b_or.r_and_l.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => b_or.r_and_r.proof FS O hO v1 v2 res h) ?_
+  refine Refines.firstSome_cons (fun res h => b_or.r_or_.proof FS O hO v1 v2 res h) ?_
+  refine Refines.firstSome_cons (fun res h => b_or.r_and_.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => b_or.r_complementary.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => b_or.r_upper_eq.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => b_or.r_lower_eq.proof FS O hO v1 v2 res h) ?_
@@ -4330,18 +4267,12 @@ theorem sem_eq.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term
   refine Refines.firstSome_cons (fun res h => sem_eq.r_ptrs.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => sem_eq.r_bvs.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => sem_eq.r_floats.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => sem_eq.r_neg_r.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => sem_eq.r_neg_l.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => sem_eq.r_not_r.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => sem_eq.r_not_l.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => sem_eq.r_add_const_r.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => sem_eq.r_add_const_l.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => sem_eq.r_sub_const_r1.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => sem_eq.r_sub_const_r2.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => sem_eq.r_sub_const_l1.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => sem_eq.r_sub_const_l2.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => sem_eq.r_self_add_r.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => sem_eq.r_self_add_l.proof FS O hO v1 v2 res h) ?_
+  refine Refines.firstSome_cons (fun res h => sem_eq.r_neg.proof FS O hO v1 v2 res h) ?_
+  refine Refines.firstSome_cons (fun res h => sem_eq.r_not.proof FS O hO v1 v2 res h) ?_
+  refine Refines.firstSome_cons (fun res h => sem_eq.r_add_const.proof FS O hO v1 v2 res h) ?_
+  refine Refines.firstSome_cons (fun res h => sem_eq.r_sub_const1.proof FS O hO v1 v2 res h) ?_
+  refine Refines.firstSome_cons (fun res h => sem_eq.r_sub_const2.proof FS O hO v1 v2 res h) ?_
+  refine Refines.firstSome_cons (fun res h => sem_eq.r_self_add.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => sem_eq.r_add_add.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => sem_eq.r_mul_const.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => sem_eq.r_ite_ite.proof FS O hO v1 v2 res h) ?_
@@ -4352,12 +4283,9 @@ theorem sem_eq.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term
   refine Refines.firstSome_cons (fun res h => sem_eq.r_zext_const.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => sem_eq.r_ite_concat.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => sem_eq.r_concat_concat.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => sem_eq.r_ite_const_l.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => sem_eq.r_ite_const_r.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => sem_eq.r_false_l.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => sem_eq.r_false_r.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => sem_eq.r_true_l.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => sem_eq.r_true_r.proof FS O hO v1 v2 res h) ?_
+  refine Refines.firstSome_cons (fun res h => sem_eq.r_ite_const.proof FS O hO v1 v2 res h) ?_
+  refine Refines.firstSome_cons (fun res h => sem_eq.r_false_.proof FS O hO v1 v2 res h) ?_
+  refine Refines.firstSome_cons (fun res h => sem_eq.r_true_.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => sem_eq.r_of_bools.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => sem_eq.r_nots.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => sem_eq.r_of_bool_const.proof FS O hO v1 v2 res h) ?_
@@ -4416,16 +4344,13 @@ theorem bv_add.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (checked :
   Refines FS (bv_add.spec checked v1 v2) (bv_add.step O checked v1 v2) := by
   unfold bv_add.step
   refine Refines.firstSome_cons (fun res h => bv_add.r_lits.proof FS O hO checked v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => bv_add.r_neg_l.proof FS O hO checked v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => bv_add.r_neg_r.proof FS O hO checked v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => bv_add.r_zero_r.proof FS O hO checked v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => bv_add.r_zero_l.proof FS O hO checked v1 v2 res h) ?_
+  refine Refines.firstSome_cons (fun res h => bv_add.r_neg.proof FS O hO checked v1 v2 res h) ?_
+  refine Refines.firstSome_cons (fun res h => bv_add.r_zero.proof FS O hO checked v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => bv_add.r_not_one.proof FS O hO checked v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => bv_add.r_add_const.proof FS O hO checked v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => bv_add.r_sub_const_r.proof FS O hO checked v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => bv_add.r_sub_const_l.proof FS O hO checked v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => bv_add.r_sub_cancel_r.proof FS O hO checked v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => bv_add.r_sub_cancel_l.proof FS O hO checked v1 v2 res h) ?_
+  refine Refines.firstSome_cons (fun res h => bv_add.r_sub_cancel.proof FS O hO checked v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => bv_add.r_add_sub.proof FS O hO checked v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => bv_add.r_factor.proof FS O hO checked v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => bv_add.r_factor_const.proof FS O hO checked v1 v2 res h) ?_
@@ -4498,20 +4423,16 @@ theorem bv_and.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term
   Refines FS (bv_and.spec v1 v2) (bv_and.step O v1 v2) := by
   unfold bv_and.step
   refine Refines.firstSome_cons (fun res h => bv_and.r_lits.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => bv_and.r_zero_l.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => bv_and.r_zero_r.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => bv_and.r_ones_l.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => bv_and.r_ones_r.proof FS O hO v1 v2 res h) ?_
+  refine Refines.firstSome_cons (fun res h => bv_and.r_zero.proof FS O hO v1 v2 res h) ?_
+  refine Refines.firstSome_cons (fun res h => bv_and.r_ones.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => bv_and.r_lshr_mask.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => bv_and.r_ite_r.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => bv_and.r_ite_l.proof FS O hO v1 v2 res h) ?_
+  refine Refines.firstSome_cons (fun res h => bv_and.r_ite.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => bv_and.r_masks.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => bv_and.r_mask_or_mask.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => bv_and.r_mask_or.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => bv_and.r_mask_or_disj.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => bv_and.r_right_mask.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => bv_and.r_of_bool_r.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => bv_and.r_of_bool_l.proof FS O hO v1 v2 res h) ?_
+  refine Refines.firstSome_cons (fun res h => bv_and.r_of_bool.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => bv_and.r_of_bools.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => bv_and.r_ites.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => bv_and.r_default.proof FS O hO v1 v2 res h) ?_
@@ -4521,8 +4442,7 @@ theorem bv_or.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term)
   Refines FS (bv_or.spec v1 v2) (bv_or.step O v1 v2) := by
   unfold bv_or.step
   refine Refines.firstSome_cons (fun res h => bv_or.r_lits.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => bv_or.r_zero_l.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => bv_or.r_zero_r.proof FS O hO v1 v2 res h) ?_
+  refine Refines.firstSome_cons (fun res h => bv_or.r_zero.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => bv_or.r_same.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => bv_or.r_mask_and.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => bv_or.r_masks.proof FS O hO v1 v2 res h) ?_
@@ -4535,8 +4455,7 @@ theorem bv_xor.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term
   Refines FS (bv_xor.spec v1 v2) (bv_xor.step O v1 v2) := by
   unfold bv_xor.step
   refine Refines.firstSome_cons (fun res h => bv_xor.r_lits.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => bv_xor.r_zero_l.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => bv_xor.r_zero_r.proof FS O hO v1 v2 res h) ?_
+  refine Refines.firstSome_cons (fun res h => bv_xor.r_zero.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => bv_xor.r_of_bools.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => bv_xor.r_default.proof FS O hO v1 v2 res h) ?_
   exact Refines.firstSome_nil
@@ -4627,10 +4546,8 @@ theorem bv_mul.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (checked :
   Refines FS (bv_mul.spec checked v1 v2) (bv_mul.step O checked v1 v2) := by
   unfold bv_mul.step
   refine Refines.firstSome_cons (fun res h => bv_mul.r_lits.proof FS O hO checked v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => bv_mul.r_one_r.proof FS O hO checked v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => bv_mul.r_one_l.proof FS O hO checked v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => bv_mul.r_zero_r.proof FS O hO checked v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => bv_mul.r_zero_l.proof FS O hO checked v1 v2 res h) ?_
+  refine Refines.firstSome_cons (fun res h => bv_mul.r_one.proof FS O hO checked v1 v2 res h) ?_
+  refine Refines.firstSome_cons (fun res h => bv_mul.r_zero.proof FS O hO checked v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => bv_mul.r_neg.proof FS O hO checked v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => bv_mul.r_mul_const.proof FS O hO checked v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => bv_mul.r_ite.proof FS O hO checked v1 v2 res h) ?_

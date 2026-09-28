@@ -6,11 +6,11 @@ namespace Bvr
 
 open Classical Lib
 
-theorem bv_and.r_ones_l.a1.proof : bv_and.r_ones_l.a1.Stmt := by
+theorem bv_and.r_ones.a1.proof : bv_and.r_ones.a1.Stmt := by
   bvr_rule_sem
   all_goals simp_all [is_ones_mk]
 
-theorem bv_and.r_ones_r.a1.proof : bv_and.r_ones_r.a1.Stmt := by
+theorem bv_and.r_ones.a2.proof : bv_and.r_ones.a2.Stmt := by
   bvr_rule_sem
   all_goals simp_all [is_ones_mk]
 

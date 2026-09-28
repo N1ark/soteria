@@ -1573,6 +1573,8 @@ module Make (V : Value_ext) () = struct
         [rem ~signed:false]. *)
     and mod_ v1 v2 =
       match (v1.node.kind, v2.node.kind) with
+      (* by zero, the result is the dividend (as in SMT-LIB) *)
+      | _, BitVec r when Z.equal r Z.zero -> v1
       | BitVec l, BitVec r ->
           let size = size_of v1.node.ty in
           let l = bv_to_z true size l in
@@ -1590,6 +1592,8 @@ module Make (V : Value_ext) () = struct
         of the dividend [v1] if [signed]. *)
     and rem ~signed v1 v2 =
       match (v1.node.kind, v2.node.kind) with
+      (* by zero, the result is the dividend (as in SMT-LIB) *)
+      | _, BitVec r when Z.equal r Z.zero -> v1
       | BitVec l, BitVec r ->
           let size = size_of v1.node.ty in
           let l = bv_to_z signed size l in

@@ -1,4 +1,4 @@
-import Bvr.Lib.Tactic
+import Bvr.Lib.Msb
 
 /-!
 # Comparisons
@@ -90,97 +90,11 @@ theorem eq_intMin_iff {n : Nat} (hn : 0 < n) (x : BitVec n) :
 
 /-! ## The helpers on terms: `unsigned_ub`, `cancellable` -/
 
-theorem two_pow_mono' {a b : Int} (h : a ≤ b) : (2 : Int) ^ a.toNat ≤ 2 ^ b.toNat := by
-  have : 2 ^ a.toNat ≤ 2 ^ b.toNat := Nat.pow_le_pow_right (by omega) (by omega)
-  exact_mod_cast this
-
-theorem msb_of_bound_aux {FS : FloatSem} {ρ : Env} (K : Nat) : ∀ (v : Term), sizeOf v < K →
-    ∀ {n : Nat} {x : BitVec n}, v.WT → v.ty = .bitVector n → den FS ρ n v = some x →
-    (x.toNat : Int) < 2 ^ (msb_of v + 1).toNat := by
-  induction K with
-  | zero => intro v hv; omega
-  | succ K ih =>
-  intro v hK n x w ht h
-  have hx : (x.toNat : Int) < 2 ^ n := by have := x.isLt; exact_mod_cast this
-  have gen : msb_of v = size v - 1 → (x.toNat : Int) < 2 ^ (msb_of v + 1).toNat := by
-    intro e; rw [e]; simp [size, ht]; exact hx
-  rcases v with ⟨_ | _ | _ | _ | z | _ | ⟨op, a⟩ | ⟨op, a, b⟩ | ⟨op, g, l, r⟩ | _ | _ | _, T⟩
-  all_goals simp only [Term.ty_mk] at ht
-  all_goals subst ht
-  case bitVec =>
-    obtain ⟨-, h0, h1⟩ := WT_bitVec_bv.1 w
-    simp only [den, Option.some.injEq] at h; subst h
-    rw [msb_of_lit]
-    split
-    · rw [toNat_ofInt_of_lt h0 (by simpa using h1)]
-      have := lt_two_pow_log2_succ (by omega : 0 < z); omega
-    · simp only [size_of_ty_bitVector]; simpa using hx
-  case unop =>
-    cases op
-    case bvExtend s k =>
-      cases s
-      · obtain ⟨⟨m, hm, ha, hk, e⟩, wa⟩ := WT_unop.1 w
-        simp only [Ty.sort_eq, Ty.bitVector.injEq] at ha e
-        obtain ⟨m, rfl⟩ : ∃ m' : Nat, m = m' := ⟨m.toNat, by omega⟩
-        simp only [den, ha, Int.toNat_natCast, Option.map_eq_some_iff, Bool.false_eq_true,
-          ite_false] at h
-        obtain ⟨xa, ea, rfl⟩ := h
-        have ih := ih a (by simp at hK; omega) wa ha ea
-        have hmn : 2 ^ m ≤ 2 ^ n := Nat.pow_le_pow_right (by omega) (by omega)
-        have := xa.isLt
-        rw [msb_of]
-        simp only [firstSome, BitVec.toNat_setWidth,
-          Nat.mod_eq_of_lt (by omega : xa.toNat < 2 ^ n)]
-        simpa [HOrElse.hOrElse, OrElse.orElse, Option.orElse] using ih
-      · exact gen (by rw [msb_of]; simp [firstSome]; all_goals (intros; simp_all))
-    all_goals exact gen (by rw [msb_of]; simp [firstSome]; all_goals (intros; simp_all))
-  case binop =>
-    cases op
-    case bitAnd =>
-      obtain ⟨⟨⟨m, hm, ha⟩, hb, e⟩, wa, wb⟩ := WT_binop.1 w
-      simp only [Ty.sort_eq] at ha hb e
-      replace ha : a.ty = .bitVector n := e.symm
-      simp only [den] at h
-      cases ea : den FS ρ n a <;> cases eb : den FS ρ n b <;> simp [ea, eb, binOp] at h
-      subst h
-      rename_i xa xb
-      have h1 := ih a (by simp at hK; omega) wa ha ea
-      have h2 := ih b (by simp at hK; omega) wb (hb.trans ha) eb
-      have l1 : xa.toNat &&& xb.toNat ≤ xa.toNat := Nat.and_le_left
-      have l2 : xa.toNat &&& xb.toNat ≤ xb.toNat := Nat.and_le_right
-      rw [msb_of]; simp only [firstSome, zmin]
-      simp [HOrElse.hOrElse, OrElse.orElse, Option.orElse]
-      split <;> omega
-    all_goals exact gen (by rw [msb_of]; simp [firstSome]; all_goals (intros; simp_all))
-  case triop =>
-    cases op
-    case ite =>
-      obtain ⟨⟨hg, hb, e⟩, wg, wl, wr⟩ := WT_triop.1 w
-      simp only [Ty.sort_eq] at hg hb e
-      simp only [den] at h
-      have h1 := fun xl (el : den FS ρ n l = some xl) =>
-        ih l (by simp at hK; omega) wl e.symm el
-      have h2 := fun xr (er : den FS ρ n r = some xr) =>
-        ih r (by simp at hK; omega) wr (hb.trans e.symm) er
-      rw [msb_of]; simp only [firstSome, zmax]
-      simp [HOrElse.hOrElse, OrElse.orElse, Option.orElse]
-      have m1 := two_pow_mono' (a := msb_of l + 1) (b := max (msb_of l) (msb_of r) + 1) (by omega)
-      have m2 := two_pow_mono' (a := msb_of r + 1) (b := max (msb_of l) (msb_of r) + 1) (by omega)
-      have : (if msb_of r ≤ msb_of l then msb_of l else msb_of r) = max (msb_of l) (msb_of r) := by
-        split <;> omega
-      rw [this]
-      split at h
-      · have := h1 x h; omega
-      · have := h2 x h; omega
-      · simp at h
-    all_goals exact gen (by rw [msb_of]; simp [firstSome]; all_goals (intros; simp_all))
-  all_goals exact gen (by rw [msb_of]; simp [firstSome]; all_goals (intros; simp_all))
-
 /-- The values of a bit-vector term are below `2 ^ (msb_of v + 1)`. -/
 theorem msb_of_bound {FS : FloatSem} {ρ : Env} {v : Term} {n : Nat} {x : BitVec n}
     (w : v.WT) (ht : v.ty = .bitVector n) (h : den FS ρ n v = some x) :
-    (x.toNat : Int) < 2 ^ (msb_of v + 1).toNat :=
-  msb_of_bound_aux (sizeOf v + 1) v (by omega) w ht h
+    (x.toNat : Int) < 2 ^ (msb_of v + 1).toNat := by
+  exact_mod_cast den_msb w ht h
 
 theorem den_le_unsigned_ub {FS : FloatSem} {ρ : Env} {k : Kind} {n : Nat}
     (w : (Term.mk k (.bitVector n)).WT) :

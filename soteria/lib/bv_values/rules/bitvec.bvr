@@ -126,11 +126,11 @@ let[@spec Sub (checked, v1, v2) <| ty v1] [@cases] bv_sub (checked : checked)
       b_ite b (bv_sub unchecked v1 (bv_one n)) v1
   | _ [@r default] -> Sub (checked, v1, v2) <| ty v1
 
-let[@spec Neg (checked, v) <| ty v] bv_neg (checked : bool) (v : t) : t =
-  let n = size v in
+let[@spec Neg (checked, v) <| ty v] [@cases] bv_neg (checked : bool) (v : t) : t
+    =
   match v with
-  | BitVec bv [@r lit] -> mk_masked n (-bv)
-  | Neg (_, v) [@r neg] -> v
+  | BitVec bv [@r lit] -> lit (-bv)
+  | Neg (_, x) [@r neg] -> x
   | Ite (b, l, r) [@r ite] -> b_ite b (bv_neg checked l) (bv_neg checked r)
   | BvOfBool (n, b) [@r of_bool] ->
       b_ite b (bv_neg false (bv_one n)) (bv_zero n)
@@ -138,47 +138,37 @@ let[@spec Neg (checked, v) <| ty v] bv_neg (checked : bool) (v : t) : t =
 
 (* the signed remainder of [v1 / v2], which takes the sign of the divisor
    [v2] *)
-let[@spec Mod (v1, v2) <| ty v1] bv_mod (v1 : t) (v2 : t) : t =
+let[@spec Mod (v1, v2) <| ty v1] [@cases] bv_mod (v1 : t) (v2 : t) : t =
   match (v1, v2) with
-  | BitVec l, BitVec r [@r lits] ->
-      let sz = size v1 in
-      let l = bv_to_z true sz l in
-      let r = bv_to_z true sz r in
-      let res = trem l r in
-      let res =
-        if res < 0 && not (r < 0) then res + r
-        else if res > 0 && r < 0 then res + r
-        else res
-      in
-      mk_masked sz res
+  | BitVec l, BitVec r [@r lits] -> lit (lit_smod l r)
   | _ [@r default] -> Mod (v1, v2) <| ty v1
 
 (* the remainder of [v1 / v2], which takes the sign of the dividend [v1] if
    [signed] *)
-let[@spec Rem (signed, v1, v2) <| ty v1] bv_rem (signed : bool) (v1 : t)
-    (v2 : t) : t =
+let[@spec Rem (signed, v1, v2) <| ty v1] [@cases] bv_rem (signed : bool)
+    (v1 : t) (v2 : t) : t =
   match (v1, v2) with
   | BitVec l, BitVec r [@r lits] ->
-      let sz = size v1 in
-      let l = bv_to_z signed sz l in
-      let r = bv_to_z signed sz r in
-      mk_masked sz (trem l r)
+      lit (if signed then lit_srem l r else lit_urem l r)
   | 0, _ [@r zero_l] -> bv_zero (size v1)
   | _, 1 [@r one_r] when not signed -> bv_zero (size v1)
   (* x %u 2^k keeps the k lowest bits of x *)
-  | _, BitVec r [@r pow2] when (not signed) && is_pow2 r && r > 1 ->
+  | _, BitVec r [@r pow2]
+    when (not signed) && is_pow2 (to_z false r) && to_z false r > 1 ->
       let sz = size v1 in
-      let bitwidth = log2 r in
+      let bitwidth = log2 (to_z false r) in
       let lower = bv_extract 0 (bitwidth - 1) v1 in
       bv_extend false (sz - bitwidth) lower
   (* (d + r) %u d = r %u d, when the addition does not wrap *)
-  | Add (ck, BitVec d, r) [@comm], BitVec d [@r add]
-    when (not signed) && ck.unsigned ->
+  | Add (ck, BitVec d, r) [@comm], BitVec d' [@r add]
+    when (not signed) && ck.unsigned && to_z false d = to_z false d' ->
       bv_rem signed r v2
   | Rem (false, r, (BitVec r1 as v_r1)), BitVec r2 [@r rem_rem]
-    when (not signed) && r1 > 0 && r2 > 0
-         && (0 = trem r1 r2 || 0 = trem r2 r1) ->
-      let rhs = if zmin r1 r2 = r1 then v_r1 else v2 in
+    when (not signed)
+         && to_z false r1 > 0
+         && to_z false r2 > 0
+         && (udivides r2 r1 || udivides r1 r2) ->
+      let rhs = if to_z false r1 <= to_z false r2 then v_r1 else v2 in
       bv_rem signed r rhs
   | _ [@r default] -> Rem (signed, v1, v2) <| ty v1
 
@@ -890,24 +880,23 @@ let signed_to_unsigned_cmp (is_leq : bool) (c_on_left : bool) (c : int)
 
 (* Overflow checks *)
 
-let[@spec AddOvf (signed, v1, v2) <| TBool] bv_add_overflows (signed : bool)
-    (v1 : t) (v2 : t) : t =
+let[@spec AddOvf (signed, v1, v2) <| TBool] [@cases] bv_add_overflows
+    (signed : bool) (v1 : t) (v2 : t) : t =
   match (v1, v2) with
-  | BitVec l, BitVec r [@r lits] -> of_bool (overflows_add signed (size v1) l r)
+  | BitVec l, BitVec r [@r lits] -> of_bool (add_overflows signed l r)
   | (0, _) [@comm] [@r zero] -> v_false
   | _ [@r size1] when size v1 = 1 ->
       let one = bv_one 1 in
       b_and (sem_eq v1 one) (sem_eq v2 one)
   (* z + x overflows iff max - z < x *)
   | (BitVec z, x) [@comm] [@r unsigned] when not signed ->
-      let n = size v1 in
-      bv_lt signed (mk_bv n (max_for signed n - z)) x
+      bv_lt signed (lit (lognot z)) x
   | (BitVec z, x) [@comm] [@r signed] when signed ->
       let n = size v1 in
-      let z = bv_to_z signed n z in
+      let z = to_z signed z in
       if z > 0 then
         (* z > 0 so overflows if max - z < x *)
-        bv_lt signed (mk_bv n (max_for signed n - z)) x
+        bv_lt signed (mk_masked n (max_for signed n - z)) x
       else
         (* z < 0 so overflows if x < min - z *)
         bv_lt signed x (mk_masked n (min_for signed n - z))
@@ -920,29 +909,27 @@ let[@spec AddOvf (signed, v1, v2) <| TBool] bv_add_overflows (signed : bool)
   (* ite(b, 1, 0) + x only overflows if b && x == max *)
   | (BvOfBool (_, b), other) [@comm] [@r of_bool] when size v1 > 1 ->
       let n = size v1 in
-      let other = kind other <| TBitVector n in
-      b_and b (sem_eq other (mk_bv n (max_for signed n)))
+      b_and b (sem_eq other (mk_masked n (max_for signed n)))
   | _ [@r default] -> mk_commut_binop (AddOvf signed) v1 v2 <| TBool
 
-let[@spec MulOvf (signed, v1, v2) <| TBool] bv_mul_overflows (signed : bool)
-    (v1 : t) (v2 : t) : t =
+let[@spec MulOvf (signed, v1, v2) <| TBool] [@cases] bv_mul_overflows
+    (signed : bool) (v1 : t) (v2 : t) : t =
   match (v1, v2) with
-  | BitVec l, BitVec r [@r lits] -> of_bool (overflows_mul signed (size v1) l r)
+  | BitVec l, BitVec r [@r lits] -> of_bool (mul_overflows signed l r)
   | _ [@r size1] when signed && size v1 = 1 ->
       (* We need to special-case size one because the other simplifications will
          mess with that case, and it's pretty easy to simplify. *)
       let one = bv_one 1 in
       b_and (sem_eq v1 one) (sem_eq v2 one)
   | _ [@r msb]
-    when if signed then msb_of v1 + msb_of v2 < size v1 - 2
-         else msb_of v1 + msb_of v2 < size v1 - 1 ->
+    when (signed && msb_of v1 + msb_of v2 < size v1 - 2)
+         || ((not signed) && msb_of v1 + msb_of v2 < size v1 - 1) ->
       v_false
   | (BitVec z, x) [@comm] [@r const] when (not signed) || size v1 > 1 ->
-      if z = 0 || z = 1 then v_false
+      if to_z false z = 0 || to_z false z = 1 then v_false
       else
         let n = size v1 in
-        let x = kind x <| ty v1 in
-        let z = bv_to_z signed n z in
+        let z = to_z signed z in
         if signed then
           (* For signed overflow, the correct condition is: z * x overflows iff
              x < min_x or x > max_x, where min_x = ceil((-2^(n-1))/z), max_x =
@@ -963,20 +950,19 @@ let[@spec MulOvf (signed, v1, v2) <| TBool] bv_mul_overflows (signed : bool)
         else
           (* For unsigned overflow, z * x overflows iff x > floor((2^n - 1) /
              z) *)
-          bv_lt signed (mk_bv n (tdiv ((1 lsl n) - 1) z)) x
+          bv_lt signed (mk_masked n (tdiv ((1 lsl n) - 1) z)) x
   (* `x * (y / x)` cannot overflow with unsigned ops *)
   | (x, Div (false, _, x)) [@comm] [@r div] when not signed -> v_false
   | _ [@r default] -> mk_commut_binop (MulOvf signed) v1 v2 <| TBool
 
-let[@spec Eq (mk_masked (size v) (min_for true (size v)), v) <| TBool]
+let[@spec Eq (mk_masked (size v) (min_for true (size v)), v) <| TBool] [@cases]
     bv_neg_overflows (v : t) : t =
-  let n = size v in
-  sem_eq (mk_masked n (min_for true n)) v
+  sem_eq (mk_masked (size v) (min_for true (size v))) v
 
-let[@spec SubOvf (signed, v1, v2) <| TBool] bv_sub_overflows (signed : bool)
-    (v1 : t) (v2 : t) : t =
+let[@spec SubOvf (signed, v1, v2) <| TBool] [@cases] bv_sub_overflows
+    (signed : bool) (v1 : t) (v2 : t) : t =
   match (v1, v2) with
-  | BitVec l, BitVec r [@r lits] -> of_bool (overflows_sub signed (size v1) l r)
+  | BitVec l, BitVec r [@r lits] -> of_bool (sub_overflows signed l r)
   | v, v [@r same] -> v_false
   | _ [@r unsigned] when not signed -> bv_lt signed v1 v2
   | _ [@r default] -> SubOvf (signed, v1, v2) <| TBool

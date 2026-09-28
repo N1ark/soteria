@@ -120,18 +120,18 @@ let[@spec Ite (guard, if_, else_) <| ty if_] [@cases] b_ite (guard : t)
   | _, x, x [@r same] -> if_
   | _ [@r default] -> Ite (guard, if_, else_) <| ty if_
 
-let[@spec Eq (v1, v2) <| TBool] sem_eq (v1 : t) (v2 : t) : t =
+let[@spec Eq (v1, v2) <| TBool] [@cases] sem_eq (v1 : t) (v2 : t) : t =
   match (v1, v2) with
   | v, v [@r same] -> v_true
   | Bool b1, Bool b2 [@r bools] -> of_bool (b1 = b2)
   | Ptr (l1, o1), Ptr (l2, o2) [@r ptrs] -> b_and (sem_eq l1 l2) (sem_eq o1 o2)
-  | BitVec b1, BitVec b2 [@r bvs] -> of_bool (b1 = b2)
+  | BitVec b1, BitVec b2 [@r bvs] -> of_bool (to_z false b1 = to_z false b2)
   | Float f1, Float f2 [@r floats] -> of_bool (f_bits_equal f1 f2)
   (* Arithmetics *)
-  | BitVec _, Neg (_, v2) [@r neg_r] -> sem_eq (bv_neg false v1) v2
-  | Neg (_, v1), BitVec _ [@r neg_l] -> sem_eq v1 (bv_neg false v2)
-  | BitVec _, BvNot v2 [@r not_r] -> sem_eq (bv_not v1) v2
-  | BvNot v1, BitVec _ [@r not_l] -> sem_eq v1 (bv_not v2)
+  | BitVec _, Neg (_, x) [@r neg_r] -> sem_eq (bv_neg false v1) x
+  | Neg (_, x), BitVec _ [@r neg_l] -> sem_eq x (bv_neg false v2)
+  | BitVec _, BvNot x [@r not_r] -> sem_eq (bv_not v1) x
+  | BvNot x, BitVec _ [@r not_l] -> sem_eq x (bv_not v2)
   (* c == l + r <=> c - l == r, for constants c and l *)
   | BitVec _, Add (_, (BitVec _ as l), r) [@comm] [@r add_const_r] ->
       sem_eq (bv_sub unchecked v1 l) r
@@ -147,15 +147,17 @@ let[@spec Eq (v1, v2) <| TBool] sem_eq (v1 : t) (v2 : t) : t =
   | Sub (_, (BitVec _ as l), r), BitVec _ [@r sub_const_l2] ->
       sem_eq (bv_sub unchecked l v2) r
   (* x == x + c <=> c == 0 *)
-  | x, Add (_, x, BitVec bv) [@comm] [@r self_add_r] -> of_bool (bv = 0)
-  | Add (_, x, BitVec bv) [@comm], x [@r self_add_l] -> of_bool (bv = 0)
+  | x, Add (_, x, BitVec bv) [@comm] [@r self_add_r] ->
+      of_bool (to_z false bv = 0)
+  | Add (_, x, BitVec bv) [@comm], x [@r self_add_l] ->
+      of_bool (to_z false bv = 0)
   | ( Add (_, (BitVec bv_l as l), y) [@comm],
       Add (_, (BitVec bv_r as r), x) [@comm] ) [@r add_add] ->
       (* y + l == x + r <=> y == x + (r - l) <=> y + (l - r) == x *)
       (* we pick the option that will make a positive constant (superstition);
          this rewrite holds modulo 2^n regardless of overflow, but the rebuilt
          sum carries no overflow guarantee, so it stays unchecked. *)
-      if bv_l >= bv_r then
+      if to_z false bv_l >= to_z false bv_r then
         sem_eq x (bv_add unchecked y (bv_sub unchecked l r))
       else sem_eq y (bv_add unchecked x (bv_sub unchecked r l))
   | (BitVec n, Mul (ck, BitVec m, x) [@comm]) [@comm] [@r mul_const]
@@ -165,8 +167,8 @@ let[@spec Eq (v1, v2) <| TBool] sem_eq (v1 : t) (v2 : t) : t =
          dividing recovers [x] *)
       let sz = size x in
       let signed = not ck.unsigned in
-      let m = bv_to_z signed sz m in
-      let n = bv_to_z signed sz n in
+      let m = to_z signed m in
+      let n = to_z signed n in
       if m = 0 then of_bool (n = 0)
       else if n = 0 then sem_eq x (bv_zero sz)
       else if divisible n m then
@@ -186,9 +188,11 @@ let[@spec Eq (v1, v2) <| TBool] sem_eq (v1 : t) (v2 : t) : t =
      odd (invertible modulo 2^n), or when [a] is non-zero and both
      multiplications are overflow-checked (so they behave like exact integer
      arithmetic). *)
-  | Mul (ck1, BitVec a, b) [@comm], Mul (ck2, BitVec a, d) [@comm]
+  | Mul (ck1, BitVec a, b) [@comm], Mul (ck2, BitVec a', d) [@comm]
     [@r mul_cancel]
-    when a land 1 = 1 || (a <> 0 && is_checked (checked_meet ck1 ck2)) ->
+    when to_z false a = to_z false a'
+         && (to_z false a land 1 = 1
+            || (to_z false a <> 0 && is_checked (checked_meet ck1 ck2))) ->
       sem_eq b d
   (* Bitvectors *)
   (* 0 == L | R ==> 0 == L && 0 == R, splitting is better for the PC *)
@@ -198,19 +202,16 @@ let[@spec Eq (v1, v2) <| TBool] sem_eq (v1 : t) (v2 : t) : t =
   (* for N == (M & X), if N has bits set that aren't in M, then it must be
      false, since the mask would unset them *)
   | (BitVec n, BitAnd (BitVec mask, _) [@comm]) [@comm] [@r and_mask]
-    when let sz = size v1 in
-         let full_mask = (1 lsl sz) - 1 in
-         let mask_not = lognot mask land full_mask in
-         not (n land mask_not = 0) ->
+    when not (to_z false (n land lognot mask) = 0) ->
       v_false
   | ((BitVec _ as z), BvConcat (l, r)) [@comm] [@r concat_const] ->
-      let z = kind z <| ty v1 in
       let size_r = size r in
       let size_l = size l in
       let z_r = bv_extract 0 (size_r - 1) z in
       let z_l = bv_extract size_r (size_r + size_l - 1) z in
       b_and (sem_eq l z_l) (sem_eq r z_r)
   | (BvExtend (false, by, bv), BitVec z) [@comm] [@r zext_const] ->
+      let z = to_z false z in
       let size_bv = size bv in
       (* if any of the bits of z are set in [size_bv, size_bv+by), this cannot
          be true since they're extended to 0 *)
@@ -245,18 +246,20 @@ let[@spec Eq (v1, v2) <| TBool] sem_eq (v1 : t) (v2 : t) : t =
   | BvOfBool (_, b), BvOfBool (_, c) [@r of_bools] -> sem_eq b c
   | Not b, Not c [@r nots] -> sem_eq b c
   | (BvOfBool (_, b), BitVec z) [@comm] [@r of_bool_const] ->
+      let z = to_z false z in
       if z = 1 then b else if z = 0 then b_not b else v_false
   (* special case: for BVs, check if we can infer the most significant set bits
      and extract *)
-  | _ [@r msb] when is_bv (ty v1) && is_bv (ty v2) ->
-      let current_size = size v1 in
+  | _ [@r msb]
+    when is_bv (ty v1)
+         && is_bv (ty v2)
+         &&
+         let msb = zmax (msb_of v1) (msb_of v2) in
+         0 <= msb && msb < size v1 - 1 ->
       let msb = zmax (msb_of v1) (msb_of v2) in
-      if 0 <= msb && msb < current_size - 1 then
-        let v1' = bv_extract 0 msb v1 in
-        let v2' = bv_extract 0 msb v2 in
-        sem_eq v1' v2'
-      else (* regular sem_eq *)
-        mk_commut_binop Eq v1 v2 <| TBool
+      let v1' = bv_extract 0 msb v1 in
+      let v2' = bv_extract 0 msb v2 in
+      sem_eq v1' v2'
   | _ [@r default] -> mk_commut_binop Eq v1 v2 <| TBool
 
 let[@spec Exists (binders, body) <| TBool] [@cases] b_mk_exists

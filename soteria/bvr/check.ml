@@ -1042,11 +1042,106 @@ let alpha_equal (p : pattern) (q : pattern) =
        (List.sort_uniq compare (Hashtbl.fold (fun _ y l -> y :: l) ren []))
      = Hashtbl.length ren
 
-(** In a rule, [match v1 op v2 with | p op q -> e | ...], where [op] is the node
-    of the spec, matches the operands of the spec: it stands for
-    [match v1, v2 with | p, q -> e | ...], with [p] and [q] in either order when
-    [op] is commutative. *)
+(** The node of the spec of a rule, and the variables that are its last two
+    operands. *)
+let spec_node (spec : expression) =
+  match spec.pexp_desc with
+  | Pexp_apply
+      ( { pexp_desc = Pexp_ident { txt = Lident "<|"; _ }; _ },
+        [
+          (_, { pexp_desc = Pexp_construct ({ txt = Lident n; _ }, arg); _ }); _;
+        ] ) ->
+      let args =
+        match arg with
+        | Some { pexp_desc = Pexp_tuple l; _ } -> l
+        | Some a -> [ a ]
+        | None -> []
+      in
+      let var (e : expression) =
+        match e.pexp_desc with
+        | Pexp_ident { txt = Lident x; _ } -> Some x
+        | _ -> None
+      in
+      let operands =
+        match List.rev args with
+        | b :: a :: _ -> (
+            match (var a, var b) with
+            | Some a, Some b -> Some (a, b)
+            | _ -> None)
+        | _ -> None
+      in
+      Some (n, operands)
+  | _ -> None
+
+(** In a rule whose spec is a commutative node [op (v1, v2)], the cases of
+    [match v1, v2 with] match the operands in either order, unless their pattern
+    is symmetric (the same up to renaming, once swapped). The cases must then
+    name the operands rather than use [v1] and [v2] (other than in [ty v1] and
+    [size v1]).
+
+    [match v1 op v2 with | p op q -> e | ...], where [op] is the node of the
+    spec, stands for [match v1, v2 with | p, q -> e | ...]. *)
 let rec spec_match (spec : expression) (e : expression) =
+  let node, operands =
+    match spec_node spec with Some (n, o) -> (n, o) | None -> ("", None)
+  in
+  (* the case [p, q], swapped if [op] is commutative *)
+  let pair (c : Ppxlib.case) (p : pattern) (q : pattern) =
+    let lhs = c.pc_lhs in
+    count_vars lhs;
+    let once (p : pattern) =
+      match p.ppat_desc with
+      | Ppat_any -> true
+      | Ppat_var { txt; _ } -> Hashtbl.find case_vars txt = 1
+      | _ -> false
+    in
+    let symmetric =
+      alpha_equal
+        { lhs with ppat_desc = Ppat_tuple [ p; q ] }
+        { lhs with ppat_desc = Ppat_tuple [ q; p ] }
+    in
+    let swap =
+      List.mem node commutative
+      && (not (has_attr "comm" lhs.ppat_attributes))
+      && (not (once p && once q))
+      && not symmetric
+    in
+    if swap then
+      Option.iter
+        (fun (a, b) ->
+          List.iter
+            (fun x ->
+              if
+                mentions x c.pc_rhs
+                || Option.fold ~none:false ~some:(mentions x) c.pc_guard
+              then
+                error lhs.ppat_loc
+                  "the operands match in either order: name them rather than %s"
+                  x)
+            [ a; b ])
+        operands;
+    let comm =
+      {
+        attr_name = { txt = "comm"; loc = lhs.ppat_loc };
+        attr_payload = PStr [];
+        attr_loc = lhs.ppat_loc;
+      }
+    in
+    {
+      c with
+      pc_lhs =
+        {
+          lhs with
+          ppat_desc = Ppat_tuple [ p; q ];
+          ppat_attributes = (lhs.ppat_attributes @ if swap then [ comm ] else []);
+        };
+    }
+  in
+  let is_var x (e : expression) =
+    match e.pexp_desc with
+    | Pexp_ident { txt = Lident y; _ } -> x = y
+    | _ -> false
+  in
   match e.pexp_desc with
   | Pexp_sequence (a, b) ->
       { e with pexp_desc = Pexp_sequence (a, spec_match spec b) }
@@ -1060,89 +1155,19 @@ let rec spec_match (spec : expression) (e : expression) =
          } as scrut),
         cases )
     when List.mem_assoc op node_ops ->
-      let node = List.assoc op node_ops in
-      (match spec.pexp_desc with
-      | Pexp_apply
-          ( { pexp_desc = Pexp_ident { txt = Lident "<|"; _ }; _ },
-            [
-              (_, { pexp_desc = Pexp_construct ({ txt = Lident n; _ }, _); _ });
-              _;
-            ] )
-        when n = node ->
-          ()
-      | _ -> error scrut.pexp_loc "the spec of this rule is not a %s node" node);
-      let params =
-        List.map
-          (fun (x : expression) ->
-            match x.pexp_desc with
-            | Pexp_ident { txt = Lident x; _ } -> x
-            | _ -> error x.pexp_loc "expected a parameter")
-          [ a; b ]
-      in
+      let op_node = List.assoc op node_ops in
+      if op_node <> node then
+        error scrut.pexp_loc "the spec of this rule is not a %s node" op_node;
       let case (c : Ppxlib.case) =
         let lhs = c.pc_lhs in
         match lhs.ppat_desc with
         | Ppat_any -> c
         | Ppat_construct
             ({ txt = Lident n; _ }, Some (_, { ppat_desc = Ppat_tuple l; _ }))
-          when n = node ->
-            let p, q =
-              match l with
-              | [ p; q ] | [ { ppat_desc = Ppat_any; _ }; p; q ] -> (p, q)
-              | _ -> error lhs.ppat_loc "the check of the spec is not matched"
-            in
-            count_vars lhs;
-            let once (p : pattern) =
-              match p.ppat_desc with
-              | Ppat_any -> true
-              | Ppat_var { txt; _ } -> Hashtbl.find case_vars txt = 1
-              | _ -> false
-            in
-            let symmetric =
-              alpha_equal
-                { lhs with ppat_desc = Ppat_tuple [ p; q ] }
-                { lhs with ppat_desc = Ppat_tuple [ q; p ] }
-            in
-            let swap =
-              List.mem node commutative
-              && (not (once p && once q))
-              && not symmetric
-            in
-            if swap then
-              List.iter
-                (fun x ->
-                  let body_uses =
-                    mentions x c.pc_rhs
-                    || Option.fold ~none:false ~some:(mentions x) c.pc_guard
-                  in
-                  if body_uses then
-                    error lhs.ppat_loc
-                      "the operands match in either order: name them rather \
-                       than %s"
-                      x)
-                params;
-            let attrs =
-              lhs.ppat_attributes
-              @
-              if swap then
-                [
-                  {
-                    attr_name = { txt = "comm"; loc = lhs.ppat_loc };
-                    attr_payload = PStr [];
-                    attr_loc = lhs.ppat_loc;
-                  };
-                ]
-              else []
-            in
-            {
-              c with
-              pc_lhs =
-                {
-                  lhs with
-                  ppat_desc = Ppat_tuple [ p; q ];
-                  ppat_attributes = attrs;
-                };
-            }
+          when n = node -> (
+            match l with
+            | [ p; q ] | [ { ppat_desc = Ppat_any; _ }; p; q ] -> pair c p q
+            | _ -> error lhs.ppat_loc "the check of the spec is not matched")
         | _ -> error lhs.ppat_loc "expected a %s pattern" node
       in
       {
@@ -1151,6 +1176,16 @@ let rec spec_match (spec : expression) (e : expression) =
           Pexp_match
             ({ scrut with pexp_desc = Pexp_tuple [ a; b ] }, List.map case cases);
       }
+  | Pexp_match (({ pexp_desc = Pexp_tuple [ a; b ]; _ } as scrut), cases)
+    when match operands with
+         | Some (x, y) -> is_var x a && is_var y b
+         | None -> false ->
+      let case (c : Ppxlib.case) =
+        match c.pc_lhs.ppat_desc with
+        | Ppat_tuple [ p; q ] -> pair c p q
+        | _ -> c
+      in
+      { e with pexp_desc = Pexp_match (scrut, List.map case cases) }
   | _ -> e
 
 (* ---------------------------------------------------------------- *)

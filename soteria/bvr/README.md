@@ -55,13 +55,16 @@ Rule functions are proved per alternative of their rules:
 - It may only match on its parameters, with no `let` before the match, and
   its pattern variables may not shadow the parameters it does not match on.
 
+- When the spec of a rule is a commutative node over `v1, v2` (e.g.
+  `And (v1, v2)`, `AddOvf (signed, v1, v2)`), the cases of `match v1, v2 with`
+  match them in either order, unless the pattern is symmetric (the same once
+  swapped, up to renaming), so `| true_: true, x -> x` covers both
+  `true && x` and `x && true`. The cases must then name the operands rather
+  than use `v1` and `v2` (other than in `ty v1` and `size v1`).
 - A rule may match on the operands of its spec, when the spec is an operator
   on terms: in `rule bv_sub (checked : checked) (v1 v2 : t) : Sub (checked,
   v1, v2) <| ty v1`, `match v1 - v2 with | sub_sub: l - (l - r) -> r` stands
-  for `match v1, v2 with | sub_sub: l, (l - r) -> r`. When the operator is
-  commutative, the operands match in either order (unless the pattern is
-  symmetric), so the cases must name them rather than use `v1` and `v2`
-  (other than in `ty v1` and `size v1`).
+  for `match v1, v2 with | sub_sub: l, (l - r) -> r`.
 
 ## Terms
 

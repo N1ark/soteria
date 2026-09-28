@@ -5512,6 +5512,15 @@ def bv_add_overflows.r_of_bools.a1.Stmt : Prop :=
    then (O.b_and b1 b2)
    else v_false))
 
+def bv_add_overflows.r_of_bools.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (signed : Bool) (w__5 : Int) (b2 : Term) (t__8 : Ty) (n : Int) (b1 : Term) (t__4 : Ty),
+  (decide (n > (1 : Int))) = true →
+  Refines FS (bv_add_overflows.spec signed (Term.mk (Kind.unop (Unop.bvOfBool w__5) b2) t__8) (Term.mk (Kind.unop (Unop.bvOfBool n) b1) t__4))
+  ((if (signed && (decide (n = (2 : Int))))
+   then (O.b_and b1 b2)
+   else v_false))
+
 def bv_add_overflows.r_of_bool.a1.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
   ∀ (signed : Bool) (v2 : Term) (w__1 : Int) (b : Term) (t__4 : Ty),
@@ -5886,14 +5895,9 @@ def float_eq.r_same.Stmt : Prop :=
   ∀ (v1 : Term) (v2 : Term) (res : Term), float_eq.r_same O v1 v2 = some res →
   Refines FS (float_eq.spec v1 v2) res
 
-def float_eq.r_lit_l.Stmt : Prop :=
+def float_eq.r_lit.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (v1 : Term) (v2 : Term) (res : Term), float_eq.r_lit_l O v1 v2 = some res →
-  Refines FS (float_eq.spec v1 v2) res
-
-def float_eq.r_lit_r.Stmt : Prop :=
-  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (v1 : Term) (v2 : Term) (res : Term), float_eq.r_lit_r O v1 v2 = some res →
+  ∀ (v1 : Term) (v2 : Term) (res : Term), float_eq.r_lit O v1 v2 = some res →
   Refines FS (float_eq.spec v1 v2) res
 
 def float_eq.r_default.Stmt : Prop :=
@@ -5914,7 +5918,7 @@ def float_eq.r_same.a1.Stmt : Prop :=
   Refines FS (float_eq.spec v1 v2)
   ((O.b_not (O.float_is_floatclass FClass.nan v1)))
 
-def float_eq.r_lit_l.a1.Stmt : Prop :=
+def float_eq.r_lit.a1.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
   ∀ (v2 : Term) (f : FloatLit) (t__2 : Ty),
   Refines FS (float_eq.spec (Term.mk (Kind.float f) t__2) v2)
@@ -5924,15 +5928,15 @@ def float_eq.r_lit_l.a1.Stmt : Prop :=
         then (O.float_is_floatclass FClass.zero v2)
         else (O.sem_eq (Term.mk (Kind.float f) t__2) v2))))
 
-def float_eq.r_lit_r.a1.Stmt : Prop :=
+def float_eq.r_lit.a2.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (v1 : Term) (f : FloatLit) (t__3 : Ty),
-  Refines FS (float_eq.spec v1 (Term.mk (Kind.float f) t__3))
+  ∀ (v1 : Term) (f : FloatLit) (t__2 : Ty),
+  Refines FS (float_eq.spec v1 (Term.mk (Kind.float f) t__2))
   ((if (f_is_nan f)
    then v_false
    else (if (f_is_zero f)
         then (O.float_is_floatclass FClass.zero v1)
-        else (O.sem_eq v1 (Term.mk (Kind.float f) t__3)))))
+        else (O.sem_eq (Term.mk (Kind.float f) t__2) v1))))
 
 def float_eq.r_default.a1.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →

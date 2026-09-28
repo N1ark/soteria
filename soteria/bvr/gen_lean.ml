@@ -639,7 +639,9 @@ let rec occurs ~ty_ok x (e : expr) =
 
 (** The arm that the arm [a] is derived from by commutativity, if any: the one
     of the same source case that takes the same or-pattern choices and no
-    [[@comm]] swap, when [a]'s guard and body do not depend on the swaps. *)
+    [[@comm]] swap, when [a]'s guard and body do not depend on the swaps (a
+    variable may stand for a different parameter in each, when the arguments of
+    the function are swapped), with the arguments of its statement. *)
 let derived_from (grp : arm list) (a : arm) =
   let c = a.a_case in
   if not (List.exists (fun (_, i, comm) -> comm && i = 1) c.alt) then None
@@ -662,18 +664,45 @@ let derived_from (grp : arm list) (a : arm) =
           List.sort_uniq compare
             (List.map fst a.a_subst @ List.map fst b.a_subst)
         in
+        let is_param (arm : arm) t = List.mem_assoc t arm.a_binders in
         let independent x =
           match (List.assoc_opt x a.a_subst, List.assoc_opt x b.a_subst) with
           | Some (t, _), Some (t', _) when t = t' -> true
+          | Some (t, _), Some (t', _) when is_param a t && is_param b t' -> true
           | Some (_, p), Some (_, p') ->
               let ty_ok = p = p' in
               let e = c.body and g = c.guard in
               not
                 (occurs ~ty_ok x e
                 || Option.fold ~none:false ~some:(occurs ~ty_ok x) g)
-          | _ -> false
+          | Some _, None | None, Some _ ->
+              (* a parameter matched in one arm and not the other *)
+              let e = c.body and g = c.guard in
+              not
+                (occurs ~ty_ok:false x e
+                || Option.fold ~none:false ~some:(occurs ~ty_ok:false x) g)
+          | None, None -> false
         in
-        if List.for_all independent names then Some b else None
+        (* the parameter of [b] that a variable stands for is the one it stands
+           for in [a] *)
+        let arg (y, _) =
+          match
+            List.find_opt
+              (fun (x, (t, _)) -> t = y && List.mem_assoc x a.a_subst)
+              b.a_subst
+          with
+          | Some (x, _) when is_param b y -> fst (List.assoc x a.a_subst)
+          | _ when not (is_param a y) -> (
+              (* a parameter matched by [_], which is the other one in [a] *)
+              match
+                List.filter (fun (z, _) -> not (is_param b z)) a.a_binders
+              with
+              | [ (z, _) ] -> z
+              | _ -> y)
+          | _ -> y
+        in
+        if List.for_all independent names then Some (b, List.map arg b.a_binders)
+        else None
 
 (* ---------------------------------------------------------------- *)
 (* Files *)
@@ -929,7 +958,7 @@ let cases_proofs ft (f : fn) =
                  tactic *)
               pf ft "theorem %s.ok : %s.Stmt := bvr_proof%% %s@ @ "
                 (arm_name f r i) (arm_name f r i) (arm_name f r i)
-          | Some b ->
+          | Some (b, args) ->
               let j =
                 let rec find k = function
                   | x :: _ when x == b -> k
@@ -946,8 +975,8 @@ let cases_proofs ft (f : fn) =
                 (arm_name f r i) (arm_name f r i)
                 (list ~sep:" " (fun ft (x, _) -> pf ft "%s" x))
                 a.a_binders hg f.name (arm_name f r j)
-                (list ~sep:" " (fun ft (x, _) -> pf ft "%s" x))
-                b.a_binders hg)
+                (list ~sep:" " Format.pp_print_string)
+                args hg)
         arms;
       (* the alternatives come out of [repeat' rcases] in order *)
       pf ft

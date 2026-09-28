@@ -2865,6 +2865,13 @@ module Make (P : PRIMS) = struct
         (if (signed && ((Z.equal n (Z.of_int (2)))))
         then (b_and b1 b2)
         else P.v_false)
+      | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Unop ((Svalue_ast.Unop.BvOfBool (_)), b2); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Unop ((Svalue_ast.Unop.BvOfBool (n)), b1); _ }; _ })
+        when (let n = Z.of_int n in
+        (Z.gt n Z.one)) ->
+        let n = Z.of_int n in
+        (if (signed && ((Z.equal n (Z.of_int (2)))))
+        then (b_and b1 b2)
+        else P.v_false)
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Unop ((Svalue_ast.Unop.BvOfBool (_)), b); _ }; _ }, other)
         when ((Z.gt (size v1) Z.one)) ->
         (let n = (size v1) in
@@ -3028,19 +3035,19 @@ module Make (P : PRIMS) = struct
         (of_bool (P.f_eq f1 f2))
       | (v, bvr__2)
         when ((P.equal v bvr__2)) ->
-        (b_not (float_is_floatclass Svalue_ast.FloatClass.NaN v1))
-      | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Float (f); _ }; _ }, _) ->
+        (b_not (float_is_floatclass Svalue_ast.FloatClass.NaN v))
+      | (({ Hc.node = { Svalue_ast.kind = Svalue_ast.Float (f); _ }; _ } as l), x) ->
         (if (P.f_is_nan f)
         then P.v_false
         else (if (P.f_is_zero f)
-             then (float_is_floatclass Svalue_ast.FloatClass.Zero v2)
-             else (sem_eq v1 v2)))
-      | (_, { Hc.node = { Svalue_ast.kind = Svalue_ast.Float (f); _ }; _ }) ->
+             then (float_is_floatclass Svalue_ast.FloatClass.Zero x)
+             else (sem_eq l x)))
+      | (x, ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Float (f); _ }; _ } as l)) ->
         (if (P.f_is_nan f)
         then P.v_false
         else (if (P.f_is_zero f)
-             then (float_is_floatclass Svalue_ast.FloatClass.Zero v1)
-             else (sem_eq v1 v2)))
+             then (float_is_floatclass Svalue_ast.FloatClass.Zero x)
+             else (sem_eq l x)))
       | _ ->
         (P.node (mk_commut_binop Svalue_ast.Binop.FEq v1 v2) Svalue_ast.TBool)
       )

@@ -22,7 +22,11 @@ theorem b_and.r_same.proof : b_and.r_same.Stmt := by
 
 theorem b_and.r_false_.a1.ok : b_and.r_false_.a1.Stmt := bvr_proof% b_and.r_false_.a1
 
-theorem b_and.r_false_.a2.ok : b_and.r_false_.a2.Stmt := bvr_proof% b_and.r_false_.a2
+theorem b_and.r_false_.a2.ok : b_and.r_false_.a2.Stmt := by
+  intro FS O hO v1 t__2
+  exact Refines.trans
+    (by simp only [b_and.spec, ty, Term.ty_mk]; bvr_comm)
+    (b_and.r_false_.a1.ok FS O hO v1 t__2)
 
 theorem b_and.r_false_.proof : b_and.r_false_.Stmt := by
   intro FS O hO v1 v2 res h
@@ -33,7 +37,11 @@ theorem b_and.r_false_.proof : b_and.r_false_.Stmt := by
 
 theorem b_and.r_true_.a1.ok : b_and.r_true_.a1.Stmt := bvr_proof% b_and.r_true_.a1
 
-theorem b_and.r_true_.a2.ok : b_and.r_true_.a2.Stmt := bvr_proof% b_and.r_true_.a2
+theorem b_and.r_true_.a2.ok : b_and.r_true_.a2.Stmt := by
+  intro FS O hO v1 t__2
+  exact Refines.trans
+    (by simp only [b_and.spec, ty, Term.ty_mk]; bvr_comm)
+    (b_and.r_true_.a1.ok FS O hO v1 t__2)
 
 theorem b_and.r_true_.proof : b_and.r_true_.Stmt := by
   intro FS O hO v1 v2 res h
@@ -44,7 +52,11 @@ theorem b_and.r_true_.proof : b_and.r_true_.Stmt := by
 
 theorem b_and.r_not.a1.ok : b_and.r_not.a1.Stmt := bvr_proof% b_and.r_not.a1
 
-theorem b_and.r_not.a2.ok : b_and.r_not.a2.Stmt := bvr_proof% b_and.r_not.a2
+theorem b_and.r_not.a2.ok : b_and.r_not.a2.Stmt := by
+  intro FS O hO v2 bvr__3 t__4 hg
+  exact Refines.trans
+    (by simp only [b_and.spec, ty, Term.ty_mk]; bvr_comm)
+    (b_and.r_not.a1.ok FS O hO v2 bvr__3 t__4 hg)
 
 theorem b_and.r_not.proof : b_and.r_not.Stmt := by
   intro FS O hO v1 v2 res h
@@ -57,7 +69,11 @@ theorem b_and.r_and_.a1.ok : b_and.r_and_.a1.Stmt := bvr_proof% b_and.r_and_.a1
 
 theorem b_and.r_and_.a2.ok : b_and.r_and_.a2.Stmt := bvr_proof% b_and.r_and_.a2
 
-theorem b_and.r_and_.a3.ok : b_and.r_and_.a3.Stmt := bvr_proof% b_and.r_and_.a3
+theorem b_and.r_and_.a3.ok : b_and.r_and_.a3.Stmt := by
+  intro FS O hO v1 a w__3 t__4 hg
+  exact Refines.trans
+    (by simp only [b_and.spec, ty, Term.ty_mk]; bvr_comm)
+    (b_and.r_and_.a1.ok FS O hO v1 a w__3 t__4 hg)
 
 theorem b_and.r_and_.a4.ok : b_and.r_and_.a4.Stmt := bvr_proof% b_and.r_and_.a4
 
@@ -78,9 +94,17 @@ theorem b_and.r_or_.a2.ok : b_and.r_or_.a2.Stmt := by
     (by simp only [b_and.spec, ty, Term.ty_mk]; bvr_comm)
     (b_and.r_or_.a1.ok FS O hO v2 a w__3 t__4 hg)
 
-theorem b_and.r_or_.a3.ok : b_and.r_or_.a3.Stmt := bvr_proof% b_and.r_or_.a3
+theorem b_and.r_or_.a3.ok : b_and.r_or_.a3.Stmt := by
+  intro FS O hO v1 a w__3 t__4 hg
+  exact Refines.trans
+    (by simp only [b_and.spec, ty, Term.ty_mk]; bvr_comm)
+    (b_and.r_or_.a1.ok FS O hO v1 a w__3 t__4 hg)
 
-theorem b_and.r_or_.a4.ok : b_and.r_or_.a4.Stmt := bvr_proof% b_and.r_or_.a4
+theorem b_and.r_or_.a4.ok : b_and.r_or_.a4.Stmt := by
+  intro FS O hO v1 w__3 a t__4 hg
+  exact Refines.trans
+    (by simp only [b_and.spec, ty, Term.ty_mk]; bvr_comm)
+    (b_and.r_or_.a1.ok FS O hO v1 a w__3 t__4 hg)
 
 theorem b_and.r_or_.proof : b_and.r_or_.Stmt := by
   intro FS O hO v1 v2 res h
@@ -201,7 +225,11 @@ theorem b_or.r_same.proof : b_or.r_same.Stmt := by
 
 theorem b_or.r_true_.a1.ok : b_or.r_true_.a1.Stmt := bvr_proof% b_or.r_true_.a1
 
-theorem b_or.r_true_.a2.ok : b_or.r_true_.a2.Stmt := bvr_proof% b_or.r_true_.a2
+theorem b_or.r_true_.a2.ok : b_or.r_true_.a2.Stmt := by
+  intro FS O hO v1 t__2
+  exact Refines.trans
+    (by simp only [b_or.spec, ty, Term.ty_mk]; bvr_comm)
+    (b_or.r_true_.a1.ok FS O hO v1 t__2)
 
 theorem b_or.r_true_.proof : b_or.r_true_.Stmt := by
   intro FS O hO v1 v2 res h
@@ -212,7 +240,11 @@ theorem b_or.r_true_.proof : b_or.r_true_.Stmt := by
 
 theorem b_or.r_false_.a1.ok : b_or.r_false_.a1.Stmt := bvr_proof% b_or.r_false_.a1
 
-theorem b_or.r_false_.a2.ok : b_or.r_false_.a2.Stmt := bvr_proof% b_or.r_false_.a2
+theorem b_or.r_false_.a2.ok : b_or.r_false_.a2.Stmt := by
+  intro FS O hO v1 t__2
+  exact Refines.trans
+    (by simp only [b_or.spec, ty, Term.ty_mk]; bvr_comm)
+    (b_or.r_false_.a1.ok FS O hO v1 t__2)
 
 theorem b_or.r_false_.proof : b_or.r_false_.Stmt := by
   intro FS O hO v1 v2 res h
@@ -223,7 +255,11 @@ theorem b_or.r_false_.proof : b_or.r_false_.Stmt := by
 
 theorem b_or.r_not.a1.ok : b_or.r_not.a1.Stmt := bvr_proof% b_or.r_not.a1
 
-theorem b_or.r_not.a2.ok : b_or.r_not.a2.Stmt := bvr_proof% b_or.r_not.a2
+theorem b_or.r_not.a2.ok : b_or.r_not.a2.Stmt := by
+  intro FS O hO v2 bvr__3 t__4 hg
+  exact Refines.trans
+    (by simp only [b_or.spec, ty, Term.ty_mk]; bvr_comm)
+    (b_or.r_not.a1.ok FS O hO v2 bvr__3 t__4 hg)
 
 theorem b_or.r_not.proof : b_or.r_not.Stmt := by
   intro FS O hO v1 v2 res h
@@ -259,7 +295,11 @@ theorem b_or.r_or_.a1.ok : b_or.r_or_.a1.Stmt := bvr_proof% b_or.r_or_.a1
 
 theorem b_or.r_or_.a2.ok : b_or.r_or_.a2.Stmt := bvr_proof% b_or.r_or_.a2
 
-theorem b_or.r_or_.a3.ok : b_or.r_or_.a3.Stmt := bvr_proof% b_or.r_or_.a3
+theorem b_or.r_or_.a3.ok : b_or.r_or_.a3.Stmt := by
+  intro FS O hO v1 a w__3 t__4 hg
+  exact Refines.trans
+    (by simp only [b_or.spec, ty, Term.ty_mk]; bvr_comm)
+    (b_or.r_or_.a1.ok FS O hO v1 a w__3 t__4 hg)
 
 theorem b_or.r_or_.a4.ok : b_or.r_or_.a4.Stmt := bvr_proof% b_or.r_or_.a4
 
@@ -280,9 +320,17 @@ theorem b_or.r_and_.a2.ok : b_or.r_and_.a2.Stmt := by
     (by simp only [b_or.spec, ty, Term.ty_mk]; bvr_comm)
     (b_or.r_and_.a1.ok FS O hO v2 a w__3 t__4 hg)
 
-theorem b_or.r_and_.a3.ok : b_or.r_and_.a3.Stmt := bvr_proof% b_or.r_and_.a3
+theorem b_or.r_and_.a3.ok : b_or.r_and_.a3.Stmt := by
+  intro FS O hO v1 a w__3 t__4 hg
+  exact Refines.trans
+    (by simp only [b_or.spec, ty, Term.ty_mk]; bvr_comm)
+    (b_or.r_and_.a1.ok FS O hO v1 a w__3 t__4 hg)
 
-theorem b_or.r_and_.a4.ok : b_or.r_and_.a4.Stmt := bvr_proof% b_or.r_and_.a4
+theorem b_or.r_and_.a4.ok : b_or.r_and_.a4.Stmt := by
+  intro FS O hO v1 w__3 a t__4 hg
+  exact Refines.trans
+    (by simp only [b_or.spec, ty, Term.ty_mk]; bvr_comm)
+    (b_or.r_and_.a1.ok FS O hO v1 a w__3 t__4 hg)
 
 theorem b_or.r_and_.proof : b_or.r_and_.Stmt := by
   intro FS O hO v1 v2 res h
@@ -868,9 +916,17 @@ theorem sem_eq.r_self_add.a2.ok : sem_eq.r_self_add.a2.Stmt := by
     (by simp only [sem_eq.spec, ty, Term.ty_mk]; bvr_comm)
     (sem_eq.r_self_add.a1.ok FS O hO v1 w__2 bvr__4 bv__z bv__T t__6 hg)
 
-theorem sem_eq.r_self_add.a3.ok : sem_eq.r_self_add.a3.Stmt := bvr_proof% sem_eq.r_self_add.a3
+theorem sem_eq.r_self_add.a3.ok : sem_eq.r_self_add.a3.Stmt := by
+  intro FS O hO v2 w__2 bvr__4 bv__z bv__T t__6 hg
+  exact Refines.trans
+    (by simp only [sem_eq.spec, ty, Term.ty_mk]; bvr_comm)
+    (sem_eq.r_self_add.a1.ok FS O hO v2 w__2 bvr__4 bv__z bv__T t__6 hg)
 
-theorem sem_eq.r_self_add.a4.ok : sem_eq.r_self_add.a4.Stmt := bvr_proof% sem_eq.r_self_add.a4
+theorem sem_eq.r_self_add.a4.ok : sem_eq.r_self_add.a4.Stmt := by
+  intro FS O hO v2 w__2 bv__z bv__T bvr__4 t__6 hg
+  exact Refines.trans
+    (by simp only [sem_eq.spec, ty, Term.ty_mk]; bvr_comm)
+    (sem_eq.r_self_add.a1.ok FS O hO v2 w__2 bvr__4 bv__z bv__T t__6 hg)
 
 theorem sem_eq.r_self_add.proof : sem_eq.r_self_add.Stmt := by
   intro FS O hO v1 v2 res h
@@ -1096,7 +1152,11 @@ theorem sem_eq.r_ite_const.proof : sem_eq.r_ite_const.Stmt := by
 
 theorem sem_eq.r_false_.a1.ok : sem_eq.r_false_.a1.Stmt := bvr_proof% sem_eq.r_false_.a1
 
-theorem sem_eq.r_false_.a2.ok : sem_eq.r_false_.a2.Stmt := bvr_proof% sem_eq.r_false_.a2
+theorem sem_eq.r_false_.a2.ok : sem_eq.r_false_.a2.Stmt := by
+  intro FS O hO v1 t__2
+  exact Refines.trans
+    (by simp only [sem_eq.spec, ty, Term.ty_mk]; bvr_comm)
+    (sem_eq.r_false_.a1.ok FS O hO v1 t__2)
 
 theorem sem_eq.r_false_.proof : sem_eq.r_false_.Stmt := by
   intro FS O hO v1 v2 res h
@@ -1107,7 +1167,11 @@ theorem sem_eq.r_false_.proof : sem_eq.r_false_.Stmt := by
 
 theorem sem_eq.r_true_.a1.ok : sem_eq.r_true_.a1.Stmt := bvr_proof% sem_eq.r_true_.a1
 
-theorem sem_eq.r_true_.a2.ok : sem_eq.r_true_.a2.Stmt := bvr_proof% sem_eq.r_true_.a2
+theorem sem_eq.r_true_.a2.ok : sem_eq.r_true_.a2.Stmt := by
+  intro FS O hO v1 t__2
+  exact Refines.trans
+    (by simp only [sem_eq.spec, ty, Term.ty_mk]; bvr_comm)
+    (sem_eq.r_true_.a1.ok FS O hO v1 t__2)
 
 theorem sem_eq.r_true_.proof : sem_eq.r_true_.Stmt := by
   intro FS O hO v1 v2 res h
@@ -1309,7 +1373,11 @@ theorem bv_add.r_lits.proof : bv_add.r_lits.Stmt := by
 
 theorem bv_add.r_neg.a1.ok : bv_add.r_neg.a1.Stmt := bvr_proof% bv_add.r_neg.a1
 
-theorem bv_add.r_neg.a2.ok : bv_add.r_neg.a2.Stmt := bvr_proof% bv_add.r_neg.a2
+theorem bv_add.r_neg.a2.ok : bv_add.r_neg.a2.Stmt := by
+  intro FS O hO checked v2 w__2 y t__5
+  exact Refines.trans
+    (by simp only [bv_add.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_add.r_neg.a1.ok FS O hO checked v2 w__2 y t__5)
 
 theorem bv_add.r_neg.proof : bv_add.r_neg.Stmt := by
   intro FS O hO checked v1 v2 res h
@@ -1320,7 +1388,11 @@ theorem bv_add.r_neg.proof : bv_add.r_neg.Stmt := by
 
 theorem bv_add.r_zero.a1.ok : bv_add.r_zero.a1.Stmt := bvr_proof% bv_add.r_zero.a1
 
-theorem bv_add.r_zero.a2.ok : bv_add.r_zero.a2.Stmt := bvr_proof% bv_add.r_zero.a2
+theorem bv_add.r_zero.a2.ok : bv_add.r_zero.a2.Stmt := by
+  intro FS O hO checked v2 bvr__2 t__3 hg
+  exact Refines.trans
+    (by simp only [bv_add.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_add.r_zero.a1.ok FS O hO checked v2 bvr__2 t__3 hg)
 
 theorem bv_add.r_zero.proof : bv_add.r_zero.Stmt := by
   intro FS O hO checked v1 v2 res h
@@ -1405,7 +1477,11 @@ theorem bv_add.r_sub_const_l.proof : bv_add.r_sub_const_l.Stmt := by
 
 theorem bv_add.r_sub_cancel.a1.ok : bv_add.r_sub_cancel.a1.Stmt := bvr_proof% bv_add.r_sub_cancel.a1
 
-theorem bv_add.r_sub_cancel.a2.ok : bv_add.r_sub_cancel.a2.Stmt := bvr_proof% bv_add.r_sub_cancel.a2
+theorem bv_add.r_sub_cancel.a2.ok : bv_add.r_sub_cancel.a2.Stmt := by
+  intro FS O hO checked v2 w__2 l bvr__5 t__6 hg
+  exact Refines.trans
+    (by simp only [bv_add.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_add.r_sub_cancel.a1.ok FS O hO checked v2 w__2 l bvr__5 t__6 hg)
 
 theorem bv_add.r_sub_cancel.proof : bv_add.r_sub_cancel.Stmt := by
   intro FS O hO checked v1 v2 res h
@@ -1889,7 +1965,11 @@ theorem bv_and.r_zero.proof : bv_and.r_zero.Stmt := by
 
 theorem bv_and.r_ones.a1.ok : bv_and.r_ones.a1.Stmt := bvr_proof% bv_and.r_ones.a1
 
-theorem bv_and.r_ones.a2.ok : bv_and.r_ones.a2.Stmt := bvr_proof% bv_and.r_ones.a2
+theorem bv_and.r_ones.a2.ok : bv_and.r_ones.a2.Stmt := by
+  intro FS O hO v1 mask__z mask__T hg
+  exact Refines.trans
+    (by simp only [bv_and.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_and.r_ones.a1.ok FS O hO v1 mask__z mask__T hg)
 
 theorem bv_and.r_ones.proof : bv_and.r_ones.Stmt := by
   intro FS O hO v1 v2 res h
@@ -2116,7 +2196,11 @@ theorem bv_or.r_lits.proof : bv_or.r_lits.Stmt := by
 
 theorem bv_or.r_zero.a1.ok : bv_or.r_zero.a1.Stmt := bvr_proof% bv_or.r_zero.a1
 
-theorem bv_or.r_zero.a2.ok : bv_or.r_zero.a2.Stmt := bvr_proof% bv_or.r_zero.a2
+theorem bv_or.r_zero.a2.ok : bv_or.r_zero.a2.Stmt := by
+  intro FS O hO v2 bvr__2 t__3 hg
+  exact Refines.trans
+    (by simp only [bv_or.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_or.r_zero.a1.ok FS O hO v2 bvr__2 t__3 hg)
 
 theorem bv_or.r_zero.proof : bv_or.r_zero.Stmt := by
   intro FS O hO v1 v2 res h
@@ -2239,7 +2323,11 @@ theorem bv_xor.r_lits.proof : bv_xor.r_lits.Stmt := by
 
 theorem bv_xor.r_zero.a1.ok : bv_xor.r_zero.a1.Stmt := bvr_proof% bv_xor.r_zero.a1
 
-theorem bv_xor.r_zero.a2.ok : bv_xor.r_zero.a2.Stmt := bvr_proof% bv_xor.r_zero.a2
+theorem bv_xor.r_zero.a2.ok : bv_xor.r_zero.a2.Stmt := by
+  intro FS O hO v2 bvr__2 t__3 hg
+  exact Refines.trans
+    (by simp only [bv_xor.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_xor.r_zero.a1.ok FS O hO v2 bvr__2 t__3 hg)
 
 theorem bv_xor.r_zero.proof : bv_xor.r_zero.Stmt := by
   intro FS O hO v1 v2 res h
@@ -2739,7 +2827,11 @@ theorem bv_mul.r_lits.proof : bv_mul.r_lits.Stmt := by
 
 theorem bv_mul.r_one.a1.ok : bv_mul.r_one.a1.Stmt := bvr_proof% bv_mul.r_one.a1
 
-theorem bv_mul.r_one.a2.ok : bv_mul.r_one.a2.Stmt := bvr_proof% bv_mul.r_one.a2
+theorem bv_mul.r_one.a2.ok : bv_mul.r_one.a2.Stmt := by
+  intro FS O hO checked v2 bvr__2 t__3 hg
+  exact Refines.trans
+    (by simp only [bv_mul.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_mul.r_one.a1.ok FS O hO checked v2 bvr__2 t__3 hg)
 
 theorem bv_mul.r_one.proof : bv_mul.r_one.Stmt := by
   intro FS O hO checked v1 v2 res h
@@ -3577,7 +3669,11 @@ theorem bv_add_overflows.r_lits.proof : bv_add_overflows.r_lits.Stmt := by
 
 theorem bv_add_overflows.r_zero.a1.ok : bv_add_overflows.r_zero.a1.Stmt := bvr_proof% bv_add_overflows.r_zero.a1
 
-theorem bv_add_overflows.r_zero.a2.ok : bv_add_overflows.r_zero.a2.Stmt := bvr_proof% bv_add_overflows.r_zero.a2
+theorem bv_add_overflows.r_zero.a2.ok : bv_add_overflows.r_zero.a2.Stmt := by
+  intro FS O hO signed v1 bvr__1 t__2 hg
+  exact Refines.trans
+    (by simp only [bv_add_overflows.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_add_overflows.r_zero.a1.ok FS O hO signed v1 bvr__1 t__2 hg)
 
 theorem bv_add_overflows.r_zero.proof : bv_add_overflows.r_zero.Stmt := by
   intro FS O hO signed v1 v2 res h
@@ -3596,7 +3692,11 @@ theorem bv_add_overflows.r_size1.proof : bv_add_overflows.r_size1.Stmt := by
 
 theorem bv_add_overflows.r_unsigned.a1.ok : bv_add_overflows.r_unsigned.a1.Stmt := bvr_proof% bv_add_overflows.r_unsigned.a1
 
-theorem bv_add_overflows.r_unsigned.a2.ok : bv_add_overflows.r_unsigned.a2.Stmt := bvr_proof% bv_add_overflows.r_unsigned.a2
+theorem bv_add_overflows.r_unsigned.a2.ok : bv_add_overflows.r_unsigned.a2.Stmt := by
+  intro FS O hO signed v1 z__z z__T hg
+  exact Refines.trans
+    (by simp only [bv_add_overflows.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_add_overflows.r_unsigned.a1.ok FS O hO signed v1 z__z z__T hg)
 
 theorem bv_add_overflows.r_unsigned.proof : bv_add_overflows.r_unsigned.Stmt := by
   intro FS O hO signed v1 v2 res h
@@ -3618,11 +3718,18 @@ theorem bv_add_overflows.r_signed.proof : bv_add_overflows.r_signed.Stmt := by
 
 theorem bv_add_overflows.r_of_bools.a1.ok : bv_add_overflows.r_of_bools.a1.Stmt := bvr_proof% bv_add_overflows.r_of_bools.a1
 
+theorem bv_add_overflows.r_of_bools.a2.ok : bv_add_overflows.r_of_bools.a2.Stmt := by
+  intro FS O hO signed w__5 b2 t__8 n b1 t__4 hg
+  exact Refines.trans
+    (by simp only [bv_add_overflows.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_add_overflows.r_of_bools.a1.ok FS O hO signed n b1 t__4 w__5 b2 t__8 hg)
+
 theorem bv_add_overflows.r_of_bools.proof : bv_add_overflows.r_of_bools.Stmt := by
   intro FS O hO signed v1 v2 res h
   simp only [bv_add_overflows.r_of_bools] at h
   repeat' rcases Lib.orElse_some h with h | h
   · bvr_arm h (bv_add_overflows.r_of_bools.a1.ok FS O hO)
+  · bvr_arm h (bv_add_overflows.r_of_bools.a2.ok FS O hO)
 
 theorem bv_add_overflows.r_of_bool.a1.ok : bv_add_overflows.r_of_bool.a1.Stmt := bvr_proof% bv_add_overflows.r_of_bool.a1
 
@@ -3680,7 +3787,11 @@ theorem bv_mul_overflows.r_const.proof : bv_mul_overflows.r_const.Stmt := by
 
 theorem bv_mul_overflows.r_div.a1.ok : bv_mul_overflows.r_div.a1.Stmt := bvr_proof% bv_mul_overflows.r_div.a1
 
-theorem bv_mul_overflows.r_div.a2.ok : bv_mul_overflows.r_div.a2.Stmt := bvr_proof% bv_mul_overflows.r_div.a2
+theorem bv_mul_overflows.r_div.a2.ok : bv_mul_overflows.r_div.a2.Stmt := by
+  intro FS O hO signed v2 w__4 bvr__5 t__6 hg
+  exact Refines.trans
+    (by simp only [bv_mul_overflows.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_mul_overflows.r_div.a1.ok FS O hO signed v2 w__4 bvr__5 t__6 hg)
 
 theorem bv_mul_overflows.r_div.proof : bv_mul_overflows.r_div.Stmt := by
   intro FS O hO signed v1 v2 res h
@@ -3865,21 +3976,20 @@ theorem float_eq.r_same.proof : float_eq.r_same.Stmt := by
   repeat' rcases Lib.orElse_some h with h | h
   · bvr_arm h (float_eq.r_same.a1.ok FS O hO)
 
-theorem float_eq.r_lit_l.a1.ok : float_eq.r_lit_l.a1.Stmt := bvr_proof% float_eq.r_lit_l.a1
+theorem float_eq.r_lit.a1.ok : float_eq.r_lit.a1.Stmt := bvr_proof% float_eq.r_lit.a1
 
-theorem float_eq.r_lit_l.proof : float_eq.r_lit_l.Stmt := by
+theorem float_eq.r_lit.a2.ok : float_eq.r_lit.a2.Stmt := by
+  intro FS O hO v1 f t__2
+  exact Refines.trans
+    (by simp only [float_eq.spec, ty, Term.ty_mk]; bvr_comm)
+    (float_eq.r_lit.a1.ok FS O hO v1 f t__2)
+
+theorem float_eq.r_lit.proof : float_eq.r_lit.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [float_eq.r_lit_l] at h
+  simp only [float_eq.r_lit] at h
   repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (float_eq.r_lit_l.a1.ok FS O hO)
-
-theorem float_eq.r_lit_r.a1.ok : float_eq.r_lit_r.a1.Stmt := bvr_proof% float_eq.r_lit_r.a1
-
-theorem float_eq.r_lit_r.proof : float_eq.r_lit_r.Stmt := by
-  intro FS O hO v1 v2 res h
-  simp only [float_eq.r_lit_r] at h
-  repeat' rcases Lib.orElse_some h with h | h
-  · bvr_arm h (float_eq.r_lit_r.a1.ok FS O hO)
+  · bvr_arm h (float_eq.r_lit.a1.ok FS O hO)
+  · bvr_arm h (float_eq.r_lit.a2.ok FS O hO)
 
 theorem float_eq.r_default.a1.ok : float_eq.r_default.a1.Stmt := bvr_proof% float_eq.r_default.a1
 
@@ -4741,8 +4851,7 @@ theorem float_eq.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Te
   unfold float_eq.step
   refine Refines.firstSome_cons (fun res h => float_eq.r_lits.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => float_eq.r_same.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => float_eq.r_lit_l.proof FS O hO v1 v2 res h) ?_
-  refine Refines.firstSome_cons (fun res h => float_eq.r_lit_r.proof FS O hO v1 v2 res h) ?_
+  refine Refines.firstSome_cons (fun res h => float_eq.r_lit.proof FS O hO v1 v2 res h) ?_
   refine Refines.firstSome_cons (fun res h => float_eq.r_default.proof FS O hO v1 v2 res h) ?_
   exact Refines.firstSome_nil
 

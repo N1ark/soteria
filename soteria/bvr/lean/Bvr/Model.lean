@@ -4337,6 +4337,13 @@ def bv_add_overflows.r_of_bools (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term
      then (O.b_and b1 b2)
      else v_false)))
     | _, _ => none)
+  <|> (match v1, v2 with
+        | (Term.mk (Kind.unop (Unop.bvOfBool _) b2) _), (Term.mk (Kind.unop (Unop.bvOfBool n) b1) _) =>
+        (whenSome (decide (n > (1 : Int)))
+        ((if (signed && (decide (n = (2 : Int))))
+         then (O.b_and b1 b2)
+         else v_false)))
+        | _, _ => none)
 
 def bv_add_overflows.r_of_bool (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
@@ -4612,29 +4619,27 @@ def float_eq.r_same (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | v, bvr__2 =>
     (whenSome (equal v bvr__2)
-    ((O.b_not (O.float_is_floatclass FClass.nan v1)))))
+    ((O.b_not (O.float_is_floatclass FClass.nan v)))))
 
-def float_eq.r_lit_l (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
+def float_eq.r_lit (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.float f) _), _ =>
+    | l@(Term.mk (Kind.float f) _), x =>
     (whenSome true
     ((if (f_is_nan f)
      then v_false
      else (if (f_is_zero f)
-          then (O.float_is_floatclass FClass.zero v2)
-          else (O.sem_eq v1 v2)))))
+          then (O.float_is_floatclass FClass.zero x)
+          else (O.sem_eq l x)))))
     | _, _ => none)
-
-def float_eq.r_lit_r (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
-  (match v1, v2 with
-    | _, (Term.mk (Kind.float f) _) =>
-    (whenSome true
-    ((if (f_is_nan f)
-     then v_false
-     else (if (f_is_zero f)
-          then (O.float_is_floatclass FClass.zero v1)
-          else (O.sem_eq v1 v2)))))
-    | _, _ => none)
+  <|> (match v1, v2 with
+        | x, l@(Term.mk (Kind.float f) _) =>
+        (whenSome true
+        ((if (f_is_nan f)
+         then v_false
+         else (if (f_is_zero f)
+              then (O.float_is_floatclass FClass.zero x)
+              else (O.sem_eq l x)))))
+        | _, _ => none)
 
 def float_eq.r_default (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
@@ -4642,7 +4647,7 @@ def float_eq.r_default (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
     (whenSome true ((Term.mk (mk_commut_binop O Binop.fEq v1 v2) Ty.bool))))
 
 def float_eq.step (O : Ops) (v1 : Term) (v2 : Term) : Term :=
-  (firstSome [float_eq.r_lits O v1 v2, float_eq.r_same O v1 v2, float_eq.r_lit_l O v1 v2, float_eq.r_lit_r O v1 v2, float_eq.r_default O v1 v2]).getD (float_eq.spec v1 v2)
+  (firstSome [float_eq.r_lits O v1 v2, float_eq.r_same O v1 v2, float_eq.r_lit O v1 v2, float_eq.r_default O v1 v2]).getD (float_eq.spec v1 v2)
 
 def float_lt.r_lits (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with

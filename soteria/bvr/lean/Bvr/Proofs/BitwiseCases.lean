@@ -10,10 +10,6 @@ theorem bv_and.r_ones.a1.proof : bv_and.r_ones.a1.Stmt := by
   bvr_rule_sem
   all_goals simp_all [is_ones_mk]
 
-theorem bv_and.r_ones.a2.proof : bv_and.r_ones.a2.Stmt := by
-  bvr_rule_sem
-  all_goals simp_all [is_ones_mk]
-
 theorem bv_and.r_lshr_mask.a1.proof : bv_and.r_lshr_mask.a1.Stmt := by
   bvr_rule_sem
   all_goals subst_vars; exact (lshr_and_of_bits_in ‹_› _).symm

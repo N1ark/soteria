@@ -170,14 +170,8 @@ theorem float_eq.r_same.a1.proof : float_eq.r_same.a1.Stmt := by
     rw [h1] at h2; cases h2
     rw [h1]; simp at h3; simp [evUnop, ← h3, FBits.isClass]
 
-theorem float_eq.r_lit_l.a1.proof : float_eq.r_lit_l.a1.Stmt := by
+theorem float_eq.r_lit.a1.proof : float_eq.r_lit.a1.Stmt := by
   intro FS O hO v2 f T
   exact Refines.feq_lit hO (hO.sem_eq _ _)
-
-theorem float_eq.r_lit_r.a1.proof : float_eq.r_lit_r.a1.Stmt := by
-  intro FS O hO v1 f T
-  exact Refines.trans (Refines.comm (by simp [Binop.Comm]) (fun _ => rfl))
-    (Refines.feq_lit hO (Refines.trans (Refines.comm (by simp [Binop.Comm]) (fun _ => rfl))
-      (hO.sem_eq _ _)))
 
 end Bvr

@@ -26,16 +26,12 @@ rule float_cast (rounding : rm) (fp : fp) (v : t) :
 rule float_eq (v1 v2 : t) : FEq (v1, v2) <| TBool =
   match (v1, v2) with
   | lits: Float f1, Float f2 -> of_bool (f_eq f1 f2)
-  | same: v, v -> not (float_is_floatclass NaN v1)
+  | same: v, v -> not (float_is_floatclass NaN v)
   (* Against a constant, [fp.eq] is decidable structurally *)
-  | lit_l: Float f, _ ->
+  | lit: (Float f as l), x ->
       if f_is_nan f then v_false
-      else if f_is_zero f then float_is_floatclass Zero v2
-      else v1 == v2
-  | lit_r: _, Float f ->
-      if f_is_nan f then v_false
-      else if f_is_zero f then float_is_floatclass Zero v1
-      else v1 == v2
+      else if f_is_zero f then float_is_floatclass Zero x
+      else l == x
   | default: _ -> mk_commut_binop FEq v1 v2 <| TBool
 
 rule float_lt (v1 v2 : t) : FLt (v1, v2) <| TBool =

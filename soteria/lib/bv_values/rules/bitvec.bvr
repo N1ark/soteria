@@ -811,14 +811,14 @@ rule bv_add_overflows (signed : bool) (v1 v2 : t) :
     AddOvf (signed, v1, v2) <| TBool =
   match (v1, v2) with
   | lits: #l, #r -> of_bool (add_overflows signed l r)
-  | zero: (0, _) [@comm] -> v_false
+  | zero: 0, _ -> v_false
   | size1: _ when size v1 = 1 ->
       let one = bv_one 1 in
       v1 == one && v2 == one
   (* z + x overflows iff max - z < x *)
-  | unsigned: (#z, x) [@comm] when not signed ->
+  | unsigned: #z, x when not signed ->
       bv_lt signed (~z) x
-  | signed: (#z, x) [@comm] when signed ->
+  | signed: #z, x when signed ->
       let n = size v1 in
       let z = to_z signed z in
       if z > 0 then
@@ -834,7 +834,7 @@ rule bv_add_overflows (signed : bool) (v1 v2 : t) :
         b1 && b2
       else v_false
   (* ite(b, 1, 0) + x only overflows if b && x == max *)
-  | of_bool: (BvOfBool (_, b), other) [@comm] when size v1 > 1 ->
+  | of_bool: BvOfBool (_, b), other when size v1 > 1 ->
       let n = size v1 in
       b && other == mk_masked n (max_for signed n)
   | default: _ -> mk_commut_binop (AddOvf signed) v1 v2 <| TBool
@@ -852,7 +852,7 @@ rule bv_mul_overflows (signed : bool) (v1 v2 : t) :
     when (signed && msb_of v1 + msb_of v2 < size v1 - 2)
          || ((not signed) && msb_of v1 + msb_of v2 < size v1 - 1) ->
       v_false
-  | const: (#z, x) [@comm] when (not signed) || size v1 > 1 ->
+  | const: #z, x when (not signed) || size v1 > 1 ->
       if to_z false z = 0 || to_z false z = 1 then v_false
       else
         let n = size v1 in
@@ -878,7 +878,7 @@ rule bv_mul_overflows (signed : bool) (v1 v2 : t) :
              z) *)
           bv_lt signed (mk_masked n (tdiv ((1 lsl n) - 1) z)) x
   (* `x * (y / x)` cannot overflow with unsigned ops *)
-  | div: (x, Div (false, _, x)) [@comm] when not signed -> v_false
+  | div: x, Div (false, _, x) when not signed -> v_false
   | default: _ -> mk_commut_binop (MulOvf signed) v1 v2 <| TBool
 
 rule bv_neg_overflows (v : t) :

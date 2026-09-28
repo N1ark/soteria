@@ -169,6 +169,23 @@ def binB {α : Type} (f : α → α → Bool) : Option α → Option α → Opti
 @[simp] theorem orB_some {x y : Bool} : orB (some x) (some y) = some (x || y) := by
   cases x <;> cases y <;> rfl
 
+@[simp] theorem andB_false_l (b : Option Bool) : andB (some false) b = some false := rfl
+@[simp] theorem andB_false_r (a : Option Bool) : andB a (some false) = some false := by
+  rcases a with _ | _ | _ <;> rfl
+@[simp] theorem andB_true_l (b : Option Bool) : andB (some true) b = b := by
+  rcases b with _ | _ | _ <;> rfl
+@[simp] theorem andB_true_r (a : Option Bool) : andB a (some true) = a := by
+  rcases a with _ | _ | _ <;> rfl
+@[simp] theorem andB_none_none : andB none none = none := rfl
+@[simp] theorem orB_true_l (b : Option Bool) : orB (some true) b = some true := rfl
+@[simp] theorem orB_true_r (a : Option Bool) : orB a (some true) = some true := by
+  rcases a with _ | _ | _ <;> rfl
+@[simp] theorem orB_false_l (b : Option Bool) : orB (some false) b = b := by
+  rcases b with _ | _ | _ <;> rfl
+@[simp] theorem orB_false_r (a : Option Bool) : orB a (some false) = a := by
+  rcases a with _ | _ | _ <;> rfl
+@[simp] theorem orB_none_none : orB none none = none := rfl
+
 section
 variable {FS : FloatSem} {ρ : Env} {a b g : Term} {t : Ty}
 

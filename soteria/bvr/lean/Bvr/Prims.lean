@@ -112,6 +112,7 @@ def v_false : Term := .mk (.bool false) .bool
 structure BvVal where
   w : Nat
   x : BitVec w
+deriving DecidableEq
 
 def bv_of_lit : Term → BvVal
   | .mk (.bitVec z) t => ⟨(size_of_ty t).toNat, BitVec.ofInt _ z⟩
@@ -131,6 +132,21 @@ def lit_mul (a b : BvVal) : BvVal := ⟨a.w, a.x * b.x.setWidth a.w⟩
 def lit_neg (a : BvVal) : BvVal := ⟨a.w, -a.x⟩
 def lit_udiv (a b : BvVal) : BvVal := ⟨a.w, a.x.smtUDiv (b.x.setWidth a.w)⟩
 def lit_sdiv (a b : BvVal) : BvVal := ⟨a.w, a.x.smtSDiv (b.x.setWidth a.w)⟩
+def lit_and (a b : BvVal) : BvVal := ⟨a.w, a.x &&& b.x.setWidth a.w⟩
+def lit_or (a b : BvVal) : BvVal := ⟨a.w, a.x ||| b.x.setWidth a.w⟩
+def lit_xor (a b : BvVal) : BvVal := ⟨a.w, a.x ^^^ b.x.setWidth a.w⟩
+def lit_not (a : BvVal) : BvVal := ⟨a.w, ~~~a.x⟩
+def lit_shl (a b : BvVal) : BvVal := ⟨a.w, a.x <<< b.x.setWidth a.w⟩
+def lit_lshr (a b : BvVal) : BvVal := ⟨a.w, a.x >>> b.x.setWidth a.w⟩
+def lit_ashr (a b : BvVal) : BvVal := ⟨a.w, a.x.sshiftRight' (b.x.setWidth a.w)⟩
+def lit_urem (a b : BvVal) : BvVal := ⟨a.w, a.x.umod (b.x.setWidth a.w)⟩
+def lit_srem (a b : BvVal) : BvVal := ⟨a.w, a.x.srem (b.x.setWidth a.w)⟩
+def lit_smod (a b : BvVal) : BvVal := ⟨a.w, a.x.smod (b.x.setWidth a.w)⟩
+def lit_extract (from_ to_ : Int) (l : BvVal) : BvVal :=
+  ⟨(to_ - from_ + 1).toNat, l.x.extractLsb' from_.toNat _⟩
+def lit_zext (k : Int) (l : BvVal) : BvVal := ⟨l.w + k.toNat, l.x.setWidth _⟩
+def lit_sext (k : Int) (l : BvVal) : BvVal := ⟨l.w + k.toNat, l.x.signExtend _⟩
+def lit_concat (l r : BvVal) : BvVal := ⟨l.w + r.w, l.x ++ r.x⟩
 
 /-! ## Floats, as Floatml's `AnyFloat` -/
 

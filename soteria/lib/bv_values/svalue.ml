@@ -457,6 +457,61 @@ module Make (V : Value_ext) () = struct
         masked a.w (if Z.lt n Z.zero then Z.one else Z.minus_one)
       else masked a.w (Z.div n d)
 
+    let bv_equal a b = a.w = b.w && Z.equal a.z b.z
+    let lit_and a b = masked a.w (Z.logand a.z b.z)
+    let lit_or a b = masked a.w (Z.logor a.z b.z)
+    let lit_xor a b = masked a.w (Z.logxor a.z b.z)
+    let lit_not a = masked a.w (Z.lognot a.z)
+
+    (* the shift amount, if it is less than the width *)
+    let shift_amount a b =
+      let s = Z.extract b.z 0 a.w in
+      if Z.lt s (Z.of_int a.w) then Some (Z.to_int s) else None
+
+    let lit_shl a b =
+      match shift_amount a b with
+      | Some s -> masked a.w (Z.shift_left a.z s)
+      | None -> masked a.w Z.zero
+
+    let lit_lshr a b =
+      match shift_amount a b with
+      | Some s -> masked a.w (Z.shift_right a.z s)
+      | None -> masked a.w Z.zero
+
+    let lit_ashr a b =
+      let n = Z.signed_extract a.z 0 a.w in
+      match shift_amount a b with
+      | Some s -> masked a.w (Z.shift_right n s)
+      | None -> masked a.w (if Z.lt n Z.zero then Z.minus_one else Z.zero)
+
+    let lit_urem a b =
+      let d = Z.extract b.z 0 a.w in
+      if Z.equal d Z.zero then a else masked a.w (Z.rem a.z d)
+
+    let lit_srem a b =
+      let n = Z.signed_extract a.z 0 a.w and d = Z.signed_extract b.z 0 a.w in
+      if Z.equal d Z.zero then a else masked a.w (Z.rem n d)
+
+    let lit_smod a b =
+      let n = Z.signed_extract a.z 0 a.w and d = Z.signed_extract b.z 0 a.w in
+      if Z.equal d Z.zero then a
+      else
+        let r = Z.rem n d in
+        if Z.equal r Z.zero || Z.sign r = Z.sign d then masked a.w r
+        else masked a.w (Z.add r d)
+
+    let lit_extract from_ to_ l =
+      let from_ = Z.to_int from_ in
+      masked (Z.to_int to_ - from_ + 1) (Z.shift_right l.z from_)
+
+    let lit_zext k l = { w = l.w + Z.to_int k; z = l.z }
+
+    let lit_sext k l =
+      masked (l.w + Z.to_int k) (Z.signed_extract l.z 0 l.w)
+
+    let lit_concat l r =
+      { w = l.w + r.w; z = Z.logor (Z.shift_left l.z r.w) r.z }
+
     let signed_extract z o l = Z.signed_extract z (Z.to_int o) (Z.to_int l)
     let popcount z = Z.of_int (Z.popcount z)
     let log2 z = Z.of_int (Z.log2 z)

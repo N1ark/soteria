@@ -181,9 +181,9 @@ let[@spec Rem (signed, v1, v2) <| ty v1] bv_rem (signed : bool) (v1 : t)
       bv_rem signed r rhs
   | _ [@r default] -> Rem (signed, v1, v2) <| ty v1
 
-let[@spec BvNot v <| ty v] bv_not (v : t) : t =
+let[@spec BvNot v <| ty v] [@cases] bv_not (v : t) : t =
   match v with
-  | BitVec bv [@r lit] -> mk_masked (size v) (lognot bv)
+  | BitVec bv [@r lit] -> lit (lognot bv)
   | Ite (b, l, r) [@r ite] -> b_ite b (bv_not l) (bv_not r)
   | _ [@r default] -> BvNot v <| ty v
 

@@ -135,56 +135,6 @@ theorem bv_not_bool.r_default.proof : bv_not_bool.r_default.Stmt := by
   refine Refines.trans ?_ (hO.bv_of_bool _ _)
   exact Refines.unop (hO.sem_eq _ _) (fun _ => rfl)
 
-theorem bv_not.r_lit.proof : bv_not.r_lit.Stmt := by
-  intro FS O hO v res h
-  simp only [bv_not.r_lit] at h
-  split at h <;> simp at h
-  subst h
-  rename_i z T
-  have key : (Term.mk (.unop .bvNot (.mk (.bitVec z) T)) T).WT →
-      ∃ n : Nat, 0 < n ∧ T = .bitVector n ∧ 0 ≤ z ∧ z < 2 ^ n := by
-    intro w
-    have ⟨w1, w2⟩ := WT_unop.1 w
-    obtain ⟨n, hn, hT, h1, h2⟩ := WT_bitVec.1 w2
-    simp [Unop.WT] at w1
-    rcases hT with rfl | rfl
-    · exact ⟨n, hn, rfl, h1, h2⟩
-    · simp at w1
-  refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
-  · obtain ⟨n, hn, rfl, _, _⟩ := key (by simpa [bv_not.spec] using w)
-    exact ⟨mk_masked_WT (by simp [size_of_ty]; omega), by simp [bv_not.spec, size_of_ty]⟩
-  · simp only [bv_not.spec, ty_eq, Term.ty_mk] at w e
-    obtain ⟨n, hn, rfl, _, _⟩ := key w
-    rw [eval_unop w, eval_bitVec' (WT_unop.1 w).2 (Or.inl rfl)] at e
-    simp only [size_of_ty]
-    rw [eval_mk_masked (by omega)]
-    simp [evUnop] at e; subst e
-    simp [BitVec.ofInt_zlognot]
-
-theorem bv_not.r_ite.proof : bv_not.r_ite.Stmt := by
-  intro FS O hO v r h
-  simp only [bv_not.r_ite] at h
-  split at h <;> simp at h
-  subst h
-  rename_i b l r0 T
-  have hl : ∀ t, Refines FS (.mk (.unop .bvNot l) t) (O.bv_not l) := fun t =>
-    Refines.trans (Refines.unop Refines.refl (fun w => by
-      have := (WT_unop.1 w).1; simp [Unop.WT] at this ⊢; grind)) (hO.bv_not l)
-  have hr : ∀ t, Refines FS (.mk (.unop .bvNot r0) t) (O.bv_not r0) := fun t =>
-    Refines.trans (Refines.unop Refines.refl (fun w => by
-      have := (WT_unop.1 w).1; simp [Unop.WT] at this ⊢; grind)) (hO.bv_not r0)
-  refine Refines.trans Refines.unop_ite ?_
-  refine Refines.trans ?_ (hO.b_ite _ _ _)
-  refine Refines.ite Refines.refl (hl _) (hr _) (fun w => ?_)
-  have ⟨h1, _, wa, _⟩ := WT_triop.1 w
-  have := ((hl _).syn wa).2
-  simp_all [b_ite.spec]
-
-theorem bv_not.r_default.proof : bv_not.r_default.Stmt := by
-  intro FS O hO v r h
-  simp [bv_not.r_default] at h; subst h
-  exact Refines.refl
-
 theorem bv_and.r_lits.proof : bv_and.r_lits.Stmt := by
   intro FS O hO v1 v2 res h
   simp only [bv_and.r_lits] at h

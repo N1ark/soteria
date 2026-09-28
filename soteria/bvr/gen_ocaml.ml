@@ -144,6 +144,7 @@ let rec expr ctx ft (e : expr) =
             match a.ety with
             | TInt -> "Z.equal"
             | TSty -> "P.equal_ty"
+            | TBv -> "P.bv_equal"
             | _ -> "Stdlib.( = )"
           in
           pf ft "(%s(%s %a %a))" neg eq expr a expr b

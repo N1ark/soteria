@@ -16,8 +16,8 @@ namespace Bvr.Lib
 open Lean Meta Elab Tactic
 
 private def isAtom (e : Expr) : Bool :=
-  e.isAppOfArity ``Bvr.Lib.den 4 || e.isAppOfArity ``Bvr.Lib.evalBV 4 ||
-    e.isAppOfArity ``Bvr.Lib.evalB 3 || e.isAppOfArity ``Bvr.Lib.denB 3
+  !e.hasLooseBVars && (e.isAppOfArity ``Bvr.Lib.den 4 || e.isAppOfArity ``Bvr.Lib.evalBV 4 ||
+    e.isAppOfArity ``Bvr.Lib.evalB 3 || e.isAppOfArity ``Bvr.Lib.denB 3)
 
 /-- Generalizes and case splits every atom. -/
 partial def caseAtoms (g : MVarId) : MetaM (List MVarId) := g.withContext do

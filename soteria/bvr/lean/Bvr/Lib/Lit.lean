@@ -22,6 +22,20 @@ def _root_.Bvr.BvVal.at (n : Nat) (l : BvVal) : BitVec n := l.x.setWidth n
 @[simp] theorem lit_w_neg (a : BvVal) : (lit_neg a).w = a.w := rfl
 @[simp] theorem lit_w_udiv (a b : BvVal) : (lit_udiv a b).w = a.w := rfl
 @[simp] theorem lit_w_sdiv (a b : BvVal) : (lit_sdiv a b).w = a.w := rfl
+@[simp] theorem lit_w_and (a b : BvVal) : (lit_and a b).w = a.w := rfl
+@[simp] theorem lit_w_or (a b : BvVal) : (lit_or a b).w = a.w := rfl
+@[simp] theorem lit_w_xor (a b : BvVal) : (lit_xor a b).w = a.w := rfl
+@[simp] theorem lit_w_shl (a b : BvVal) : (lit_shl a b).w = a.w := rfl
+@[simp] theorem lit_w_lshr (a b : BvVal) : (lit_lshr a b).w = a.w := rfl
+@[simp] theorem lit_w_ashr (a b : BvVal) : (lit_ashr a b).w = a.w := rfl
+@[simp] theorem lit_w_urem (a b : BvVal) : (lit_urem a b).w = a.w := rfl
+@[simp] theorem lit_w_srem (a b : BvVal) : (lit_srem a b).w = a.w := rfl
+@[simp] theorem lit_w_smod (a b : BvVal) : (lit_smod a b).w = a.w := rfl
+@[simp] theorem lit_w_not (a : BvVal) : (lit_not a).w = a.w := rfl
+@[simp] theorem lit_w_extract (i j : Int) (a : BvVal) : (lit_extract i j a).w = (j - i + 1).toNat := rfl
+@[simp] theorem lit_w_zext (k : Int) (a : BvVal) : (lit_zext k a).w = a.w + k.toNat := rfl
+@[simp] theorem lit_w_sext (k : Int) (a : BvVal) : (lit_sext k a).w = a.w + k.toNat := rfl
+@[simp] theorem lit_w_concat (a b : BvVal) : (lit_concat a b).w = a.w + b.w := rfl
 @[simp] theorem bv_of_lit_w (z : Int) (t : Ty) :
     (bv_of_lit (.mk (.bitVec z) t)).w = (size_of_ty t).toNat := rfl
 @[simp] theorem of_z_w (n z : Int) : (of_z n z).w = n.toNat := rfl
@@ -125,6 +139,10 @@ Once the widths are those of well-typed terms, the values are normalized to
 @[simp] theorem bv_of_lit_bv (n : Nat) (z : Int) :
     bv_of_lit (.mk (.bitVec z) (.bitVector (n : Int))) = ⟨n, BitVec.ofInt n z⟩ := rfl
 
+/-- `bv_of_lit_bv`, at any width (e.g. a numeral). -/
+@[simp] theorem bv_of_lit_bv' (m z : Int) :
+    bv_of_lit (.mk (.bitVec z) (.bitVector m)) = ⟨m.toNat, BitVec.ofInt m.toNat z⟩ := rfl
+
 @[simp] theorem of_z_nat (n : Nat) (z : Int) : of_z (n : Int) z = ⟨n, BitVec.ofInt n z⟩ := rfl
 
 @[simp] theorem lit_add_mk {n} (x y : BitVec n) : lit_add ⟨n, x⟩ ⟨n, y⟩ = ⟨n, x + y⟩ := by
@@ -138,6 +156,40 @@ Once the widths are those of well-typed terms, the values are normalized to
     lit_udiv ⟨n, x⟩ ⟨n, y⟩ = ⟨n, x.smtUDiv y⟩ := by simp [lit_udiv]
 @[simp] theorem lit_sdiv_mk {n} (x y : BitVec n) :
     lit_sdiv ⟨n, x⟩ ⟨n, y⟩ = ⟨n, x.smtSDiv y⟩ := by simp [lit_sdiv]
+@[simp] theorem lit_and_mk {n} (x y : BitVec n) : lit_and ⟨n, x⟩ ⟨n, y⟩ = ⟨n, x &&& y⟩ := by
+  simp [lit_and]
+@[simp] theorem lit_or_mk {n} (x y : BitVec n) : lit_or ⟨n, x⟩ ⟨n, y⟩ = ⟨n, x ||| y⟩ := by
+  simp [lit_or]
+@[simp] theorem lit_xor_mk {n} (x y : BitVec n) : lit_xor ⟨n, x⟩ ⟨n, y⟩ = ⟨n, x ^^^ y⟩ := by
+  simp [lit_xor]
+@[simp] theorem lit_not_mk {n} (x : BitVec n) : lit_not ⟨n, x⟩ = ⟨n, ~~~x⟩ := rfl
+@[simp] theorem lit_shl_mk {n} (x y : BitVec n) : lit_shl ⟨n, x⟩ ⟨n, y⟩ = ⟨n, x <<< y⟩ := by
+  simp [lit_shl]
+@[simp] theorem lit_lshr_mk {n} (x y : BitVec n) : lit_lshr ⟨n, x⟩ ⟨n, y⟩ = ⟨n, x >>> y⟩ := by
+  simp [lit_lshr]
+@[simp] theorem lit_ashr_mk {n} (x y : BitVec n) :
+    lit_ashr ⟨n, x⟩ ⟨n, y⟩ = ⟨n, x.sshiftRight' y⟩ := by simp [lit_ashr]
+@[simp] theorem lit_urem_mk {n} (x y : BitVec n) : lit_urem ⟨n, x⟩ ⟨n, y⟩ = ⟨n, x.umod y⟩ := by
+  simp [lit_urem]
+@[simp] theorem lit_srem_mk {n} (x y : BitVec n) : lit_srem ⟨n, x⟩ ⟨n, y⟩ = ⟨n, x.srem y⟩ := by
+  simp [lit_srem]
+@[simp] theorem lit_smod_mk {n} (x y : BitVec n) : lit_smod ⟨n, x⟩ ⟨n, y⟩ = ⟨n, x.smod y⟩ := by
+  simp [lit_smod]
+@[simp] theorem lit_extract_mk {n} (i j : Int) (x : BitVec n) :
+    lit_extract i j ⟨n, x⟩ = ⟨(j - i + 1).toNat, x.extractLsb' i.toNat _⟩ := rfl
+@[simp] theorem lit_zext_mk {n} (k : Int) (x : BitVec n) :
+    lit_zext k ⟨n, x⟩ = ⟨n + k.toNat, x.setWidth _⟩ := rfl
+@[simp] theorem lit_sext_mk {n} (k : Int) (x : BitVec n) :
+    lit_sext k ⟨n, x⟩ = ⟨n + k.toNat, x.signExtend _⟩ := rfl
+@[simp] theorem lit_concat_mk {n m} (x : BitVec n) (y : BitVec m) :
+    lit_concat ⟨n, x⟩ ⟨m, y⟩ = ⟨n + m, x ++ y⟩ := rfl
+/-- A value at another width than its own. -/
+theorem at_mk' {n m} (x : BitVec n) : BvVal.at m ⟨n, x⟩ = x.setWidth m := rfl
+@[simp] theorem bv_equal_mk {n} (x y : BitVec n) : (⟨n, x⟩ : BvVal) = ⟨n, y⟩ ↔ x = y := by
+  constructor
+  · intro h; cases h; rfl
+  · intro h; rw [h]
+
 @[simp] theorem at_of_z_self (m z : Int) : (of_z m z).at m.toNat = BitVec.ofInt m.toNat z := by
   simp [BvVal.at, of_z]
 @[simp] theorem at_mk {n} (x : BitVec n) : BvVal.at n ⟨n, x⟩ = x := by simp [BvVal.at]

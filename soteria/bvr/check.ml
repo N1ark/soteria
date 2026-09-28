@@ -383,10 +383,10 @@ let add_binders env p =
 (** Types on which [=] and [<>] are allowed: structural equality coincides in
     OCaml and Lean. *)
 let rec eq_ty = function
-  | TInt | TBool | TUnit | TSty | TData _ -> true
+  | TInt | TBv | TBool | TUnit | TSty | TData _ -> true
   | TTuple l -> List.for_all eq_ty l
   | TOption t -> eq_ty t
-  | TTerm | TKind | TFloat | TVar | TBv | TList _ -> false
+  | TTerm | TKind | TFloat | TVar | TList _ -> false
 
 (* ---------------------------------------------------------------- *)
 (* Desugaring of patterns
@@ -661,9 +661,25 @@ let rec expr env ?expected (e : expression) : Syntax.expr =
           let a = expr env ~expected:TBool a
           and b = expr env ~expected:TBool b in
           mk TBool (EBinop (Arith (if op = "&&" then And else Or), a, b))
-      | ("land" | "lor" | "lxor" | "lsl" | "asr"), [ a; b ] ->
-          let a = expr env ~expected:TInt a and b = expr env ~expected:TInt b in
-          mk TInt (EBinop (Bit (List.assoc op bit_ops), a, b))
+      | ("land" | "lor" | "lxor" | "lsl" | "asr"), [ a; b ] -> (
+          let a = expr env a in
+          match (a.ety, op) with
+          | TBv, ("land" | "lor" | "lxor" | "lsl") ->
+              (* bitwise operations on bit-vector values *)
+              let b = expr env ~expected:TBv b in
+              let f =
+                match op with
+                | "land" -> "lit_and"
+                | "lor" -> "lit_or"
+                | "lxor" -> "lit_xor"
+                | _ -> "lit_shl"
+              in
+              ignore (find_global env loc f);
+              mk TBv (ECall (f, [ a; b ]))
+          | _ ->
+              expect a.eloc ~expected:TInt a.ety;
+              let b = expr env ~expected:TInt b in
+              mk TInt (EBinop (Bit (List.assoc op bit_ops), a, b)))
       | "not", [ a ] -> mk TBool (EUnop (Not, expr env ~expected:TBool a))
       | ("~-" | "-"), [ a ] -> (
           let a = expr env a in
@@ -674,7 +690,15 @@ let rec expr env ?expected (e : expression) : Syntax.expr =
           | _ ->
               expect a.eloc ~expected:TInt a.ety;
               mk TInt (EUnop (Neg, a)))
-      | "lognot", [ a ] -> mk TInt (EUnop (Lognot, expr env ~expected:TInt a))
+      | "lognot", [ a ] -> (
+          let a = expr env a in
+          match a.ety with
+          | TBv ->
+              ignore (find_global env loc "lit_not");
+              mk TBv (ECall ("lit_not", [ a ]))
+          | _ ->
+              expect a.eloc ~expected:TInt a.ety;
+              mk TInt (EUnop (Lognot, a)))
       | f, args -> (
           let check_args (s : sig_) =
             if List.length s.args <> List.length args then

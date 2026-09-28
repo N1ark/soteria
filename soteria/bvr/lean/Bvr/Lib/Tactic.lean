@@ -95,9 +95,11 @@ macro "bvr_wt" : tactic => `(tactic| (
 
 /-- Unfolds the literals and the arithmetic on them. -/
 macro "bvr_lits" : tactic => `(tactic|
-  simp only [den, denB, den_lit, bv_of_lit_bv, of_z_nat, lit_add_mk, lit_sub_mk, lit_mul_mk,
-    lit_neg_mk, lit_udiv_mk, lit_sdiv_mk, at_mk, at_of_z_self, width_mk, Term.ty_mk, to_z_mk, bv_zero, bv_one, mk_masked,
-    mk_bv, size_of_ty_bitVector, Int.toNat_natCast] at *)
+  simp only [den, denB, den_lit, ty_lit, bv_of_lit_bv, bv_of_lit_bv', of_z_nat, lit_add_mk, lit_sub_mk, lit_mul_mk,
+    lit_neg_mk, lit_udiv_mk, lit_sdiv_mk, lit_and_mk, lit_or_mk, lit_xor_mk, lit_not_mk,
+    lit_shl_mk, lit_lshr_mk, lit_ashr_mk, lit_urem_mk, lit_srem_mk, lit_smod_mk, lit_extract_mk,
+    lit_zext_mk, lit_sext_mk, lit_concat_mk, bv_equal_mk, at_mk, at_mk', BitVec.setWidth_eq, at_of_z_self, width_mk, Term.ty_mk, to_z_mk, bv_zero, bv_one, mk_masked,
+    mk_bv, v_true, v_false, of_bool, size_of_ty_bitVector, Int.toNat_natCast, Int.reduceToNat] at *)
 
 /-- The checked flags, and the booleans of the guards. -/
 macro "bvr_flags" : tactic => `(tactic|
@@ -108,11 +110,18 @@ macro "bvr_flags" : tactic => `(tactic|
 /-- The value half of `Refines.den`, reduced to the facts on the values of the
 atoms. -/
 macro "bvr_sem_core" : tactic => `(tactic| (
-  first | intro n w ht ρ x h | intro w ρ x h
-  have w' := w
-  bvr_facts
-  bvr_lits
-  bvr_cases
+  first
+    | (intro n w ht ρ x h
+       have w' := w
+       bvr_facts
+       bvr_lits
+       bvr_cases)
+    | (intro w ρ x h
+       have w' := w
+       bvr_facts
+       bvr_lits
+       bvr_cases
+       all_goals bvr_bool_vars)
   all_goals (try simp_all [unchecked, checked_signed, checked_unsigned, checked_meet])
   all_goals (try (repeat' split at h))
   all_goals (try simp_all [ssubOverflow_zero_left])
@@ -126,6 +135,8 @@ macro "bvr_sem_core" : tactic => `(tactic| (
 macro "bvr_sem" : tactic => `(tactic| (
   bvr_sem_core
   all_goals (first
+    | (simp only [BitVec.ult, BitVec.ule, BitVec.slt, BitVec.sle, decide_eq_true_eq,
+        decide_eq_false_iff_not, Bool.not_eq_true, Bool.not_eq_false] at *; omega)
     | (grind [BitVec.neg_eq_not_add]; done)
     | (bvr_ovf; done)
     | skip)))
@@ -188,7 +199,10 @@ macro "bvr_rule_core" : tactic => `(tactic| (
   all_goals (try bvr_lift_body)
   all_goals (try simp only [bvr_spec, ty])
   all_goals (try (first | exact Refines.refl | (bvr_comm; done)))
-  all_goals (try first | apply Refines.den | apply Refines.denB)))
+  all_goals (try first
+    | apply Refines.denB (fun _ => rfl)
+    | apply Refines.den
+    | apply Refines.denB)))
 
 macro "bvr_rule" : tactic => `(tactic| (
   bvr_rule_core

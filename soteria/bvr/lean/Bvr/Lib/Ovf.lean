@@ -196,6 +196,21 @@ partial def splitBools (g : MVarId) : MetaM (List MVarId) := g.withContext do
 open Lean Meta Elab Tactic in
 elab "bvr_bools" : tactic => liftMetaTactic splitBools
 
+open Lean Meta Elab Tactic in
+/-- Case splits the booleans of the context. -/
+partial def splitBoolVars (g : MVarId) : MetaM (List MVarId) := g.withContext do
+  for d in (← getLCtx) do
+    if d.isImplementationDetail then continue
+    let ty ← whnfR (← instantiateMVars d.type)
+    if ty.isConstOf ``Bool then
+      let subgoals ← g.cases d.fvarId
+      return ← subgoals.toList.foldlM (init := []) fun acc sg =>
+        return acc ++ (← splitBoolVars sg.mvarId)
+  return [g]
+
+open Lean Meta Elab Tactic in
+elab "bvr_bool_vars" : tactic => liftMetaTactic splitBoolVars
+
 /-- Proves overflow facts: splits the flags, and reasons on integers. -/
 macro "bvr_ovf" : tactic => `(tactic| (
   bvr_bools

@@ -320,6 +320,24 @@ theorem bv_sub.r_default.proof : bv_sub.r_default.Stmt := by
   repeat' rcases Lib.orElse_some h with h | h
   · bvr_arm h (bv_sub.r_default.a1.proof FS O hO)
 
+theorem bv_not.r_lit.proof : bv_not.r_lit.Stmt := by
+  intro FS O hO v res h
+  simp only [bv_not.r_lit] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_not.r_lit.a1.proof FS O hO)
+
+theorem bv_not.r_ite.proof : bv_not.r_ite.Stmt := by
+  intro FS O hO v res h
+  simp only [bv_not.r_ite] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_not.r_ite.a1.proof FS O hO)
+
+theorem bv_not.r_default.proof : bv_not.r_default.Stmt := by
+  intro FS O hO v res h
+  simp only [bv_not.r_default] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_not.r_default.a1.proof FS O hO)
+
 theorem bv_mul.r_lits.proof : bv_mul.r_lits.Stmt := by
   intro FS O hO checked v1 v2 res h
   simp only [bv_mul.r_lits] at h

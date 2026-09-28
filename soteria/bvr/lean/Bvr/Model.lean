@@ -2332,18 +2332,20 @@ def bv_rem.step (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
 
 def bv_not.r_lit (O : Ops) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.bitVec bv) _) =>
-    some ((mk_masked (size v) (zlognot bv)))
+    | bv@(Term.mk (Kind.bitVec _) _) =>
+    (let bv := bv_of_lit bv; (whenSome true ((lit (lit_not bv)))))
     | _ => none)
 
 def bv_not.r_ite (O : Ops) (v : Term) : Option Term :=
   (match v with
     | (Term.mk (Kind.triop Triop.ite b l r) _) =>
-    some ((O.b_ite b (O.bv_not l) (O.bv_not r)))
+    (whenSome true ((O.b_ite b (O.bv_not l) (O.bv_not r))))
     | _ => none)
 
 def bv_not.r_default (O : Ops) (v : Term) : Option Term :=
-  (match v with | _ => some ((Term.mk (Kind.unop Unop.bvNot v) (ty v))))
+  (match v with
+    | _ =>
+    (whenSome true ((Term.mk (Kind.unop Unop.bvNot v) (ty v)))))
 
 def bv_not.step (O : Ops) (v : Term) : Term :=
   (firstSome [bv_not.r_lit O v, bv_not.r_ite O v, bv_not.r_default O v]).getD (bv_not.spec v)

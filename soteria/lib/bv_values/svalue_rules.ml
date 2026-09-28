@@ -35,6 +35,20 @@ module type PRIMS = sig
   val lit_neg : bv -> bv
   val lit_udiv : bv -> bv -> bv
   val lit_sdiv : bv -> bv -> bv
+  val lit_and : bv -> bv -> bv
+  val lit_or : bv -> bv -> bv
+  val lit_xor : bv -> bv -> bv
+  val lit_not : bv -> bv
+  val lit_shl : bv -> bv -> bv
+  val lit_lshr : bv -> bv -> bv
+  val lit_ashr : bv -> bv -> bv
+  val lit_urem : bv -> bv -> bv
+  val lit_srem : bv -> bv -> bv
+  val lit_smod : bv -> bv -> bv
+  val lit_extract : Z.t -> Z.t -> bv -> bv
+  val lit_zext : Z.t -> bv -> bv
+  val lit_sext : Z.t -> bv -> bv
+  val lit_concat : bv -> bv -> bv
   val signed_extract : Z.t -> Z.t -> Z.t -> Z.t
   val popcount : Z.t -> Z.t
   val log2 : Z.t -> Z.t
@@ -1144,8 +1158,9 @@ module Make (P : PRIMS) = struct
   
   and bv_not (v : t) : t =
       (match v with
-      | { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (bv); _ }; _ } ->
-        (P.mk_masked (size v) (Z.lognot bv))
+      | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec _; _ }; _ } as bv) ->
+        let bv = P.bv_of_lit bv in
+        (P.lit (P.lit_not bv))
       | { Hc.node = { Svalue_ast.kind = Svalue_ast.Triop ((Svalue_ast.Triop.Ite), b, l, r); _ }; _ } ->
         (b_ite b (bv_not l) (bv_not r))
       | _ -> (P.node (Svalue_ast.Unop (Svalue_ast.Unop.BvNot, v)) (P.ty v))

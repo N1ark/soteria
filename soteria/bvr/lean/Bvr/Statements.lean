@@ -1250,6 +1250,24 @@ def bv_not.r_default.Stmt : Prop :=
   ∀ (v : Term) (res : Term), bv_not.r_default O v = some res →
   Refines FS (bv_not.spec v) res
 
+def bv_not.r_lit.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (bv__z : Int) (bv__T : Ty),
+  Refines FS (bv_not.spec (Term.mk (Kind.bitVec bv__z) bv__T))
+  ((lit (lit_not (bv_of_lit (Term.mk (Kind.bitVec bv__z) bv__T)))))
+
+def bv_not.r_ite.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (b : Term) (l : Term) (r : Term) (t__5 : Ty),
+  Refines FS (bv_not.spec (Term.mk (Kind.triop Triop.ite b l r) t__5))
+  ((O.b_ite b (O.bv_not l) (O.bv_not r)))
+
+def bv_not.r_default.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v : Term),
+  Refines FS (bv_not.spec v)
+  ((Term.mk (Kind.unop Unop.bvNot v) (ty v)))
+
 def bv_and.r_lits.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
   ∀ (v1 : Term) (v2 : Term) (res : Term), bv_and.r_lits O v1 v2 = some res →

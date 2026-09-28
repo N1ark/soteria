@@ -62,6 +62,31 @@ external lit_neg : bv -> bv = ""
 external lit_udiv : bv -> bv -> bv = ""
 external lit_sdiv : bv -> bv -> bv = ""
 
+(* Bitwise operations and shifts, at the width of the first operand; [land],
+   [lor], [lxor], [lognot] and [lsl] on [bv]s stand for the first five. Shifts
+   by at least the width give 0 (all ones for a negative [lit_ashr]). *)
+external lit_and : bv -> bv -> bv = ""
+external lit_or : bv -> bv -> bv = ""
+external lit_xor : bv -> bv -> bv = ""
+external lit_not : bv -> bv = ""
+external lit_shl : bv -> bv -> bv = ""
+external lit_lshr : bv -> bv -> bv = ""
+external lit_ashr : bv -> bv -> bv = ""
+
+(* Remainders, SMT-LIB's: by zero, they give the dividend. [lit_srem] takes the
+   sign of the dividend and [lit_smod] that of the divisor. *)
+external lit_urem : bv -> bv -> bv = ""
+external lit_srem : bv -> bv -> bv = ""
+external lit_smod : bv -> bv -> bv = ""
+
+(* [lit_extract from_ to_ l] is bits [from_] to [to_] of [l], inclusive;
+   [lit_zext k l] and [lit_sext k l] extend [l] by [k] bits; [lit_concat l r]
+   has [l] in its high bits and [r] in its low bits. *)
+external lit_extract : int -> int -> bv -> bv = ""
+external lit_zext : int -> bv -> bv = ""
+external lit_sext : int -> bv -> bv = ""
+external lit_concat : bv -> bv -> bv = ""
+
 (* Integers *)
 external signed_extract : int -> int -> int -> int = ""
 external popcount : int -> int = ""

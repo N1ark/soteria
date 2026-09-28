@@ -258,3 +258,16 @@ let rec sure_neq (a : t) (b : t) : bool =
   | Bool a, Bool b -> not (a = b)
   | Ptr (la, oa), Ptr (lb, ob) -> sure_neq la lb || sure_neq oa ob
   | _ -> false
+
+(* Bitwise *)
+
+(* the value of width [n] with all bits set *)
+let ones (n : int) : bv = lognot (of_z n 0)
+
+let is_ones (l : bv) : bool = to_z true l = -1
+
+(* whether the bits set in [a] are all set in [b] *)
+let bits_in (a : bv) (b : bv) : bool = to_z false (a land b) = to_z false a
+
+(* whether no bit is set in both [a] and [b] *)
+let disjoint (a : bv) (b : bv) : bool = to_z false (a land b) = 0

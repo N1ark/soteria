@@ -965,7 +965,7 @@ let soundness ~sources ~proofs ft (p : program) =
   let ctx = classify p in
   let proofs =
     if List.exists (fun f -> f.cases) (rule_fns ctx) then
-      "Bvr.Lib.Tactic" :: proofs
+      "Bvr.Lib.Rule" :: proofs
     else proofs
   in
   header ~sources ft ("Bvr.Statements" :: proofs);

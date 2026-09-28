@@ -5,117 +5,7 @@ proved per alternative. -/
 
 namespace Bvr
 
-open Classical Lib EqL
-
-theorem bv_concat.r_assoc_l.a1.proof : bv_concat.r_assoc_l.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_concat.r_assoc_r.a1.proof : bv_concat.r_assoc_r.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_concat.r_default.a1.proof : bv_concat.r_default.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_concat.r_extract_extracts.a1.proof : bv_concat.r_extract_extracts.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_concat.r_extracts.a1.proof : bv_concat.r_extracts.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_concat.r_ites.a1.proof : bv_concat.r_ites.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_concat.r_lits.a1.proof : bv_concat.r_lits.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_extend.r_default.a1.proof : bv_extend.r_default.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_extend.r_extend.a1.proof : bv_extend.r_extend.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_extend.r_ite.a1.proof : bv_extend.r_ite.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_extend.r_lit.a1.proof : bv_extend.r_lit.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_extend.r_of_bool.a1.proof : bv_extend.r_of_bool.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_extract.r_and_.a1.proof : bv_extract.r_and_.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_extract.r_concat.a1.proof : bv_extract.r_concat.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_extract.r_default.a1.proof : bv_extract.r_default.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_extract.r_ext_low.a1.proof : bv_extract.r_ext_low.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_extract.r_ext_orig.a1.proof : bv_extract.r_ext_orig.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_extract.r_extract.a1.proof : bv_extract.r_extract.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_extract.r_full.a1.proof : bv_extract.r_full.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_extract.r_ite.a1.proof : bv_extract.r_ite.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_extract.r_lit.a1.proof : bv_extract.r_lit.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_extract.r_lshr.a1.proof : bv_extract.r_lshr.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_extract.r_or_.a1.proof : bv_extract.r_or_.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_extract.r_sext_bit.a1.proof : bv_extract.r_sext_bit.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_extract.r_shl.a1.proof : bv_extract.r_shl.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_extract.r_xor.a1.proof : bv_extract.r_xor.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_extract.r_zext_high.a1.proof : bv_extract.r_zext_high.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_not_bool.r_default.a1.proof : bv_not_bool.r_default.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_not_bool.r_of_bool.a1.proof : bv_not_bool.r_of_bool.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_of_bool.r_default.a1.proof : bv_of_bool.r_default.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_of_bool.r_false_.a1.proof : bv_of_bool.r_false_.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_of_bool.r_true_.a1.proof : bv_of_bool.r_true_.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_to_bool.r_default.a1.proof : bv_to_bool.r_default.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_to_bool.r_of_bool.a1.proof : bv_to_bool.r_of_bool.a1.Stmt := by
-  bvr_rule_r
-
-theorem bv_to_bool.r_lit.a1.proof : bv_to_bool.r_lit.a1.Stmt := by
-  bvr_rule_sem_r
-  all_goals subst_vars; simp (disch := assumption) only [ofInt_eq_zero_of_lt] at *; simp_all
-
-theorem bv_not_bool.r_lit.a1.proof : bv_not_bool.r_lit.a1.Stmt := by
-  bvr_rule_sem_r
-  all_goals subst_vars; simp (disch := assumption) only [ofInt_eq_zero_of_lt] at *; simp_all
+open Classical Lib
 
 theorem bv_extract.r_add_low.a1.proof : bv_extract.r_add_low.a1.Stmt := by
   bvr_rule_sem_r
@@ -131,12 +21,12 @@ theorem bv_extract.r_add_const.a1.proof : bv_extract.r_add_const.a1.Stmt := by
 
 theorem bv_extract.r_mul_pow2.a1.proof : bv_extract.r_mul_pow2.a1.Stmt := by
   bvr_rule_sem_r
-  all_goals bvr_split; subst_vars; obtain ⟨k, rfl⟩ := is_pow2_eq ‹_›
+  all_goals bvr_split; subst_vars; obtain ⟨k, rfl⟩ := is_pow2_exists ‹_›
   all_goals simp only [log2_two_pow] at *; exact (extractLsb'_mul_pow2 _ ‹_› ‹_› ‹_›).symm
 
 theorem bv_extract.r_urem.a1.proof : bv_extract.r_urem.a1.Stmt := by
   bvr_rule_sem_r
-  all_goals subst_vars; obtain ⟨k, rfl⟩ := is_pow2_eq ‹_›
+  all_goals subst_vars; obtain ⟨k, rfl⟩ := is_pow2_exists ‹_›
   all_goals simp only [log2_two_pow] at *
   all_goals exact extractLsb'_umod_pow2 _ (by omega) (by omega) (by omega) (by omega)
 
@@ -357,7 +247,7 @@ theorem float_eq.r_same.a1.proof : float_eq.r_same.a1.Stmt := by
   · have ⟨_, w1⟩ := WT_unop.1 w'
     rw [float_eq.spec, eval_binop w] at e
     rw [b_not.spec, eval_unop w', float_is_floatclass.spec, eval_unop w1]
-    simp only [evBinop, EqL.fBin_eq_some] at e
+    simp only [evBinop, fBin_eq_some] at e
     obtain ⟨p, x, y, h1, h2, h3⟩ := e
     rw [h1] at h2; cases h2
     rw [h1]; simp at h3; simp [evUnop, ← h3, FBits.isClass]

@@ -219,4 +219,58 @@ theorem msb_of_lit (z : Int) (T : Ty) :
     · subst h'; simp [firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse]
     · simp [firstSome, h, h', HOrElse.hOrElse, OrElse.orElse, Option.orElse]
 
+/-! ## Integer helpers -/
+
+theorem popcountNat_eq_zero : ∀ {m : Nat}, popcountNat m = 0 → m = 0
+  | 0, _ => rfl
+  | k + 1, h => by
+      rw [popcountNat] at h
+      have : (k + 1) / 2 < k + 1 := by omega
+      have := popcountNat_eq_zero (m := (k + 1) / 2) (by omega)
+      omega
+
+theorem popcountNat_eq_one : ∀ {m : Nat}, popcountNat m = 1 → ∃ j, m = 2 ^ j
+  | 0, h => by simp [popcountNat] at h
+  | k + 1, h => by
+      rw [popcountNat] at h
+      have : (k + 1) / 2 < k + 1 := by omega
+      by_cases hm : (k + 1) % 2 = 1
+      · have := popcountNat_eq_zero (m := (k + 1) / 2) (by omega)
+        exact ⟨0, by omega⟩
+      · obtain ⟨j, hj⟩ := popcountNat_eq_one (m := (k + 1) / 2) (by omega)
+        exact ⟨j + 1, by rw [Nat.pow_succ]; omega⟩
+
+theorem is_pow2_eq {z : Int} (h : is_pow2 z = true) : z = 2 ^ (log2 z).toNat ∧ 0 ≤ log2 z := by
+  unfold is_pow2 at h
+  simp only [Bool.and_eq_true, decide_eq_true_eq] at h
+  obtain ⟨h0, h1⟩ := h
+  simp only [popcount] at h1
+  have h1' : popcountNat z.toNat = 1 := by exact_mod_cast h1
+  obtain ⟨j, hj⟩ := popcountNat_eq_one h1'
+  have e1 : ((2 ^ j : Nat) : Int) = (2 : Int) ^ j := by push_cast; rfl
+  simp only [log2, hj, Nat.log2_two_pow, Int.toNat_natCast]
+  omega
+
+theorem is_pow2_exists {z : Int} (h : is_pow2 z = true) : ∃ k : Nat, z = 2 ^ k :=
+  ⟨_, (is_pow2_eq h).1⟩
+
+theorem lt_two_pow_log2 {z w : Int} (hz : 0 < z) (h : log2 z < w) : z < 2 ^ w.toNat := by
+  have hl := Nat.lt_log2_self (n := z.toNat)
+  have hle : 2 ^ (Nat.log2 z.toNat + 1) ≤ 2 ^ w.toNat :=
+    Nat.pow_le_pow_right (by omega) (by simp only [log2] at h; omega)
+  have : ((z.toNat : Nat) : Int) < ((2 ^ w.toNat : Nat) : Int) := by exact_mod_cast (by omega)
+  push_cast at this; omega
+
+theorem lt_two_pow_log2_succ {z : Int} (hz : 0 < z) : z < 2 ^ (log2 z + 1).toNat :=
+  lt_two_pow_log2 hz (by omega)
+
+/-! ## Boolean literals -/
+
+@[simp] theorem of_bool_WT (b : Bool) : (of_bool b).WT := by cases b <;> simp [of_bool]
+@[simp] theorem of_bool_ty (b : Bool) : (of_bool b).ty = .bool := by cases b <;> rfl
+@[simp] theorem denB_of_bool {FS ρ} (b : Bool) : denB FS ρ (of_bool b) = some b := by
+  cases b <;> rfl
+@[simp] theorem eval_of_bool {FS ρ} (b : Bool) : eval FS ρ (of_bool b) = some (.bool b) := by
+  cases b <;> simp [of_bool]
+
 end Bvr.Lib

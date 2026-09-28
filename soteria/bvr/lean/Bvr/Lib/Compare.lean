@@ -23,13 +23,6 @@ open Classical
 
 /-! ## Booleans and widths -/
 
-@[simp] theorem denB_of_bool {FS ρ} (b : Bool) : denB FS ρ (of_bool b) = some b := by
-  cases b <;> rfl
-
-@[simp] theorem WT_of_bool (b : Bool) : (of_bool b).WT := by
-  cases b <;> simp [of_bool, v_true, v_false, WT_bool]
-
-@[simp] theorem ty_of_bool (b : Bool) : (of_bool b).ty = .bool := by cases b <;> rfl
 
 theorem ite_of_pos {α : Sort _} {c : Prop} [Decidable c] (h : c) (a b : α) :
     (if c then a else b) = a := by simp [h]
@@ -101,14 +94,6 @@ theorem two_pow_mono' {a b : Int} (h : a ≤ b) : (2 : Int) ^ a.toNat ≤ 2 ^ b.
   have : 2 ^ a.toNat ≤ 2 ^ b.toNat := Nat.pow_le_pow_right (by omega) (by omega)
   exact_mod_cast this
 
-theorem lt_two_pow_log2 {z : Int} (hz : 0 < z) : z < 2 ^ (log2 z + 1).toNat := by
-  have hl := Nat.lt_log2_self (n := z.toNat)
-  have e : (log2 z + 1).toNat = Nat.log2 z.toNat + 1 := by simp [log2]
-  rw [e]
-  have : ((z.toNat : Nat) : Int) < ((2 ^ (Nat.log2 z.toNat + 1) : Nat) : Int) := by
-    exact_mod_cast hl
-  push_cast at this; have := Int.toNat_of_nonneg (Int.le_of_lt hz); omega
-
 theorem msb_of_bound_aux {FS : FloatSem} {ρ : Env} (K : Nat) : ∀ (v : Term), sizeOf v < K →
     ∀ {n : Nat} {x : BitVec n}, v.WT → v.ty = .bitVector n → den FS ρ n v = some x →
     (x.toNat : Int) < 2 ^ (msb_of v + 1).toNat := by
@@ -128,7 +113,7 @@ theorem msb_of_bound_aux {FS : FloatSem} {ρ : Env} (K : Nat) : ∀ (v : Term), 
     rw [msb_of_lit]
     split
     · rw [toNat_ofInt_of_lt h0 (by simpa using h1)]
-      have := lt_two_pow_log2 (by omega : 0 < z); omega
+      have := lt_two_pow_log2_succ (by omega : 0 < z); omega
     · simp only [size_of_ty_bitVector]; simpa using hx
   case unop =>
     cases op

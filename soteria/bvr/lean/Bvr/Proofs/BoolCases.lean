@@ -17,82 +17,6 @@ theorem b_and.r_eq_extracts.a1.proof : b_and.r_eq_extracts.a1.Stmt := by
     | exact concat_ne_extract ‹_› (by omega) (by omega)
     | exact concat_ne_extract' ‹_› (by omega) (by omega)
 
-theorem b_and.r_upper_bounds.a1.proof : b_and.r_upper_bounds.a1.Stmt := by
-  bvr_rule_bounds
-
-theorem b_and.r_upper_bounds.a2.proof : b_and.r_upper_bounds.a2.Stmt := by
-  bvr_rule_bounds
-
-theorem b_and.r_upper_bounds.a3.proof : b_and.r_upper_bounds.a3.Stmt := by
-  bvr_rule_bounds
-
-theorem b_and.r_upper_bounds.a4.proof : b_and.r_upper_bounds.a4.Stmt := by
-  bvr_rule_bounds
-
-theorem b_and.r_lower_bounds.a1.proof : b_and.r_lower_bounds.a1.Stmt := by
-  bvr_rule_bounds
-
-theorem b_and.r_lower_bounds.a2.proof : b_and.r_lower_bounds.a2.Stmt := by
-  bvr_rule_bounds
-
-theorem b_and.r_lower_bounds.a3.proof : b_and.r_lower_bounds.a3.Stmt := by
-  bvr_rule_bounds
-
-theorem b_and.r_lower_bounds.a4.proof : b_and.r_lower_bounds.a4.Stmt := by
-  bvr_rule_bounds
-
-theorem b_or.r_lt_lt.a1.proof : b_or.r_lt_lt.a1.Stmt := by
-  bvr_rule
-  all_goals bvr_int_cmp
-
-theorem b_or.r_complementary.a1.proof : b_or.r_complementary.a1.Stmt := by
-  bvr_rule_bounds
-
-theorem b_or.r_complementary.a3.proof : b_or.r_complementary.a3.Stmt := by
-  bvr_rule_bounds
-
-theorem b_or.r_complementary.a2.proof : b_or.r_complementary.a2.Stmt := by
-  bvr_rule_bounds
-
-theorem b_or.r_complementary.a4.proof : b_or.r_complementary.a4.Stmt := by
-  bvr_rule_bounds
-
-theorem b_or.r_upper_eq.a1.proof : b_or.r_upper_eq.a1.Stmt := by
-  bvr_rule_bounds
-
-theorem b_or.r_upper_eq.a3.proof : b_or.r_upper_eq.a3.Stmt := by
-  bvr_rule_bounds
-
-theorem b_or.r_lower_eq.a1.proof : b_or.r_lower_eq.a1.Stmt := by
-  bvr_rule_bounds
-
-theorem b_or.r_lower_eq.a3.proof : b_or.r_lower_eq.a3.Stmt := by
-  bvr_rule_bounds
-
-theorem b_or.r_upper_bounds.a1.proof : b_or.r_upper_bounds.a1.Stmt := by
-  bvr_rule_bounds
-
-theorem b_or.r_upper_bounds.a2.proof : b_or.r_upper_bounds.a2.Stmt := by
-  bvr_rule_bounds
-
-theorem b_or.r_upper_bounds.a3.proof : b_or.r_upper_bounds.a3.Stmt := by
-  bvr_rule_bounds
-
-theorem b_or.r_upper_bounds.a4.proof : b_or.r_upper_bounds.a4.Stmt := by
-  bvr_rule_bounds
-
-theorem b_or.r_lower_bounds.a1.proof : b_or.r_lower_bounds.a1.Stmt := by
-  bvr_rule_bounds
-
-theorem b_or.r_lower_bounds.a2.proof : b_or.r_lower_bounds.a2.Stmt := by
-  bvr_rule_bounds
-
-theorem b_or.r_lower_bounds.a3.proof : b_or.r_lower_bounds.a3.Stmt := by
-  bvr_rule_bounds
-
-theorem b_or.r_lower_bounds.a4.proof : b_or.r_lower_bounds.a4.Stmt := by
-  bvr_rule_bounds
-
 theorem b_not.r_distinct.a1.proof : b_not.r_distinct.a1.Stmt := by
   intro FS O hO l r t
   simp only [bvr_spec]
@@ -104,63 +28,6 @@ theorem b_not.r_distinct.a1.proof : b_not.r_distinct.a1.Stmt := by
     rw [eval_eq_ev w']
     simp only [ev, evList] at e ⊢
     cases hl : ev FS ρ l <;> cases hr : ev FS ρ r <;> simp_all [evUnop, evBinop]
-
-theorem b_ite.r_true_.a1.proof : b_ite.r_true_.a1.Stmt := by
-  bvr_rule_ev
-
-theorem b_ite.r_false_.a1.proof : b_ite.r_false_.a1.Stmt := by
-  bvr_rule_ev
-
-theorem b_ite.r_bool.a1.proof : b_ite.r_bool.a1.Stmt := by
-  bvr_rule_typed
-
-theorem b_ite.r_not_bool.a1.proof : b_ite.r_not_bool.a1.Stmt := by
-  bvr_rule_typed
-
-theorem b_ite.r_false_then.a1.proof : b_ite.r_false_then.a1.Stmt := by
-  bvr_rule_typed
-
-theorem b_ite.r_true_then.a1.proof : b_ite.r_true_then.a1.Stmt := by
-  bvr_rule_typed
-
-theorem b_ite.r_false_else.a1.proof : b_ite.r_false_else.a1.Stmt := by
-  bvr_rule_typed
-
-theorem b_ite.r_true_else.a1.proof : b_ite.r_true_else.a1.Stmt := by
-  bvr_rule_typed
-
-theorem b_ite.r_bv_of_bool.a1.proof : b_ite.r_bv_of_bool.a1.Stmt := by
-  bvr_rule_typed
-
-theorem b_ite.r_not_guard.a1.proof : b_ite.r_not_guard.a1.Stmt := by
-  bvr_rule_ev
-
-theorem b_ite.r_guard_then.a1.proof : b_ite.r_guard_then.a1.Stmt := by
-  bvr_rule_typed
-
-theorem b_ite.r_guard_else.a1.proof : b_ite.r_guard_else.a1.Stmt := by
-  bvr_rule_typed
-
-theorem b_ite.r_ite_then.a1.proof : b_ite.r_ite_then.a1.Stmt := by
-  bvr_rule_ev
-
-theorem b_ite.r_ite_else.a1.proof : b_ite.r_ite_else.a1.Stmt := by
-  bvr_rule_ev
-
-theorem b_ite.r_and_ite_then.a1.proof : b_ite.r_and_ite_then.a1.Stmt := by
-  bvr_rule_ev
-
-theorem b_ite.r_and_ite_then.a2.proof : b_ite.r_and_ite_then.a2.Stmt := by
-  bvr_rule_ev
-
-theorem b_ite.r_or_ite_else.a1.proof : b_ite.r_or_ite_else.a1.Stmt := by
-  bvr_rule_ev
-
-theorem b_ite.r_or_ite_else.a2.proof : b_ite.r_or_ite_else.a2.Stmt := by
-  bvr_rule_ev
-
-theorem b_ite.r_same.a1.proof : b_ite.r_same.a1.Stmt := by
-  bvr_rule_ev
 
 theorem b_mk_exists.r_empty.a1.proof : b_mk_exists.r_empty.a1.Stmt := by
   intro FS O hO bs body hu
@@ -189,11 +56,6 @@ theorem b_mk_exists.r_default.a1.proof : b_mk_exists.r_default.a1.Stmt := by
   · simp only [b_mk_exists.spec] at w e
     rw [eval_eq_ev w, ev_exists_used hn hw] at e
     rw [eval_eq_ev w']; exact e
-
-theorem sem_eq_untyped.r_ill_typed.a1.proof : sem_eq_untyped.r_ill_typed.a1.Stmt := by
-  intro FS O hO v1 v2 h
-  have h' : ¬ v1.ty = v2.ty := fun e => by simp [e] at h
-  exact Refines.of_WT fun w => absurd (by simpa [Binop.WT] using (WT_binop.1 w).1) h'
 
 theorem b_distinct.r_small.a1.proof : b_distinct.r_small.a1.Stmt := by
   intro FS O hO l h

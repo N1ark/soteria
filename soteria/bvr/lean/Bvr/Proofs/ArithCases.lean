@@ -105,13 +105,6 @@ theorem zext_div_ok {m n : Nat} (hmn : m ≤ n) (x : BitVec m) {z : Int} (h0 : 0
       Nat.mod_eq_of_lt (by have := Nat.div_le_self x.toNat z.toNat; omega)]
   · simp
 
-theorem lt_two_pow_of_log2 {z w : Int} (hz : 0 < z) (h : log2 z < w) : z < 2 ^ w.toNat := by
-  have hl := Nat.lt_log2_self (n := z.toNat)
-  have hle : 2 ^ (Nat.log2 z.toNat + 1) ≤ 2 ^ w.toNat :=
-    Nat.pow_le_pow_right (by omega) (by simp only [log2] at h; omega)
-  have : ((z.toNat : Nat) : Int) < ((2 ^ w.toNat : Nat) : Int) := by exact_mod_cast (by omega)
-  push_cast at this; omega
-
 theorem bv_add.r_factor_const.a1.proof : bv_add.r_factor_const.a1.Stmt := by
   bvr_rule_sem
   all_goals bvr_split
@@ -157,7 +150,7 @@ theorem bv_div.r_zext.a1.proof : bv_div.r_zext.a1.Stmt := by
     simp (disch := assumption) only [emod_two_pow_of_lt, Int.max_eq_left] at *
     refine (zext_div_ok (by omega) _ ‹_› ?_ ‹_›).symm
     split at *
-    · exact .inl ⟨‹_›, lt_two_pow_of_log2 ‹_› ‹_›⟩
+    · exact .inl ⟨‹_›, lt_two_pow_log2 ‹_› ‹_›⟩
     · exact .inr (by omega)
 
 end Bvr

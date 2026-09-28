@@ -1,5 +1,5 @@
 import Bvr.Lib.Tactic
-import Bvr.Proofs.EqLemmas
+import Bvr.Lib.Float
 
 /-!
 # Lemmas for the resizing, conversion, float and pointer rules
@@ -42,36 +42,9 @@ theorem ofInt_eq_zero_of_lt {n : Nat} {z : Int} (h0 : 0 ≤ z) (h1 : z < 2 ^ n) 
 
 /-! ## Powers of two and lowest set bits of literals -/
 
-theorem popcountNat_eq_zero : ∀ {m : Nat}, popcountNat m = 0 → m = 0
-  | 0, _ => rfl
-  | k + 1, h => by
-      rw [popcountNat] at h
-      have : (k + 1) / 2 < k + 1 := by omega
-      have := popcountNat_eq_zero (m := (k + 1) / 2) (by omega)
-      omega
-
-theorem popcountNat_eq_one : ∀ {m : Nat}, popcountNat m = 1 → ∃ j, m = 2 ^ j
-  | 0, h => by simp [popcountNat] at h
-  | k + 1, h => by
-      rw [popcountNat] at h
-      have : (k + 1) / 2 < k + 1 := by omega
-      by_cases hm : (k + 1) % 2 = 1
-      · have := popcountNat_eq_zero (m := (k + 1) / 2) (by omega)
-        exact ⟨0, by omega⟩
-      · obtain ⟨j, hj⟩ := popcountNat_eq_one (m := (k + 1) / 2) (by omega)
-        exact ⟨j + 1, by rw [Nat.pow_succ]; omega⟩
-
 @[simp] theorem log2_two_pow (k : Nat) : log2 ((2 : Int) ^ k) = k := by
   rw [show (2 : Int) ^ k = ((2 ^ k : Nat) : Int) by push_cast; rfl, log2, Int.toNat_natCast,
     Nat.log2_two_pow]
-
-theorem is_pow2_eq {z : Int} (h : is_pow2 z = true) : ∃ k : Nat, z = 2 ^ k := by
-  simp only [is_pow2, Bool.and_eq_true, popcount] at h
-  have h0 := of_decide_eq_true h.1
-  obtain ⟨j, hj⟩ := popcountNat_eq_one (m := z.toNat) (by exact_mod_cast of_decide_eq_true h.2)
-  refine ⟨j, ?_⟩
-  have : ((2 ^ j : Nat) : Int) = (2 : Int) ^ j := by push_cast; rfl
-  omega
 
 theorem testBit_two_mul (y i : Nat) : (2 * y).testBit i = (decide (0 < i) && y.testBit (i - 1)) := by
   cases i with
@@ -179,7 +152,7 @@ theorem extractLsb'_umod_pow2 {w n m k : Nat} {j : Int} (x : BitVec w) (hk : k <
 /-! ## Float literals -/
 
 section
-open EqL
+
 variable {FS : FloatSem}
 
 /-- A comparison of float literals. -/
@@ -192,7 +165,7 @@ theorem Refines.fcmp_lits {op : Binop} (hop : op = .fEq ∨ op = .fLt ∨ op = .
   obtain ⟨_, h2, _, w1, w2⟩ := (WT_fcmp hop).1 w
   rw [(WT_float.1 w1).1, (WT_float.1 w2).1] at h2
   rw [eval_binop w, eval_float w1, eval_float w2, hsem (by simpa using h2)] at e
-  rw [EqL.eval_of_bool]; exact e
+  rw [eval_of_bool]; exact e
 
 /-- A unary operation on a float literal, of the precision of the literal. -/
 theorem Refines.funop_lit {op : Unop} (hop : op = .fAbs ∨ op = .fNeg ∨ op = .fSqrt ∨ ∃ rm, op = .fRound rm)
@@ -242,7 +215,7 @@ theorem Refines.feq_lit {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {f : FloatLi
     have w := eval_WT e
     have ⟨_, w1, _⟩ := WT_binop.1 w
     rw [float_eq.spec, eval_binop w, eval_float w1] at e
-    simp only [evBinop, EqL.fBin_eq_some, FloatLit.sem] at e
+    simp only [evBinop, fBin_eq_some, FloatLit.sem] at e
     obtain ⟨p, x, y, h1, h2, h3⟩ := e
     simp at h1; obtain ⟨rfl, h1⟩ := h1; subst h1
     simp at h3

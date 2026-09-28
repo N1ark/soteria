@@ -1,3 +1,4 @@
+import Bvr.Lib.Float
 import Bvr.Lib.Tactic
 
 /-!
@@ -115,19 +116,6 @@ theorem sure_neq_cases {a b : Term} (h : sure_neq a b = true) :
   cases ka <;> cases kb <;> simp [firstSome, f_equal] at h ⊢ <;>
     first | assumption | exact ⟨_, _, ⟨rfl, rfl⟩, _, _, ⟨rfl, rfl⟩, h⟩
 
-theorem eval_ptr_eq_some {FS ρ l o T u} (e : eval FS ρ (.mk (.ptr l o) T) = some u) :
-    ∃ n x y, u = .ptr n x y ∧ eval FS ρ l = some (.bv n x) ∧ eval FS ρ o = some (.bv n y) := by
-  have w := eval_WT e
-  have w' := w
-  obtain ⟨_, _, _, _, _, wl, wo⟩ := w'
-  rw [eval_eq_ev w] at e; rw [eval_eq_ev wl, eval_eq_ev wo]
-  simp only [ev] at e
-  split at e
-  · split at e
-    · rename_i h; subst h; cases e; exact ⟨_, _, _, rfl, by assumption, by assumption⟩
-    · cases e
-  · cases e
-
 theorem sure_neq_sound_aux {FS : FloatSem} (k : Nat) : ∀ {a b : Term} {ρ : Env} {u : Val},
     sizeOf a < k → sure_neq a b = true →
     a.ty = b.ty → eval FS ρ a = some u → eval FS ρ b = some u → False := by
@@ -166,8 +154,8 @@ theorem sure_neq_sound_aux {FS : FloatSem} (k : Nat) : ∀ {a b : Term} {ρ : En
       exact hf (by simp at this ⊢; omega)
     · simp only [eval_bool (WT_bool.1 (eval_WT ea)), eval_bool (WT_bool.1 (eval_WT eb))] at ea eb
       rw [← ea] at eb; simp at eb; exact hb eb.symm
-    · obtain ⟨n, x, y, rfl, hla, hoa⟩ := eval_ptr_eq_some ea
-      obtain ⟨n', x', y', he, hlb, hob⟩ := eval_ptr_eq_some eb
+    · obtain ⟨n, x, y, hla, hoa, rfl⟩ := (eval_ptr_eq_some (eval_WT ea)).1 ea
+      obtain ⟨n', x', y', hlb, hob, he⟩ := (eval_ptr_eq_some (eval_WT eb)).1 eb
       simp only [Val.ptr.injEq] at he
       obtain ⟨rfl, rfl, rfl⟩ := he
       obtain ⟨m, -, hTa, hla', hoa', -, -⟩ := eval_WT ea

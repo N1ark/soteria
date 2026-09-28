@@ -1,178 +1,11 @@
-import Bvr.Lemmas
+import Bvr.Lib.Lit
 
-/-! Lemmas for the equality, float and pointer rules. -/
+/-! Floats, pointers and equalities, by evaluation. -/
 
-namespace Bvr
-namespace EqL
+namespace Bvr.Lib
 
 open Classical
 
-/-! ## Evaluation yields values of the sort of the term -/
-
-@[simp] theorem Val.hasSort_bool {b : Bool} {T : Ty} : (Val.bool b).hasSort T ↔ T = .bool := by
-  cases T <;> simp [Val.hasSort]
-
-@[simp] theorem Val.hasSort_bv {n : Nat} {x : BitVec n} {T : Ty} :
-    (Val.bv n x).hasSort T ↔ (T = .bitVector n ∨ T = .loc n) ∧ 0 < n := by
-  cases T <;> simp [Val.hasSort, eq_comm]
-
-@[simp] theorem Val.hasSort_ptr {n : Nat} {l o : BitVec n} {T : Ty} :
-    (Val.ptr n l o).hasSort T ↔ T = .pointer n ∧ 0 < n := by
-  cases T <;> simp [Val.hasSort, eq_comm]
-
-@[simp] theorem Val.hasSort_float {p : Prec} {x : FBits p} {T : Ty} :
-    (Val.float p x).hasSort T ↔ T = .float p := by
-  cases T <;> simp [Val.hasSort, eq_comm]
-
-mutual
-theorem ev_hasSort {FS : FloatSem} : ∀ (ρ : Env) (t : Term), t.WT → ∀ v, ev FS ρ t = some v →
-    v.hasSort t.ty.sort
-  | ρ, .mk (.var x) T, w, v, e => by
-    simp only [ev] at e; split at e
-    · split at e <;> simp_all [Val.hasTy]
-    · simp at e
-  | ρ, .mk (.bool b) T, w, v, e => by
-    simp [Term.WT] at w; subst w; simp [ev] at e; subst e; simp [Val.hasSort]
-  | ρ, .mk (.float f) T, w, v, e => by
-    simp [Term.WT] at w; obtain ⟨rfl, _⟩ := w; simp [ev] at e; subst e
-    simp [FloatLit.sem]
-  | ρ, .mk (.bitVec z) T, w, v, e => by
-    obtain ⟨n, hn, hT, _⟩ := WT_bitVec.1 w
-    simp [ev] at e; subst e
-    simp only [Term.ty_mk, Ty.sort_eq, Ty.width_of_sort hT, Val.hasSort_bv]
-    exact ⟨by rcases hT with rfl | rfl <;> simp, hn⟩
-  | ρ, .mk (.ptr l o) T, w, v, e => by
-    simp only [Term.WT] at w
-    obtain ⟨n, hn, rfl, hl, ho, wl, wo⟩ := w
-    simp only [ev] at e
-    split at e <;> try simp at e
-    rename_i n1 x m y h1 h2
-    obtain ⟨rfl, rfl⟩ := e
-    have := ev_hasSort ρ l wl _ h1
-    rw [hl] at this
-    simp [Val.hasSort] at this ⊢; omega
-  | ρ, .mk (.seq l) T, w, v, e => by
-    simp only [Term.WT] at w
-    obtain ⟨E, rfl, wl⟩ := w
-    simp only [ev, Option.map_eq_some_iff] at e
-    obtain ⟨vs, h, rfl⟩ := e
-    simp only [Term.ty_mk, Ty.sort, Val.hasSort]
-    exact evList_hasSort ρ E l wl vs h
-  | ρ, .mk (.unop op a) T, w, v, e => by
-    have ⟨w1, wa⟩ := WT_unop.1 w
-    simp only [ev] at e
-    cases h : ev FS ρ a with
-    | none => simp [h] at e
-    | some x =>
-      have hx := ev_hasSort ρ a wa x h
-      rw [h] at e
-      generalize a.ty.sort = A at hx w1
-      simp only [Term.ty_mk]
-      generalize T.sort = T' at w1
-      rcases x with b | ⟨n, x⟩ | ⟨n, l, o⟩ | ⟨p, x⟩ | vs | x <;> cases op <;>
-        simp only [evUnop, reduceCtorEq, Option.some.injEq] at e <;> (try subst e) <;>
-        simp only [Unop.WT] at w1
-      all_goals (try simp at e)
-      all_goals (try obtain ⟨_, rfl⟩ := e)
-      all_goals (simp only [Val.hasSort_bool, Val.hasSort_bv, Val.hasSort_float,
-        Val.hasSort_ptr] at hx ⊢)
-      all_goals grind
-  | ρ, .mk (.binop op a b) T, w, v, e => by
-    have ⟨w1, wa, wb⟩ := WT_binop.1 w
-    simp only [ev] at e
-    simp only [Term.ty_mk]
-    generalize T.sort = T' at w1
-    cases op
-    case and_ =>
-      simp only [evBinop, pand_eq_some] at e; simp only [Binop.WT] at w1; grind [Val.hasSort_bool]
-    case or_ =>
-      simp only [evBinop, por_eq_some] at e; simp only [Binop.WT] at w1; grind [Val.hasSort_bool]
-    all_goals
-      cases ha : ev FS ρ a with
-      | none => rw [ha] at e; simp [evBinop, fArith, checkedOp] at e
-      | some x =>
-        cases hb : ev FS ρ b with
-        | none =>
-          rw [ha, hb] at e
-          rcases x with _ | _ | _ | _ | _ | _ <;> simp [evBinop, fArith, checkedOp] at e
-        | some y =>
-          have hx := ev_hasSort ρ a wa x ha
-          have hy := ev_hasSort ρ b wb y hb
-          rw [ha, hb] at e
-          generalize a.ty.sort = A at hx w1
-          generalize b.ty.sort = B at hy w1
-          simp only [Binop.WT] at w1
-          rcases x with _ | ⟨n, x⟩ | _ | ⟨p, x⟩ | _ | _ <;> rcases y with _ | ⟨m, y⟩ | _ | ⟨q, y⟩ | _ | _ <;>
-            simp only [evBinop, bvBin, fBin, fArith, checkedOp, reduceCtorEq, Option.some.injEq]
-              at e <;>
-            (try split at e) <;>
-            (try simp only [Option.some.injEq, reduceCtorEq] at e) <;>
-            (try split at e) <;>
-            (try simp only [Option.some.injEq, reduceCtorEq] at e) <;>
-            (try subst e) <;>
-            simp only [Val.hasSort_bool, Val.hasSort_bv, Val.hasSort_float,
-              Val.hasSort_ptr] at hx hy ⊢ <;> grind
-  | ρ, .mk (.triop op a b c) T, w, v, e => by
-    have ⟨w1, wa, wb, wc⟩ := WT_triop.1 w
-    simp only [Term.ty_mk]
-    cases op
-    case ite =>
-      simp only [Triop.WT] at w1
-      obtain ⟨_, h2, h3⟩ := w1
-      simp only [ev] at e
-      split at e
-      · rw [h3]; exact ev_hasSort ρ b wb v e
-      · rw [h3, ← h2]; exact ev_hasSort ρ c wc v e
-      · simp at e
-    case fma =>
-      simp only [ev] at e
-      cases ha : ev FS ρ a with
-      | none => simp [ha, evFma] at e
-      | some x =>
-        have hx := ev_hasSort ρ a wa x ha
-        rw [ha] at e
-        simp only [evFma] at e
-        split at e
-        · split at e
-          · simp only [Option.some.injEq] at *; subst_vars
-            simp only [Triop.WT] at w1
-            simp only [Val.hasSort_float] at hx ⊢
-            grind
-          · simp at e
-        · simp at e
-  | ρ, .mk (.nop op l) T, w, v, e => by
-    cases op
-    simp only [Term.WT] at w
-    simp only [ev, Option.map_eq_some_iff] at e
-    obtain ⟨_, _, rfl⟩ := e
-    simp [w.1]
-  | ρ, .mk (.exists_ bs body) T, w, v, e => by
-    simp only [Term.WT] at w
-    simp only [ev] at e
-    split at e <;> simp at e
-    subst e; simp [w.1]
-  | ρ, .mk (.extension x) T, w, v, e => by
-    simp only [ev] at e; split at e
-    · split at e <;> simp_all [Val.hasTy]
-    · simp at e
-
-theorem evList_hasSort {FS : FloatSem} : ∀ (ρ : Env) (E : Ty) (l : List Term), Term.WTList E l →
-    ∀ vs, evList FS ρ l = some vs → Val.hasSortList vs E.sort
-  | ρ, E, [], _, vs, e => by simp [evList] at e; subst e; simp [Val.hasSortList]
-  | ρ, E, t :: ts, w, vs, e => by
-    simp only [Term.WTList] at w
-    obtain ⟨h1, wt, wts⟩ := w
-    simp only [evList] at e
-    split at e <;> simp at e
-    rename_i v vs' h2 h3
-    subst e
-    have := ev_hasSort ρ t wt v h2
-    rw [h1] at this
-    exact ⟨this, evList_hasSort ρ E ts wts vs' h3⟩
-end
-
-theorem eval_hasSort {FS ρ t v} (h : eval FS ρ t = some v) : v.hasSort t.ty.sort :=
-  ev_hasSort ρ t (eval_WT h) v (by rw [← eval_eq_ev (eval_WT h)]; exact h)
 
 /-! ## Equality -/
 
@@ -215,10 +48,6 @@ theorem Refines.b_ite {FS : FloatSem} {O : Ops} {g a b g' a' b'} (hO : O.Sound F
 
 /-! ## Literals -/
 
-@[simp] theorem of_bool_WT (b : Bool) : (of_bool b).WT := by cases b <;> simp [of_bool]
-@[simp] theorem of_bool_ty (b : Bool) : (of_bool b).ty = .bool := by cases b <;> rfl
-@[simp] theorem eval_of_bool {FS ρ} (b : Bool) : eval FS ρ (of_bool b) = some (.bool b) := by
-  cases b <;> simp [of_bool]
 
 theorem WT_float {f t} : (Term.mk (.float f) t).WT ↔ t = .float f.prec ∧ f.bits < 2 ^ f.prec.size := by
   simp [Term.WT]
@@ -256,9 +85,9 @@ theorem eval_ptr_eq_some {FS ρ l o t v} (h : (Term.mk (.ptr l o) t).WT) :
 
 /-! ## Floats -/
 
-end EqL
+end Bvr.Lib
 
-namespace FBits
+namespace Bvr.FBits
 
 variable {p : Prec}
 
@@ -296,20 +125,9 @@ theorem abs_abs (x : FBits p) : x.abs.abs = x.abs := by
 theorem neg_neg (x : FBits p) : x.neg.neg = x := by
   simp [neg, BitVec.xor_assoc]
 
-end FBits
+end Bvr.FBits
 
-namespace EqL
-
-theorem fBin_eq_some {f : (p : Prec) → FBits p → FBits p → Option Val} {a b v} :
-    fBin f a b = some v ↔
-      ∃ p x y, a = some (.float p x) ∧ b = some (.float p y) ∧ f p x y = some v := by
-  constructor
-  · intro h
-    rcases a with _ | ⟨_ | _ | _ | ⟨p, x⟩ | _ | _⟩ <;>
-      rcases b with _ | ⟨_ | _ | _ | ⟨q, y⟩ | _ | _⟩ <;> simp [fBin] at h
-    obtain ⟨rfl, h⟩ := h
-    exact ⟨_, _, _, rfl, rfl, h⟩
-  · rintro ⟨p, x, y, rfl, rfl, h⟩; simp [fBin, h]
+namespace Bvr.Lib
 
 theorem WT_fcmp {op a b t} (hop : op = .fEq ∨ op = .fLt ∨ op = .fLeq) :
     (Term.mk (.binop op a b) t).WT ↔
@@ -390,34 +208,10 @@ theorem FloatLit.val_ofNat_toNat {p : Prec} (x : FBits p) :
 
 /-! ## Bit-vector operations -/
 
-theorem checkedOp_eq_some {c : Checked} {so uo : ∀ {n : Nat}, BitVec n → BitVec n → Bool}
-    {f : ∀ {n : Nat}, BitVec n → BitVec n → BitVec n} {a b v} :
-    checkedOp c so uo f a b = some v ↔ ∃ n x y, a = some (.bv n x) ∧ b = some (.bv n y) ∧
-      ((c.signed && so x y) || (c.unsigned && uo x y)) = false ∧ v = .bv n (f x y) := by
-  constructor
-  · intro h
-    rcases a with _ | ⟨_ | ⟨n, x⟩ | _ | _ | _ | _⟩ <;>
-      rcases b with _ | ⟨_ | ⟨m, y⟩ | _ | _ | _ | _⟩ <;> simp [checkedOp, bvBin] at h
-    obtain ⟨rfl, hc, rfl⟩ := h
-    refine ⟨_, _, _, rfl, rfl, ?_, rfl⟩
-    cases c; rename_i s u; cases s <;> cases u <;> simp_all
-  · rintro ⟨n, x, y, rfl, rfl, hc, rfl⟩; simp [checkedOp, bvBin, hc]
-
-theorem bvBin_eq_some {f : ∀ {n : Nat}, BitVec n → BitVec n → Option Val} {a b v} :
-    bvBin f a b = some v ↔ ∃ n x y, a = some (.bv n x) ∧ b = some (.bv n y) ∧ f x y = some v := by
-  constructor
-  · intro h
-    rcases a with _ | ⟨_ | ⟨n, x⟩ | _ | _ | _ | _⟩ <;>
-      rcases b with _ | ⟨_ | ⟨m, y⟩ | _ | _ | _ | _⟩ <;> simp [bvBin] at h
-    obtain ⟨rfl, h⟩ := h
-    exact ⟨_, _, _, rfl, rfl, h⟩
-  · rintro ⟨n, x, y, rfl, rfl, h⟩; simp [bvBin, h]
-
 /-! ## If-then-else -/
 
 theorem WT_ite {g a b t} : (Term.mk (.triop .ite g a b) t).WT ↔
     g.ty = .bool ∧ b.ty = a.ty ∧ t = a.ty ∧ g.WT ∧ a.WT ∧ b.WT := by
   simp [Term.WT, Triop.WT, and_assoc]
 
-end EqL
-end Bvr
+end Bvr.Lib

@@ -22,17 +22,9 @@ theorem bv_and.r_lshr_mask.a2.proof : bv_and.r_lshr_mask.a2.Stmt := by
   bvr_rule_sem
   all_goals subst_vars; rw [BitVec.and_comm]; exact (lshr_and_of_bits_in ‹_› _).symm
 
-theorem bv_and.r_mask_or.a1.proof : bv_and.r_mask_or.a1.Stmt := by
-  bvr_rule_sem
-  all_goals subst_vars; exact (and_or_of_bits_in ‹_› _).symm
-
 theorem bv_and.r_mask_or_disj.a1.proof : bv_and.r_mask_or_disj.a1.Stmt := by
   bvr_rule_sem
   all_goals subst_vars; exact (and_or_of_disjoint ‹_› _).symm
-
-theorem bv_or.r_mask_and.a1.proof : bv_or.r_mask_and.a1.Stmt := by
-  bvr_rule_sem
-  all_goals subst_vars; exact (or_and_of_bits_in ‹_› _).symm
 
 theorem bv_or.r_extend_shl.a1.proof : bv_or.r_extend_shl.a1.Stmt := by
   intro FS O hO nx base t5 w8 tail t11 z T t13 hg

@@ -99,10 +99,6 @@ elab "bvr_decide_small" : tactic => do
 open Lean Meta Elab Tactic in
 elab "bvr_gen_lits" : tactic => liftMetaTactic fun g => return [← genLits g]
 
-@[simp] theorem of_bool_WT (b : Bool) : (of_bool b).WT := by cases b <;> simp [of_bool]
-@[simp] theorem of_bool_ty (b : Bool) : (of_bool b).ty = .bool := by cases b <;> rfl
-@[simp] theorem denB_of_bool {FS ρ} (b : Bool) : denB FS ρ (of_bool b) = some b := by
-  cases b <;> rfl
 
 /-! ## Facts on values, as the value goals state them -/
 
@@ -605,8 +601,6 @@ theorem Refines.eq_ite_r {g l r c : Term} {T t : Ty} :
     rcases o with _ | _ | _ <;> simp only at e ⊢ <;> first | exact e | simp at e
 
 
-@[simp] theorem eval_of_bool {ρ} (b : Bool) : eval FS ρ (of_bool b) = some (.bool b) := by
-  cases b <;> simp [of_bool]
 
 theorem Refines.eq_lits {z1 z2 : Int} {T1 T2 t : Ty} :
     Refines FS (.mk (.binop .eq (.mk (.bitVec z1) T1) (.mk (.bitVec z2) T2)) t)
@@ -684,13 +678,6 @@ theorem Refines.eq_ptrs {l1 o1 l2 o2 : Term} {T T' t : Ty} :
 
 theorem pow_le_of_le {a b : Int} (h : a ≤ b) : 2 ^ a.toNat ≤ 2 ^ b.toNat :=
   Nat.pow_le_pow_right (by omega) (by omega)
-
-theorem lt_two_pow_log2 {z w : Int} (hz : 0 < z) (h : log2 z < w) : z < 2 ^ w.toNat := by
-  have hl := Nat.lt_log2_self (n := z.toNat)
-  have hle : 2 ^ (Nat.log2 z.toNat + 1) ≤ 2 ^ w.toNat :=
-    Nat.pow_le_pow_right (by omega) (by simp only [log2] at h; omega)
-  have : ((z.toNat : Nat) : Int) < ((2 ^ w.toNat : Nat) : Int) := by exact_mod_cast (by omega)
-  push_cast at this; omega
 
 /-- [msb_of] bounds the value of a bit-vector. -/
 theorem den_msb_aux {ρ} (s : Nat) : ∀ v : Term, sizeOf v < s → v.WT → ∀ {n : Nat},
@@ -966,36 +953,6 @@ theorem Refines.eq_low {a b : Term} {M : Int} {t : Ty} (hbv : is_bv a.ty = true)
     have e1 : (M + 1).toNat = (M - 0 + 1).toNat := by omega
     rw [e1] at bx by'
     rw [← e, Int.toNat_zero]; simp only [extract_low_inj bx by']
-
-theorem popcountNat_eq_zero : ∀ {m : Nat}, popcountNat m = 0 → m = 0
-  | 0, _ => rfl
-  | k + 1, h => by
-      rw [popcountNat] at h
-      have : (k + 1) / 2 < k + 1 := by omega
-      have := popcountNat_eq_zero (m := (k + 1) / 2) (by omega)
-      omega
-
-theorem popcountNat_eq_one : ∀ {m : Nat}, popcountNat m = 1 → ∃ j, m = 2 ^ j
-  | 0, h => by simp [popcountNat] at h
-  | k + 1, h => by
-      rw [popcountNat] at h
-      have : (k + 1) / 2 < k + 1 := by omega
-      by_cases hm : (k + 1) % 2 = 1
-      · have := popcountNat_eq_zero (m := (k + 1) / 2) (by omega)
-        exact ⟨0, by omega⟩
-      · obtain ⟨j, hj⟩ := popcountNat_eq_one (m := (k + 1) / 2) (by omega)
-        exact ⟨j + 1, by rw [Nat.pow_succ]; omega⟩
-
-theorem is_pow2_eq {z : Int} (h : is_pow2 z = true) : z = 2 ^ (log2 z).toNat ∧ 0 ≤ log2 z := by
-  unfold is_pow2 at h
-  simp only [Bool.and_eq_true, decide_eq_true_eq] at h
-  obtain ⟨h0, h1⟩ := h
-  simp only [popcount] at h1
-  have h1' : popcountNat z.toNat = 1 := by exact_mod_cast h1
-  obtain ⟨j, hj⟩ := popcountNat_eq_one h1'
-  have e1 : ((2 ^ j : Nat) : Int) = (2 : Int) ^ j := by push_cast; rfl
-  simp only [log2, hj, Nat.log2_two_pow, Int.toNat_natCast]
-  omega
 
 /-- The remainder by a power of two keeps the low bits. -/
 theorem Refines.rem_pow2 {v : Term} {r : Int} {T t : Ty}

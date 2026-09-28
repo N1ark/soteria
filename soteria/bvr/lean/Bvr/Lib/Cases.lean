@@ -21,16 +21,20 @@ theorem whenSome_eq_some {α} {c : Bool} {a r : α} (h : whenSome c a = some r) 
   cases c <;> simp_all [whenSome]
 
 /-- Closes `Refines FS spec res` from `h : <one alternative> = some res`, with
-`p` the proof of that alternative: splits its match, takes its guard (`whenSome`,
-also for unguarded alternatives), and applies `p`, whose conclusion must then
-match the goal. -/
-macro "bvr_arm " h:ident p:term : tactic => `(tactic| (
-  (try split at $h:ident)
-  all_goals first
-    | (simp at $h:ident; done)
-    | (obtain ⟨hg, heq⟩ := Lib.whenSome_eq_some $h:ident
-       subst heq
-       apply $p <;> assumption)))
+`p` the proof of that alternative: splits its match (unless its pattern always
+matches, so that the conditionals of its body are not split instead), takes its
+guard (`whenSome`, also for unguarded alternatives), and applies `p`, whose
+conclusion must then match the goal. -/
+macro "bvr_arm " h:ident p:term : tactic => `(tactic| first
+  | (obtain ⟨hg, heq⟩ := Lib.whenSome_eq_some $h:ident
+     subst heq
+     apply $p <;> assumption)
+  | ((try split at $h:ident)
+     all_goals first
+       | (simp at $h:ident; done)
+       | (obtain ⟨hg, heq⟩ := Lib.whenSome_eq_some $h:ident
+          subst heq
+          apply $p <;> assumption)))
 
 /-! ## Commutativity -/
 

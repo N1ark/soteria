@@ -1186,7 +1186,7 @@ module Make (P : PRIMS) = struct
       | (({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec _; _ }; _ } as l), ({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec _; _ }; _ } as r)) ->
         let l = P.bv_of_lit l in
         let r = P.bv_of_lit r in
-        (P.mk_masked (size v1) (P.trem (P.to_z signed l) (P.to_z signed r)))
+        (P.lit (if signed then (P.lit_srem l r) else (P.lit_urem l r)))
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (bvr__1); _ }; _ }, _)
         when (((Z.equal bvr__1 Z.zero))) ->
         (P.bv_zero (size v1))
@@ -2289,15 +2289,7 @@ module Make (P : PRIMS) = struct
       | (({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec _; _ }; _ } as l), ({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec _; _ }; _ } as r)) ->
         let l = P.bv_of_lit l in
         let r = P.bv_of_lit r in
-        (let l = (P.to_z true l) in
-        (let r = (P.to_z true r) in
-        (let res = (P.trem l r) in
-        (let res = (if ((Z.lt res Z.zero) && (not (Z.lt r Z.zero)))
-                   then (Z.add res r)
-                   else (if ((Z.gt res Z.zero) && (Z.lt r Z.zero))
-                        then (Z.add res r)
-                        else res)) in
-        (P.mk_masked (size v1) res)))))
+        (P.lit (P.lit_smod l r))
       | _ ->
         (P.node (Svalue_ast.Binop (Svalue_ast.Binop.Mod, v1, v2)) (P.ty v1))
       )

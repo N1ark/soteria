@@ -139,16 +139,7 @@ let[@spec Neg (checked, v) <| ty v] [@cases] bv_neg (checked : bool) (v : t) : t
    [v2] *)
 let[@spec Mod (v1, v2) <| ty v1] [@cases] bv_mod (v1 : t) (v2 : t) : t =
   match (v1, v2) with
-  | BitVec l, BitVec r [@r lits] ->
-      let l = to_z true l in
-      let r = to_z true r in
-      let res = trem l r in
-      let res =
-        if res < 0 && not (r < 0) then res + r
-        else if res > 0 && r < 0 then res + r
-        else res
-      in
-      mk_masked (size v1) res
+  | BitVec l, BitVec r [@r lits] -> lit (lit_smod l r)
   | _ [@r default] -> Mod (v1, v2) <| ty v1
 
 (* the remainder of [v1 / v2], which takes the sign of the dividend [v1] if
@@ -157,7 +148,7 @@ let[@spec Rem (signed, v1, v2) <| ty v1] [@cases] bv_rem (signed : bool)
     (v1 : t) (v2 : t) : t =
   match (v1, v2) with
   | BitVec l, BitVec r [@r lits] ->
-      mk_masked (size v1) (trem (to_z signed l) (to_z signed r))
+      lit (if signed then lit_srem l r else lit_urem l r)
   | 0, _ [@r zero_l] -> bv_zero (size v1)
   | _, 1 [@r one_r] when not signed -> bv_zero (size v1)
   (* x %u 2^k keeps the k lowest bits of x *)

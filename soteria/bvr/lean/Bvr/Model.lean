@@ -2252,16 +2252,7 @@ def bv_mod.r_lits (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
     | l@(Term.mk (Kind.bitVec _) _), r@(Term.mk (Kind.bitVec _) _) =>
     (let l := bv_of_lit l;
     let r := bv_of_lit r;
-    (whenSome true
-    ((let l := (to_z true l);
-     (let r := (to_z true r);
-     (let res := (trem l r);
-     (let res := (if ((decide (res < (0 : Int))) && (! (decide (r < (0 : Int)))))
-                 then (res + r)
-                 else (if ((decide (res > (0 : Int))) && (decide (r < (0 : Int))))
-                      then (res + r)
-                      else res));
-     (mk_masked (size v1) res))))))))
+    (whenSome true ((lit (lit_smod l r)))))
     | _, _ => none)
 
 def bv_mod.r_default (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
@@ -2278,7 +2269,7 @@ def bv_rem.r_lits (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Ter
     (let l := bv_of_lit l;
     let r := bv_of_lit r;
     (whenSome true
-    ((mk_masked (size v1) (trem (to_z signed l) (to_z signed r))))))
+    ((lit (if signed then (lit_srem l r) else (lit_urem l r))))))
     | _, _ => none)
 
 def bv_rem.r_zero_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=

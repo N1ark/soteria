@@ -1734,15 +1734,7 @@ def bv_mod.r_lits.a1.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
   ∀ (l__z : Int) (l__T : Ty) (r__z : Int) (r__T : Ty),
   Refines FS (bv_mod.spec (Term.mk (Kind.bitVec l__z) l__T) (Term.mk (Kind.bitVec r__z) r__T))
-  ((let l := (to_z true (bv_of_lit (Term.mk (Kind.bitVec l__z) l__T)));
-   (let r := (to_z true (bv_of_lit (Term.mk (Kind.bitVec r__z) r__T)));
-   (let res := (trem l r);
-   (let res := (if ((decide (res < (0 : Int))) && (! (decide (r < (0 : Int)))))
-               then (res + r)
-               else (if ((decide (res > (0 : Int))) && (decide (r < (0 : Int))))
-                    then (res + r)
-                    else res));
-   (mk_masked (size (Term.mk (Kind.bitVec l__z) l__T)) res))))))
+  ((lit (lit_smod (bv_of_lit (Term.mk (Kind.bitVec l__z) l__T)) (bv_of_lit (Term.mk (Kind.bitVec r__z) r__T)))))
 
 def bv_mod.r_default.a1.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
@@ -1789,7 +1781,9 @@ def bv_rem.r_lits.a1.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
   ∀ (signed : Bool) (l__z : Int) (l__T : Ty) (r__z : Int) (r__T : Ty),
   Refines FS (bv_rem.spec signed (Term.mk (Kind.bitVec l__z) l__T) (Term.mk (Kind.bitVec r__z) r__T))
-  ((mk_masked (size (Term.mk (Kind.bitVec l__z) l__T)) (trem (to_z signed (bv_of_lit (Term.mk (Kind.bitVec l__z) l__T))) (to_z signed (bv_of_lit (Term.mk (Kind.bitVec r__z) r__T))))))
+  ((lit (if signed
+        then (lit_srem (bv_of_lit (Term.mk (Kind.bitVec l__z) l__T)) (bv_of_lit (Term.mk (Kind.bitVec r__z) r__T)))
+        else (lit_urem (bv_of_lit (Term.mk (Kind.bitVec l__z) l__T)) (bv_of_lit (Term.mk (Kind.bitVec r__z) r__T))))))
 
 def bv_rem.r_zero_l.a1.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →

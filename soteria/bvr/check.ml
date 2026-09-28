@@ -159,27 +159,69 @@ let strip_attr name (p : pattern) =
         p.ppat_attributes;
   }
 
-(** Converts a pattern at the expected type. *)
+(** How many times each variable is bound in the pattern of the case being
+    checked. *)
+let case_vars : (string, int) Hashtbl.t = Hashtbl.create 8
+
+let count_vars (p : pattern) =
+  Hashtbl.reset case_vars;
+  let add x =
+    Hashtbl.replace case_vars x
+      (1 + Option.value ~default:0 (Hashtbl.find_opt case_vars x))
+  in
+  object
+    inherit Ast_traverse.iter as super
+
+    method! pattern p =
+      (match p.ppat_desc with
+      | Ppat_var { txt; _ } | Ppat_alias (_, { txt; _ }) -> add txt
+      | _ -> ());
+      super#pattern p
+  end
+    #pattern
+    p
+
+(** Whether swapping two operands matches the same terms: when they are
+    wildcards or variables bound nowhere else. *)
+let swap_is_trivial (a : Syntax.pat) (b : Syntax.pat) =
+  let once (p : Syntax.pat) =
+    match p.p with
+    | PAny -> true
+    | PVar x -> Option.value ~default:1 (Hashtbl.find_opt case_vars x) = 1
+    | _ -> false
+  in
+  once a && once b
+
+(** Converts a pattern at the expected type. The operands of commutative
+    operators are matched in either order. *)
 let rec pat (expected : Syntax.ty) (p : pattern) : Syntax.pat =
-  if has_attr "comm" p.ppat_attributes then
-    (* [p [@comm]]: the operands of a binary operator, or the components of a
-       pair, in either order *)
-    let q = pat expected (strip_attr "comm" p) in
+  let comm ~explicit (q : Syntax.pat) =
     let swapped =
       match q.p with
-      | PTuple [ a; b ] -> PTuple [ b; a ]
-      | PConstr (({ c_name = "Binop"; _ } as c), [ op; a; b ]) ->
-          (match op.p with
-          | PConstr (o, _)
-            when !cases_mode && not (List.mem o.c_name commutative) ->
+      | PTuple [ a; b ] when explicit -> Some (PTuple [ b; a ])
+      | PConstr (({ c_name = "Binop"; _ } as c), [ op; a; b ]) -> (
+          match op.p with
+          | PConstr (o, _) when List.mem o.c_name commutative ->
+              if explicit || not (swap_is_trivial a b) then
+                Some (PConstr (c, [ op; b; a ]))
+              else None
+          | PConstr (o, _) when explicit && !cases_mode ->
               error p.ppat_loc "[@comm]: %s is not commutative" o.c_name
-          | PConstr _ -> ()
-          | _ -> error p.ppat_loc "[@comm]: unknown operator");
-          PConstr (c, [ op; b; a ])
-      | _ -> error p.ppat_loc "[@comm] applies to pairs and binary operators"
+          | PConstr _ when explicit -> Some (PConstr (c, [ op; b; a ]))
+          | _ when explicit -> error p.ppat_loc "[@comm]: unknown operator"
+          | _ -> None)
+      | _ when explicit ->
+          error p.ppat_loc "[@comm] applies to pairs and binary operators"
+      | _ -> None
     in
-    { q with p = PComm (q, { q with p = swapped }); pid = next_pid () }
-  else pat' expected p
+    match swapped with
+    | Some s -> { q with p = PComm (q, { q with p = s }); pid = next_pid () }
+    | None -> q
+  in
+  if has_attr "comm" p.ppat_attributes then
+    (* [p [@comm]]: the components of a pair in either order *)
+    comm ~explicit:true (pat' expected (strip_attr "comm" p))
+  else comm ~explicit:false (pat' expected p)
 
 and pat' (expected : Syntax.ty) (p : pattern) : Syntax.pat =
   let loc = p.ppat_loc in
@@ -887,6 +929,7 @@ and case env ?expected scruts (c : Ppxlib.case) : Syntax.case list =
   in
   (* numbered per case, so that the generated names are stable *)
   pid_counter := 0;
+  count_vars lhs;
   let sty =
     match scruts with
     | [ s ] -> s.ety

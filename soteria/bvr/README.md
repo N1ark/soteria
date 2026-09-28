@@ -45,14 +45,13 @@ fn size (v : t) : int = size_of_ty (ty v)
 Rule functions are proved per alternative of their rules:
 
 - `#l` (or `BitVec l`) binds `l : bv`, the value of the literal.
-- Each alternative of a rule (after expanding or-patterns and `[@comm]`) has
+- Each alternative of a rule (after expanding or-patterns and swaps) has
   its own statement, over the variables of its pattern and with its guard as
   a hypothesis: `f.r_name.aI.Stmt`. The statement of the rule is proved from
   them by generated code.
 - An alternative that only swaps operands of commutative operators (or the two
   arguments of the function) is proved from the unswapped one by generated
-  code, if its guard and body do not depend on the swap. `[@comm]` is only
-  allowed on commutative operators there.
+  code, if its guard and body do not depend on the swap.
 - It may only match on its parameters, with no `let` before the match, and
   its pattern variables may not shadow the parameters it does not match on.
 
@@ -91,9 +90,13 @@ expected stands for its literal: `| lits: #l, #r -> l + r`.
   one (to its value in rules, to its unsigned integer in helpers); `true` and
   `false` match boolean literals.
 - A repeated variable matches equal terms: `| p, not p -> v_false`.
-- `p [@comm]` also matches the operands of the binary operator `p`, or the
-  components of the pair `p`, swapped: `(1, ~v) [@comm]` matches both
-  `1, ~v` and `~v, 1`.
+- The operands of commutative operators (`+`, `*`, `land`, `lor`, `lxor`,
+  `&&`, `||`, `==`, and `FEq`, `AddOvf`, `MulOvf`) match in either order:
+  `x + #k` also matches `#k + x`. The swap is left out when both operands are
+  wildcards or variables bound nowhere else, as it matches the same terms.
+- `p [@comm]` also matches the components of the pair `p` swapped (the
+  arguments of the rule function): `(1, ~v) [@comm]` matches both `1, ~v` and
+  `~v, 1`.
 - Or-patterns, `as`, `when` guards, `Some`/`None`, lists and partial records
   (`{ unsigned = true; _ }`) are supported. Each alternative of an or-pattern
   is tried in turn, together with the guard.

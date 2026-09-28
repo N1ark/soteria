@@ -9,13 +9,13 @@ rule b_and (v1 v2 : t) : And (v1, v2) <| TBool =
   (* p && !p <=> false *)
   | not: (p, not p) [@comm] -> v_false
   (* (a && b) && a <=> a && b *)
-  | and_l: a && _ [@comm], a -> v1
-  | and_r: a, a && _ [@comm] -> v2
+  | and_l: a && _, a -> v1
+  | and_r: a, a && _ -> v2
   (* (a || b) && a <=> a *)
-  | or_l: a || _ [@comm], a -> v2
-  | or_r: a, a || _ [@comm] -> v1
+  | or_l: a || _, a -> v2
+  | or_r: a, a || _ -> v1
   (* [a == x && a == y] with [x] and [y] surely different *)
-  | eq_neq: a == x [@comm], a == y [@comm] when sure_neq x y -> v_false
+  | eq_neq: a == x, a == y when sure_neq x y -> v_false
   (* only for constants: if [bv1] or [bv2] could be undefined (an operation
      whose overflow check does not hold), the conjunction could still be false
      thanks to the other conjunct, while the merged equality would be
@@ -47,11 +47,11 @@ rule b_or (v1 v2 : t) : Or (v1, v2) <| TBool =
   | lt_lt: Lt (s, a, b), Lt (s, b, a) -> not (a == b)
   (* [a < b || b <= a] <=> true *)
   | lt_leq: (Lt (s, a, b), Leq (s, b, a)) [@comm] -> v_true
-  | or_l: a || _ [@comm], a -> v1
-  | or_r: a, a || _ [@comm] -> v2
+  | or_l: a || _, a -> v1
+  | or_r: a, a || _ -> v2
   (* (a && b) || a <=> a *)
-  | and_l: a && _ [@comm], a -> v2
-  | and_r: a, a && _ [@comm] -> v1
+  | and_l: a && _, a -> v2
+  | and_r: a, a && _ -> v1
   (* an upper and a lower bound on the same value that (at least) touch cover
      the whole domain, e.g. [a <= 2] || [3 <= a] *)
   | complementary:
@@ -61,10 +61,10 @@ rule b_or (v1 v2 : t) : Or (v1, v2) <| TBool =
       v_true
   (* a bound absorbs an equality it already allows, e.g. [a < c] || [a ==
      0] *)
-  | upper_eq: (((Lt (s, a, #_) | Leq (s, a, #_)) as b), a == #k [@comm]) [@comm]
+  | upper_eq: (((Lt (s, a, #_) | Leq (s, a, #_)) as b), a == #k) [@comm]
     when to_z s k <= upper_bound b ->
       b
-  | lower_eq: (((Lt (s, #_, a) | Leq (s, #_, a)) as b), a == #k [@comm]) [@comm]
+  | lower_eq: (((Lt (s, #_, a) | Leq (s, #_, a)) as b), a == #k) [@comm]
     when lower_bound b <= to_z s k ->
       b
   (* two upper (resp. lower) bounds on the same value keep the looser one *)
@@ -86,7 +86,7 @@ rule b_not (sv : t) : Not sv <| TBool =
   | or_: v1 || v2 -> not v1 && not v2
   | and_: v1 && v2 -> not v1 || not v2
   | ite: Ite (g, a, b) -> b_ite g (not a) (not b)
-  | eq_bit: (#bv as c) == v [@comm] when ty c = TBitVector 1 -> ~bv == v
+  | eq_bit: (#bv as c) == v when ty c = TBitVector 1 -> ~bv == v
   | distinct: Distinct [ l; r ] -> l == r
   | default: _ -> Not sv <| TBool
 
@@ -106,8 +106,8 @@ rule b_ite (guard if_ else_ : t) : Ite (guard, if_, else_) <| ty if_ =
   | guard_else: g, _, g -> guard && if_
   | ite_then: g, Ite (g, x, _), _ -> b_ite guard x else_
   | ite_else: g, _, Ite (g, _, y) -> b_ite guard if_ y
-  | and_ite_then: g && _ [@comm], Ite (g, x, _), _ -> b_ite guard x else_
-  | or_ite_else: g || _ [@comm], _, Ite (g, _, y) -> b_ite guard if_ y
+  | and_ite_then: g && _, Ite (g, x, _), _ -> b_ite guard x else_
+  | or_ite_else: g || _, _, Ite (g, _, y) -> b_ite guard if_ y
   | same: _, x, x -> if_
   | default: _ -> Ite (guard, if_, else_) <| ty if_
 
@@ -124,24 +124,24 @@ rule sem_eq (v1 v2 : t) : Eq (v1, v2) <| TBool =
   | not_r: #_, ~x -> ~v1 == x
   | not_l: ~x, #_ -> x == ~v2
   (* c == l + r <=> c - l == r, for constants c and l *)
-  | add_const_r: #_, (#_ as l) + r [@comm] -> v1 - l == r
-  | add_const_l: (#_ as l) + r [@comm], #_ -> v2 - l == r
+  | add_const_r: #_, (#_ as l) + r -> v1 - l == r
+  | add_const_l: (#_ as l) + r, #_ -> v2 - l == r
   (* c == l - r <=> c + r == l, and c == l - r <=> l - c == r *)
   | sub_const_r1: #_, l - (#_ as r) -> v1 + r == l
   | sub_const_r2: #_, (#_ as l) - r -> l - v1 == r
   | sub_const_l1: l - (#_ as r), #_ -> v2 + r == l
   | sub_const_l2: (#_ as l) - r, #_ -> l - v2 == r
   (* x == x + c <=> c == 0 *)
-  | self_add_r: x, x + #bv [@comm] -> of_bool (to_z false bv = 0)
-  | self_add_l: x + #bv [@comm], x -> of_bool (to_z false bv = 0)
-  | add_add: (#bv_l as l) + y [@comm], (#bv_r as r) + x [@comm] ->
+  | self_add_r: x, x + #bv -> of_bool (to_z false bv = 0)
+  | self_add_l: x + #bv, x -> of_bool (to_z false bv = 0)
+  | add_add: (#bv_l as l) + y, (#bv_r as r) + x ->
       (* y + l == x + r <=> y == x + (r - l) <=> y + (l - r) == x *)
       (* we pick the option that will make a positive constant (superstition);
          this rewrite holds modulo 2^n regardless of overflow, but the rebuilt
          sum carries no overflow guarantee, so it stays unchecked. *)
       if to_z false bv_l >= to_z false bv_r then x == y + (l - r)
       else y == x + (r - l)
-  | mul_const: (#n, Mul (ck, #m, x) [@comm]) [@comm] when is_checked ck ->
+  | mul_const: (#n, Mul (ck, #m, x)) [@comm] when is_checked ck ->
       (* the multiplication is exact in a checked signedness, so read the
          constants in that signedness: the result must be a multiple of [m], and
          dividing recovers [x] *)
@@ -167,7 +167,7 @@ rule sem_eq (v1 v2 : t) : Eq (v1, v2) <| TBool =
      odd (invertible modulo 2^n), or when [a] is non-zero and both
      multiplications are overflow-checked (so they behave like exact integer
      arithmetic). *)
-  | mul_cancel: Mul (ck1, #a, b) [@comm], Mul (ck2, #a', d) [@comm]
+  | mul_cancel: Mul (ck1, #a, b), Mul (ck2, #a', d)
     when to_z false a = to_z false a'
          && (to_z false a land 1 = 1
             || (to_z false a <> 0 && is_checked (checked_meet ck1 ck2))) ->
@@ -179,7 +179,7 @@ rule sem_eq (v1 v2 : t) : Eq (v1, v2) <| TBool =
       l == z && r == z
   (* for N == (M & X), if N has bits set that aren't in M, then it must be
      false, since the mask would unset them *)
-  | and_mask: (#n, #mask land _ [@comm]) [@comm]
+  | and_mask: (#n, #mask land _) [@comm]
     when not (to_z false (n land lognot mask) = 0) ->
       v_false
   | concat_const: ((#_ as z), l ++ r) [@comm] ->

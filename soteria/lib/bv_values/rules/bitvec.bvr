@@ -128,6 +128,8 @@ let[@spec Sub (checked, v1, v2) <| ty v1] [@cases] bv_sub (checked : checked)
 
 let[@spec Neg (checked, v) <| ty v] [@cases] bv_neg (checked : bool) (v : t) : t
     =
+  (* fails early if [v] is not a bit-vector *)
+  assert (size v > 0);
   match v with
   | BitVec bv [@r lit] -> lit (-bv)
   | Neg (_, x) [@r neg] -> x

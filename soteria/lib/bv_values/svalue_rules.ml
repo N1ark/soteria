@@ -1223,6 +1223,7 @@ module Make (P : PRIMS) = struct
       )
   
   and bv_neg (checked : bool) (v : t) : t =
+      (assert (Z.gt (size v) Z.zero);
       (match v with
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec _; _ }; _ } as bv) ->
         let bv = P.bv_of_lit bv in
@@ -1236,7 +1237,7 @@ module Make (P : PRIMS) = struct
         (b_ite b (bv_neg false (P.bv_one n)) (P.bv_zero n))
       | _ ->
         (P.node (Svalue_ast.Unop ((Svalue_ast.Unop.Neg (checked)), v)) (P.ty v))
-      )
+      ))
   
   and bv_rem (signed : bool) (v1 : t) (v2 : t) : t =
       (match v1, v2 with

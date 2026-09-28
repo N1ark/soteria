@@ -464,14 +464,6 @@ theorem FloatLit.val_ofNat_toNat {p : Prec} (x : FBits p) :
     (⟨p, x.toNat⟩ : FloatLit).val = x := by
   simp [FloatLit.val]
 
-theorem Refines.raw_fmod {FS : FloatSem} {r r' v1 v2 : Term} (hr : Refines FS r r') :
-    Refines FS (raw_fmod_of_rem r v1 v2) (raw_fmod_of_rem r' v1 v2) := by
-  have hs : ∀ w : r.WT, r'.ty = r.ty := fun w => by simpa using (hr.syn w).2
-  refine Refines.ite (Refines.binop (Refines.unop hr (fun _ => rfl)) Refines.refl (fun _ => rfl))
-    hr (Refines.binop hr Refines.refl (fun w => ?_)) (fun w => ?_)
-  · simpa using hs (WT_binop.1 w).2.1
-  · simpa using hs (WT_triop.1 w).2.2.1
-
 /-! ## Bit-vector operations -/
 
 theorem eval_bv_of_ty {FS ρ t v} {n : Int} (h : eval FS ρ t = some v)

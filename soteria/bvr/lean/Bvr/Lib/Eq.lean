@@ -898,18 +898,10 @@ theorem Refines.eq_mul_const {n m : Int} {Tn Tm T t : Ty} {ck : Checked} {x r : 
 
 /-! ## The rule tactics -/
 
-/-- `bvr_wt`, knowing that masked constants are in range. -/
-macro "bvr_wt_b" : tactic => `(tactic| (
-  intro w
-  bvr_facts
-  (try simp_all [WT_bitVec, emod_two_pow_nonneg, emod_two_pow_lt])
-  all_goals grind [size_of_ty, WT_bitVec]))
-
 /-- The typing and value halves, closed as far as possible. -/
 macro "bvr_halves_b" : tactic => `(tactic|
   all_goals first
     | (bvr_wt; done)
-    | (bvr_wt_b; done)
     | bvr_sem_b
     | skip)
 
@@ -928,7 +920,6 @@ macro "bvr_rule_b_sem" : tactic => `(tactic| (
   bvr_rule_core
   all_goals first
     | (bvr_wt; done)
-    | (bvr_wt_b; done)
     | bvr_sem_b_core))
 
 end Bvr.Lib.SemEq

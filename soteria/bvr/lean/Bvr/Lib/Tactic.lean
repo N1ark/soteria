@@ -87,11 +87,40 @@ macro "bvr_facts" : tactic => `(tactic| (
   (try bvr_split)
   (try subst_vars)))
 
+open Lean Meta Elab Tactic in
+/-- Case splits on the first proposition `p` of a `decide p` or an `if p` of
+the goal. -/
+elab "bvr_split_decide" : tactic => withMainContext do
+  let t ← instantiateMVars (← getMainTarget)
+  let some e := t.find? (fun e => !e.hasLooseBVars &&
+      (e.isAppOfArity ``Decidable.decide 2 || e.isAppOfArity ``ite 5))
+    | throwError "bvr_split_decide: no decide"
+  let p ← Term.exprToSyntax (if e.isAppOfArity ``ite 5 then e.getArg! 1 else e.getArg! 0)
+  evalTactic (← `(tactic| by_cases hp : $p <;> simp only [hp, decide_true, decide_false,
+    ↓reduceIte, Bool.not_true, Bool.not_false, Bool.true_and, Bool.false_and, Bool.and_true,
+    Bool.and_false, Bool.true_or, Bool.false_or, Bool.or_true, Bool.or_false] at ⊢))
+
+/-- Proves an equality of bit-vectors bit by bit, the indices being linear. -/
+macro "bvr_bits" : tactic => `(tactic| (
+  ext i hi
+  simp [BitVec.getElem_extractLsb', BitVec.getLsbD_shiftLeft, BitVec.getLsbD_ushiftRight,
+    BitVec.getElem_setWidth, BitVec.getLsbD_append, BitVec.getLsbD_extractLsb',
+    BitVec.getLsbD_setWidth, BitVec.getLsbD_signExtend]
+  repeat' bvr_split_decide
+  all_goals first | rfl | (exfalso; omega) | (simp; done) | (congr 1; omega)))
+
+/-- The integers read from literals in range (`to_z false`) are their values.
+(By `rw`, since they may occur in the widths of bit-vectors.) -/
+macro "bvr_zlits" : tactic => `(tactic| (
+  (repeat' rw [emod_two_pow_of_lt (by assumption) (by assumption)] at *)
+  (repeat' rw [Int.max_eq_left (by assumption)] at *)))
+
 /-- Proves the typing half of a refinement between raw terms. -/
 macro "bvr_wt" : tactic => `(tactic| (
   intro w
   bvr_facts
-  (try simp_all [WT_bitVec])
+  bvr_zlits
+  (try simp_all [WT_bitVec, WT_mk_masked, emod_two_pow_nonneg, emod_two_pow_lt])
   all_goals grind [size_of_ty, WT_bitVec]))
 
 /-- Unfolds the literals and the arithmetic on them. -/
@@ -135,11 +164,13 @@ macro "bvr_sem_core" : tactic => `(tactic| (
 `simp_all` and `grind` can. -/
 macro "bvr_sem" : tactic => `(tactic| (
   bvr_sem_core
+  all_goals bvr_zlits
   all_goals (first
     | (simp only [BitVec.ult, BitVec.ule, BitVec.slt, BitVec.sle, decide_eq_true_eq,
         decide_eq_false_iff_not, Bool.not_eq_true, Bool.not_eq_false] at *; omega)
     | (grind [BitVec.neg_eq_not_add]; done)
     | (bvr_ovf; done)
+    | ((try bvr_split); subst_vars; bvr_bits; done)
     | skip)))
 
 /-- Proves `Refines FS ?S body`, where `?S` is `body` with every call

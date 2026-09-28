@@ -35,11 +35,6 @@ theorem binB_ite_r {α : Type} {f : α → α → Bool} {c : Prop} [Decidable c]
     binB f a (if c then b else b') = if c then binB f a b else binB f a b' := by
   split <;> rfl
 
-theorem WT_mk_masked {n z : Int} : (mk_masked n z).WT ↔ 0 < n := by
-  refine ⟨fun w => ?_, mk_masked_WT⟩
-  obtain ⟨k, hk, h, -⟩ := WT_bitVec.1 w
-  rcases h with h | h <;> simp at h; omega
-
 /-! ## The helpers, on values of known width -/
 
 section
@@ -518,12 +513,6 @@ elab "bvr_clear_flags" : tactic => liftMetaTactic fun g => g.withContext do
 
 /-! ## Tactics -/
 
-/-- `bvr_wt`, for the terms with masked literals (such as the sign bit). -/
-macro "bvr_cmp_wt" : tactic => `(tactic| (
-  simp only [mk_bv, WT_binop, WT_unop, WT_triop, WT_mk_masked, mk_masked_ty, Term.ty_mk,
-    Ty.sort_eq]
-  bvr_wt))
-
 /-- `bvr_facts`, keeping the literals as values (`BitVec.ofInt n z`). -/
 macro "bvr_cmp_facts" : tactic => `(tactic| (
   (try simp [WT_binop, WT_unop, WT_triop, Binop.WT, Unop.WT, Triop.WT, bv_zero, bv_one,
@@ -601,7 +590,6 @@ macro "bvr_cmp" : tactic => `(tactic| (
   bvr_rule_core
   all_goals first
     | (bvr_wt; done)
-    | (bvr_cmp_wt; done)
     | (bvr_cmp_sem
        all_goals (try (bvr_cmp_omega; done)))))
 
@@ -612,7 +600,6 @@ macro_rules
       bvr_rule_core
       all_goals first
         | (bvr_wt; done)
-        | (bvr_cmp_wt; done)
         | (bvr_cmp_sem
            all_goals (try (simp_all [$ls,*]; done))
            all_goals (try (bvr_cmp_omega; done)))))

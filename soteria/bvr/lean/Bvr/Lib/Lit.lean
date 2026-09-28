@@ -267,6 +267,11 @@ theorem lt_two_pow_log2_succ {z : Int} (hz : 0 < z) : z < 2 ^ (log2 z + 1).toNat
 theorem is_bv_iff {t : Ty} : is_bv t = true ↔ ∃ n, t = .bitVector n := by
   cases t <;> simp [is_bv, firstSome]
 
+theorem WT_mk_masked {n z : Int} : (mk_masked n z).WT ↔ 0 < n := by
+  refine ⟨fun w => ?_, mk_masked_WT⟩
+  obtain ⟨k, hk, h, -⟩ := WT_bitVec.1 w
+  rcases h with h | h <;> simp at h; omega
+
 /-! ## Boolean literals -/
 
 @[simp] theorem of_bool_WT (b : Bool) : (of_bool b).WT := by cases b <;> simp [of_bool]

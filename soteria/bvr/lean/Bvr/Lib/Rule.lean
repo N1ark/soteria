@@ -11,7 +11,6 @@ namespace Bvr.Lib
 /-- The rule tactics of the libraries, in turn. -/
 macro "bvr_auto" : tactic => `(tactic| first
   | (bvr_rule; done)
-  | (bvr_rule_r; done)
   | (bvr_rule_b; done)
   | (bvr_rule_typed; done)
   | (bvr_rule_ev; done)

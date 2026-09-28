@@ -8,24 +8,29 @@ namespace Bvr
 open Classical Lib
 
 theorem bv_extract.r_add_low.a1.proof : bv_extract.r_add_low.a1.Stmt := by
-  bvr_rule_sem_r
+  bvr_rule_sem
+  all_goals bvr_zlits
   all_goals bvr_split; subst_vars; exact (BitVec.extractLsb'_add (by omega)).symm
 
 theorem bv_extract.r_mul_low.a1.proof : bv_extract.r_mul_low.a1.Stmt := by
-  bvr_rule_sem_r
+  bvr_rule_sem
+  all_goals bvr_zlits
   all_goals bvr_split; subst_vars; exact (BitVec.extractLsb'_mul (by omega)).symm
 
 theorem bv_extract.r_add_const.a1.proof : bv_extract.r_add_const.a1.Stmt := by
-  bvr_rule_sem_r
+  bvr_rule_sem
+  all_goals bvr_zlits
   all_goals bvr_split; subst_vars; exact (extractLsb'_add_lsb _ ‹_› ‹_› ‹_› ‹_› ‹_› ‹_›).symm
 
 theorem bv_extract.r_mul_pow2.a1.proof : bv_extract.r_mul_pow2.a1.Stmt := by
-  bvr_rule_sem_r
+  bvr_rule_sem
+  all_goals bvr_zlits
   all_goals bvr_split; subst_vars; obtain ⟨k, rfl⟩ := is_pow2_exists ‹_›
   all_goals simp only [log2_two_pow] at *; exact (extractLsb'_mul_pow2 _ ‹_› ‹_› ‹_›).symm
 
 theorem bv_extract.r_urem.a1.proof : bv_extract.r_urem.a1.Stmt := by
-  bvr_rule_sem_r
+  bvr_rule_sem
+  all_goals bvr_zlits
   all_goals subst_vars; obtain ⟨k, rfl⟩ := is_pow2_exists ‹_›
   all_goals simp only [log2_two_pow] at *
   all_goals exact extractLsb'_umod_pow2 _ (by omega) (by omega) (by omega) (by omega)

@@ -10,6 +10,7 @@ module type PRIMS = sig
   type bv
   val node : (ghost, ext, ext_ty) Svalue_ast.t_kind -> ext_ty Svalue_ast.ty -> t
   val equal_ty : ext_ty Svalue_ast.ty -> ext_ty Svalue_ast.ty -> bool
+  val bv_equal : bv -> bv -> bool
   val equal : t -> t -> bool
   val ty : t -> ext_ty Svalue_ast.ty
   val kind : t -> (ghost, ext, ext_ty) Svalue_ast.t_kind

@@ -295,6 +295,7 @@ let program ~sources ft (p : program) =
     "val node : (ghost, ext, ext_ty) Svalue_ast.t_kind -> ext_ty Svalue_ast.ty \
      -> t@ ";
   pf ft "val equal_ty : ext_ty Svalue_ast.ty -> ext_ty Svalue_ast.ty -> bool@ ";
+  pf ft "val bv_equal : bv -> bv -> bool@ ";
   List.iter
     (fun (pr : prim) ->
       let args = match pr.pargs with [] -> [ TUnit ] | l -> l in

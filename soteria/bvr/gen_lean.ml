@@ -803,9 +803,10 @@ let arm_stmt ctx ft f r i (a : arm) =
   pf ft
     "@[<v 2>def %s.Stmt : Prop :=@ ∀ (FS : FloatSem) (O : Ops), O.Sound FS →@ "
     (arm_name f r i);
-  pf ft "∀ %a,@ "
-    (list ~sep:" " (fun ft (x, t) -> pf ft "(%s : %s)" x t))
-    a.a_binders;
+  if a.a_binders <> [] then
+    pf ft "∀ %a,@ "
+      (list ~sep:" " (fun ft (x, t) -> pf ft "(%s : %s)" x t))
+      a.a_binders;
   with_subst a.a_body_subst (fun () ->
       Option.iter (fun g -> pf ft "%a = true →@ " (expr ctx) g) c.guard);
   let spec_args =

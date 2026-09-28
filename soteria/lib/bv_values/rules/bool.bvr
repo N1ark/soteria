@@ -1,67 +1,6 @@
 (* Booleans *)
 
-(* Recognize an upper-bound constraint [a < c] / [a <= c], returning the
-   bounded value, the signedness, the original node, and the inclusive upper
-   bound as an integer in that signedness. [as_lower_bound] is symmetric for [c
-   < a] / [c <= a] (returning an inclusive lower bound). *)
-let as_upper_bound (v : t) : (t * bool * t * int) option =
-  match v with
-  | Lt (s, a, BitVec c) -> Some (a, s, v, bv_to_z s (size a) c - 1)
-  | Leq (s, a, BitVec c) -> Some (a, s, v, bv_to_z s (size a) c)
-  | _ -> None
-
-let as_lower_bound (v : t) : (t * bool * t * int) option =
-  match v with
-  | Lt (s, BitVec c, a) -> Some (a, s, v, bv_to_z s (size a) c + 1)
-  | Leq (s, BitVec c, a) -> Some (a, s, v, bv_to_z s (size a) c)
-  | _ -> None
-
-(* For two bounds on the same value (same signedness), [&&] keeps the tighter
-   and [||] keeps the looser; either way the kept node already implies (resp.
-   is implied by) the other, so we can drop it. Callers only invoke these once
-   both operands have matched as upper (resp. lower) bounds, so the [None]
-   cases are unreachable. *)
-let combine_upper_bounds (keep_tighter : bool) (v1 : t) (v2 : t) : t =
-  match (as_upper_bound v1, as_upper_bound v2) with
-  | Some (_, _, _, u1), Some (_, _, _, u2) ->
-      if (u1 <= u2) = keep_tighter then v1 else v2
-  | _ ->
-      assert false;
-      v1
-
-let combine_lower_bounds (keep_tighter : bool) (v1 : t) (v2 : t) : t =
-  match (as_lower_bound v1, as_lower_bound v2) with
-  | Some (_, _, _, l1), Some (_, _, _, l2) ->
-      if (l1 >= l2) = keep_tighter then v1 else v2
-  | _ ->
-      assert false;
-      v1
-
-(* Whether [ubv] (an upper bound on some [a]) and [lbv] (a lower bound on the
-   same [a]) jointly cover the whole domain, i.e. the lower bound starts no
-   later than one past the upper bound. *)
-let complementary_bounds (ubv : t) (lbv : t) : bool =
-  match (as_upper_bound ubv, as_lower_bound lbv) with
-  | Some (a1, s1, _, u), Some (a2, s2, _, l) ->
-      s1 = s2 && equal a1 a2 && l <= u + 1
-  | _ -> false
-
-(* Whether [boundv] (a bound on some [a]) is implied by [eqv] (an equality [a
-   == k] with [k] constant), i.e. [k] satisfies the bound. *)
-let bound_implied_by_eq (boundv : t) (eqv : t) : bool =
-  match eqv with
-  | Eq (a, BitVec k) [@comm] -> (
-      let k_in (s : bool) = bv_to_z s (size a) k in
-      (match as_upper_bound boundv with
-      | Some (ba, s, _, u) -> equal ba a && k_in s <= u
-      | None -> false)
-      ||
-      match as_lower_bound boundv with
-      | Some (ba, s, _, l) -> equal ba a && k_in s >= l
-      | None -> false)
-  | _ -> false
-
-let[@spec And (v1, v2) <| TBool] b_and (v1 : t) (v2 : t) : t =
+let[@spec And (v1, v2) <| TBool] [@cases] b_and (v1 : t) (v2 : t) : t =
   match (v1, v2) with
   | v, v [@r same] -> v1
   | (false, _) [@comm] [@r false_] -> v_false
@@ -86,22 +25,19 @@ let[@spec And (v1, v2) <| TBool] b_and (v1 : t) (v2 : t) : t =
       Eq ((BitVec _ as bv2), BvExtract (s2, e2, x)) )
     [@r eq_extracts]
     when e1 + 1 = s2 || e2 + 1 = s1 ->
-      let bv, xy =
-        if e1 + 1 = s2 then (bv_concat bv2 bv1, bv_extract s1 e2 x)
-        else (bv_concat bv1 bv2, bv_extract s2 e1 x)
-      in
-      sem_eq bv xy
+      if e1 + 1 = s2 then sem_eq (bv_concat bv2 bv1) (bv_extract s1 e2 x)
+      else sem_eq (bv_concat bv1 bv2) (bv_extract s2 e1 x)
   (* two upper (resp. lower) bounds on the same value (e.g. [a < c1] && [a <=
      c2]) keep the tighter one *)
   | (Lt (s, a, BitVec _) | Leq (s, a, BitVec _)),
     (Lt (s, a, BitVec _) | Leq (s, a, BitVec _)) [@r upper_bounds] ->
-      combine_upper_bounds true v1 v2
+      if upper_bound v1 <= upper_bound v2 then v1 else v2
   | (Lt (s, BitVec _, a) | Leq (s, BitVec _, a)),
     (Lt (s, BitVec _, a) | Leq (s, BitVec _, a)) [@r lower_bounds] ->
-      combine_lower_bounds true v1 v2
+      if lower_bound v1 >= lower_bound v2 then v1 else v2
   | _ [@r default] -> mk_commut_binop And v1 v2 <| TBool
 
-let[@spec Or (v1, v2) <| TBool] b_or (v1 : t) (v2 : t) : t =
+let[@spec Or (v1, v2) <| TBool] [@cases] b_or (v1 : t) (v2 : t) : t =
   match (v1, v2) with
   | v, v [@r same] -> v1
   | (true, _) [@comm] [@r true_] -> v_true
@@ -120,23 +56,33 @@ let[@spec Or (v1, v2) <| TBool] b_or (v1 : t) (v2 : t) : t =
   | a, And (a, _) [@comm] [@r and_r] -> v1
   (* an upper and a lower bound on the same value that (at least) touch cover
      the whole domain, e.g. [a <= 2] || [3 <= a] *)
-  | (Lt _ | Leq _), (Lt _ | Leq _) [@r complementary]
-    when complementary_bounds v1 v2 || complementary_bounds v2 v1 ->
+  | ( ((Lt (s, a, BitVec _) | Leq (s, a, BitVec _)) as ub),
+      ((Lt (s, BitVec _, a) | Leq (s, BitVec _, a)) as lb) )
+    [@comm] [@r complementary]
+    when lower_bound lb <= upper_bound ub + 1 ->
       v_true
   (* a bound absorbs an equality it already allows, e.g. [a < c] || [a ==
      0] *)
-  | (Lt _ | Leq _), Eq _ [@r bound_eq] when bound_implied_by_eq v1 v2 -> v1
-  | Eq _, (Lt _ | Leq _) [@r eq_bound] when bound_implied_by_eq v2 v1 -> v2
+  | ( ((Lt (s, a, BitVec _) | Leq (s, a, BitVec _)) as b),
+      Eq (a, BitVec k) [@comm] )
+    [@comm] [@r upper_eq]
+    when to_z s k <= upper_bound b ->
+      b
+  | ( ((Lt (s, BitVec _, a) | Leq (s, BitVec _, a)) as b),
+      Eq (a, BitVec k) [@comm] )
+    [@comm] [@r lower_eq]
+    when lower_bound b <= to_z s k ->
+      b
   (* two upper (resp. lower) bounds on the same value keep the looser one *)
   | (Lt (s, a, BitVec _) | Leq (s, a, BitVec _)),
     (Lt (s, a, BitVec _) | Leq (s, a, BitVec _)) [@r upper_bounds] ->
-      combine_upper_bounds false v1 v2
+      if upper_bound v1 <= upper_bound v2 then v2 else v1
   | (Lt (s, BitVec _, a) | Leq (s, BitVec _, a)),
     (Lt (s, BitVec _, a) | Leq (s, BitVec _, a)) [@r lower_bounds] ->
-      combine_lower_bounds false v1 v2
+      if lower_bound v1 >= lower_bound v2 then v2 else v1
   | _ [@r default] -> mk_commut_binop Or v1 v2 <| TBool
 
-let[@spec Not sv <| TBool] b_not (sv : t) : t =
+let[@spec Not sv <| TBool] [@cases] b_not (sv : t) : t =
   match sv with
   | true [@r true_] -> v_false
   | false [@r false_] -> v_true
@@ -147,12 +93,12 @@ let[@spec Not sv <| TBool] b_not (sv : t) : t =
   | And (v1, v2) [@r and_] -> b_or (b_not v1) (b_not v2)
   | Ite (g, a, b) [@r ite] -> b_ite g (b_not a) (b_not b)
   | Eq ((BitVec bv as c), v) [@comm] [@r eq_bit] when ty c = TBitVector 1 ->
-      sem_eq (mk_bv 1 (1 - bv)) v
+      sem_eq (lit (lognot bv)) v
   | Distinct [ l; r ] [@r distinct] -> sem_eq l r
   | _ [@r default] -> Not sv <| TBool
 
-let[@spec Ite (guard, if_, else_) <| ty if_] b_ite (guard : t) (if_ : t)
-    (else_ : t) : t =
+let[@spec Ite (guard, if_, else_) <| ty if_] [@cases] b_ite (guard : t)
+    (if_ : t) (else_ : t) : t =
   match (guard, if_, else_) with
   | true, _, _ [@r true_] -> if_
   | false, _, _ [@r false_] -> else_
@@ -313,14 +259,17 @@ let[@spec Eq (v1, v2) <| TBool] sem_eq (v1 : t) (v2 : t) : t =
         mk_commut_binop Eq v1 v2 <| TBool
   | _ [@r default] -> mk_commut_binop Eq v1 v2 <| TBool
 
-let[@spec Exists (binders, body) <| TBool] b_mk_exists
+let[@spec Exists (binders, body) <| TBool] [@cases] b_mk_exists
     (binders : (var * ty) list) (body : t) : t =
-  match used_binders binders body with
-  | [] [@r empty] -> body
-  | binders [@r default] -> Exists (binders, body) <| TBool
+  match body with
+  | _ [@r empty] when no_binders (used_binders binders body) -> body
+  | _ [@r default] -> Exists (used_binders binders body, body) <| TBool
 
-let[@spec Eq (v1, v2) <| TBool] sem_eq_untyped (v1 : t) (v2 : t) : t =
-  if ty v1 = ty v2 then sem_eq v1 v2 else v_false
+let[@spec Eq (v1, v2) <| TBool] [@cases] sem_eq_untyped (v1 : t) (v2 : t) :
+    t =
+  match (v1, v2) with
+  | _ [@r ill_typed] when not (ty v1 = ty v2) -> v_false
+  | _ [@r typed] -> sem_eq v1 v2
 
 (* [distinct_check_one a rest] and [distinct_check l] go through the pairs of
    elements in order, and stop at the first pair that is equal ([Some false])
@@ -341,11 +290,9 @@ let rec distinct_check (l : t list) : bool option =
       | Some true -> distinct_check rest
       | r -> r)
 
-let[@spec Distinct l <| TBool] b_distinct (l : t list) : t =
+let[@spec Distinct l <| TBool] [@cases] b_distinct (l : t list) : t =
   match l with
-  | ([] | [ _ ]) [@r small] -> v_true
-  | _ [@r default] -> (
-      match distinct_check l with
-      | Some true -> v_true
-      | Some false -> v_false
-      | None -> Distinct (sort_by_tag l) <| TBool)
+  | _ [@r small] when at_most_one l -> v_true
+  | _ [@r distinct] when distinct_check l = Some true -> v_true
+  | _ [@r not_distinct] when distinct_check l = Some false -> v_false
+  | _ [@r default] -> Distinct (sort_by_tag l) <| TBool

@@ -258,3 +258,27 @@ let rec sure_neq (a : t) (b : t) : bool =
   | Bool a, Bool b -> not (a = b)
   | Ptr (la, oa), Ptr (lb, ob) -> sure_neq la lb || sure_neq oa ob
   | _ -> false
+
+(* Bool *)
+
+let at_most_one (l : t list) : bool =
+  match l with [] | [ _ ] -> true | _ -> false
+
+let no_binders (l : (var * ty) list) : bool =
+  match l with [] -> true | _ -> false
+
+(* For an upper bound [a < c] or [a <= c] on [a], the largest value of [a] that
+   it allows, read as an integer in its signedness ([c - 1] for [a < c]). *)
+let upper_bound (v : t) : int =
+  match v with
+  | Lt (s, _, (BitVec _ as c)) -> to_z s (bv_of_lit c) - 1
+  | Leq (s, _, (BitVec _ as c)) -> to_z s (bv_of_lit c)
+  | _ -> 0
+
+(* For a lower bound [c < a] or [c <= a] on [a], the smallest value of [a] that
+   it allows ([c + 1] for [c < a]). *)
+let lower_bound (v : t) : int =
+  match v with
+  | Lt (s, (BitVec _ as c), _) -> to_z s (bv_of_lit c) + 1
+  | Leq (s, (BitVec _ as c), _) -> to_z s (bv_of_lit c)
+  | _ -> 0

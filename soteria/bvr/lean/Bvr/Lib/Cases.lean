@@ -151,6 +151,11 @@ macro_rules
       | (simp [Binop.Comm]; done)
       | bvr_comm
       | (intro w; simp; done)
-      | (intro w; simpa using ty_of_WT_binop (by simp [Binop.Comm]) (by simp) w))
+      | (intro w; simpa using ty_of_WT_binop (by simp [Binop.Comm]) (by simp) w)
+      -- a type given by the size of either operand
+      | (intro w
+         have e := ty_of_WT_binop (by simp [Binop.Comm]) (by simp) w
+         simp only [Term.ty_mk] at e
+         simp [size, ty, e]))
 
 end Bvr.Lib

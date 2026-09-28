@@ -6,45 +6,6 @@ namespace Bvr
 
 open Classical Lib
 
-theorem b_and.r_same.a1.proof : b_and.r_same.a1.Stmt := by
-  bvr_rule
-
-theorem b_and.r_false_.a1.proof : b_and.r_false_.a1.Stmt := by
-  bvr_rule
-
-theorem b_and.r_false_.a2.proof : b_and.r_false_.a2.Stmt := by
-  bvr_rule
-
-theorem b_and.r_true_l.a1.proof : b_and.r_true_l.a1.Stmt := by
-  bvr_rule
-
-theorem b_and.r_true_r.a1.proof : b_and.r_true_r.a1.Stmt := by
-  bvr_rule
-
-theorem b_and.r_not.a1.proof : b_and.r_not.a1.Stmt := by
-  bvr_rule
-
-theorem b_and.r_not.a2.proof : b_and.r_not.a2.Stmt := by
-  bvr_rule
-
-theorem b_and.r_and_l.a1.proof : b_and.r_and_l.a1.Stmt := by
-  bvr_rule
-
-theorem b_and.r_and_l.a2.proof : b_and.r_and_l.a2.Stmt := by
-  bvr_rule
-
-theorem b_and.r_and_r.a1.proof : b_and.r_and_r.a1.Stmt := by
-  bvr_rule
-
-theorem b_and.r_and_r.a2.proof : b_and.r_and_r.a2.Stmt := by
-  bvr_rule
-
-theorem b_and.r_or_l.a1.proof : b_and.r_or_l.a1.Stmt := by
-  bvr_rule
-
-theorem b_and.r_or_r.a1.proof : b_and.r_or_r.a1.Stmt := by
-  bvr_rule
-
 theorem b_and.r_eq_neq.a1.proof : b_and.r_eq_neq.a1.Stmt := by
   bvr_and_eq_neq
 
@@ -80,54 +41,9 @@ theorem b_and.r_lower_bounds.a3.proof : b_and.r_lower_bounds.a3.Stmt := by
 theorem b_and.r_lower_bounds.a4.proof : b_and.r_lower_bounds.a4.Stmt := by
   bvr_rule_bounds
 
-theorem b_and.r_default.a1.proof : b_and.r_default.a1.Stmt := by
-  bvr_rule
-
-theorem b_or.r_same.a1.proof : b_or.r_same.a1.Stmt := by
-  bvr_rule
-
-theorem b_or.r_true_.a1.proof : b_or.r_true_.a1.Stmt := by
-  bvr_rule
-
-theorem b_or.r_true_.a2.proof : b_or.r_true_.a2.Stmt := by
-  bvr_rule
-
-theorem b_or.r_false_l.a1.proof : b_or.r_false_l.a1.Stmt := by
-  bvr_rule
-
-theorem b_or.r_false_r.a1.proof : b_or.r_false_r.a1.Stmt := by
-  bvr_rule
-
-theorem b_or.r_not.a1.proof : b_or.r_not.a1.Stmt := by
-  bvr_rule
-
-theorem b_or.r_not.a2.proof : b_or.r_not.a2.Stmt := by
-  bvr_rule
-
 theorem b_or.r_lt_lt.a1.proof : b_or.r_lt_lt.a1.Stmt := by
   bvr_rule
   all_goals bvr_int_cmp
-
-theorem b_or.r_lt_leq.a1.proof : b_or.r_lt_leq.a1.Stmt := by
-  bvr_rule
-
-theorem b_or.r_or_l.a1.proof : b_or.r_or_l.a1.Stmt := by
-  bvr_rule
-
-theorem b_or.r_or_l.a2.proof : b_or.r_or_l.a2.Stmt := by
-  bvr_rule
-
-theorem b_or.r_or_r.a1.proof : b_or.r_or_r.a1.Stmt := by
-  bvr_rule
-
-theorem b_or.r_or_r.a2.proof : b_or.r_or_r.a2.Stmt := by
-  bvr_rule
-
-theorem b_or.r_and_l.a1.proof : b_or.r_and_l.a1.Stmt := by
-  bvr_rule
-
-theorem b_or.r_and_r.a1.proof : b_or.r_and_r.a1.Stmt := by
-  bvr_rule
 
 theorem b_or.r_complementary.a1.proof : b_or.r_complementary.a1.Stmt := by
   bvr_rule_bounds
@@ -177,36 +93,6 @@ theorem b_or.r_lower_bounds.a3.proof : b_or.r_lower_bounds.a3.Stmt := by
 theorem b_or.r_lower_bounds.a4.proof : b_or.r_lower_bounds.a4.Stmt := by
   bvr_rule_bounds
 
-theorem b_or.r_default.a1.proof : b_or.r_default.a1.Stmt := by
-  bvr_rule
-
-theorem b_not.r_true_.a1.proof : b_not.r_true_.a1.Stmt := by
-  bvr_rule
-
-theorem b_not.r_false_.a1.proof : b_not.r_false_.a1.Stmt := by
-  bvr_rule
-
-theorem b_not.r_not.a1.proof : b_not.r_not.a1.Stmt := by
-  bvr_rule
-
-theorem b_not.r_lt.a1.proof : b_not.r_lt.a1.Stmt := by
-  bvr_rule
-
-theorem b_not.r_leq.a1.proof : b_not.r_leq.a1.Stmt := by
-  bvr_rule
-
-theorem b_not.r_or_.a1.proof : b_not.r_or_.a1.Stmt := by
-  bvr_rule
-
-theorem b_not.r_and_.a1.proof : b_not.r_and_.a1.Stmt := by
-  bvr_rule
-
-theorem b_not.r_ite.a1.proof : b_not.r_ite.a1.Stmt := by
-  bvr_rule
-
-theorem b_not.r_eq_bit.a1.proof : b_not.r_eq_bit.a1.Stmt := by
-  bvr_rule
-
 theorem b_not.r_distinct.a1.proof : b_not.r_distinct.a1.Stmt := by
   intro FS O hO l r t
   simp only [bvr_spec]
@@ -218,9 +104,6 @@ theorem b_not.r_distinct.a1.proof : b_not.r_distinct.a1.Stmt := by
     rw [eval_eq_ev w']
     simp only [ev, evList] at e ⊢
     cases hl : ev FS ρ l <;> cases hr : ev FS ρ r <;> simp_all [evUnop, evBinop]
-
-theorem b_not.r_default.a1.proof : b_not.r_default.a1.Stmt := by
-  bvr_rule
 
 theorem b_ite.r_true_.a1.proof : b_ite.r_true_.a1.Stmt := by
   bvr_rule_ev
@@ -279,9 +162,6 @@ theorem b_ite.r_or_ite_else.a2.proof : b_ite.r_or_ite_else.a2.Stmt := by
 theorem b_ite.r_same.a1.proof : b_ite.r_same.a1.Stmt := by
   bvr_rule_ev
 
-theorem b_ite.r_default.a1.proof : b_ite.r_default.a1.Stmt := by
-  bvr_rule
-
 theorem b_mk_exists.r_empty.a1.proof : b_mk_exists.r_empty.a1.Stmt := by
   intro FS O hO bs body hu
   replace hu : used_binders bs body = [] := by
@@ -314,9 +194,6 @@ theorem sem_eq_untyped.r_ill_typed.a1.proof : sem_eq_untyped.r_ill_typed.a1.Stmt
   intro FS O hO v1 v2 h
   have h' : ¬ v1.ty = v2.ty := fun e => by simp [e] at h
   exact Refines.of_WT fun w => absurd (by simpa [Binop.WT] using (WT_binop.1 w).1) h'
-
-theorem sem_eq_untyped.r_typed.a1.proof : sem_eq_untyped.r_typed.a1.Stmt := by
-  bvr_rule
 
 theorem b_distinct.r_small.a1.proof : b_distinct.r_small.a1.Stmt := by
   intro FS O hO l h

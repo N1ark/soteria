@@ -924,7 +924,11 @@ let cases_proofs ft (f : fn) =
       List.iteri
         (fun i a ->
           match derived_from arms a with
-          | None -> ()
+          | None ->
+              (* a hand-written [.proof] if there is one, else the default
+                 tactic *)
+              pf ft "theorem %s.ok : %s.Stmt := bvr_proof%% %s@ @ "
+                (arm_name f r i) (arm_name f r i) (arm_name f r i)
           | Some b ->
               let j =
                 let rec find k = function
@@ -936,9 +940,9 @@ let cases_proofs ft (f : fn) =
               in
               let hg = if a.a_case.guard = None then "" else " hg" in
               pf ft
-                "@[<v 2>theorem %s.proof : %s.Stmt := by@ intro FS O hO %a%s@ \
+                "@[<v 2>theorem %s.ok : %s.Stmt := by@ intro FS O hO %a%s@ \
                  exact Refines.trans@   (by simp only [%s.spec, ty, \
-                 Term.ty_mk]; bvr_comm)@   (%s.proof FS O hO %a%s)@]@ @ "
+                 Term.ty_mk]; bvr_comm)@   (%s.ok FS O hO %a%s)@]@ @ "
                 (arm_name f r i) (arm_name f r i)
                 (list ~sep:" " (fun ft (x, _) -> pf ft "%s" x))
                 a.a_binders hg f.name (arm_name f r j)
@@ -953,7 +957,7 @@ let cases_proofs ft (f : fn) =
         f.name (id r) f.name (id r) args f f.name (id r)
         (Format.pp_print_list
            ~pp_sep:(fun ft () -> pf ft "@ ")
-           (fun ft i -> pf ft "· bvr_arm h (%s.proof FS O hO)" (arm_name f r i)))
+           (fun ft i -> pf ft "· bvr_arm h (%s.ok FS O hO)" (arm_name f r i)))
         (List.init (List.length arms) Fun.id))
     (arms f)
 
@@ -961,7 +965,7 @@ let soundness ~sources ~proofs ft (p : program) =
   let ctx = classify p in
   let proofs =
     if List.exists (fun f -> f.cases) (rule_fns ctx) then
-      "Bvr.Lib.Cases" :: proofs
+      "Bvr.Lib.Tactic" :: proofs
     else proofs
   in
   header ~sources ft ("Bvr.Statements" :: proofs);

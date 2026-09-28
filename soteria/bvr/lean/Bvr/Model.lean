@@ -231,17 +231,25 @@ def lower_bound (v : Term) : Int :=
       | _ => none)]).getD
     (match v with | _ => (0 : Int)))
 
+def is_min_of (signed : Bool) (l : BvVal) : Bool :=
+  (decide ((to_z signed l) = (min_for signed (width l))))
+
+def is_max_of (signed : Bool) (l : BvVal) : Bool :=
+  (decide ((to_z signed l) = (max_for signed (width l))))
+
 def cancellable (signed : Bool) (a : Term) : Bool :=
   (if signed
   then ((firstSome [(match a with
-                      | (Term.mk (Kind.bitVec x) _) =>
-                      some ((decide ((bv_to_z true (size a) x) > (0 : Int))))
+                      | (Term.mk (Kind.bitVec _) _) =>
+                      some ((decide ((to_z true (bv_of_lit a)) > (0 : Int))))
                       | _ => none)]).getD
          (match a with | _ => false))
   else (sure_neq a (bv_zero (size a))))
 
-def const_keeps_in_range (base : Int) (d : Int) : Bool :=
-  ((decide ((zmin (0 : Int) base) ≤ d)) && (decide (d ≤ (zmax (0 : Int) base))))
+def const_keeps_in_range (signed : Bool) (l : BvVal) (r : BvVal) : Bool :=
+  (let base := (to_z signed l);
+  (let d := (base - (to_z signed r));
+  ((decide ((zmin (0 : Int) base) ≤ d)) && (decide (d ≤ (zmax (0 : Int) base))))))
 
 def is_checked_unsigned_op (v : Term) : Bool :=
   ((firstSome [(match v with
@@ -427,13 +435,13 @@ def lt_zero_aux (O : Ops) (v : Term) : Term :=
 termination_by sizeOf v
 decreasing_by all_goals (simp_wf; omega)
 
-def signed_to_unsigned_cmp (O : Ops) (is_leq : Bool) (c_on_left : Bool) (c : Int) (v1 : Term) (v2 : Term) : Term :=
+def signed_to_unsigned_cmp (O : Ops) (is_leq : Bool) (c_on_left : Bool) (c : BvVal) (v1 : Term) (v2 : Term) : Term :=
   (let bits := (size v1);
   (let sign_bit := (mk_bv bits (zshiftl (1 : Int) (bits - (1 : Int))));
   (let c_cmp := (if is_leq
                 then (O.bv_leq false v1 v2)
                 else (O.bv_lt false v1 v2));
-  (let nonneg := (decide ((bv_to_z true bits c) ≥ (0 : Int)));
+  (let nonneg := (decide ((to_z true c) ≥ (0 : Int)));
   (if c_on_left
   then (let in_pos := (O.bv_lt false v2 sign_bit);
        (if nonneg then (O.b_and c_cmp in_pos) else (O.b_or in_pos c_cmp)))
@@ -3411,911 +3419,783 @@ def bv_div.step (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [bv_div.r_lits O signed v1 v2, bv_div.r_one O signed v1 v2, bv_div.r_mul_lits O signed v1 v2, bv_div.r_mul_div O signed v1 v2, bv_div.r_div_mul O signed v1 v2, bv_div.r_div_div O signed v1 v2, bv_div.r_zext O signed v1 v2, bv_div.r_default O signed v1 v2]).getD (bv_div.spec signed v1 v2)
 
 def bv_lt.r_lits (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | (Term.mk (Kind.bitVec l) _), (Term.mk (Kind.bitVec r) _) =>
-    some ((of_bool (decide ((bv_to_z signed bits l) < (bv_to_z signed bits r)))))
+    | l@(Term.mk (Kind.bitVec _) _), r@(Term.mk (Kind.bitVec _) _) =>
+    (let l := bv_of_lit l;
+    let r := bv_of_lit r;
+    (whenSome true ((of_bool (decide ((to_z signed l) < (to_z signed r)))))))
     | _, _ => none)
 
 def bv_lt.r_same (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
-  (match v1, v2 with
-    | v, bvr__2 =>
-    (if (equal v bvr__2) then some (v_false) else none))
+  (match v1, v2 with | v, bvr__2 => (whenSome (equal v bvr__2) (v_false)))
 
 def bv_lt.r_negs (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
     | (Term.mk (Kind.unop (Unop.neg true) a) _), (Term.mk (Kind.unop (Unop.neg true) b) _) =>
-    (if signed then some ((O.bv_lt signed b a)) else none)
+    (whenSome signed ((O.bv_lt signed b a)))
     | _, _ => none)
 
 def bv_lt.r_neg_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | (Term.mk (Kind.unop (Unop.neg true) a) _), (Term.mk (Kind.bitVec c) _) =>
-    (if (signed && (! (decide ((bv_to_z signed bits c) = (min_for signed bits)))))
-    then some ((O.bv_lt signed (O.bv_neg false v2) a))
-    else none)
+    | (Term.mk (Kind.unop (Unop.neg true) a) _), c@(Term.mk (Kind.bitVec _) _) =>
+    (let c := bv_of_lit c;
+    (whenSome (signed && (! (is_int_min c)))
+    ((O.bv_lt signed (O.bv_neg false v2) a))))
     | _, _ => none)
 
 def bv_lt.r_neg_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | (Term.mk (Kind.bitVec c) _), (Term.mk (Kind.unop (Unop.neg true) a) _) =>
-    (if (signed && (! (decide ((bv_to_z signed bits c) = (min_for signed bits)))))
-    then some ((O.bv_lt signed a (O.bv_neg false v1)))
-    else none)
+    | c@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.unop (Unop.neg true) a) _) =>
+    (let c := bv_of_lit c;
+    (whenSome (signed && (! (is_int_min c)))
+    ((O.bv_lt signed a (O.bv_neg false v1)))))
     | _, _ => none)
 
 def bv_lt.r_const_add (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | (Term.mk (Kind.bitVec bv_v1) _), (Term.mk (Kind.binop (Binop.add checked) r@(Term.mk (Kind.bitVec bv_r) _) x) _) =>
-    (if (checked_has signed checked)
-    then some ((if ((! signed) && (decide (bv_v1 < bv_r)))
-               then v_true
-               else (if (overflows_sub signed bits bv_v1 bv_r)
-                    then (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool)
-                    else (O.bv_lt signed (O.bv_sub chk v1 r) x))))
-    else none)
+    | c@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.add checked) r@(Term.mk (Kind.bitVec _) _) x) _) =>
+    (let c := bv_of_lit c;
+    let r := bv_of_lit r;
+    (whenSome (checked_has signed checked)
+    ((if (sub_overflows signed c r)
+     then (if (! signed)
+          then v_true
+          else (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))
+     else (O.bv_lt signed (lit (lit_sub c r)) x)))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.bitVec bv_v1) _), (Term.mk (Kind.binop (Binop.add checked) x r@(Term.mk (Kind.bitVec bv_r) _)) _) =>
-        (if (checked_has signed checked)
-        then some ((if ((! signed) && (decide (bv_v1 < bv_r)))
-                   then v_true
-                   else (if (overflows_sub signed bits bv_v1 bv_r)
-                        then (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool)
-                        else (O.bv_lt signed (O.bv_sub chk v1 r) x))))
-        else none)
+        | c@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.add checked) x r@(Term.mk (Kind.bitVec _) _)) _) =>
+        (let c := bv_of_lit c;
+        let r := bv_of_lit r;
+        (whenSome (checked_has signed checked)
+        ((if (sub_overflows signed c r)
+         then (if (! signed)
+              then v_true
+              else (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))
+         else (O.bv_lt signed (lit (lit_sub c r)) x)))))
         | _, _ => none)
 
 def bv_lt.r_add_const (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.add checked) l@(Term.mk (Kind.bitVec bv_l) _) x) _), (Term.mk (Kind.bitVec bv_v2) _) =>
-    (if (checked_has signed checked)
-    then some ((if ((! signed) && (decide (bv_v2 < bv_l)))
-               then v_false
-               else (if (overflows_sub signed bits bv_v2 bv_l)
-                    then (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool)
-                    else (O.bv_lt signed x (O.bv_sub chk v2 l)))))
-    else none)
+    | (Term.mk (Kind.binop (Binop.add checked) l@(Term.mk (Kind.bitVec _) _) x) _), c@(Term.mk (Kind.bitVec _) _) =>
+    (let l := bv_of_lit l;
+    let c := bv_of_lit c;
+    (whenSome (checked_has signed checked)
+    ((if (sub_overflows signed c l)
+     then (if (! signed)
+          then v_false
+          else (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))
+     else (O.bv_lt signed x (lit (lit_sub c l)))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add checked) x l@(Term.mk (Kind.bitVec bv_l) _)) _), (Term.mk (Kind.bitVec bv_v2) _) =>
-        (if (checked_has signed checked)
-        then some ((if ((! signed) && (decide (bv_v2 < bv_l)))
-                   then v_false
-                   else (if (overflows_sub signed bits bv_v2 bv_l)
-                        then (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool)
-                        else (O.bv_lt signed x (O.bv_sub chk v2 l)))))
-        else none)
+        | (Term.mk (Kind.binop (Binop.add checked) x l@(Term.mk (Kind.bitVec _) _)) _), c@(Term.mk (Kind.bitVec _) _) =>
+        (let l := bv_of_lit l;
+        let c := bv_of_lit c;
+        (whenSome (checked_has signed checked)
+        ((if (sub_overflows signed c l)
+         then (if (! signed)
+              then v_false
+              else (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))
+         else (O.bv_lt signed x (lit (lit_sub c l)))))))
         | _, _ => none)
 
 def bv_lt.r_self_add_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
     | a, (Term.mk (Kind.binop (Binop.add checked) bvr__4 b) _) =>
-    (if ((equal a bvr__4) && (checked_has signed checked))
-    then some ((O.bv_lt signed (bv_zero bits) b))
-    else none)
+    (whenSome ((equal a bvr__4) && (checked_has signed checked))
+    ((O.bv_lt signed (bv_zero (size v1)) b)))
     | _, _ => none)
   <|> (match v1, v2 with
         | a, (Term.mk (Kind.binop (Binop.add checked) b bvr__4) _) =>
-        (if ((equal a bvr__4) && (checked_has signed checked))
-        then some ((O.bv_lt signed (bv_zero bits) b))
-        else none)
+        (whenSome ((equal a bvr__4) && (checked_has signed checked))
+        ((O.bv_lt signed (bv_zero (size v1)) b)))
         | _, _ => none)
 
 def bv_lt.r_self_add_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
     | (Term.mk (Kind.binop (Binop.add checked) a b) _), bvr__7 =>
-    (if ((equal a bvr__7) && (checked_has signed checked))
-    then some ((O.bv_lt signed b (bv_zero bits)))
-    else none)
+    (whenSome ((equal a bvr__7) && (checked_has signed checked))
+    ((O.bv_lt signed b (bv_zero (size v1)))))
     | _, _ => none)
   <|> (match v1, v2 with
         | (Term.mk (Kind.binop (Binop.add checked) b a) _), bvr__7 =>
-        (if ((equal a bvr__7) && (checked_has signed checked))
-        then some ((O.bv_lt signed b (bv_zero bits)))
-        else none)
+        (whenSome ((equal a bvr__7) && (checked_has signed checked))
+        ((O.bv_lt signed b (bv_zero (size v1)))))
         | _, _ => none)
 
 def bv_lt.r_add_add (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.add checked_l) l@(Term.mk (Kind.bitVec bv_l) _) y) _), (Term.mk (Kind.binop (Binop.add checked_r) r@(Term.mk (Kind.bitVec bv_r) _) x) _) =>
-    (if ((checked_has signed checked_l) && (checked_has signed checked_r))
-    then some ((let int_l := (bv_to_z signed bits bv_l);
-               (let int_r := (bv_to_z signed bits bv_r);
-               (if (const_keeps_in_range int_l (int_l - int_r))
-               then (O.bv_lt signed (O.bv_add chk y (O.bv_sub chk l r)) x)
-               else (if (const_keeps_in_range int_r (int_r - int_l))
-                    then (O.bv_lt signed y (O.bv_add chk x (O.bv_sub chk r l)))
-                    else (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))))))
-    else none)
+    | (Term.mk (Kind.binop (Binop.add checked_l) l@(Term.mk (Kind.bitVec _) _) y) _), (Term.mk (Kind.binop (Binop.add checked_r) r@(Term.mk (Kind.bitVec _) _) x) _) =>
+    (let l := bv_of_lit l;
+    let r := bv_of_lit r;
+    (whenSome ((checked_has signed checked_l) && (checked_has signed checked_r))
+    ((if (const_keeps_in_range signed l r)
+     then (O.bv_lt signed (O.bv_add (checked_of_signed signed) y (lit (lit_sub l r))) x)
+     else (if (const_keeps_in_range signed r l)
+          then (O.bv_lt signed y (O.bv_add (checked_of_signed signed) x (lit (lit_sub r l))))
+          else (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add checked_l) l@(Term.mk (Kind.bitVec bv_l) _) y) _), (Term.mk (Kind.binop (Binop.add checked_r) x r@(Term.mk (Kind.bitVec bv_r) _)) _) =>
-        (if ((checked_has signed checked_l) && (checked_has signed checked_r))
-        then some ((let int_l := (bv_to_z signed bits bv_l);
-                   (let int_r := (bv_to_z signed bits bv_r);
-                   (if (const_keeps_in_range int_l (int_l - int_r))
-                   then (O.bv_lt signed (O.bv_add chk y (O.bv_sub chk l r)) x)
-                   else (if (const_keeps_in_range int_r (int_r - int_l))
-                        then (O.bv_lt signed y (O.bv_add chk x (O.bv_sub chk r l)))
-                        else (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))))))
-        else none)
+        | (Term.mk (Kind.binop (Binop.add checked_l) l@(Term.mk (Kind.bitVec _) _) y) _), (Term.mk (Kind.binop (Binop.add checked_r) x r@(Term.mk (Kind.bitVec _) _)) _) =>
+        (let l := bv_of_lit l;
+        let r := bv_of_lit r;
+        (whenSome ((checked_has signed checked_l) && (checked_has signed checked_r))
+        ((if (const_keeps_in_range signed l r)
+         then (O.bv_lt signed (O.bv_add (checked_of_signed signed) y (lit (lit_sub l r))) x)
+         else (if (const_keeps_in_range signed r l)
+              then (O.bv_lt signed y (O.bv_add (checked_of_signed signed) x (lit (lit_sub r l))))
+              else (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add checked_l) y l@(Term.mk (Kind.bitVec bv_l) _)) _), (Term.mk (Kind.binop (Binop.add checked_r) r@(Term.mk (Kind.bitVec bv_r) _) x) _) =>
-        (if ((checked_has signed checked_l) && (checked_has signed checked_r))
-        then some ((let int_l := (bv_to_z signed bits bv_l);
-                   (let int_r := (bv_to_z signed bits bv_r);
-                   (if (const_keeps_in_range int_l (int_l - int_r))
-                   then (O.bv_lt signed (O.bv_add chk y (O.bv_sub chk l r)) x)
-                   else (if (const_keeps_in_range int_r (int_r - int_l))
-                        then (O.bv_lt signed y (O.bv_add chk x (O.bv_sub chk r l)))
-                        else (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))))))
-        else none)
+        | (Term.mk (Kind.binop (Binop.add checked_l) y l@(Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.binop (Binop.add checked_r) r@(Term.mk (Kind.bitVec _) _) x) _) =>
+        (let l := bv_of_lit l;
+        let r := bv_of_lit r;
+        (whenSome ((checked_has signed checked_l) && (checked_has signed checked_r))
+        ((if (const_keeps_in_range signed l r)
+         then (O.bv_lt signed (O.bv_add (checked_of_signed signed) y (lit (lit_sub l r))) x)
+         else (if (const_keeps_in_range signed r l)
+              then (O.bv_lt signed y (O.bv_add (checked_of_signed signed) x (lit (lit_sub r l))))
+              else (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add checked_l) y l@(Term.mk (Kind.bitVec bv_l) _)) _), (Term.mk (Kind.binop (Binop.add checked_r) x r@(Term.mk (Kind.bitVec bv_r) _)) _) =>
-        (if ((checked_has signed checked_l) && (checked_has signed checked_r))
-        then some ((let int_l := (bv_to_z signed bits bv_l);
-                   (let int_r := (bv_to_z signed bits bv_r);
-                   (if (const_keeps_in_range int_l (int_l - int_r))
-                   then (O.bv_lt signed (O.bv_add chk y (O.bv_sub chk l r)) x)
-                   else (if (const_keeps_in_range int_r (int_r - int_l))
-                        then (O.bv_lt signed y (O.bv_add chk x (O.bv_sub chk r l)))
-                        else (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))))))
-        else none)
+        | (Term.mk (Kind.binop (Binop.add checked_l) y l@(Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.binop (Binop.add checked_r) x r@(Term.mk (Kind.bitVec _) _)) _) =>
+        (let l := bv_of_lit l;
+        let r := bv_of_lit r;
+        (whenSome ((checked_has signed checked_l) && (checked_has signed checked_r))
+        ((if (const_keeps_in_range signed l r)
+         then (O.bv_lt signed (O.bv_add (checked_of_signed signed) y (lit (lit_sub l r))) x)
+         else (if (const_keeps_in_range signed r l)
+              then (O.bv_lt signed y (O.bv_add (checked_of_signed signed) x (lit (lit_sub r l))))
+              else (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))))))
         | _, _ => none)
 
 def bv_lt.r_one (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
     | _, (Term.mk (Kind.bitVec bvr__2) _) =>
-    (if ((decide (bvr__2 = (1 : Int))) && (! signed))
-    then some ((O.sem_eq v1 (bv_zero bits)))
-    else none)
+    (whenSome ((decide (bvr__2 = (1 : Int))) && (! signed))
+    ((O.sem_eq v1 (bv_zero (size v1)))))
     | _, _ => none)
 
 def bv_lt.r_of_bool (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
     | _, (Term.mk (Kind.unop (Unop.bvOfBool n) b) _) =>
-    (if (! signed)
-    then some ((O.b_and b (O.sem_eq v1 (bv_zero n))))
-    else none)
+    (whenSome (! signed) ((O.b_and b (O.sem_eq v1 (bv_zero n)))))
     | _, _ => none)
 
 def bv_lt.r_ite_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
     | (Term.mk (Kind.triop Triop.ite b l r) _), _ =>
-    some ((O.b_ite b (O.bv_lt signed l v2) (O.bv_lt signed r v2)))
+    (whenSome true ((O.b_ite b (O.bv_lt signed l v2) (O.bv_lt signed r v2))))
     | _, _ => none)
 
 def bv_lt.r_ite_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
     | _, (Term.mk (Kind.triop Triop.ite b l r) _) =>
-    some ((O.b_ite b (O.bv_lt signed v1 l) (O.bv_lt signed v1 r)))
+    (whenSome true ((O.b_ite b (O.bv_lt signed v1 l) (O.bv_lt signed v1 r))))
     | _, _ => none)
 
 def bv_lt.r_lt_zero (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
     | _, (Term.mk (Kind.bitVec bvr__2) _) =>
-    (if ((decide (bvr__2 = (0 : Int))) && (signed && (! (is_checked_unsigned_op v1))))
-    then some ((lt_zero_aux O v1))
-    else none)
+    (whenSome ((decide (bvr__2 = (0 : Int))) && (signed && (! (is_checked_unsigned_op v1))))
+    ((lt_zero_aux O v1)))
     | _, _ => none)
 
 def bv_lt.r_max_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | (Term.mk (Kind.bitVec x) _), _ =>
-    (if (decide ((bv_to_z signed bits x) = (max_for signed bits)))
-    then some (v_false)
-    else none)
+    | x@(Term.mk (Kind.bitVec _) _), _ =>
+    (let x := bv_of_lit x; (whenSome (is_max_of signed x) (v_false)))
     | _, _ => none)
 
 def bv_lt.r_min_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | _, (Term.mk (Kind.bitVec x) _) =>
-    (if (decide ((bv_to_z signed bits x) = (min_for signed bits)))
-    then some (v_false)
-    else none)
+    | _, x@(Term.mk (Kind.bitVec _) _) =>
+    (let x := bv_of_lit x; (whenSome (is_min_of signed x) (v_false)))
     | _, _ => none)
 
 def bv_lt.r_min_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | (Term.mk (Kind.bitVec x) _), _ =>
-    (if (decide ((bv_to_z signed bits x) = (min_for signed bits)))
-    then some ((O.b_not (O.sem_eq v1 v2)))
-    else none)
+    | x@(Term.mk (Kind.bitVec _) _), _ =>
+    (let x := bv_of_lit x;
+    (whenSome (is_min_of signed x) ((O.b_not (O.sem_eq v1 v2)))))
     | _, _ => none)
 
 def bv_lt.r_max_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | _, (Term.mk (Kind.bitVec x) _) =>
-    (if (decide ((bv_to_z signed bits x) = (max_for signed bits)))
-    then some ((O.b_not (O.sem_eq v1 v2)))
-    else none)
+    | _, x@(Term.mk (Kind.bitVec _) _) =>
+    (let x := bv_of_lit x;
+    (whenSome (is_max_of signed x) ((O.b_not (O.sem_eq v1 v2)))))
     | _, _ => none)
 
 def bv_lt.r_const_mul (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | (Term.mk (Kind.bitVec c2) _), (Term.mk (Kind.binop (Binop.mul checked) x vc1@(Term.mk (Kind.bitVec c1) _)) _) =>
-    (if ((checked_has signed checked) && (decide (c1 ≠ (0 : Int))))
-    then some ((let c1 := (bv_to_z signed bits c1);
-               (let c2 := (bv_to_z signed bits c2);
-               (if ((divisible c2 c1) || (decide (c2 ≥ (0 : Int))))
-               then (if (decide (c1 < (0 : Int)))
-                    then (if (signed && ((decide (c1 = (-1 : Int))) && (decide (c2 = (min_for signed bits)))))
-                         then v_true
-                         else (O.bv_lt signed x (O.bv_div signed v1 vc1)))
-                    else (O.bv_lt signed (O.bv_div signed v1 vc1) x))
-               else (if (decide (c1 < (0 : Int)))
-                    then (O.bv_leq signed x (O.bv_div signed v1 vc1))
-                    else (O.bv_leq signed (O.bv_div signed v1 vc1) x))))))
-    else none)
+    | c2@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.mul checked) x vc1@c1@(Term.mk (Kind.bitVec _) _)) _) =>
+    (let c2 := bv_of_lit c2;
+    let c1 := bv_of_lit c1;
+    (whenSome ((checked_has signed checked) && (! (decide ((to_z false c1) = (0 : Int)))))
+    ((let z1 := (to_z signed c1);
+     (let z2 := (to_z signed c2);
+     (if ((divisible z2 z1) || (decide (z2 ≥ (0 : Int))))
+     then (if (decide (z1 < (0 : Int)))
+          then (if (signed && ((decide (z1 = (-1 : Int))) && (is_int_min c2)))
+               then v_true
+               else (O.bv_lt signed x (O.bv_div signed v1 vc1)))
+          else (O.bv_lt signed (O.bv_div signed v1 vc1) x))
+     else (if (decide (z1 < (0 : Int)))
+          then (O.bv_leq signed x (O.bv_div signed v1 vc1))
+          else (O.bv_leq signed (O.bv_div signed v1 vc1) x))))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.bitVec c2) _), (Term.mk (Kind.binop (Binop.mul checked) vc1@(Term.mk (Kind.bitVec c1) _) x) _) =>
-        (if ((checked_has signed checked) && (decide (c1 ≠ (0 : Int))))
-        then some ((let c1 := (bv_to_z signed bits c1);
-                   (let c2 := (bv_to_z signed bits c2);
-                   (if ((divisible c2 c1) || (decide (c2 ≥ (0 : Int))))
-                   then (if (decide (c1 < (0 : Int)))
-                        then (if (signed && ((decide (c1 = (-1 : Int))) && (decide (c2 = (min_for signed bits)))))
-                             then v_true
-                             else (O.bv_lt signed x (O.bv_div signed v1 vc1)))
-                        else (O.bv_lt signed (O.bv_div signed v1 vc1) x))
-                   else (if (decide (c1 < (0 : Int)))
-                        then (O.bv_leq signed x (O.bv_div signed v1 vc1))
-                        else (O.bv_leq signed (O.bv_div signed v1 vc1) x))))))
-        else none)
+        | c2@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.mul checked) vc1@c1@(Term.mk (Kind.bitVec _) _) x) _) =>
+        (let c2 := bv_of_lit c2;
+        let c1 := bv_of_lit c1;
+        (whenSome ((checked_has signed checked) && (! (decide ((to_z false c1) = (0 : Int)))))
+        ((let z1 := (to_z signed c1);
+         (let z2 := (to_z signed c2);
+         (if ((divisible z2 z1) || (decide (z2 ≥ (0 : Int))))
+         then (if (decide (z1 < (0 : Int)))
+              then (if (signed && ((decide (z1 = (-1 : Int))) && (is_int_min c2)))
+                   then v_true
+                   else (O.bv_lt signed x (O.bv_div signed v1 vc1)))
+              else (O.bv_lt signed (O.bv_div signed v1 vc1) x))
+         else (if (decide (z1 < (0 : Int)))
+              then (O.bv_leq signed x (O.bv_div signed v1 vc1))
+              else (O.bv_leq signed (O.bv_div signed v1 vc1) x))))))))
         | _, _ => none)
 
 def bv_lt.r_mul_const (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.mul checked) x vc1@(Term.mk (Kind.bitVec c1) _)) _), (Term.mk (Kind.bitVec c2) _) =>
-    (if ((checked_has signed checked) && (decide (c1 ≠ (0 : Int))))
-    then some ((let c1 := (bv_to_z signed bits c1);
-               (let c2 := (bv_to_z signed bits c2);
-               (if ((divisible c2 c1) || (decide (c2 < (0 : Int))))
-               then (if (decide (c1 < (0 : Int)))
-                    then (if (signed && ((decide (c1 = (-1 : Int))) && (decide (c2 = (min_for signed bits)))))
-                         then v_false
-                         else (O.bv_lt signed (O.bv_div signed v2 vc1) x))
-                    else (O.bv_lt signed x (O.bv_div signed v2 vc1)))
-               else (if (decide (c1 < (0 : Int)))
-                    then (O.bv_leq signed (O.bv_div signed v2 vc1) x)
-                    else (O.bv_leq signed x (O.bv_div signed v2 vc1)))))))
-    else none)
+    | (Term.mk (Kind.binop (Binop.mul checked) x vc1@c1@(Term.mk (Kind.bitVec _) _)) _), c2@(Term.mk (Kind.bitVec _) _) =>
+    (let c1 := bv_of_lit c1;
+    let c2 := bv_of_lit c2;
+    (whenSome ((checked_has signed checked) && (! (decide ((to_z false c1) = (0 : Int)))))
+    ((let z1 := (to_z signed c1);
+     (let z2 := (to_z signed c2);
+     (if ((divisible z2 z1) || (decide (z2 < (0 : Int))))
+     then (if (decide (z1 < (0 : Int)))
+          then (if (signed && ((decide (z1 = (-1 : Int))) && (is_int_min c2)))
+               then v_false
+               else (O.bv_lt signed (O.bv_div signed v2 vc1) x))
+          else (O.bv_lt signed x (O.bv_div signed v2 vc1)))
+     else (if (decide (z1 < (0 : Int)))
+          then (O.bv_leq signed (O.bv_div signed v2 vc1) x)
+          else (O.bv_leq signed x (O.bv_div signed v2 vc1)))))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.mul checked) vc1@(Term.mk (Kind.bitVec c1) _) x) _), (Term.mk (Kind.bitVec c2) _) =>
-        (if ((checked_has signed checked) && (decide (c1 ≠ (0 : Int))))
-        then some ((let c1 := (bv_to_z signed bits c1);
-                   (let c2 := (bv_to_z signed bits c2);
-                   (if ((divisible c2 c1) || (decide (c2 < (0 : Int))))
-                   then (if (decide (c1 < (0 : Int)))
-                        then (if (signed && ((decide (c1 = (-1 : Int))) && (decide (c2 = (min_for signed bits)))))
-                             then v_false
-                             else (O.bv_lt signed (O.bv_div signed v2 vc1) x))
-                        else (O.bv_lt signed x (O.bv_div signed v2 vc1)))
-                   else (if (decide (c1 < (0 : Int)))
-                        then (O.bv_leq signed (O.bv_div signed v2 vc1) x)
-                        else (O.bv_leq signed x (O.bv_div signed v2 vc1)))))))
-        else none)
+        | (Term.mk (Kind.binop (Binop.mul checked) vc1@c1@(Term.mk (Kind.bitVec _) _) x) _), c2@(Term.mk (Kind.bitVec _) _) =>
+        (let c1 := bv_of_lit c1;
+        let c2 := bv_of_lit c2;
+        (whenSome ((checked_has signed checked) && (! (decide ((to_z false c1) = (0 : Int)))))
+        ((let z1 := (to_z signed c1);
+         (let z2 := (to_z signed c2);
+         (if ((divisible z2 z1) || (decide (z2 < (0 : Int))))
+         then (if (decide (z1 < (0 : Int)))
+              then (if (signed && ((decide (z1 = (-1 : Int))) && (is_int_min c2)))
+                   then v_false
+                   else (O.bv_lt signed (O.bv_div signed v2 vc1) x))
+              else (O.bv_lt signed x (O.bv_div signed v2 vc1)))
+         else (if (decide (z1 < (0 : Int)))
+              then (O.bv_leq signed (O.bv_div signed v2 vc1) x)
+              else (O.bv_leq signed x (O.bv_div signed v2 vc1)))))))))
         | _, _ => none)
 
 def bv_lt.r_mul_mul (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
     | (Term.mk (Kind.binop (Binop.mul checked_l) a x) _), (Term.mk (Kind.binop (Binop.mul checked_r) bvr__9 y) _) =>
-    (if ((equal a bvr__9) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))
-    then some ((O.bv_lt signed x y))
-    else none)
+    (whenSome ((equal a bvr__9) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))
+    ((O.bv_lt signed x y)))
     | _, _ => none)
   <|> (match v1, v2 with
         | (Term.mk (Kind.binop (Binop.mul checked_l) a x) _), (Term.mk (Kind.binop (Binop.mul checked_r) y bvr__9) _) =>
-        (if ((equal a bvr__9) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))
-        then some ((O.bv_lt signed x y))
-        else none)
+        (whenSome ((equal a bvr__9) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))
+        ((O.bv_lt signed x y)))
         | _, _ => none)
   <|> (match v1, v2 with
         | (Term.mk (Kind.binop (Binop.mul checked_l) x a) _), (Term.mk (Kind.binop (Binop.mul checked_r) bvr__9 y) _) =>
-        (if ((equal a bvr__9) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))
-        then some ((O.bv_lt signed x y))
-        else none)
+        (whenSome ((equal a bvr__9) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))
+        ((O.bv_lt signed x y)))
         | _, _ => none)
   <|> (match v1, v2 with
         | (Term.mk (Kind.binop (Binop.mul checked_l) x a) _), (Term.mk (Kind.binop (Binop.mul checked_r) y bvr__9) _) =>
-        (if ((equal a bvr__9) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))
-        then some ((O.bv_lt signed x y))
-        else none)
+        (whenSome ((equal a bvr__9) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))
+        ((O.bv_lt signed x y)))
         | _, _ => none)
 
 def bv_lt.r_const_sub1 (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | (Term.mk (Kind.bitVec bv_v1) _), (Term.mk (Kind.binop (Binop.sub checked) x k@(Term.mk (Kind.bitVec bv_k) _)) _) =>
-    (if (checked_has signed checked)
-    then some ((if (overflows_add signed bits bv_v1 bv_k)
-               then (if (! signed)
-                    then v_false
-                    else (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))
-               else (O.bv_lt signed (O.bv_add chk v1 k) x)))
-    else none)
+    | c@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.sub checked) x k@(Term.mk (Kind.bitVec _) _)) _) =>
+    (let c := bv_of_lit c;
+    let k := bv_of_lit k;
+    (whenSome (checked_has signed checked)
+    ((if (add_overflows signed c k)
+     then (if (! signed)
+          then v_false
+          else (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))
+     else (O.bv_lt signed (lit (lit_add c k)) x)))))
     | _, _ => none)
 
 def bv_lt.r_const_sub2 (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | (Term.mk (Kind.bitVec bv_v1) _), (Term.mk (Kind.binop (Binop.sub checked) k@(Term.mk (Kind.bitVec bv_k) _) x) _) =>
-    (if (checked_has signed checked)
-    then some ((if (overflows_sub signed bits bv_k bv_v1)
-               then (if (! signed)
-                    then v_false
-                    else (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))
-               else (O.bv_lt signed x (O.bv_sub chk k v1))))
-    else none)
+    | c@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.sub checked) k@(Term.mk (Kind.bitVec _) _) x) _) =>
+    (let c := bv_of_lit c;
+    let k := bv_of_lit k;
+    (whenSome (checked_has signed checked)
+    ((if (sub_overflows signed k c)
+     then (if (! signed)
+          then v_false
+          else (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))
+     else (O.bv_lt signed x (lit (lit_sub k c)))))))
     | _, _ => none)
 
 def bv_lt.r_sub_const1 (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.sub checked) x k@(Term.mk (Kind.bitVec bv_k) _)) _), (Term.mk (Kind.bitVec bv_v2) _) =>
-    (if (checked_has signed checked)
-    then some ((if (overflows_add signed bits bv_v2 bv_k)
-               then (if (! signed)
-                    then v_true
-                    else (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))
-               else (O.bv_lt signed x (O.bv_add chk v2 k))))
-    else none)
+    | (Term.mk (Kind.binop (Binop.sub checked) x k@(Term.mk (Kind.bitVec _) _)) _), c@(Term.mk (Kind.bitVec _) _) =>
+    (let k := bv_of_lit k;
+    let c := bv_of_lit c;
+    (whenSome (checked_has signed checked)
+    ((if (add_overflows signed c k)
+     then (if (! signed)
+          then v_true
+          else (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))
+     else (O.bv_lt signed x (lit (lit_add c k)))))))
     | _, _ => none)
 
 def bv_lt.r_sub_const2 (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.sub checked) k@(Term.mk (Kind.bitVec bv_k) _) x) _), (Term.mk (Kind.bitVec bv_v2) _) =>
-    (if (checked_has signed checked)
-    then some ((if (overflows_sub signed bits bv_k bv_v2)
-               then (if (! signed)
-                    then v_true
-                    else (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))
-               else (O.bv_lt signed (O.bv_sub chk k v2) x)))
-    else none)
+    | (Term.mk (Kind.binop (Binop.sub checked) k@(Term.mk (Kind.bitVec _) _) x) _), c@(Term.mk (Kind.bitVec _) _) =>
+    (let k := bv_of_lit k;
+    let c := bv_of_lit c;
+    (whenSome (checked_has signed checked)
+    ((if (sub_overflows signed k c)
+     then (if (! signed)
+          then v_true
+          else (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))
+     else (O.bv_lt signed (lit (lit_sub k c)) x)))))
     | _, _ => none)
 
 def bv_lt.r_ub_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | _, (Term.mk (Kind.bitVec c) _) =>
-    (if ((! signed) && (decide ((unsigned_ub v1) < c)))
-    then some (v_true)
-    else none)
+    | _, c@(Term.mk (Kind.bitVec _) _) =>
+    (let c := bv_of_lit c;
+    (whenSome ((! signed) && (decide ((unsigned_ub v1) < (to_z false c))))
+    (v_true)))
     | _, _ => none)
 
 def bv_lt.r_ub_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | (Term.mk (Kind.bitVec c) _), _ =>
-    (if ((! signed) && (decide ((unsigned_ub v2) ≤ c)))
-    then some (v_false)
-    else none)
+    | c@(Term.mk (Kind.bitVec _) _), _ =>
+    (let c := bv_of_lit c;
+    (whenSome ((! signed) && (decide ((unsigned_ub v2) ≤ (to_z false c))))
+    (v_false)))
     | _, _ => none)
 
 def bv_lt.r_to_unsigned_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | (Term.mk (Kind.bitVec c) _), _ =>
-    (if (signed && (is_checked_unsigned_op v2))
-    then some ((signed_to_unsigned_cmp O false true c v1 v2))
-    else none)
+    | c@(Term.mk (Kind.bitVec _) _), _ =>
+    (let c := bv_of_lit c;
+    (whenSome (signed && (is_checked_unsigned_op v2))
+    ((signed_to_unsigned_cmp O false true c v1 v2))))
     | _, _ => none)
 
 def bv_lt.r_to_unsigned_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | _, (Term.mk (Kind.bitVec c) _) =>
-    (if (signed && (is_checked_unsigned_op v1))
-    then some ((signed_to_unsigned_cmp O false false c v1 v2))
-    else none)
+    | _, c@(Term.mk (Kind.bitVec _) _) =>
+    (let c := bv_of_lit c;
+    (whenSome (signed && (is_checked_unsigned_op v1))
+    ((signed_to_unsigned_cmp O false false c v1 v2))))
     | _, _ => none)
 
 def bv_lt.r_default (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
     | _, _ =>
-    some ((Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool)))
+    (whenSome true ((Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))))
 
 def bv_lt.step (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [bv_lt.r_lits O signed v1 v2, bv_lt.r_same O signed v1 v2, bv_lt.r_negs O signed v1 v2, bv_lt.r_neg_l O signed v1 v2, bv_lt.r_neg_r O signed v1 v2, bv_lt.r_const_add O signed v1 v2, bv_lt.r_add_const O signed v1 v2, bv_lt.r_self_add_r O signed v1 v2, bv_lt.r_self_add_l O signed v1 v2, bv_lt.r_add_add O signed v1 v2, bv_lt.r_one O signed v1 v2, bv_lt.r_of_bool O signed v1 v2, bv_lt.r_ite_l O signed v1 v2, bv_lt.r_ite_r O signed v1 v2, bv_lt.r_lt_zero O signed v1 v2, bv_lt.r_max_l O signed v1 v2, bv_lt.r_min_r O signed v1 v2, bv_lt.r_min_l O signed v1 v2, bv_lt.r_max_r O signed v1 v2, bv_lt.r_const_mul O signed v1 v2, bv_lt.r_mul_const O signed v1 v2, bv_lt.r_mul_mul O signed v1 v2, bv_lt.r_const_sub1 O signed v1 v2, bv_lt.r_const_sub2 O signed v1 v2, bv_lt.r_sub_const1 O signed v1 v2, bv_lt.r_sub_const2 O signed v1 v2, bv_lt.r_ub_r O signed v1 v2, bv_lt.r_ub_l O signed v1 v2, bv_lt.r_to_unsigned_l O signed v1 v2, bv_lt.r_to_unsigned_r O signed v1 v2, bv_lt.r_default O signed v1 v2]).getD (bv_lt.spec signed v1 v2)
 
 def bv_leq.r_same (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
-  (match v1, v2 with
-    | v, bvr__2 =>
-    (if (equal v bvr__2) then some (v_true) else none))
+  (match v1, v2 with | v, bvr__2 => (whenSome (equal v bvr__2) (v_true)))
 
 def bv_leq.r_lits (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | (Term.mk (Kind.bitVec l) _), (Term.mk (Kind.bitVec r) _) =>
-    some ((of_bool (decide ((bv_to_z signed bits l) ≤ (bv_to_z signed bits r)))))
+    | l@(Term.mk (Kind.bitVec _) _), r@(Term.mk (Kind.bitVec _) _) =>
+    (let l := bv_of_lit l;
+    let r := bv_of_lit r;
+    (whenSome true ((of_bool (decide ((to_z signed l) ≤ (to_z signed r)))))))
     | _, _ => none)
 
 def bv_leq.r_negs (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
     | (Term.mk (Kind.unop (Unop.neg true) a) _), (Term.mk (Kind.unop (Unop.neg true) b) _) =>
-    (if signed then some ((O.bv_leq signed b a)) else none)
+    (whenSome signed ((O.bv_leq signed b a)))
     | _, _ => none)
 
 def bv_leq.r_neg_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | (Term.mk (Kind.unop (Unop.neg true) a) _), (Term.mk (Kind.bitVec c) _) =>
-    (if (signed && (! (decide ((bv_to_z signed bits c) = (min_for signed bits)))))
-    then some ((O.bv_leq signed (O.bv_neg false v2) a))
-    else none)
+    | (Term.mk (Kind.unop (Unop.neg true) a) _), c@(Term.mk (Kind.bitVec _) _) =>
+    (let c := bv_of_lit c;
+    (whenSome (signed && (! (is_int_min c)))
+    ((O.bv_leq signed (O.bv_neg false v2) a))))
     | _, _ => none)
 
 def bv_leq.r_neg_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | (Term.mk (Kind.bitVec c) _), (Term.mk (Kind.unop (Unop.neg true) a) _) =>
-    (if (signed && (! (decide ((bv_to_z signed bits c) = (min_for signed bits)))))
-    then some ((O.bv_leq signed a (O.bv_neg false v1)))
-    else none)
+    | c@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.unop (Unop.neg true) a) _) =>
+    (let c := bv_of_lit c;
+    (whenSome (signed && (! (is_int_min c)))
+    ((O.bv_leq signed a (O.bv_neg false v1)))))
     | _, _ => none)
 
 def bv_leq.r_const_add (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | (Term.mk (Kind.bitVec bv_v1) _), (Term.mk (Kind.binop (Binop.add checked) r@(Term.mk (Kind.bitVec bv_r) _) x) _) =>
-    (if (checked_has signed checked)
-    then some ((if ((! signed) && (decide (bv_v1 < bv_r)))
-               then v_true
-               else (if (overflows_sub signed bits bv_v1 bv_r)
-                    then (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool)
-                    else (O.bv_leq signed (O.bv_sub chk v1 r) x))))
-    else none)
+    | c@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.add checked) r@(Term.mk (Kind.bitVec _) _) x) _) =>
+    (let c := bv_of_lit c;
+    let r := bv_of_lit r;
+    (whenSome (checked_has signed checked)
+    ((if (sub_overflows signed c r)
+     then (if (! signed)
+          then v_true
+          else (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))
+     else (O.bv_leq signed (lit (lit_sub c r)) x)))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.bitVec bv_v1) _), (Term.mk (Kind.binop (Binop.add checked) x r@(Term.mk (Kind.bitVec bv_r) _)) _) =>
-        (if (checked_has signed checked)
-        then some ((if ((! signed) && (decide (bv_v1 < bv_r)))
-                   then v_true
-                   else (if (overflows_sub signed bits bv_v1 bv_r)
-                        then (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool)
-                        else (O.bv_leq signed (O.bv_sub chk v1 r) x))))
-        else none)
+        | c@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.add checked) x r@(Term.mk (Kind.bitVec _) _)) _) =>
+        (let c := bv_of_lit c;
+        let r := bv_of_lit r;
+        (whenSome (checked_has signed checked)
+        ((if (sub_overflows signed c r)
+         then (if (! signed)
+              then v_true
+              else (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))
+         else (O.bv_leq signed (lit (lit_sub c r)) x)))))
         | _, _ => none)
 
 def bv_leq.r_add_const (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.add checked) l@(Term.mk (Kind.bitVec bv_l) _) x) _), (Term.mk (Kind.bitVec bv_v2) _) =>
-    (if (checked_has signed checked)
-    then some ((if ((! signed) && (decide (bv_v2 < bv_l)))
-               then v_false
-               else (if (overflows_sub signed bits bv_v2 bv_l)
-                    then (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool)
-                    else (O.bv_leq signed x (O.bv_sub chk v2 l)))))
-    else none)
+    | (Term.mk (Kind.binop (Binop.add checked) l@(Term.mk (Kind.bitVec _) _) x) _), c@(Term.mk (Kind.bitVec _) _) =>
+    (let l := bv_of_lit l;
+    let c := bv_of_lit c;
+    (whenSome (checked_has signed checked)
+    ((if (sub_overflows signed c l)
+     then (if (! signed)
+          then v_false
+          else (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))
+     else (O.bv_leq signed x (lit (lit_sub c l)))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add checked) x l@(Term.mk (Kind.bitVec bv_l) _)) _), (Term.mk (Kind.bitVec bv_v2) _) =>
-        (if (checked_has signed checked)
-        then some ((if ((! signed) && (decide (bv_v2 < bv_l)))
-                   then v_false
-                   else (if (overflows_sub signed bits bv_v2 bv_l)
-                        then (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool)
-                        else (O.bv_leq signed x (O.bv_sub chk v2 l)))))
-        else none)
+        | (Term.mk (Kind.binop (Binop.add checked) x l@(Term.mk (Kind.bitVec _) _)) _), c@(Term.mk (Kind.bitVec _) _) =>
+        (let l := bv_of_lit l;
+        let c := bv_of_lit c;
+        (whenSome (checked_has signed checked)
+        ((if (sub_overflows signed c l)
+         then (if (! signed)
+              then v_false
+              else (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))
+         else (O.bv_leq signed x (lit (lit_sub c l)))))))
         | _, _ => none)
 
 def bv_leq.r_add_add (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.add checked_l) l@(Term.mk (Kind.bitVec bv_l) _) y) _), (Term.mk (Kind.binop (Binop.add checked_r) r@(Term.mk (Kind.bitVec bv_r) _) x) _) =>
-    (if ((checked_has signed checked_l) && (checked_has signed checked_r))
-    then some ((let int_l := (bv_to_z signed bits bv_l);
-               (let int_r := (bv_to_z signed bits bv_r);
-               (if (const_keeps_in_range int_l (int_l - int_r))
-               then (O.bv_leq signed (O.bv_add chk y (O.bv_sub chk l r)) x)
-               else (if (const_keeps_in_range int_r (int_r - int_l))
-                    then (O.bv_leq signed y (O.bv_add chk x (O.bv_sub chk r l)))
-                    else (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))))))
-    else none)
+    | (Term.mk (Kind.binop (Binop.add checked_l) l@(Term.mk (Kind.bitVec _) _) y) _), (Term.mk (Kind.binop (Binop.add checked_r) r@(Term.mk (Kind.bitVec _) _) x) _) =>
+    (let l := bv_of_lit l;
+    let r := bv_of_lit r;
+    (whenSome ((checked_has signed checked_l) && (checked_has signed checked_r))
+    ((if (const_keeps_in_range signed l r)
+     then (O.bv_leq signed (O.bv_add (checked_of_signed signed) y (lit (lit_sub l r))) x)
+     else (if (const_keeps_in_range signed r l)
+          then (O.bv_leq signed y (O.bv_add (checked_of_signed signed) x (lit (lit_sub r l))))
+          else (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add checked_l) l@(Term.mk (Kind.bitVec bv_l) _) y) _), (Term.mk (Kind.binop (Binop.add checked_r) x r@(Term.mk (Kind.bitVec bv_r) _)) _) =>
-        (if ((checked_has signed checked_l) && (checked_has signed checked_r))
-        then some ((let int_l := (bv_to_z signed bits bv_l);
-                   (let int_r := (bv_to_z signed bits bv_r);
-                   (if (const_keeps_in_range int_l (int_l - int_r))
-                   then (O.bv_leq signed (O.bv_add chk y (O.bv_sub chk l r)) x)
-                   else (if (const_keeps_in_range int_r (int_r - int_l))
-                        then (O.bv_leq signed y (O.bv_add chk x (O.bv_sub chk r l)))
-                        else (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))))))
-        else none)
+        | (Term.mk (Kind.binop (Binop.add checked_l) l@(Term.mk (Kind.bitVec _) _) y) _), (Term.mk (Kind.binop (Binop.add checked_r) x r@(Term.mk (Kind.bitVec _) _)) _) =>
+        (let l := bv_of_lit l;
+        let r := bv_of_lit r;
+        (whenSome ((checked_has signed checked_l) && (checked_has signed checked_r))
+        ((if (const_keeps_in_range signed l r)
+         then (O.bv_leq signed (O.bv_add (checked_of_signed signed) y (lit (lit_sub l r))) x)
+         else (if (const_keeps_in_range signed r l)
+              then (O.bv_leq signed y (O.bv_add (checked_of_signed signed) x (lit (lit_sub r l))))
+              else (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add checked_l) y l@(Term.mk (Kind.bitVec bv_l) _)) _), (Term.mk (Kind.binop (Binop.add checked_r) r@(Term.mk (Kind.bitVec bv_r) _) x) _) =>
-        (if ((checked_has signed checked_l) && (checked_has signed checked_r))
-        then some ((let int_l := (bv_to_z signed bits bv_l);
-                   (let int_r := (bv_to_z signed bits bv_r);
-                   (if (const_keeps_in_range int_l (int_l - int_r))
-                   then (O.bv_leq signed (O.bv_add chk y (O.bv_sub chk l r)) x)
-                   else (if (const_keeps_in_range int_r (int_r - int_l))
-                        then (O.bv_leq signed y (O.bv_add chk x (O.bv_sub chk r l)))
-                        else (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))))))
-        else none)
+        | (Term.mk (Kind.binop (Binop.add checked_l) y l@(Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.binop (Binop.add checked_r) r@(Term.mk (Kind.bitVec _) _) x) _) =>
+        (let l := bv_of_lit l;
+        let r := bv_of_lit r;
+        (whenSome ((checked_has signed checked_l) && (checked_has signed checked_r))
+        ((if (const_keeps_in_range signed l r)
+         then (O.bv_leq signed (O.bv_add (checked_of_signed signed) y (lit (lit_sub l r))) x)
+         else (if (const_keeps_in_range signed r l)
+              then (O.bv_leq signed y (O.bv_add (checked_of_signed signed) x (lit (lit_sub r l))))
+              else (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add checked_l) y l@(Term.mk (Kind.bitVec bv_l) _)) _), (Term.mk (Kind.binop (Binop.add checked_r) x r@(Term.mk (Kind.bitVec bv_r) _)) _) =>
-        (if ((checked_has signed checked_l) && (checked_has signed checked_r))
-        then some ((let int_l := (bv_to_z signed bits bv_l);
-                   (let int_r := (bv_to_z signed bits bv_r);
-                   (if (const_keeps_in_range int_l (int_l - int_r))
-                   then (O.bv_leq signed (O.bv_add chk y (O.bv_sub chk l r)) x)
-                   else (if (const_keeps_in_range int_r (int_r - int_l))
-                        then (O.bv_leq signed y (O.bv_add chk x (O.bv_sub chk r l)))
-                        else (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))))))
-        else none)
+        | (Term.mk (Kind.binop (Binop.add checked_l) y l@(Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.binop (Binop.add checked_r) x r@(Term.mk (Kind.bitVec _) _)) _) =>
+        (let l := bv_of_lit l;
+        let r := bv_of_lit r;
+        (whenSome ((checked_has signed checked_l) && (checked_has signed checked_r))
+        ((if (const_keeps_in_range signed l r)
+         then (O.bv_leq signed (O.bv_add (checked_of_signed signed) y (lit (lit_sub l r))) x)
+         else (if (const_keeps_in_range signed r l)
+              then (O.bv_leq signed y (O.bv_add (checked_of_signed signed) x (lit (lit_sub r l))))
+              else (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))))))
         | _, _ => none)
 
 def bv_leq.r_self_add_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
     | a, (Term.mk (Kind.binop (Binop.add checked) bvr__4 b) _) =>
-    (if ((equal a bvr__4) && (checked_has signed checked))
-    then some ((O.bv_leq signed (bv_zero bits) b))
-    else none)
+    (whenSome ((equal a bvr__4) && (checked_has signed checked))
+    ((O.bv_leq signed (bv_zero (size v1)) b)))
     | _, _ => none)
   <|> (match v1, v2 with
         | a, (Term.mk (Kind.binop (Binop.add checked) b bvr__4) _) =>
-        (if ((equal a bvr__4) && (checked_has signed checked))
-        then some ((O.bv_leq signed (bv_zero bits) b))
-        else none)
+        (whenSome ((equal a bvr__4) && (checked_has signed checked))
+        ((O.bv_leq signed (bv_zero (size v1)) b)))
         | _, _ => none)
 
 def bv_leq.r_self_add_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
     | (Term.mk (Kind.binop (Binop.add checked) a b) _), bvr__7 =>
-    (if ((equal a bvr__7) && (checked_has signed checked))
-    then some ((O.bv_leq signed b (bv_zero bits)))
-    else none)
+    (whenSome ((equal a bvr__7) && (checked_has signed checked))
+    ((O.bv_leq signed b (bv_zero (size v1)))))
     | _, _ => none)
   <|> (match v1, v2 with
         | (Term.mk (Kind.binop (Binop.add checked) b a) _), bvr__7 =>
-        (if ((equal a bvr__7) && (checked_has signed checked))
-        then some ((O.bv_leq signed b (bv_zero bits)))
-        else none)
+        (whenSome ((equal a bvr__7) && (checked_has signed checked))
+        ((O.bv_leq signed b (bv_zero (size v1)))))
         | _, _ => none)
 
 def bv_leq.r_min_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | (Term.mk (Kind.bitVec x) _), _ =>
-    (if (decide ((bv_to_z signed bits x) = (min_for signed bits)))
-    then some (v_true)
-    else none)
+    | x@(Term.mk (Kind.bitVec _) _), _ =>
+    (let x := bv_of_lit x; (whenSome (is_min_of signed x) (v_true)))
     | _, _ => none)
 
 def bv_leq.r_max_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | _, (Term.mk (Kind.bitVec x) _) =>
-    (if (decide ((bv_to_z signed bits x) = (max_for signed bits)))
-    then some (v_true)
-    else none)
+    | _, x@(Term.mk (Kind.bitVec _) _) =>
+    (let x := bv_of_lit x; (whenSome (is_max_of signed x) (v_true)))
     | _, _ => none)
 
 def bv_leq.r_const_mul (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | (Term.mk (Kind.bitVec c2) _), (Term.mk (Kind.binop (Binop.mul checked) x vc1@(Term.mk (Kind.bitVec c1) _)) _) =>
-    (if ((checked_has signed checked) && (decide (c1 ≠ (0 : Int))))
-    then some ((let c1 := (bv_to_z signed bits c1);
-               (let c2 := (bv_to_z signed bits c2);
-               (if (divisible c2 c1)
-               then (if (decide (c1 < (0 : Int)))
-                    then (if (signed && ((decide (c1 = (-1 : Int))) && (decide (c2 = (min_for signed bits)))))
-                         then v_true
-                         else (O.bv_leq signed x (O.bv_div signed v1 vc1)))
-                    else (O.bv_leq signed (O.bv_div signed v1 vc1) x))
-               else (if (decide (c1 < (0 : Int)))
-                    then (if (decide (c2 < (0 : Int)))
-                         then (O.bv_leq signed x (O.bv_div signed v1 vc1))
-                         else (O.bv_lt signed x (O.bv_div signed v1 vc1)))
-                    else (if (decide (c2 < (0 : Int)))
-                         then (O.bv_leq signed (O.bv_div signed v1 vc1) x)
-                         else (O.bv_lt signed (O.bv_div signed v1 vc1) x)))))))
-    else none)
+    | c2@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.mul checked) x vc1@c1@(Term.mk (Kind.bitVec _) _)) _) =>
+    (let c2 := bv_of_lit c2;
+    let c1 := bv_of_lit c1;
+    (whenSome ((checked_has signed checked) && (! (decide ((to_z false c1) = (0 : Int)))))
+    ((let z1 := (to_z signed c1);
+     (let z2 := (to_z signed c2);
+     (if (divisible z2 z1)
+     then (if (decide (z1 < (0 : Int)))
+          then (if (signed && ((decide (z1 = (-1 : Int))) && (is_int_min c2)))
+               then v_true
+               else (O.bv_leq signed x (O.bv_div signed v1 vc1)))
+          else (O.bv_leq signed (O.bv_div signed v1 vc1) x))
+     else (if (decide (z1 < (0 : Int)))
+          then (if (decide (z2 < (0 : Int)))
+               then (O.bv_leq signed x (O.bv_div signed v1 vc1))
+               else (O.bv_lt signed x (O.bv_div signed v1 vc1)))
+          else (if (decide (z2 < (0 : Int)))
+               then (O.bv_leq signed (O.bv_div signed v1 vc1) x)
+               else (O.bv_lt signed (O.bv_div signed v1 vc1) x)))))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.bitVec c2) _), (Term.mk (Kind.binop (Binop.mul checked) vc1@(Term.mk (Kind.bitVec c1) _) x) _) =>
-        (if ((checked_has signed checked) && (decide (c1 ≠ (0 : Int))))
-        then some ((let c1 := (bv_to_z signed bits c1);
-                   (let c2 := (bv_to_z signed bits c2);
-                   (if (divisible c2 c1)
-                   then (if (decide (c1 < (0 : Int)))
-                        then (if (signed && ((decide (c1 = (-1 : Int))) && (decide (c2 = (min_for signed bits)))))
-                             then v_true
-                             else (O.bv_leq signed x (O.bv_div signed v1 vc1)))
-                        else (O.bv_leq signed (O.bv_div signed v1 vc1) x))
-                   else (if (decide (c1 < (0 : Int)))
-                        then (if (decide (c2 < (0 : Int)))
-                             then (O.bv_leq signed x (O.bv_div signed v1 vc1))
-                             else (O.bv_lt signed x (O.bv_div signed v1 vc1)))
-                        else (if (decide (c2 < (0 : Int)))
-                             then (O.bv_leq signed (O.bv_div signed v1 vc1) x)
-                             else (O.bv_lt signed (O.bv_div signed v1 vc1) x)))))))
-        else none)
+        | c2@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.mul checked) vc1@c1@(Term.mk (Kind.bitVec _) _) x) _) =>
+        (let c2 := bv_of_lit c2;
+        let c1 := bv_of_lit c1;
+        (whenSome ((checked_has signed checked) && (! (decide ((to_z false c1) = (0 : Int)))))
+        ((let z1 := (to_z signed c1);
+         (let z2 := (to_z signed c2);
+         (if (divisible z2 z1)
+         then (if (decide (z1 < (0 : Int)))
+              then (if (signed && ((decide (z1 = (-1 : Int))) && (is_int_min c2)))
+                   then v_true
+                   else (O.bv_leq signed x (O.bv_div signed v1 vc1)))
+              else (O.bv_leq signed (O.bv_div signed v1 vc1) x))
+         else (if (decide (z1 < (0 : Int)))
+              then (if (decide (z2 < (0 : Int)))
+                   then (O.bv_leq signed x (O.bv_div signed v1 vc1))
+                   else (O.bv_lt signed x (O.bv_div signed v1 vc1)))
+              else (if (decide (z2 < (0 : Int)))
+                   then (O.bv_leq signed (O.bv_div signed v1 vc1) x)
+                   else (O.bv_lt signed (O.bv_div signed v1 vc1) x)))))))))
         | _, _ => none)
 
 def bv_leq.r_mul_const (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.mul checked) x vc1@(Term.mk (Kind.bitVec c1) _)) _), (Term.mk (Kind.bitVec c2) _) =>
-    (if ((checked_has signed checked) && (decide (c1 ≠ (0 : Int))))
-    then some ((let c1 := (bv_to_z signed bits c1);
-               (let c2 := (bv_to_z signed bits c2);
-               (if (divisible c2 c1)
-               then (if (decide (c1 < (0 : Int)))
-                    then (if (signed && ((decide (c1 = (-1 : Int))) && (decide (c2 = (min_for signed bits)))))
-                         then v_false
-                         else (O.bv_leq signed (O.bv_div signed v2 vc1) x))
-                    else (O.bv_leq signed x (O.bv_div signed v2 vc1)))
-               else (if (decide (c1 < (0 : Int)))
-                    then (if (decide (c2 < (0 : Int)))
-                         then (O.bv_lt signed (O.bv_div signed v2 vc1) x)
-                         else (O.bv_leq signed (O.bv_div signed v2 vc1) x))
-                    else (if (decide (c2 < (0 : Int)))
-                         then (O.bv_lt signed x (O.bv_div signed v2 vc1))
-                         else (O.bv_leq signed x (O.bv_div signed v2 vc1))))))))
-    else none)
+    | (Term.mk (Kind.binop (Binop.mul checked) x vc1@c1@(Term.mk (Kind.bitVec _) _)) _), c2@(Term.mk (Kind.bitVec _) _) =>
+    (let c1 := bv_of_lit c1;
+    let c2 := bv_of_lit c2;
+    (whenSome ((checked_has signed checked) && (! (decide ((to_z false c1) = (0 : Int)))))
+    ((let z1 := (to_z signed c1);
+     (let z2 := (to_z signed c2);
+     (if (divisible z2 z1)
+     then (if (decide (z1 < (0 : Int)))
+          then (if (signed && ((decide (z1 = (-1 : Int))) && (is_int_min c2)))
+               then v_false
+               else (O.bv_leq signed (O.bv_div signed v2 vc1) x))
+          else (O.bv_leq signed x (O.bv_div signed v2 vc1)))
+     else (if (decide (z1 < (0 : Int)))
+          then (if (decide (z2 < (0 : Int)))
+               then (O.bv_lt signed (O.bv_div signed v2 vc1) x)
+               else (O.bv_leq signed (O.bv_div signed v2 vc1) x))
+          else (if (decide (z2 < (0 : Int)))
+               then (O.bv_lt signed x (O.bv_div signed v2 vc1))
+               else (O.bv_leq signed x (O.bv_div signed v2 vc1))))))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.mul checked) vc1@(Term.mk (Kind.bitVec c1) _) x) _), (Term.mk (Kind.bitVec c2) _) =>
-        (if ((checked_has signed checked) && (decide (c1 ≠ (0 : Int))))
-        then some ((let c1 := (bv_to_z signed bits c1);
-                   (let c2 := (bv_to_z signed bits c2);
-                   (if (divisible c2 c1)
-                   then (if (decide (c1 < (0 : Int)))
-                        then (if (signed && ((decide (c1 = (-1 : Int))) && (decide (c2 = (min_for signed bits)))))
-                             then v_false
-                             else (O.bv_leq signed (O.bv_div signed v2 vc1) x))
-                        else (O.bv_leq signed x (O.bv_div signed v2 vc1)))
-                   else (if (decide (c1 < (0 : Int)))
-                        then (if (decide (c2 < (0 : Int)))
-                             then (O.bv_lt signed (O.bv_div signed v2 vc1) x)
-                             else (O.bv_leq signed (O.bv_div signed v2 vc1) x))
-                        else (if (decide (c2 < (0 : Int)))
-                             then (O.bv_lt signed x (O.bv_div signed v2 vc1))
-                             else (O.bv_leq signed x (O.bv_div signed v2 vc1))))))))
-        else none)
+        | (Term.mk (Kind.binop (Binop.mul checked) vc1@c1@(Term.mk (Kind.bitVec _) _) x) _), c2@(Term.mk (Kind.bitVec _) _) =>
+        (let c1 := bv_of_lit c1;
+        let c2 := bv_of_lit c2;
+        (whenSome ((checked_has signed checked) && (! (decide ((to_z false c1) = (0 : Int)))))
+        ((let z1 := (to_z signed c1);
+         (let z2 := (to_z signed c2);
+         (if (divisible z2 z1)
+         then (if (decide (z1 < (0 : Int)))
+              then (if (signed && ((decide (z1 = (-1 : Int))) && (is_int_min c2)))
+                   then v_false
+                   else (O.bv_leq signed (O.bv_div signed v2 vc1) x))
+              else (O.bv_leq signed x (O.bv_div signed v2 vc1)))
+         else (if (decide (z1 < (0 : Int)))
+              then (if (decide (z2 < (0 : Int)))
+                   then (O.bv_lt signed (O.bv_div signed v2 vc1) x)
+                   else (O.bv_leq signed (O.bv_div signed v2 vc1) x))
+              else (if (decide (z2 < (0 : Int)))
+                   then (O.bv_lt signed x (O.bv_div signed v2 vc1))
+                   else (O.bv_leq signed x (O.bv_div signed v2 vc1))))))))))
         | _, _ => none)
 
 def bv_leq.r_mul_mul (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
     | (Term.mk (Kind.binop (Binop.mul checked_l) a x) _), (Term.mk (Kind.binop (Binop.mul checked_r) bvr__9 y) _) =>
-    (if ((equal a bvr__9) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))
-    then some ((O.bv_leq signed x y))
-    else none)
+    (whenSome ((equal a bvr__9) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))
+    ((O.bv_leq signed x y)))
     | _, _ => none)
   <|> (match v1, v2 with
         | (Term.mk (Kind.binop (Binop.mul checked_l) a x) _), (Term.mk (Kind.binop (Binop.mul checked_r) y bvr__9) _) =>
-        (if ((equal a bvr__9) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))
-        then some ((O.bv_leq signed x y))
-        else none)
+        (whenSome ((equal a bvr__9) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))
+        ((O.bv_leq signed x y)))
         | _, _ => none)
   <|> (match v1, v2 with
         | (Term.mk (Kind.binop (Binop.mul checked_l) x a) _), (Term.mk (Kind.binop (Binop.mul checked_r) bvr__9 y) _) =>
-        (if ((equal a bvr__9) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))
-        then some ((O.bv_leq signed x y))
-        else none)
+        (whenSome ((equal a bvr__9) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))
+        ((O.bv_leq signed x y)))
         | _, _ => none)
   <|> (match v1, v2 with
         | (Term.mk (Kind.binop (Binop.mul checked_l) x a) _), (Term.mk (Kind.binop (Binop.mul checked_r) y bvr__9) _) =>
-        (if ((equal a bvr__9) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))
-        then some ((O.bv_leq signed x y))
-        else none)
+        (whenSome ((equal a bvr__9) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))
+        ((O.bv_leq signed x y)))
         | _, _ => none)
 
 def bv_leq.r_udiv_big (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.div false) _ (Term.mk (Kind.bitVec d) _)) _), (Term.mk (Kind.bitVec n) _) =>
-    (if ((! signed) && (decide ((n * d) > (max_for false bits))))
-    then some (v_true)
-    else none)
+    | (Term.mk (Kind.binop (Binop.div false) _ d@(Term.mk (Kind.bitVec _) _)) _), n@(Term.mk (Kind.bitVec _) _) =>
+    (let d := bv_of_lit d;
+    let n := bv_of_lit n;
+    (whenSome ((! signed) && (mul_overflows false n d)) (v_true)))
     | _, _ => none)
 
 def bv_leq.r_ite_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
     | (Term.mk (Kind.triop Triop.ite b l r) _), (Term.mk (Kind.bitVec _) _) =>
-    some ((O.b_ite b (O.bv_leq signed l v2) (O.bv_leq signed r v2)))
+    (whenSome true
+    ((O.b_ite b (O.bv_leq signed l v2) (O.bv_leq signed r v2))))
     | _, _ => none)
 
 def bv_leq.r_ite_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
     | (Term.mk (Kind.bitVec _) _), (Term.mk (Kind.triop Triop.ite b l r) _) =>
-    some ((O.b_ite b (O.bv_leq signed v1 l) (O.bv_leq signed v1 r)))
+    (whenSome true
+    ((O.b_ite b (O.bv_leq signed v1 l) (O.bv_leq signed v1 r))))
     | _, _ => none)
 
 def bv_leq.r_const_sub1 (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | (Term.mk (Kind.bitVec bv_v1) _), (Term.mk (Kind.binop (Binop.sub checked) x k@(Term.mk (Kind.bitVec bv_k) _)) _) =>
-    (if (checked_has signed checked)
-    then some ((if (overflows_add signed bits bv_v1 bv_k)
-               then (if (! signed)
-                    then v_false
-                    else (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))
-               else (O.bv_leq signed (O.bv_add chk v1 k) x)))
-    else none)
+    | c@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.sub checked) x k@(Term.mk (Kind.bitVec _) _)) _) =>
+    (let c := bv_of_lit c;
+    let k := bv_of_lit k;
+    (whenSome (checked_has signed checked)
+    ((if (add_overflows signed c k)
+     then (if (! signed)
+          then v_false
+          else (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))
+     else (O.bv_leq signed (lit (lit_add c k)) x)))))
     | _, _ => none)
 
 def bv_leq.r_const_sub2 (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | (Term.mk (Kind.bitVec bv_v1) _), (Term.mk (Kind.binop (Binop.sub checked) k@(Term.mk (Kind.bitVec bv_k) _) x) _) =>
-    (if (checked_has signed checked)
-    then some ((if (overflows_sub signed bits bv_k bv_v1)
-               then (if (! signed)
-                    then v_false
-                    else (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))
-               else (O.bv_leq signed x (O.bv_sub chk k v1))))
-    else none)
+    | c@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.sub checked) k@(Term.mk (Kind.bitVec _) _) x) _) =>
+    (let c := bv_of_lit c;
+    let k := bv_of_lit k;
+    (whenSome (checked_has signed checked)
+    ((if (sub_overflows signed k c)
+     then (if (! signed)
+          then v_false
+          else (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))
+     else (O.bv_leq signed x (lit (lit_sub k c)))))))
     | _, _ => none)
 
 def bv_leq.r_sub_const1 (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.sub checked) x k@(Term.mk (Kind.bitVec bv_k) _)) _), (Term.mk (Kind.bitVec bv_v2) _) =>
-    (if (checked_has signed checked)
-    then some ((if (overflows_add signed bits bv_v2 bv_k)
-               then (if (! signed)
-                    then v_true
-                    else (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))
-               else (O.bv_leq signed x (O.bv_add chk v2 k))))
-    else none)
+    | (Term.mk (Kind.binop (Binop.sub checked) x k@(Term.mk (Kind.bitVec _) _)) _), c@(Term.mk (Kind.bitVec _) _) =>
+    (let k := bv_of_lit k;
+    let c := bv_of_lit c;
+    (whenSome (checked_has signed checked)
+    ((if (add_overflows signed c k)
+     then (if (! signed)
+          then v_true
+          else (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))
+     else (O.bv_leq signed x (lit (lit_add c k)))))))
     | _, _ => none)
 
 def bv_leq.r_sub_const2 (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.sub checked) k@(Term.mk (Kind.bitVec bv_k) _) x) _), (Term.mk (Kind.bitVec bv_v2) _) =>
-    (if (checked_has signed checked)
-    then some ((if (overflows_sub signed bits bv_k bv_v2)
-               then (if (! signed)
-                    then v_true
-                    else (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))
-               else (O.bv_leq signed (O.bv_sub chk k v2) x)))
-    else none)
+    | (Term.mk (Kind.binop (Binop.sub checked) k@(Term.mk (Kind.bitVec _) _) x) _), c@(Term.mk (Kind.bitVec _) _) =>
+    (let k := bv_of_lit k;
+    let c := bv_of_lit c;
+    (whenSome (checked_has signed checked)
+    ((if (sub_overflows signed k c)
+     then (if (! signed)
+          then v_true
+          else (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))
+     else (O.bv_leq signed (lit (lit_sub k c)) x)))))
     | _, _ => none)
 
 def bv_leq.r_ub_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | _, (Term.mk (Kind.bitVec c) _) =>
-    (if ((! signed) && (decide ((unsigned_ub v1) ≤ c)))
-    then some (v_true)
-    else none)
+    | _, c@(Term.mk (Kind.bitVec _) _) =>
+    (let c := bv_of_lit c;
+    (whenSome ((! signed) && (decide ((unsigned_ub v1) ≤ (to_z false c))))
+    (v_true)))
     | _, _ => none)
 
 def bv_leq.r_ub_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | (Term.mk (Kind.bitVec c) _), _ =>
-    (if ((! signed) && (decide ((unsigned_ub v2) < c)))
-    then some (v_false)
-    else none)
+    | c@(Term.mk (Kind.bitVec _) _), _ =>
+    (let c := bv_of_lit c;
+    (whenSome ((! signed) && (decide ((unsigned_ub v2) < (to_z false c))))
+    (v_false)))
     | _, _ => none)
 
 def bv_leq.r_to_unsigned_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | (Term.mk (Kind.bitVec c) _), _ =>
-    (if (signed && (is_checked_unsigned_op v2))
-    then some ((signed_to_unsigned_cmp O true true c v1 v2))
-    else none)
+    | c@(Term.mk (Kind.bitVec _) _), _ =>
+    (let c := bv_of_lit c;
+    (whenSome (signed && (is_checked_unsigned_op v2))
+    ((signed_to_unsigned_cmp O true true c v1 v2))))
     | _, _ => none)
 
 def bv_leq.r_to_unsigned_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
-    | _, (Term.mk (Kind.bitVec c) _) =>
-    (if (signed && (is_checked_unsigned_op v1))
-    then some ((signed_to_unsigned_cmp O true false c v1 v2))
-    else none)
+    | _, c@(Term.mk (Kind.bitVec _) _) =>
+    (let c := bv_of_lit c;
+    (whenSome (signed && (is_checked_unsigned_op v1))
+    ((signed_to_unsigned_cmp O true false c v1 v2))))
     | _, _ => none)
 
 def bv_leq.r_default (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
-  let bits := (size v1);
-  let chk := (checked_of_signed signed);
   (match v1, v2 with
     | _, _ =>
-    some ((Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool)))
+    (whenSome true ((Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))))
 
 def bv_leq.step (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [bv_leq.r_same O signed v1 v2, bv_leq.r_lits O signed v1 v2, bv_leq.r_negs O signed v1 v2, bv_leq.r_neg_l O signed v1 v2, bv_leq.r_neg_r O signed v1 v2, bv_leq.r_const_add O signed v1 v2, bv_leq.r_add_const O signed v1 v2, bv_leq.r_add_add O signed v1 v2, bv_leq.r_self_add_r O signed v1 v2, bv_leq.r_self_add_l O signed v1 v2, bv_leq.r_min_l O signed v1 v2, bv_leq.r_max_r O signed v1 v2, bv_leq.r_const_mul O signed v1 v2, bv_leq.r_mul_const O signed v1 v2, bv_leq.r_mul_mul O signed v1 v2, bv_leq.r_udiv_big O signed v1 v2, bv_leq.r_ite_l O signed v1 v2, bv_leq.r_ite_r O signed v1 v2, bv_leq.r_const_sub1 O signed v1 v2, bv_leq.r_const_sub2 O signed v1 v2, bv_leq.r_sub_const1 O signed v1 v2, bv_leq.r_sub_const2 O signed v1 v2, bv_leq.r_ub_r O signed v1 v2, bv_leq.r_ub_l O signed v1 v2, bv_leq.r_to_unsigned_l O signed v1 v2, bv_leq.r_to_unsigned_r O signed v1 v2, bv_leq.r_default O signed v1 v2]).getD (bv_leq.spec signed v1 v2)

@@ -2292,6 +2292,462 @@ theorem bv_div.r_default.proof : bv_div.r_default.Stmt := by
   repeat' rcases Lib.orElse_some h with h | h
   · bvr_arm h (bv_div.r_default.a1.proof FS O hO)
 
+theorem bv_lt.r_lits.proof : bv_lt.r_lits.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_lt.r_lits] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt.r_lits.a1.proof FS O hO)
+
+theorem bv_lt.r_same.proof : bv_lt.r_same.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_lt.r_same] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt.r_same.a1.proof FS O hO)
+
+theorem bv_lt.r_negs.proof : bv_lt.r_negs.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_lt.r_negs] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt.r_negs.a1.proof FS O hO)
+
+theorem bv_lt.r_neg_l.proof : bv_lt.r_neg_l.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_lt.r_neg_l] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt.r_neg_l.a1.proof FS O hO)
+
+theorem bv_lt.r_neg_r.proof : bv_lt.r_neg_r.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_lt.r_neg_r] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt.r_neg_r.a1.proof FS O hO)
+
+theorem bv_lt.r_const_add.proof : bv_lt.r_const_add.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_lt.r_const_add] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt.r_const_add.a1.proof FS O hO)
+  · bvr_arm h (bv_lt.r_const_add.a2.proof FS O hO)
+
+theorem bv_lt.r_add_const.proof : bv_lt.r_add_const.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_lt.r_add_const] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt.r_add_const.a1.proof FS O hO)
+  · bvr_arm h (bv_lt.r_add_const.a2.proof FS O hO)
+
+theorem bv_lt.r_self_add_r.a2.proof : bv_lt.r_self_add_r.a2.Stmt := by
+  intro FS O hO signed v1 checked b bvr__4 t__6 hg
+  exact Refines.trans
+    (by simp only [bv_lt.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_lt.r_self_add_r.a1.proof FS O hO signed v1 checked bvr__4 b t__6 hg)
+
+theorem bv_lt.r_self_add_r.proof : bv_lt.r_self_add_r.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_lt.r_self_add_r] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt.r_self_add_r.a1.proof FS O hO)
+  · bvr_arm h (bv_lt.r_self_add_r.a2.proof FS O hO)
+
+theorem bv_lt.r_self_add_l.a2.proof : bv_lt.r_self_add_l.a2.Stmt := by
+  intro FS O hO signed v2 checked b a t__5 hg
+  exact Refines.trans
+    (by simp only [bv_lt.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_lt.r_self_add_l.a1.proof FS O hO signed v2 checked a b t__5 hg)
+
+theorem bv_lt.r_self_add_l.proof : bv_lt.r_self_add_l.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_lt.r_self_add_l] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt.r_self_add_l.a1.proof FS O hO)
+  · bvr_arm h (bv_lt.r_self_add_l.a2.proof FS O hO)
+
+theorem bv_lt.r_add_add.proof : bv_lt.r_add_add.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_lt.r_add_add] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt.r_add_add.a1.proof FS O hO)
+  · bvr_arm h (bv_lt.r_add_add.a2.proof FS O hO)
+  · bvr_arm h (bv_lt.r_add_add.a3.proof FS O hO)
+  · bvr_arm h (bv_lt.r_add_add.a4.proof FS O hO)
+
+theorem bv_lt.r_one.proof : bv_lt.r_one.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_lt.r_one] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt.r_one.a1.proof FS O hO)
+
+theorem bv_lt.r_of_bool.proof : bv_lt.r_of_bool.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_lt.r_of_bool] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt.r_of_bool.a1.proof FS O hO)
+
+theorem bv_lt.r_ite_l.proof : bv_lt.r_ite_l.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_lt.r_ite_l] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt.r_ite_l.a1.proof FS O hO)
+
+theorem bv_lt.r_ite_r.proof : bv_lt.r_ite_r.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_lt.r_ite_r] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt.r_ite_r.a1.proof FS O hO)
+
+theorem bv_lt.r_lt_zero.proof : bv_lt.r_lt_zero.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_lt.r_lt_zero] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt.r_lt_zero.a1.proof FS O hO)
+
+theorem bv_lt.r_max_l.proof : bv_lt.r_max_l.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_lt.r_max_l] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt.r_max_l.a1.proof FS O hO)
+
+theorem bv_lt.r_min_r.proof : bv_lt.r_min_r.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_lt.r_min_r] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt.r_min_r.a1.proof FS O hO)
+
+theorem bv_lt.r_min_l.proof : bv_lt.r_min_l.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_lt.r_min_l] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt.r_min_l.a1.proof FS O hO)
+
+theorem bv_lt.r_max_r.proof : bv_lt.r_max_r.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_lt.r_max_r] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt.r_max_r.a1.proof FS O hO)
+
+theorem bv_lt.r_const_mul.a2.proof : bv_lt.r_const_mul.a2.Stmt := by
+  intro FS O hO signed c2__z c2__T checked c1__z c1__T x t__7 hg
+  exact Refines.trans
+    (by simp only [bv_lt.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_lt.r_const_mul.a1.proof FS O hO signed c2__z c2__T checked x c1__z c1__T t__7 hg)
+
+theorem bv_lt.r_const_mul.proof : bv_lt.r_const_mul.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_lt.r_const_mul] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt.r_const_mul.a1.proof FS O hO)
+  · bvr_arm h (bv_lt.r_const_mul.a2.proof FS O hO)
+
+theorem bv_lt.r_mul_const.a2.proof : bv_lt.r_mul_const.a2.Stmt := by
+  intro FS O hO signed checked c1__z c1__T x t__6 c2__z c2__T hg
+  exact Refines.trans
+    (by simp only [bv_lt.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_lt.r_mul_const.a1.proof FS O hO signed checked x c1__z c1__T t__6 c2__z c2__T hg)
+
+theorem bv_lt.r_mul_const.proof : bv_lt.r_mul_const.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_lt.r_mul_const] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt.r_mul_const.a1.proof FS O hO)
+  · bvr_arm h (bv_lt.r_mul_const.a2.proof FS O hO)
+
+theorem bv_lt.r_mul_mul.a2.proof : bv_lt.r_mul_mul.a2.Stmt := by
+  intro FS O hO signed checked_l a x t__5 checked_r y bvr__9 t__11 hg
+  exact Refines.trans
+    (by simp only [bv_lt.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_lt.r_mul_mul.a1.proof FS O hO signed checked_l a x t__5 checked_r bvr__9 y t__11 hg)
+
+theorem bv_lt.r_mul_mul.a3.proof : bv_lt.r_mul_mul.a3.Stmt := by
+  intro FS O hO signed checked_l x a t__5 checked_r bvr__9 y t__11 hg
+  exact Refines.trans
+    (by simp only [bv_lt.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_lt.r_mul_mul.a1.proof FS O hO signed checked_l a x t__5 checked_r bvr__9 y t__11 hg)
+
+theorem bv_lt.r_mul_mul.a4.proof : bv_lt.r_mul_mul.a4.Stmt := by
+  intro FS O hO signed checked_l x a t__5 checked_r y bvr__9 t__11 hg
+  exact Refines.trans
+    (by simp only [bv_lt.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_lt.r_mul_mul.a1.proof FS O hO signed checked_l a x t__5 checked_r bvr__9 y t__11 hg)
+
+theorem bv_lt.r_mul_mul.proof : bv_lt.r_mul_mul.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_lt.r_mul_mul] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt.r_mul_mul.a1.proof FS O hO)
+  · bvr_arm h (bv_lt.r_mul_mul.a2.proof FS O hO)
+  · bvr_arm h (bv_lt.r_mul_mul.a3.proof FS O hO)
+  · bvr_arm h (bv_lt.r_mul_mul.a4.proof FS O hO)
+
+theorem bv_lt.r_const_sub1.proof : bv_lt.r_const_sub1.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_lt.r_const_sub1] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt.r_const_sub1.a1.proof FS O hO)
+
+theorem bv_lt.r_const_sub2.proof : bv_lt.r_const_sub2.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_lt.r_const_sub2] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt.r_const_sub2.a1.proof FS O hO)
+
+theorem bv_lt.r_sub_const1.proof : bv_lt.r_sub_const1.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_lt.r_sub_const1] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt.r_sub_const1.a1.proof FS O hO)
+
+theorem bv_lt.r_sub_const2.proof : bv_lt.r_sub_const2.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_lt.r_sub_const2] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt.r_sub_const2.a1.proof FS O hO)
+
+theorem bv_lt.r_ub_r.proof : bv_lt.r_ub_r.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_lt.r_ub_r] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt.r_ub_r.a1.proof FS O hO)
+
+theorem bv_lt.r_ub_l.proof : bv_lt.r_ub_l.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_lt.r_ub_l] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt.r_ub_l.a1.proof FS O hO)
+
+theorem bv_lt.r_to_unsigned_l.proof : bv_lt.r_to_unsigned_l.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_lt.r_to_unsigned_l] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt.r_to_unsigned_l.a1.proof FS O hO)
+
+theorem bv_lt.r_to_unsigned_r.proof : bv_lt.r_to_unsigned_r.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_lt.r_to_unsigned_r] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt.r_to_unsigned_r.a1.proof FS O hO)
+
+theorem bv_lt.r_default.proof : bv_lt.r_default.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_lt.r_default] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt.r_default.a1.proof FS O hO)
+
+theorem bv_leq.r_same.proof : bv_leq.r_same.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_leq.r_same] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_leq.r_same.a1.proof FS O hO)
+
+theorem bv_leq.r_lits.proof : bv_leq.r_lits.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_leq.r_lits] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_leq.r_lits.a1.proof FS O hO)
+
+theorem bv_leq.r_negs.proof : bv_leq.r_negs.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_leq.r_negs] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_leq.r_negs.a1.proof FS O hO)
+
+theorem bv_leq.r_neg_l.proof : bv_leq.r_neg_l.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_leq.r_neg_l] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_leq.r_neg_l.a1.proof FS O hO)
+
+theorem bv_leq.r_neg_r.proof : bv_leq.r_neg_r.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_leq.r_neg_r] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_leq.r_neg_r.a1.proof FS O hO)
+
+theorem bv_leq.r_const_add.proof : bv_leq.r_const_add.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_leq.r_const_add] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_leq.r_const_add.a1.proof FS O hO)
+  · bvr_arm h (bv_leq.r_const_add.a2.proof FS O hO)
+
+theorem bv_leq.r_add_const.proof : bv_leq.r_add_const.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_leq.r_add_const] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_leq.r_add_const.a1.proof FS O hO)
+  · bvr_arm h (bv_leq.r_add_const.a2.proof FS O hO)
+
+theorem bv_leq.r_add_add.proof : bv_leq.r_add_add.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_leq.r_add_add] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_leq.r_add_add.a1.proof FS O hO)
+  · bvr_arm h (bv_leq.r_add_add.a2.proof FS O hO)
+  · bvr_arm h (bv_leq.r_add_add.a3.proof FS O hO)
+  · bvr_arm h (bv_leq.r_add_add.a4.proof FS O hO)
+
+theorem bv_leq.r_self_add_r.a2.proof : bv_leq.r_self_add_r.a2.Stmt := by
+  intro FS O hO signed v1 checked b bvr__4 t__6 hg
+  exact Refines.trans
+    (by simp only [bv_leq.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_leq.r_self_add_r.a1.proof FS O hO signed v1 checked bvr__4 b t__6 hg)
+
+theorem bv_leq.r_self_add_r.proof : bv_leq.r_self_add_r.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_leq.r_self_add_r] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_leq.r_self_add_r.a1.proof FS O hO)
+  · bvr_arm h (bv_leq.r_self_add_r.a2.proof FS O hO)
+
+theorem bv_leq.r_self_add_l.a2.proof : bv_leq.r_self_add_l.a2.Stmt := by
+  intro FS O hO signed v2 checked b a t__5 hg
+  exact Refines.trans
+    (by simp only [bv_leq.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_leq.r_self_add_l.a1.proof FS O hO signed v2 checked a b t__5 hg)
+
+theorem bv_leq.r_self_add_l.proof : bv_leq.r_self_add_l.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_leq.r_self_add_l] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_leq.r_self_add_l.a1.proof FS O hO)
+  · bvr_arm h (bv_leq.r_self_add_l.a2.proof FS O hO)
+
+theorem bv_leq.r_min_l.proof : bv_leq.r_min_l.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_leq.r_min_l] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_leq.r_min_l.a1.proof FS O hO)
+
+theorem bv_leq.r_max_r.proof : bv_leq.r_max_r.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_leq.r_max_r] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_leq.r_max_r.a1.proof FS O hO)
+
+theorem bv_leq.r_const_mul.a2.proof : bv_leq.r_const_mul.a2.Stmt := by
+  intro FS O hO signed c2__z c2__T checked c1__z c1__T x t__7 hg
+  exact Refines.trans
+    (by simp only [bv_leq.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_leq.r_const_mul.a1.proof FS O hO signed c2__z c2__T checked x c1__z c1__T t__7 hg)
+
+theorem bv_leq.r_const_mul.proof : bv_leq.r_const_mul.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_leq.r_const_mul] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_leq.r_const_mul.a1.proof FS O hO)
+  · bvr_arm h (bv_leq.r_const_mul.a2.proof FS O hO)
+
+theorem bv_leq.r_mul_const.a2.proof : bv_leq.r_mul_const.a2.Stmt := by
+  intro FS O hO signed checked c1__z c1__T x t__6 c2__z c2__T hg
+  exact Refines.trans
+    (by simp only [bv_leq.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_leq.r_mul_const.a1.proof FS O hO signed checked x c1__z c1__T t__6 c2__z c2__T hg)
+
+theorem bv_leq.r_mul_const.proof : bv_leq.r_mul_const.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_leq.r_mul_const] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_leq.r_mul_const.a1.proof FS O hO)
+  · bvr_arm h (bv_leq.r_mul_const.a2.proof FS O hO)
+
+theorem bv_leq.r_mul_mul.a2.proof : bv_leq.r_mul_mul.a2.Stmt := by
+  intro FS O hO signed checked_l a x t__5 checked_r y bvr__9 t__11 hg
+  exact Refines.trans
+    (by simp only [bv_leq.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_leq.r_mul_mul.a1.proof FS O hO signed checked_l a x t__5 checked_r bvr__9 y t__11 hg)
+
+theorem bv_leq.r_mul_mul.a3.proof : bv_leq.r_mul_mul.a3.Stmt := by
+  intro FS O hO signed checked_l x a t__5 checked_r bvr__9 y t__11 hg
+  exact Refines.trans
+    (by simp only [bv_leq.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_leq.r_mul_mul.a1.proof FS O hO signed checked_l a x t__5 checked_r bvr__9 y t__11 hg)
+
+theorem bv_leq.r_mul_mul.a4.proof : bv_leq.r_mul_mul.a4.Stmt := by
+  intro FS O hO signed checked_l x a t__5 checked_r y bvr__9 t__11 hg
+  exact Refines.trans
+    (by simp only [bv_leq.spec, ty, Term.ty_mk]; bvr_comm)
+    (bv_leq.r_mul_mul.a1.proof FS O hO signed checked_l a x t__5 checked_r bvr__9 y t__11 hg)
+
+theorem bv_leq.r_mul_mul.proof : bv_leq.r_mul_mul.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_leq.r_mul_mul] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_leq.r_mul_mul.a1.proof FS O hO)
+  · bvr_arm h (bv_leq.r_mul_mul.a2.proof FS O hO)
+  · bvr_arm h (bv_leq.r_mul_mul.a3.proof FS O hO)
+  · bvr_arm h (bv_leq.r_mul_mul.a4.proof FS O hO)
+
+theorem bv_leq.r_udiv_big.proof : bv_leq.r_udiv_big.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_leq.r_udiv_big] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_leq.r_udiv_big.a1.proof FS O hO)
+
+theorem bv_leq.r_ite_l.proof : bv_leq.r_ite_l.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_leq.r_ite_l] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_leq.r_ite_l.a1.proof FS O hO)
+
+theorem bv_leq.r_ite_r.proof : bv_leq.r_ite_r.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_leq.r_ite_r] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_leq.r_ite_r.a1.proof FS O hO)
+
+theorem bv_leq.r_const_sub1.proof : bv_leq.r_const_sub1.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_leq.r_const_sub1] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_leq.r_const_sub1.a1.proof FS O hO)
+
+theorem bv_leq.r_const_sub2.proof : bv_leq.r_const_sub2.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_leq.r_const_sub2] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_leq.r_const_sub2.a1.proof FS O hO)
+
+theorem bv_leq.r_sub_const1.proof : bv_leq.r_sub_const1.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_leq.r_sub_const1] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_leq.r_sub_const1.a1.proof FS O hO)
+
+theorem bv_leq.r_sub_const2.proof : bv_leq.r_sub_const2.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_leq.r_sub_const2] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_leq.r_sub_const2.a1.proof FS O hO)
+
+theorem bv_leq.r_ub_r.proof : bv_leq.r_ub_r.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_leq.r_ub_r] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_leq.r_ub_r.a1.proof FS O hO)
+
+theorem bv_leq.r_ub_l.proof : bv_leq.r_ub_l.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_leq.r_ub_l] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_leq.r_ub_l.a1.proof FS O hO)
+
+theorem bv_leq.r_to_unsigned_l.proof : bv_leq.r_to_unsigned_l.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_leq.r_to_unsigned_l] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_leq.r_to_unsigned_l.a1.proof FS O hO)
+
+theorem bv_leq.r_to_unsigned_r.proof : bv_leq.r_to_unsigned_r.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_leq.r_to_unsigned_r] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_leq.r_to_unsigned_r.a1.proof FS O hO)
+
+theorem bv_leq.r_default.proof : bv_leq.r_default.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [bv_leq.r_default] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_leq.r_default.a1.proof FS O hO)
+
 theorem bv_add_overflows.r_lits.proof : bv_add_overflows.r_lits.Stmt := by
   intro FS O hO signed v1 v2 res h
   simp only [bv_add_overflows.r_lits] at h

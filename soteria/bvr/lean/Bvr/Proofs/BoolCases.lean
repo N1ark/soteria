@@ -106,7 +106,7 @@ theorem b_or.r_not.a2.proof : b_or.r_not.a2.Stmt := by
 
 theorem b_or.r_lt_lt.a1.proof : b_or.r_lt_lt.a1.Stmt := by
   bvr_rule
-  all_goals bvr_cmp
+  all_goals bvr_int_cmp
 
 theorem b_or.r_lt_leq.a1.proof : b_or.r_lt_leq.a1.Stmt := by
   bvr_rule

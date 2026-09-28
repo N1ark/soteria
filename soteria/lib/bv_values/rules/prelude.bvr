@@ -295,3 +295,12 @@ let lower_bound (v : t) : int =
   | Lt (s, (BitVec _ as c), _) -> to_z s (bv_of_lit c) + 1
   | Leq (s, (BitVec _ as c), _) -> to_z s (bv_of_lit c)
   | _ -> 0
+
+(* Compare *)
+
+(* whether [l] is the least (resp. greatest) integer of its width *)
+let is_min_of (signed : bool) (l : bv) : bool =
+  to_z signed l = min_for signed (width l)
+
+let is_max_of (signed : bool) (l : bv) : bool =
+  to_z signed l = max_for signed (width l)

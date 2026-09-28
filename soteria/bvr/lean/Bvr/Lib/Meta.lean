@@ -67,4 +67,25 @@ partial def destructTys (g : MVarId) : MetaM MVarId := g.withContext do
 
 elab "bvr_destruct_tys" : tactic => liftMetaTactic fun g => return [← destructTys g]
 
+open Lean Meta Elab Tactic in
+/-- Replaces the integer variables `w` with a hypothesis `0 < w` (the widths of
+bit-vector types) by natural numbers. -/
+partial def natWidths (g : MVarId) : MetaM MVarId := g.withContext do
+  for d in (← getLCtx) do
+    if d.isImplementationDetail then continue
+    let ty ← instantiateMVars d.type
+    unless ty.isAppOfArity ``LT.lt 4 && (ty.getArg! 3).isFVar do continue
+    unless ← isDefEq (ty.getArg! 0) (mkConst ``Int) do continue
+    unless ← isDefEq (ty.getArg! 2) (toExpr (0 : Int)) do continue
+    let pf ← mkAppM ``Int.eq_ofNat_of_zero_le #[← mkAppM ``Int.le_of_lt #[d.toExpr]]
+    let (h, g) ← (← g.assert `hw (← inferType pf) pf).intro1P
+    let [sg] := (← g.cases h).toList | return g
+    let heq := sg.fields[1]!.fvarId!
+    let some sg' ← observing? (subst sg.mvarId heq) | return sg.mvarId
+    return ← natWidths sg'
+  return g
+
+open Lean Meta Elab Tactic in
+elab "bvr_nat_widths" : tactic => liftMetaTactic fun g => return [← natWidths g]
+
 end Bvr.Lib

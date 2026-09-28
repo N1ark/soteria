@@ -28,7 +28,7 @@ open Classical
   simp [lower_bound, firstSome]
 
 /-- Closes the comparisons of bit-vectors, as integers. -/
-macro "bvr_cmp" : tactic => `(tactic| (
+macro "bvr_int_cmp" : tactic => `(tactic| (
   (try bvr_split)
   (try simp only [BitVec.ult, BitVec.ule, BitVec.slt, BitVec.sle, decide_eq_true_eq,
     decide_eq_false_iff_not, Bool.not_eq_true, Bool.not_eq_false, Bool.or_eq_true,
@@ -47,7 +47,7 @@ macro "bvr_rule_bounds" : tactic => `(tactic| (
   bvr_rule_core
   all_goals (try simp only [upper_bound_lt, upper_bound_leq, lower_bound_lt, lower_bound_leq] at *)
   all_goals first | (bvr_wt; done) | bvr_sem_core
-  all_goals bvr_cmp))
+  all_goals bvr_int_cmp))
 
 /-! ## Adjacent extractions -/
 

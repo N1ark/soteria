@@ -275,6 +275,12 @@ module Make (P : PRIMS) = struct
       | _ -> Z.zero
       )
   
+  let is_min_of (signed : bool) (l : bv) : bool =
+      ((Z.equal (P.to_z signed l) (min_for signed (P.width l))))
+  
+  let is_max_of (signed : bool) (l : bv) : bool =
+      ((Z.equal (P.to_z signed l) (max_for signed (P.width l))))
+  
   let bv_of_bool (n : Z.t) (b : t) : t =
       (match b with
       | { Hc.node = { Svalue_ast.kind = Svalue_ast.Bool (true); _ }; _ } ->

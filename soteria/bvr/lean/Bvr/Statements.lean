@@ -144,6 +144,222 @@ def b_and.r_default.Stmt : Prop :=
   ∀ (v1 : Term) (v2 : Term) (res : Term), b_and.r_default O v1 v2 = some res →
   Refines FS (b_and.spec v1 v2) res
 
+def b_and.r_same.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (v2 : Term),
+  (equal v1 v2) = true →
+  Refines FS (b_and.spec v1 v2)
+  (v1)
+
+def b_and.r_false_.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v2 : Term) (t__2 : Ty),
+  Refines FS (b_and.spec (Term.mk (Kind.bool false) t__2) v2)
+  (v_false)
+
+def b_and.r_false_.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (t__2 : Ty),
+  Refines FS (b_and.spec v1 (Term.mk (Kind.bool false) t__2))
+  (v_false)
+
+def b_and.r_true_l.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v2 : Term) (t__2 : Ty),
+  Refines FS (b_and.spec (Term.mk (Kind.bool true) t__2) v2)
+  (v2)
+
+def b_and.r_true_r.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (t__3 : Ty),
+  Refines FS (b_and.spec v1 (Term.mk (Kind.bool true) t__3))
+  (v1)
+
+def b_and.r_not.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (bvr__3 : Term) (t__4 : Ty),
+  (equal v1 bvr__3) = true →
+  Refines FS (b_and.spec v1 (Term.mk (Kind.unop Unop.not_ bvr__3) t__4))
+  (v_false)
+
+def b_and.r_not.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v2 : Term) (bvr__3 : Term) (t__4 : Ty),
+  (equal v2 bvr__3) = true →
+  Refines FS (b_and.spec (Term.mk (Kind.unop Unop.not_ bvr__3) t__4) v2)
+  (v_false)
+
+def b_and.r_and_l.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v2 : Term) (a : Term) (w__3 : Term) (t__4 : Ty),
+  (equal a v2) = true →
+  Refines FS (b_and.spec (Term.mk (Kind.binop Binop.and_ a w__3) t__4) v2)
+  ((Term.mk (Kind.binop Binop.and_ a w__3) t__4))
+
+def b_and.r_and_l.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v2 : Term) (w__3 : Term) (a : Term) (t__4 : Ty),
+  (equal a v2) = true →
+  Refines FS (b_and.spec (Term.mk (Kind.binop Binop.and_ w__3 a) t__4) v2)
+  ((Term.mk (Kind.binop Binop.and_ w__3 a) t__4))
+
+def b_and.r_and_r.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (bvr__3 : Term) (w__4 : Term) (t__5 : Ty),
+  (equal v1 bvr__3) = true →
+  Refines FS (b_and.spec v1 (Term.mk (Kind.binop Binop.and_ bvr__3 w__4) t__5))
+  ((Term.mk (Kind.binop Binop.and_ bvr__3 w__4) t__5))
+
+def b_and.r_and_r.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (w__4 : Term) (bvr__3 : Term) (t__5 : Ty),
+  (equal v1 bvr__3) = true →
+  Refines FS (b_and.spec v1 (Term.mk (Kind.binop Binop.and_ w__4 bvr__3) t__5))
+  ((Term.mk (Kind.binop Binop.and_ w__4 bvr__3) t__5))
+
+def b_and.r_or_l.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v2 : Term) (a : Term) (w__3 : Term) (t__4 : Ty),
+  (equal a v2) = true →
+  Refines FS (b_and.spec (Term.mk (Kind.binop Binop.or_ a w__3) t__4) v2)
+  (v2)
+
+def b_and.r_or_l.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v2 : Term) (w__3 : Term) (a : Term) (t__4 : Ty),
+  (equal a v2) = true →
+  Refines FS (b_and.spec (Term.mk (Kind.binop Binop.or_ w__3 a) t__4) v2)
+  (v2)
+
+def b_and.r_or_r.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (bvr__3 : Term) (w__4 : Term) (t__5 : Ty),
+  (equal v1 bvr__3) = true →
+  Refines FS (b_and.spec v1 (Term.mk (Kind.binop Binop.or_ bvr__3 w__4) t__5))
+  (v1)
+
+def b_and.r_or_r.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (w__4 : Term) (bvr__3 : Term) (t__5 : Ty),
+  (equal v1 bvr__3) = true →
+  Refines FS (b_and.spec v1 (Term.mk (Kind.binop Binop.or_ w__4 bvr__3) t__5))
+  (v1)
+
+def b_and.r_eq_neq.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (a : Term) (x : Term) (t__4 : Ty) (bvr__7 : Term) (y : Term) (t__9 : Ty),
+  ((equal a bvr__7) && (sure_neq x y)) = true →
+  Refines FS (b_and.spec (Term.mk (Kind.binop Binop.eq a x) t__4) (Term.mk (Kind.binop Binop.eq bvr__7 y) t__9))
+  (v_false)
+
+def b_and.r_eq_neq.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (a : Term) (x : Term) (t__4 : Ty) (y : Term) (bvr__7 : Term) (t__9 : Ty),
+  ((equal a bvr__7) && (sure_neq x y)) = true →
+  Refines FS (b_and.spec (Term.mk (Kind.binop Binop.eq a x) t__4) (Term.mk (Kind.binop Binop.eq y bvr__7) t__9))
+  (v_false)
+
+def b_and.r_eq_neq.a3.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (x : Term) (a : Term) (t__4 : Ty) (bvr__7 : Term) (y : Term) (t__9 : Ty),
+  ((equal a bvr__7) && (sure_neq x y)) = true →
+  Refines FS (b_and.spec (Term.mk (Kind.binop Binop.eq x a) t__4) (Term.mk (Kind.binop Binop.eq bvr__7 y) t__9))
+  (v_false)
+
+def b_and.r_eq_neq.a4.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (x : Term) (a : Term) (t__4 : Ty) (y : Term) (bvr__7 : Term) (t__9 : Ty),
+  ((equal a bvr__7) && (sure_neq x y)) = true →
+  Refines FS (b_and.spec (Term.mk (Kind.binop Binop.eq x a) t__4) (Term.mk (Kind.binop Binop.eq y bvr__7) t__9))
+  (v_false)
+
+def b_and.r_eq_extracts.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (w__2 : Int) (t__3 : Ty) (s1 : Int) (e1 : Int) (x : Term) (t__9 : Ty) (t__10 : Ty) (w__12 : Int) (t__13 : Ty) (s2 : Int) (e2 : Int) (bvr__18 : Term) (t__19 : Ty) (t__20 : Ty),
+  ((equal x bvr__18) && ((decide ((e1 + (1 : Int)) = s2)) || (decide ((e2 + (1 : Int)) = s1)))) = true →
+  Refines FS (b_and.spec (Term.mk (Kind.binop Binop.eq (Term.mk (Kind.bitVec w__2) t__3) (Term.mk (Kind.unop (Unop.bvExtract s1 e1) x) t__9)) t__10) (Term.mk (Kind.binop Binop.eq (Term.mk (Kind.bitVec w__12) t__13) (Term.mk (Kind.unop (Unop.bvExtract s2 e2) bvr__18) t__19)) t__20))
+  ((if (decide ((e1 + (1 : Int)) = s2))
+   then (O.sem_eq (O.bv_concat (Term.mk (Kind.bitVec w__12) t__13) (Term.mk (Kind.bitVec w__2) t__3)) (O.bv_extract s1 e2 x))
+   else (O.sem_eq (O.bv_concat (Term.mk (Kind.bitVec w__2) t__3) (Term.mk (Kind.bitVec w__12) t__13)) (O.bv_extract s2 e1 x))))
+
+def b_and.r_upper_bounds.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (s : Bool) (a : Term) (w__4 : Int) (t__5 : Ty) (t__6 : Ty) (bvr__14 : Bool) (bvr__16 : Term) (w__17 : Int) (t__18 : Ty) (t__19 : Ty),
+  ((decide (s = bvr__14)) && (equal a bvr__16)) = true →
+  Refines FS (b_and.spec (Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec w__4) t__5)) t__6) (Term.mk (Kind.binop (Binop.lt bvr__14) bvr__16 (Term.mk (Kind.bitVec w__17) t__18)) t__19))
+  ((if (decide ((upper_bound (Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec w__4) t__5)) t__6)) ≤ (upper_bound (Term.mk (Kind.binop (Binop.lt bvr__14) bvr__16 (Term.mk (Kind.bitVec w__17) t__18)) t__19))))
+   then (Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec w__4) t__5)) t__6)
+   else (Term.mk (Kind.binop (Binop.lt bvr__14) bvr__16 (Term.mk (Kind.bitVec w__17) t__18)) t__19)))
+
+def b_and.r_upper_bounds.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (s : Bool) (a : Term) (w__4 : Int) (t__5 : Ty) (t__6 : Ty) (bvr__20 : Bool) (bvr__22 : Term) (w__23 : Int) (t__24 : Ty) (t__25 : Ty),
+  ((decide (s = bvr__20)) && (equal a bvr__22)) = true →
+  Refines FS (b_and.spec (Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec w__4) t__5)) t__6) (Term.mk (Kind.binop (Binop.leq bvr__20) bvr__22 (Term.mk (Kind.bitVec w__23) t__24)) t__25))
+  ((if (decide ((upper_bound (Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec w__4) t__5)) t__6)) ≤ (upper_bound (Term.mk (Kind.binop (Binop.leq bvr__20) bvr__22 (Term.mk (Kind.bitVec w__23) t__24)) t__25))))
+   then (Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec w__4) t__5)) t__6)
+   else (Term.mk (Kind.binop (Binop.leq bvr__20) bvr__22 (Term.mk (Kind.bitVec w__23) t__24)) t__25)))
+
+def b_and.r_upper_bounds.a3.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (s : Bool) (a : Term) (w__10 : Int) (t__11 : Ty) (t__12 : Ty) (bvr__14 : Bool) (bvr__16 : Term) (w__17 : Int) (t__18 : Ty) (t__19 : Ty),
+  ((decide (s = bvr__14)) && (equal a bvr__16)) = true →
+  Refines FS (b_and.spec (Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec w__10) t__11)) t__12) (Term.mk (Kind.binop (Binop.lt bvr__14) bvr__16 (Term.mk (Kind.bitVec w__17) t__18)) t__19))
+  ((if (decide ((upper_bound (Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec w__10) t__11)) t__12)) ≤ (upper_bound (Term.mk (Kind.binop (Binop.lt bvr__14) bvr__16 (Term.mk (Kind.bitVec w__17) t__18)) t__19))))
+   then (Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec w__10) t__11)) t__12)
+   else (Term.mk (Kind.binop (Binop.lt bvr__14) bvr__16 (Term.mk (Kind.bitVec w__17) t__18)) t__19)))
+
+def b_and.r_upper_bounds.a4.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (s : Bool) (a : Term) (w__10 : Int) (t__11 : Ty) (t__12 : Ty) (bvr__20 : Bool) (bvr__22 : Term) (w__23 : Int) (t__24 : Ty) (t__25 : Ty),
+  ((decide (s = bvr__20)) && (equal a bvr__22)) = true →
+  Refines FS (b_and.spec (Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec w__10) t__11)) t__12) (Term.mk (Kind.binop (Binop.leq bvr__20) bvr__22 (Term.mk (Kind.bitVec w__23) t__24)) t__25))
+  ((if (decide ((upper_bound (Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec w__10) t__11)) t__12)) ≤ (upper_bound (Term.mk (Kind.binop (Binop.leq bvr__20) bvr__22 (Term.mk (Kind.bitVec w__23) t__24)) t__25))))
+   then (Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec w__10) t__11)) t__12)
+   else (Term.mk (Kind.binop (Binop.leq bvr__20) bvr__22 (Term.mk (Kind.bitVec w__23) t__24)) t__25)))
+
+def b_and.r_lower_bounds.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (s : Bool) (w__3 : Int) (t__4 : Ty) (a : Term) (t__6 : Ty) (bvr__14 : Bool) (w__16 : Int) (t__17 : Ty) (bvr__18 : Term) (t__19 : Ty),
+  ((decide (s = bvr__14)) && (equal a bvr__18)) = true →
+  Refines FS (b_and.spec (Term.mk (Kind.binop (Binop.lt s) (Term.mk (Kind.bitVec w__3) t__4) a) t__6) (Term.mk (Kind.binop (Binop.lt bvr__14) (Term.mk (Kind.bitVec w__16) t__17) bvr__18) t__19))
+  ((if (decide ((lower_bound (Term.mk (Kind.binop (Binop.lt s) (Term.mk (Kind.bitVec w__3) t__4) a) t__6)) ≥ (lower_bound (Term.mk (Kind.binop (Binop.lt bvr__14) (Term.mk (Kind.bitVec w__16) t__17) bvr__18) t__19))))
+   then (Term.mk (Kind.binop (Binop.lt s) (Term.mk (Kind.bitVec w__3) t__4) a) t__6)
+   else (Term.mk (Kind.binop (Binop.lt bvr__14) (Term.mk (Kind.bitVec w__16) t__17) bvr__18) t__19)))
+
+def b_and.r_lower_bounds.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (s : Bool) (w__3 : Int) (t__4 : Ty) (a : Term) (t__6 : Ty) (bvr__20 : Bool) (w__22 : Int) (t__23 : Ty) (bvr__24 : Term) (t__25 : Ty),
+  ((decide (s = bvr__20)) && (equal a bvr__24)) = true →
+  Refines FS (b_and.spec (Term.mk (Kind.binop (Binop.lt s) (Term.mk (Kind.bitVec w__3) t__4) a) t__6) (Term.mk (Kind.binop (Binop.leq bvr__20) (Term.mk (Kind.bitVec w__22) t__23) bvr__24) t__25))
+  ((if (decide ((lower_bound (Term.mk (Kind.binop (Binop.lt s) (Term.mk (Kind.bitVec w__3) t__4) a) t__6)) ≥ (lower_bound (Term.mk (Kind.binop (Binop.leq bvr__20) (Term.mk (Kind.bitVec w__22) t__23) bvr__24) t__25))))
+   then (Term.mk (Kind.binop (Binop.lt s) (Term.mk (Kind.bitVec w__3) t__4) a) t__6)
+   else (Term.mk (Kind.binop (Binop.leq bvr__20) (Term.mk (Kind.bitVec w__22) t__23) bvr__24) t__25)))
+
+def b_and.r_lower_bounds.a3.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (s : Bool) (w__9 : Int) (t__10 : Ty) (a : Term) (t__12 : Ty) (bvr__14 : Bool) (w__16 : Int) (t__17 : Ty) (bvr__18 : Term) (t__19 : Ty),
+  ((decide (s = bvr__14)) && (equal a bvr__18)) = true →
+  Refines FS (b_and.spec (Term.mk (Kind.binop (Binop.leq s) (Term.mk (Kind.bitVec w__9) t__10) a) t__12) (Term.mk (Kind.binop (Binop.lt bvr__14) (Term.mk (Kind.bitVec w__16) t__17) bvr__18) t__19))
+  ((if (decide ((lower_bound (Term.mk (Kind.binop (Binop.leq s) (Term.mk (Kind.bitVec w__9) t__10) a) t__12)) ≥ (lower_bound (Term.mk (Kind.binop (Binop.lt bvr__14) (Term.mk (Kind.bitVec w__16) t__17) bvr__18) t__19))))
+   then (Term.mk (Kind.binop (Binop.leq s) (Term.mk (Kind.bitVec w__9) t__10) a) t__12)
+   else (Term.mk (Kind.binop (Binop.lt bvr__14) (Term.mk (Kind.bitVec w__16) t__17) bvr__18) t__19)))
+
+def b_and.r_lower_bounds.a4.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (s : Bool) (w__9 : Int) (t__10 : Ty) (a : Term) (t__12 : Ty) (bvr__20 : Bool) (w__22 : Int) (t__23 : Ty) (bvr__24 : Term) (t__25 : Ty),
+  ((decide (s = bvr__20)) && (equal a bvr__24)) = true →
+  Refines FS (b_and.spec (Term.mk (Kind.binop (Binop.leq s) (Term.mk (Kind.bitVec w__9) t__10) a) t__12) (Term.mk (Kind.binop (Binop.leq bvr__20) (Term.mk (Kind.bitVec w__22) t__23) bvr__24) t__25))
+  ((if (decide ((lower_bound (Term.mk (Kind.binop (Binop.leq s) (Term.mk (Kind.bitVec w__9) t__10) a) t__12)) ≥ (lower_bound (Term.mk (Kind.binop (Binop.leq bvr__20) (Term.mk (Kind.bitVec w__22) t__23) bvr__24) t__25))))
+   then (Term.mk (Kind.binop (Binop.leq s) (Term.mk (Kind.bitVec w__9) t__10) a) t__12)
+   else (Term.mk (Kind.binop (Binop.leq bvr__20) (Term.mk (Kind.bitVec w__22) t__23) bvr__24) t__25)))
+
+def b_and.r_default.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (v2 : Term),
+  Refines FS (b_and.spec v1 v2)
+  ((Term.mk (mk_commut_binop O Binop.and_ v1 v2) Ty.bool))
+
 def b_or.r_same.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
   ∀ (v1 : Term) (v2 : Term) (res : Term), b_or.r_same O v1 v2 = some res →
@@ -204,14 +420,14 @@ def b_or.r_complementary.Stmt : Prop :=
   ∀ (v1 : Term) (v2 : Term) (res : Term), b_or.r_complementary O v1 v2 = some res →
   Refines FS (b_or.spec v1 v2) res
 
-def b_or.r_bound_eq.Stmt : Prop :=
+def b_or.r_upper_eq.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (v1 : Term) (v2 : Term) (res : Term), b_or.r_bound_eq O v1 v2 = some res →
+  ∀ (v1 : Term) (v2 : Term) (res : Term), b_or.r_upper_eq O v1 v2 = some res →
   Refines FS (b_or.spec v1 v2) res
 
-def b_or.r_eq_bound.Stmt : Prop :=
+def b_or.r_lower_eq.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (v1 : Term) (v2 : Term) (res : Term), b_or.r_eq_bound O v1 v2 = some res →
+  ∀ (v1 : Term) (v2 : Term) (res : Term), b_or.r_lower_eq O v1 v2 = some res →
   Refines FS (b_or.spec v1 v2) res
 
 def b_or.r_upper_bounds.Stmt : Prop :=
@@ -228,6 +444,374 @@ def b_or.r_default.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
   ∀ (v1 : Term) (v2 : Term) (res : Term), b_or.r_default O v1 v2 = some res →
   Refines FS (b_or.spec v1 v2) res
+
+def b_or.r_same.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (v2 : Term),
+  (equal v1 v2) = true →
+  Refines FS (b_or.spec v1 v2)
+  (v1)
+
+def b_or.r_true_.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v2 : Term) (t__2 : Ty),
+  Refines FS (b_or.spec (Term.mk (Kind.bool true) t__2) v2)
+  (v_true)
+
+def b_or.r_true_.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (t__2 : Ty),
+  Refines FS (b_or.spec v1 (Term.mk (Kind.bool true) t__2))
+  (v_true)
+
+def b_or.r_false_l.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v2 : Term) (t__2 : Ty),
+  Refines FS (b_or.spec (Term.mk (Kind.bool false) t__2) v2)
+  (v2)
+
+def b_or.r_false_r.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (t__3 : Ty),
+  Refines FS (b_or.spec v1 (Term.mk (Kind.bool false) t__3))
+  (v1)
+
+def b_or.r_not.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (bvr__3 : Term) (t__4 : Ty),
+  (equal v1 bvr__3) = true →
+  Refines FS (b_or.spec v1 (Term.mk (Kind.unop Unop.not_ bvr__3) t__4))
+  (v_true)
+
+def b_or.r_not.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v2 : Term) (bvr__3 : Term) (t__4 : Ty),
+  (equal v2 bvr__3) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.unop Unop.not_ bvr__3) t__4) v2)
+  (v_true)
+
+def b_or.r_lt_lt.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (s : Bool) (a : Term) (b : Term) (t__5 : Ty) (bvr__6 : Bool) (bvr__8 : Term) (bvr__9 : Term) (t__10 : Ty),
+  (((decide (s = bvr__6)) && (equal b bvr__8)) && (equal a bvr__9)) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop (Binop.lt s) a b) t__5) (Term.mk (Kind.binop (Binop.lt bvr__6) bvr__8 bvr__9) t__10))
+  ((O.b_not (O.sem_eq a b)))
+
+def b_or.r_lt_leq.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (s : Bool) (a : Term) (b : Term) (t__5 : Ty) (bvr__6 : Bool) (bvr__8 : Term) (bvr__9 : Term) (t__10 : Ty),
+  (((decide (s = bvr__6)) && (equal b bvr__8)) && (equal a bvr__9)) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop (Binop.lt s) a b) t__5) (Term.mk (Kind.binop (Binop.leq bvr__6) bvr__8 bvr__9) t__10))
+  (v_true)
+
+def b_or.r_lt_leq.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (bvr__6 : Bool) (bvr__8 : Term) (bvr__9 : Term) (t__10 : Ty) (s : Bool) (a : Term) (b : Term) (t__5 : Ty),
+  (((decide (s = bvr__6)) && (equal b bvr__8)) && (equal a bvr__9)) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop (Binop.leq bvr__6) bvr__8 bvr__9) t__10) (Term.mk (Kind.binop (Binop.lt s) a b) t__5))
+  (v_true)
+
+def b_or.r_or_l.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v2 : Term) (a : Term) (w__3 : Term) (t__4 : Ty),
+  (equal a v2) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop Binop.or_ a w__3) t__4) v2)
+  ((Term.mk (Kind.binop Binop.or_ a w__3) t__4))
+
+def b_or.r_or_l.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v2 : Term) (w__3 : Term) (a : Term) (t__4 : Ty),
+  (equal a v2) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop Binop.or_ w__3 a) t__4) v2)
+  ((Term.mk (Kind.binop Binop.or_ w__3 a) t__4))
+
+def b_or.r_or_r.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (bvr__3 : Term) (w__4 : Term) (t__5 : Ty),
+  (equal v1 bvr__3) = true →
+  Refines FS (b_or.spec v1 (Term.mk (Kind.binop Binop.or_ bvr__3 w__4) t__5))
+  ((Term.mk (Kind.binop Binop.or_ bvr__3 w__4) t__5))
+
+def b_or.r_or_r.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (w__4 : Term) (bvr__3 : Term) (t__5 : Ty),
+  (equal v1 bvr__3) = true →
+  Refines FS (b_or.spec v1 (Term.mk (Kind.binop Binop.or_ w__4 bvr__3) t__5))
+  ((Term.mk (Kind.binop Binop.or_ w__4 bvr__3) t__5))
+
+def b_or.r_and_l.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v2 : Term) (a : Term) (w__3 : Term) (t__4 : Ty),
+  (equal a v2) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop Binop.and_ a w__3) t__4) v2)
+  (v2)
+
+def b_or.r_and_l.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v2 : Term) (w__3 : Term) (a : Term) (t__4 : Ty),
+  (equal a v2) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop Binop.and_ w__3 a) t__4) v2)
+  (v2)
+
+def b_or.r_and_r.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (bvr__3 : Term) (w__4 : Term) (t__5 : Ty),
+  (equal v1 bvr__3) = true →
+  Refines FS (b_or.spec v1 (Term.mk (Kind.binop Binop.and_ bvr__3 w__4) t__5))
+  (v1)
+
+def b_or.r_and_r.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (w__4 : Term) (bvr__3 : Term) (t__5 : Ty),
+  (equal v1 bvr__3) = true →
+  Refines FS (b_or.spec v1 (Term.mk (Kind.binop Binop.and_ w__4 bvr__3) t__5))
+  (v1)
+
+def b_or.r_complementary.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (s : Bool) (a : Term) (w__4 : Int) (t__5 : Ty) (t__6 : Ty) (bvr__15 : Bool) (w__17 : Int) (t__18 : Ty) (bvr__19 : Term) (t__20 : Ty),
+  (((decide (s = bvr__15)) && (equal a bvr__19)) && (decide ((lower_bound (Term.mk (Kind.binop (Binop.lt bvr__15) (Term.mk (Kind.bitVec w__17) t__18) bvr__19) t__20)) ≤ ((upper_bound (Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec w__4) t__5)) t__6)) + (1 : Int))))) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec w__4) t__5)) t__6) (Term.mk (Kind.binop (Binop.lt bvr__15) (Term.mk (Kind.bitVec w__17) t__18) bvr__19) t__20))
+  (v_true)
+
+def b_or.r_complementary.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (s : Bool) (a : Term) (w__4 : Int) (t__5 : Ty) (t__6 : Ty) (bvr__21 : Bool) (w__23 : Int) (t__24 : Ty) (bvr__25 : Term) (t__26 : Ty),
+  (((decide (s = bvr__21)) && (equal a bvr__25)) && (decide ((lower_bound (Term.mk (Kind.binop (Binop.leq bvr__21) (Term.mk (Kind.bitVec w__23) t__24) bvr__25) t__26)) ≤ ((upper_bound (Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec w__4) t__5)) t__6)) + (1 : Int))))) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec w__4) t__5)) t__6) (Term.mk (Kind.binop (Binop.leq bvr__21) (Term.mk (Kind.bitVec w__23) t__24) bvr__25) t__26))
+  (v_true)
+
+def b_or.r_complementary.a3.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (s : Bool) (a : Term) (w__10 : Int) (t__11 : Ty) (t__12 : Ty) (bvr__15 : Bool) (w__17 : Int) (t__18 : Ty) (bvr__19 : Term) (t__20 : Ty),
+  (((decide (s = bvr__15)) && (equal a bvr__19)) && (decide ((lower_bound (Term.mk (Kind.binop (Binop.lt bvr__15) (Term.mk (Kind.bitVec w__17) t__18) bvr__19) t__20)) ≤ ((upper_bound (Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec w__10) t__11)) t__12)) + (1 : Int))))) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec w__10) t__11)) t__12) (Term.mk (Kind.binop (Binop.lt bvr__15) (Term.mk (Kind.bitVec w__17) t__18) bvr__19) t__20))
+  (v_true)
+
+def b_or.r_complementary.a4.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (s : Bool) (a : Term) (w__10 : Int) (t__11 : Ty) (t__12 : Ty) (bvr__21 : Bool) (w__23 : Int) (t__24 : Ty) (bvr__25 : Term) (t__26 : Ty),
+  (((decide (s = bvr__21)) && (equal a bvr__25)) && (decide ((lower_bound (Term.mk (Kind.binop (Binop.leq bvr__21) (Term.mk (Kind.bitVec w__23) t__24) bvr__25) t__26)) ≤ ((upper_bound (Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec w__10) t__11)) t__12)) + (1 : Int))))) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec w__10) t__11)) t__12) (Term.mk (Kind.binop (Binop.leq bvr__21) (Term.mk (Kind.bitVec w__23) t__24) bvr__25) t__26))
+  (v_true)
+
+def b_or.r_complementary.a5.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (bvr__15 : Bool) (w__17 : Int) (t__18 : Ty) (bvr__19 : Term) (t__20 : Ty) (s : Bool) (a : Term) (w__4 : Int) (t__5 : Ty) (t__6 : Ty),
+  (((decide (s = bvr__15)) && (equal a bvr__19)) && (decide ((lower_bound (Term.mk (Kind.binop (Binop.lt bvr__15) (Term.mk (Kind.bitVec w__17) t__18) bvr__19) t__20)) ≤ ((upper_bound (Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec w__4) t__5)) t__6)) + (1 : Int))))) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop (Binop.lt bvr__15) (Term.mk (Kind.bitVec w__17) t__18) bvr__19) t__20) (Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec w__4) t__5)) t__6))
+  (v_true)
+
+def b_or.r_complementary.a6.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (bvr__15 : Bool) (w__17 : Int) (t__18 : Ty) (bvr__19 : Term) (t__20 : Ty) (s : Bool) (a : Term) (w__10 : Int) (t__11 : Ty) (t__12 : Ty),
+  (((decide (s = bvr__15)) && (equal a bvr__19)) && (decide ((lower_bound (Term.mk (Kind.binop (Binop.lt bvr__15) (Term.mk (Kind.bitVec w__17) t__18) bvr__19) t__20)) ≤ ((upper_bound (Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec w__10) t__11)) t__12)) + (1 : Int))))) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop (Binop.lt bvr__15) (Term.mk (Kind.bitVec w__17) t__18) bvr__19) t__20) (Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec w__10) t__11)) t__12))
+  (v_true)
+
+def b_or.r_complementary.a7.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (bvr__21 : Bool) (w__23 : Int) (t__24 : Ty) (bvr__25 : Term) (t__26 : Ty) (s : Bool) (a : Term) (w__4 : Int) (t__5 : Ty) (t__6 : Ty),
+  (((decide (s = bvr__21)) && (equal a bvr__25)) && (decide ((lower_bound (Term.mk (Kind.binop (Binop.leq bvr__21) (Term.mk (Kind.bitVec w__23) t__24) bvr__25) t__26)) ≤ ((upper_bound (Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec w__4) t__5)) t__6)) + (1 : Int))))) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop (Binop.leq bvr__21) (Term.mk (Kind.bitVec w__23) t__24) bvr__25) t__26) (Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec w__4) t__5)) t__6))
+  (v_true)
+
+def b_or.r_complementary.a8.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (bvr__21 : Bool) (w__23 : Int) (t__24 : Ty) (bvr__25 : Term) (t__26 : Ty) (s : Bool) (a : Term) (w__10 : Int) (t__11 : Ty) (t__12 : Ty),
+  (((decide (s = bvr__21)) && (equal a bvr__25)) && (decide ((lower_bound (Term.mk (Kind.binop (Binop.leq bvr__21) (Term.mk (Kind.bitVec w__23) t__24) bvr__25) t__26)) ≤ ((upper_bound (Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec w__10) t__11)) t__12)) + (1 : Int))))) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop (Binop.leq bvr__21) (Term.mk (Kind.bitVec w__23) t__24) bvr__25) t__26) (Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec w__10) t__11)) t__12))
+  (v_true)
+
+def b_or.r_upper_eq.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (s : Bool) (a : Term) (w__4 : Int) (t__5 : Ty) (t__6 : Ty) (bvr__16 : Term) (k__z : Int) (k__T : Ty) (t__18 : Ty),
+  ((equal a bvr__16) && (decide ((to_z s (bv_of_lit (Term.mk (Kind.bitVec k__z) k__T))) ≤ (upper_bound (Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec w__4) t__5)) t__6))))) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec w__4) t__5)) t__6) (Term.mk (Kind.binop Binop.eq bvr__16 (Term.mk (Kind.bitVec k__z) k__T)) t__18))
+  ((Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec w__4) t__5)) t__6))
+
+def b_or.r_upper_eq.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (s : Bool) (a : Term) (w__4 : Int) (t__5 : Ty) (t__6 : Ty) (k__z : Int) (k__T : Ty) (bvr__16 : Term) (t__18 : Ty),
+  ((equal a bvr__16) && (decide ((to_z s (bv_of_lit (Term.mk (Kind.bitVec k__z) k__T))) ≤ (upper_bound (Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec w__4) t__5)) t__6))))) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec w__4) t__5)) t__6) (Term.mk (Kind.binop Binop.eq (Term.mk (Kind.bitVec k__z) k__T) bvr__16) t__18))
+  ((Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec w__4) t__5)) t__6))
+
+def b_or.r_upper_eq.a3.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (s : Bool) (a : Term) (w__10 : Int) (t__11 : Ty) (t__12 : Ty) (bvr__16 : Term) (k__z : Int) (k__T : Ty) (t__18 : Ty),
+  ((equal a bvr__16) && (decide ((to_z s (bv_of_lit (Term.mk (Kind.bitVec k__z) k__T))) ≤ (upper_bound (Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec w__10) t__11)) t__12))))) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec w__10) t__11)) t__12) (Term.mk (Kind.binop Binop.eq bvr__16 (Term.mk (Kind.bitVec k__z) k__T)) t__18))
+  ((Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec w__10) t__11)) t__12))
+
+def b_or.r_upper_eq.a4.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (s : Bool) (a : Term) (w__10 : Int) (t__11 : Ty) (t__12 : Ty) (k__z : Int) (k__T : Ty) (bvr__16 : Term) (t__18 : Ty),
+  ((equal a bvr__16) && (decide ((to_z s (bv_of_lit (Term.mk (Kind.bitVec k__z) k__T))) ≤ (upper_bound (Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec w__10) t__11)) t__12))))) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec w__10) t__11)) t__12) (Term.mk (Kind.binop Binop.eq (Term.mk (Kind.bitVec k__z) k__T) bvr__16) t__18))
+  ((Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec w__10) t__11)) t__12))
+
+def b_or.r_upper_eq.a5.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (bvr__16 : Term) (k__z : Int) (k__T : Ty) (t__18 : Ty) (s : Bool) (a : Term) (w__4 : Int) (t__5 : Ty) (t__6 : Ty),
+  ((equal a bvr__16) && (decide ((to_z s (bv_of_lit (Term.mk (Kind.bitVec k__z) k__T))) ≤ (upper_bound (Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec w__4) t__5)) t__6))))) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop Binop.eq bvr__16 (Term.mk (Kind.bitVec k__z) k__T)) t__18) (Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec w__4) t__5)) t__6))
+  ((Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec w__4) t__5)) t__6))
+
+def b_or.r_upper_eq.a6.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (bvr__16 : Term) (k__z : Int) (k__T : Ty) (t__18 : Ty) (s : Bool) (a : Term) (w__10 : Int) (t__11 : Ty) (t__12 : Ty),
+  ((equal a bvr__16) && (decide ((to_z s (bv_of_lit (Term.mk (Kind.bitVec k__z) k__T))) ≤ (upper_bound (Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec w__10) t__11)) t__12))))) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop Binop.eq bvr__16 (Term.mk (Kind.bitVec k__z) k__T)) t__18) (Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec w__10) t__11)) t__12))
+  ((Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec w__10) t__11)) t__12))
+
+def b_or.r_upper_eq.a7.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (k__z : Int) (k__T : Ty) (bvr__16 : Term) (t__18 : Ty) (s : Bool) (a : Term) (w__4 : Int) (t__5 : Ty) (t__6 : Ty),
+  ((equal a bvr__16) && (decide ((to_z s (bv_of_lit (Term.mk (Kind.bitVec k__z) k__T))) ≤ (upper_bound (Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec w__4) t__5)) t__6))))) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop Binop.eq (Term.mk (Kind.bitVec k__z) k__T) bvr__16) t__18) (Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec w__4) t__5)) t__6))
+  ((Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec w__4) t__5)) t__6))
+
+def b_or.r_upper_eq.a8.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (k__z : Int) (k__T : Ty) (bvr__16 : Term) (t__18 : Ty) (s : Bool) (a : Term) (w__10 : Int) (t__11 : Ty) (t__12 : Ty),
+  ((equal a bvr__16) && (decide ((to_z s (bv_of_lit (Term.mk (Kind.bitVec k__z) k__T))) ≤ (upper_bound (Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec w__10) t__11)) t__12))))) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop Binop.eq (Term.mk (Kind.bitVec k__z) k__T) bvr__16) t__18) (Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec w__10) t__11)) t__12))
+  ((Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec w__10) t__11)) t__12))
+
+def b_or.r_lower_eq.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (s : Bool) (w__3 : Int) (t__4 : Ty) (a : Term) (t__6 : Ty) (bvr__16 : Term) (k__z : Int) (k__T : Ty) (t__18 : Ty),
+  ((equal a bvr__16) && (decide ((lower_bound (Term.mk (Kind.binop (Binop.lt s) (Term.mk (Kind.bitVec w__3) t__4) a) t__6)) ≤ (to_z s (bv_of_lit (Term.mk (Kind.bitVec k__z) k__T)))))) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop (Binop.lt s) (Term.mk (Kind.bitVec w__3) t__4) a) t__6) (Term.mk (Kind.binop Binop.eq bvr__16 (Term.mk (Kind.bitVec k__z) k__T)) t__18))
+  ((Term.mk (Kind.binop (Binop.lt s) (Term.mk (Kind.bitVec w__3) t__4) a) t__6))
+
+def b_or.r_lower_eq.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (s : Bool) (w__3 : Int) (t__4 : Ty) (a : Term) (t__6 : Ty) (k__z : Int) (k__T : Ty) (bvr__16 : Term) (t__18 : Ty),
+  ((equal a bvr__16) && (decide ((lower_bound (Term.mk (Kind.binop (Binop.lt s) (Term.mk (Kind.bitVec w__3) t__4) a) t__6)) ≤ (to_z s (bv_of_lit (Term.mk (Kind.bitVec k__z) k__T)))))) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop (Binop.lt s) (Term.mk (Kind.bitVec w__3) t__4) a) t__6) (Term.mk (Kind.binop Binop.eq (Term.mk (Kind.bitVec k__z) k__T) bvr__16) t__18))
+  ((Term.mk (Kind.binop (Binop.lt s) (Term.mk (Kind.bitVec w__3) t__4) a) t__6))
+
+def b_or.r_lower_eq.a3.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (s : Bool) (w__9 : Int) (t__10 : Ty) (a : Term) (t__12 : Ty) (bvr__16 : Term) (k__z : Int) (k__T : Ty) (t__18 : Ty),
+  ((equal a bvr__16) && (decide ((lower_bound (Term.mk (Kind.binop (Binop.leq s) (Term.mk (Kind.bitVec w__9) t__10) a) t__12)) ≤ (to_z s (bv_of_lit (Term.mk (Kind.bitVec k__z) k__T)))))) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop (Binop.leq s) (Term.mk (Kind.bitVec w__9) t__10) a) t__12) (Term.mk (Kind.binop Binop.eq bvr__16 (Term.mk (Kind.bitVec k__z) k__T)) t__18))
+  ((Term.mk (Kind.binop (Binop.leq s) (Term.mk (Kind.bitVec w__9) t__10) a) t__12))
+
+def b_or.r_lower_eq.a4.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (s : Bool) (w__9 : Int) (t__10 : Ty) (a : Term) (t__12 : Ty) (k__z : Int) (k__T : Ty) (bvr__16 : Term) (t__18 : Ty),
+  ((equal a bvr__16) && (decide ((lower_bound (Term.mk (Kind.binop (Binop.leq s) (Term.mk (Kind.bitVec w__9) t__10) a) t__12)) ≤ (to_z s (bv_of_lit (Term.mk (Kind.bitVec k__z) k__T)))))) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop (Binop.leq s) (Term.mk (Kind.bitVec w__9) t__10) a) t__12) (Term.mk (Kind.binop Binop.eq (Term.mk (Kind.bitVec k__z) k__T) bvr__16) t__18))
+  ((Term.mk (Kind.binop (Binop.leq s) (Term.mk (Kind.bitVec w__9) t__10) a) t__12))
+
+def b_or.r_lower_eq.a5.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (bvr__16 : Term) (k__z : Int) (k__T : Ty) (t__18 : Ty) (s : Bool) (w__3 : Int) (t__4 : Ty) (a : Term) (t__6 : Ty),
+  ((equal a bvr__16) && (decide ((lower_bound (Term.mk (Kind.binop (Binop.lt s) (Term.mk (Kind.bitVec w__3) t__4) a) t__6)) ≤ (to_z s (bv_of_lit (Term.mk (Kind.bitVec k__z) k__T)))))) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop Binop.eq bvr__16 (Term.mk (Kind.bitVec k__z) k__T)) t__18) (Term.mk (Kind.binop (Binop.lt s) (Term.mk (Kind.bitVec w__3) t__4) a) t__6))
+  ((Term.mk (Kind.binop (Binop.lt s) (Term.mk (Kind.bitVec w__3) t__4) a) t__6))
+
+def b_or.r_lower_eq.a6.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (bvr__16 : Term) (k__z : Int) (k__T : Ty) (t__18 : Ty) (s : Bool) (w__9 : Int) (t__10 : Ty) (a : Term) (t__12 : Ty),
+  ((equal a bvr__16) && (decide ((lower_bound (Term.mk (Kind.binop (Binop.leq s) (Term.mk (Kind.bitVec w__9) t__10) a) t__12)) ≤ (to_z s (bv_of_lit (Term.mk (Kind.bitVec k__z) k__T)))))) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop Binop.eq bvr__16 (Term.mk (Kind.bitVec k__z) k__T)) t__18) (Term.mk (Kind.binop (Binop.leq s) (Term.mk (Kind.bitVec w__9) t__10) a) t__12))
+  ((Term.mk (Kind.binop (Binop.leq s) (Term.mk (Kind.bitVec w__9) t__10) a) t__12))
+
+def b_or.r_lower_eq.a7.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (k__z : Int) (k__T : Ty) (bvr__16 : Term) (t__18 : Ty) (s : Bool) (w__3 : Int) (t__4 : Ty) (a : Term) (t__6 : Ty),
+  ((equal a bvr__16) && (decide ((lower_bound (Term.mk (Kind.binop (Binop.lt s) (Term.mk (Kind.bitVec w__3) t__4) a) t__6)) ≤ (to_z s (bv_of_lit (Term.mk (Kind.bitVec k__z) k__T)))))) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop Binop.eq (Term.mk (Kind.bitVec k__z) k__T) bvr__16) t__18) (Term.mk (Kind.binop (Binop.lt s) (Term.mk (Kind.bitVec w__3) t__4) a) t__6))
+  ((Term.mk (Kind.binop (Binop.lt s) (Term.mk (Kind.bitVec w__3) t__4) a) t__6))
+
+def b_or.r_lower_eq.a8.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (k__z : Int) (k__T : Ty) (bvr__16 : Term) (t__18 : Ty) (s : Bool) (w__9 : Int) (t__10 : Ty) (a : Term) (t__12 : Ty),
+  ((equal a bvr__16) && (decide ((lower_bound (Term.mk (Kind.binop (Binop.leq s) (Term.mk (Kind.bitVec w__9) t__10) a) t__12)) ≤ (to_z s (bv_of_lit (Term.mk (Kind.bitVec k__z) k__T)))))) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop Binop.eq (Term.mk (Kind.bitVec k__z) k__T) bvr__16) t__18) (Term.mk (Kind.binop (Binop.leq s) (Term.mk (Kind.bitVec w__9) t__10) a) t__12))
+  ((Term.mk (Kind.binop (Binop.leq s) (Term.mk (Kind.bitVec w__9) t__10) a) t__12))
+
+def b_or.r_upper_bounds.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (s : Bool) (a : Term) (w__4 : Int) (t__5 : Ty) (t__6 : Ty) (bvr__14 : Bool) (bvr__16 : Term) (w__17 : Int) (t__18 : Ty) (t__19 : Ty),
+  ((decide (s = bvr__14)) && (equal a bvr__16)) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec w__4) t__5)) t__6) (Term.mk (Kind.binop (Binop.lt bvr__14) bvr__16 (Term.mk (Kind.bitVec w__17) t__18)) t__19))
+  ((if (decide ((upper_bound (Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec w__4) t__5)) t__6)) ≤ (upper_bound (Term.mk (Kind.binop (Binop.lt bvr__14) bvr__16 (Term.mk (Kind.bitVec w__17) t__18)) t__19))))
+   then (Term.mk (Kind.binop (Binop.lt bvr__14) bvr__16 (Term.mk (Kind.bitVec w__17) t__18)) t__19)
+   else (Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec w__4) t__5)) t__6)))
+
+def b_or.r_upper_bounds.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (s : Bool) (a : Term) (w__4 : Int) (t__5 : Ty) (t__6 : Ty) (bvr__20 : Bool) (bvr__22 : Term) (w__23 : Int) (t__24 : Ty) (t__25 : Ty),
+  ((decide (s = bvr__20)) && (equal a bvr__22)) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec w__4) t__5)) t__6) (Term.mk (Kind.binop (Binop.leq bvr__20) bvr__22 (Term.mk (Kind.bitVec w__23) t__24)) t__25))
+  ((if (decide ((upper_bound (Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec w__4) t__5)) t__6)) ≤ (upper_bound (Term.mk (Kind.binop (Binop.leq bvr__20) bvr__22 (Term.mk (Kind.bitVec w__23) t__24)) t__25))))
+   then (Term.mk (Kind.binop (Binop.leq bvr__20) bvr__22 (Term.mk (Kind.bitVec w__23) t__24)) t__25)
+   else (Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec w__4) t__5)) t__6)))
+
+def b_or.r_upper_bounds.a3.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (s : Bool) (a : Term) (w__10 : Int) (t__11 : Ty) (t__12 : Ty) (bvr__14 : Bool) (bvr__16 : Term) (w__17 : Int) (t__18 : Ty) (t__19 : Ty),
+  ((decide (s = bvr__14)) && (equal a bvr__16)) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec w__10) t__11)) t__12) (Term.mk (Kind.binop (Binop.lt bvr__14) bvr__16 (Term.mk (Kind.bitVec w__17) t__18)) t__19))
+  ((if (decide ((upper_bound (Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec w__10) t__11)) t__12)) ≤ (upper_bound (Term.mk (Kind.binop (Binop.lt bvr__14) bvr__16 (Term.mk (Kind.bitVec w__17) t__18)) t__19))))
+   then (Term.mk (Kind.binop (Binop.lt bvr__14) bvr__16 (Term.mk (Kind.bitVec w__17) t__18)) t__19)
+   else (Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec w__10) t__11)) t__12)))
+
+def b_or.r_upper_bounds.a4.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (s : Bool) (a : Term) (w__10 : Int) (t__11 : Ty) (t__12 : Ty) (bvr__20 : Bool) (bvr__22 : Term) (w__23 : Int) (t__24 : Ty) (t__25 : Ty),
+  ((decide (s = bvr__20)) && (equal a bvr__22)) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec w__10) t__11)) t__12) (Term.mk (Kind.binop (Binop.leq bvr__20) bvr__22 (Term.mk (Kind.bitVec w__23) t__24)) t__25))
+  ((if (decide ((upper_bound (Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec w__10) t__11)) t__12)) ≤ (upper_bound (Term.mk (Kind.binop (Binop.leq bvr__20) bvr__22 (Term.mk (Kind.bitVec w__23) t__24)) t__25))))
+   then (Term.mk (Kind.binop (Binop.leq bvr__20) bvr__22 (Term.mk (Kind.bitVec w__23) t__24)) t__25)
+   else (Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec w__10) t__11)) t__12)))
+
+def b_or.r_lower_bounds.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (s : Bool) (w__3 : Int) (t__4 : Ty) (a : Term) (t__6 : Ty) (bvr__14 : Bool) (w__16 : Int) (t__17 : Ty) (bvr__18 : Term) (t__19 : Ty),
+  ((decide (s = bvr__14)) && (equal a bvr__18)) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop (Binop.lt s) (Term.mk (Kind.bitVec w__3) t__4) a) t__6) (Term.mk (Kind.binop (Binop.lt bvr__14) (Term.mk (Kind.bitVec w__16) t__17) bvr__18) t__19))
+  ((if (decide ((lower_bound (Term.mk (Kind.binop (Binop.lt s) (Term.mk (Kind.bitVec w__3) t__4) a) t__6)) ≥ (lower_bound (Term.mk (Kind.binop (Binop.lt bvr__14) (Term.mk (Kind.bitVec w__16) t__17) bvr__18) t__19))))
+   then (Term.mk (Kind.binop (Binop.lt bvr__14) (Term.mk (Kind.bitVec w__16) t__17) bvr__18) t__19)
+   else (Term.mk (Kind.binop (Binop.lt s) (Term.mk (Kind.bitVec w__3) t__4) a) t__6)))
+
+def b_or.r_lower_bounds.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (s : Bool) (w__3 : Int) (t__4 : Ty) (a : Term) (t__6 : Ty) (bvr__20 : Bool) (w__22 : Int) (t__23 : Ty) (bvr__24 : Term) (t__25 : Ty),
+  ((decide (s = bvr__20)) && (equal a bvr__24)) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop (Binop.lt s) (Term.mk (Kind.bitVec w__3) t__4) a) t__6) (Term.mk (Kind.binop (Binop.leq bvr__20) (Term.mk (Kind.bitVec w__22) t__23) bvr__24) t__25))
+  ((if (decide ((lower_bound (Term.mk (Kind.binop (Binop.lt s) (Term.mk (Kind.bitVec w__3) t__4) a) t__6)) ≥ (lower_bound (Term.mk (Kind.binop (Binop.leq bvr__20) (Term.mk (Kind.bitVec w__22) t__23) bvr__24) t__25))))
+   then (Term.mk (Kind.binop (Binop.leq bvr__20) (Term.mk (Kind.bitVec w__22) t__23) bvr__24) t__25)
+   else (Term.mk (Kind.binop (Binop.lt s) (Term.mk (Kind.bitVec w__3) t__4) a) t__6)))
+
+def b_or.r_lower_bounds.a3.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (s : Bool) (w__9 : Int) (t__10 : Ty) (a : Term) (t__12 : Ty) (bvr__14 : Bool) (w__16 : Int) (t__17 : Ty) (bvr__18 : Term) (t__19 : Ty),
+  ((decide (s = bvr__14)) && (equal a bvr__18)) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop (Binop.leq s) (Term.mk (Kind.bitVec w__9) t__10) a) t__12) (Term.mk (Kind.binop (Binop.lt bvr__14) (Term.mk (Kind.bitVec w__16) t__17) bvr__18) t__19))
+  ((if (decide ((lower_bound (Term.mk (Kind.binop (Binop.leq s) (Term.mk (Kind.bitVec w__9) t__10) a) t__12)) ≥ (lower_bound (Term.mk (Kind.binop (Binop.lt bvr__14) (Term.mk (Kind.bitVec w__16) t__17) bvr__18) t__19))))
+   then (Term.mk (Kind.binop (Binop.lt bvr__14) (Term.mk (Kind.bitVec w__16) t__17) bvr__18) t__19)
+   else (Term.mk (Kind.binop (Binop.leq s) (Term.mk (Kind.bitVec w__9) t__10) a) t__12)))
+
+def b_or.r_lower_bounds.a4.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (s : Bool) (w__9 : Int) (t__10 : Ty) (a : Term) (t__12 : Ty) (bvr__20 : Bool) (w__22 : Int) (t__23 : Ty) (bvr__24 : Term) (t__25 : Ty),
+  ((decide (s = bvr__20)) && (equal a bvr__24)) = true →
+  Refines FS (b_or.spec (Term.mk (Kind.binop (Binop.leq s) (Term.mk (Kind.bitVec w__9) t__10) a) t__12) (Term.mk (Kind.binop (Binop.leq bvr__20) (Term.mk (Kind.bitVec w__22) t__23) bvr__24) t__25))
+  ((if (decide ((lower_bound (Term.mk (Kind.binop (Binop.leq s) (Term.mk (Kind.bitVec w__9) t__10) a) t__12)) ≥ (lower_bound (Term.mk (Kind.binop (Binop.leq bvr__20) (Term.mk (Kind.bitVec w__22) t__23) bvr__24) t__25))))
+   then (Term.mk (Kind.binop (Binop.leq bvr__20) (Term.mk (Kind.bitVec w__22) t__23) bvr__24) t__25)
+   else (Term.mk (Kind.binop (Binop.leq s) (Term.mk (Kind.bitVec w__9) t__10) a) t__12)))
+
+def b_or.r_default.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (v2 : Term),
+  Refines FS (b_or.spec v1 v2)
+  ((Term.mk (mk_commut_binop O Binop.or_ v1 v2) Ty.bool))
 
 def b_not.r_true_.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
@@ -283,6 +867,80 @@ def b_not.r_default.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
   ∀ (sv : Term) (res : Term), b_not.r_default O sv = some res →
   Refines FS (b_not.spec sv) res
+
+def b_not.r_true_.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (t__2 : Ty),
+  Refines FS (b_not.spec (Term.mk (Kind.bool true) t__2))
+  (v_false)
+
+def b_not.r_false_.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (t__2 : Ty),
+  Refines FS (b_not.spec (Term.mk (Kind.bool false) t__2))
+  (v_true)
+
+def b_not.r_not.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (sv : Term) (t__3 : Ty),
+  Refines FS (b_not.spec (Term.mk (Kind.unop Unop.not_ sv) t__3))
+  (sv)
+
+def b_not.r_lt.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (signed : Bool) (v1 : Term) (v2 : Term) (t__5 : Ty),
+  Refines FS (b_not.spec (Term.mk (Kind.binop (Binop.lt signed) v1 v2) t__5))
+  ((O.bv_leq signed v2 v1))
+
+def b_not.r_leq.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (signed : Bool) (v1 : Term) (v2 : Term) (t__5 : Ty),
+  Refines FS (b_not.spec (Term.mk (Kind.binop (Binop.leq signed) v1 v2) t__5))
+  ((O.bv_lt signed v2 v1))
+
+def b_not.r_or_.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (v2 : Term) (t__4 : Ty),
+  Refines FS (b_not.spec (Term.mk (Kind.binop Binop.or_ v1 v2) t__4))
+  ((O.b_and (O.b_not v1) (O.b_not v2)))
+
+def b_not.r_and_.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (v2 : Term) (t__4 : Ty),
+  Refines FS (b_not.spec (Term.mk (Kind.binop Binop.and_ v1 v2) t__4))
+  ((O.b_or (O.b_not v1) (O.b_not v2)))
+
+def b_not.r_ite.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (g : Term) (a : Term) (b : Term) (t__5 : Ty),
+  Refines FS (b_not.spec (Term.mk (Kind.triop Triop.ite g a b) t__5))
+  ((O.b_ite g (O.b_not a) (O.b_not b)))
+
+def b_not.r_eq_bit.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (bv__z : Int) (bv__T : Ty) (v : Term) (t__5 : Ty),
+  (decide ((ty (Term.mk (Kind.bitVec bv__z) bv__T)) = (Ty.bitVector (1 : Int)))) = true →
+  Refines FS (b_not.spec (Term.mk (Kind.binop Binop.eq (Term.mk (Kind.bitVec bv__z) bv__T) v) t__5))
+  ((O.sem_eq (lit (lit_not (bv_of_lit (Term.mk (Kind.bitVec bv__z) bv__T)))) v))
+
+def b_not.r_eq_bit.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v : Term) (bv__z : Int) (bv__T : Ty) (t__5 : Ty),
+  (decide ((ty (Term.mk (Kind.bitVec bv__z) bv__T)) = (Ty.bitVector (1 : Int)))) = true →
+  Refines FS (b_not.spec (Term.mk (Kind.binop Binop.eq v (Term.mk (Kind.bitVec bv__z) bv__T)) t__5))
+  ((O.sem_eq (lit (lit_not (bv_of_lit (Term.mk (Kind.bitVec bv__z) bv__T)))) v))
+
+def b_not.r_distinct.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (l : Term) (r : Term) (t__7 : Ty),
+  Refines FS (b_not.spec (Term.mk (Kind.nop Nop.distinct (l :: (r :: []))) t__7))
+  ((O.sem_eq l r))
+
+def b_not.r_default.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (sv : Term),
+  Refines FS (b_not.spec sv)
+  ((Term.mk (Kind.unop Unop.not_ sv) Ty.bool))
 
 def b_ite.r_true_.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
@@ -373,6 +1031,136 @@ def b_ite.r_default.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
   ∀ (guard : Term) (if_ : Term) (else_ : Term) (res : Term), b_ite.r_default O guard if_ else_ = some res →
   Refines FS (b_ite.spec guard if_ else_) res
+
+def b_ite.r_true_.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (if_ : Term) (else_ : Term) (t__2 : Ty),
+  Refines FS (b_ite.spec (Term.mk (Kind.bool true) t__2) if_ else_)
+  (if_)
+
+def b_ite.r_false_.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (if_ : Term) (else_ : Term) (t__2 : Ty),
+  Refines FS (b_ite.spec (Term.mk (Kind.bool false) t__2) if_ else_)
+  (else_)
+
+def b_ite.r_bool.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (guard : Term) (t__3 : Ty) (t__5 : Ty),
+  Refines FS (b_ite.spec guard (Term.mk (Kind.bool true) t__3) (Term.mk (Kind.bool false) t__5))
+  (guard)
+
+def b_ite.r_not_bool.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (guard : Term) (t__3 : Ty) (t__5 : Ty),
+  Refines FS (b_ite.spec guard (Term.mk (Kind.bool false) t__3) (Term.mk (Kind.bool true) t__5))
+  ((O.b_not guard))
+
+def b_ite.r_false_then.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (guard : Term) (else_ : Term) (t__3 : Ty),
+  Refines FS (b_ite.spec guard (Term.mk (Kind.bool false) t__3) else_)
+  ((O.b_and (O.b_not guard) else_))
+
+def b_ite.r_true_then.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (guard : Term) (else_ : Term) (t__3 : Ty),
+  Refines FS (b_ite.spec guard (Term.mk (Kind.bool true) t__3) else_)
+  ((O.b_or guard else_))
+
+def b_ite.r_false_else.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (guard : Term) (if_ : Term) (t__4 : Ty),
+  Refines FS (b_ite.spec guard if_ (Term.mk (Kind.bool false) t__4))
+  ((O.b_and guard if_))
+
+def b_ite.r_true_else.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (guard : Term) (if_ : Term) (t__4 : Ty),
+  Refines FS (b_ite.spec guard if_ (Term.mk (Kind.bool true) t__4))
+  ((O.b_or (O.b_not guard) if_))
+
+def b_ite.r_bv_of_bool.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (guard : Term) (bvr__2 : Int) (t__3 : Ty) (bvr__4 : Int) (t__5 : Ty),
+  (((decide (bvr__2 = (1 : Int))) && (decide (bvr__4 = (0 : Int)))) && (is_bv (ty (Term.mk (Kind.bitVec bvr__2) t__3)))) = true →
+  Refines FS (b_ite.spec guard (Term.mk (Kind.bitVec bvr__2) t__3) (Term.mk (Kind.bitVec bvr__4) t__5))
+  ((O.bv_of_bool (size (Term.mk (Kind.bitVec bvr__2) t__3)) guard))
+
+def b_ite.r_not_guard.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (if_ : Term) (else_ : Term) (g : Term) (t__3 : Ty),
+  Refines FS (b_ite.spec (Term.mk (Kind.unop Unop.not_ g) t__3) if_ else_)
+  ((O.b_ite g else_ if_))
+
+def b_ite.r_guard_then.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (guard : Term) (if_ : Term) (else_ : Term),
+  (equal guard if_) = true →
+  Refines FS (b_ite.spec guard if_ else_)
+  ((O.b_or guard else_))
+
+def b_ite.r_guard_else.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (guard : Term) (if_ : Term) (else_ : Term),
+  (equal guard else_) = true →
+  Refines FS (b_ite.spec guard if_ else_)
+  ((O.b_and guard if_))
+
+def b_ite.r_ite_then.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (guard : Term) (else_ : Term) (bvr__3 : Term) (x : Term) (w__5 : Term) (t__6 : Ty),
+  (equal guard bvr__3) = true →
+  Refines FS (b_ite.spec guard (Term.mk (Kind.triop Triop.ite bvr__3 x w__5) t__6) else_)
+  ((O.b_ite guard x else_))
+
+def b_ite.r_ite_else.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (guard : Term) (if_ : Term) (bvr__4 : Term) (w__5 : Term) (y : Term) (t__7 : Ty),
+  (equal guard bvr__4) = true →
+  Refines FS (b_ite.spec guard if_ (Term.mk (Kind.triop Triop.ite bvr__4 w__5 y) t__7))
+  ((O.b_ite guard if_ y))
+
+def b_ite.r_and_ite_then.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (else_ : Term) (g : Term) (w__3 : Term) (t__4 : Ty) (bvr__7 : Term) (x : Term) (w__9 : Term) (t__10 : Ty),
+  (equal g bvr__7) = true →
+  Refines FS (b_ite.spec (Term.mk (Kind.binop Binop.and_ g w__3) t__4) (Term.mk (Kind.triop Triop.ite bvr__7 x w__9) t__10) else_)
+  ((O.b_ite (Term.mk (Kind.binop Binop.and_ g w__3) t__4) x else_))
+
+def b_ite.r_and_ite_then.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (else_ : Term) (w__3 : Term) (g : Term) (t__4 : Ty) (bvr__7 : Term) (x : Term) (w__9 : Term) (t__10 : Ty),
+  (equal g bvr__7) = true →
+  Refines FS (b_ite.spec (Term.mk (Kind.binop Binop.and_ w__3 g) t__4) (Term.mk (Kind.triop Triop.ite bvr__7 x w__9) t__10) else_)
+  ((O.b_ite (Term.mk (Kind.binop Binop.and_ w__3 g) t__4) x else_))
+
+def b_ite.r_or_ite_else.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (if_ : Term) (g : Term) (w__3 : Term) (t__4 : Ty) (bvr__8 : Term) (w__9 : Term) (y : Term) (t__11 : Ty),
+  (equal g bvr__8) = true →
+  Refines FS (b_ite.spec (Term.mk (Kind.binop Binop.or_ g w__3) t__4) if_ (Term.mk (Kind.triop Triop.ite bvr__8 w__9 y) t__11))
+  ((O.b_ite (Term.mk (Kind.binop Binop.or_ g w__3) t__4) if_ y))
+
+def b_ite.r_or_ite_else.a2.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (if_ : Term) (w__3 : Term) (g : Term) (t__4 : Ty) (bvr__8 : Term) (w__9 : Term) (y : Term) (t__11 : Ty),
+  (equal g bvr__8) = true →
+  Refines FS (b_ite.spec (Term.mk (Kind.binop Binop.or_ w__3 g) t__4) if_ (Term.mk (Kind.triop Triop.ite bvr__8 w__9 y) t__11))
+  ((O.b_ite (Term.mk (Kind.binop Binop.or_ w__3 g) t__4) if_ y))
+
+def b_ite.r_same.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (guard : Term) (if_ : Term) (else_ : Term),
+  (equal if_ else_) = true →
+  Refines FS (b_ite.spec guard if_ else_)
+  (if_)
+
+def b_ite.r_default.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (guard : Term) (if_ : Term) (else_ : Term),
+  Refines FS (b_ite.spec guard if_ else_)
+  ((Term.mk (Kind.triop Triop.ite guard if_ else_) (ty if_)))
 
 def sem_eq.r_same.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
@@ -574,20 +1362,88 @@ def b_mk_exists.r_default.Stmt : Prop :=
   ∀ (binders : (List (Int × Ty))) (body : Term) (res : Term), b_mk_exists.r_default O binders body = some res →
   Refines FS (b_mk_exists.spec binders body) res
 
-def sem_eq_untyped.r_main.Stmt : Prop :=
+def b_mk_exists.r_empty.a1.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (v1 : Term) (v2 : Term) (res : Term), sem_eq_untyped.r_main O v1 v2 = some res →
+  ∀ (binders : (List (Int × Ty))) (body : Term),
+  (no_binders (used_binders binders body)) = true →
+  Refines FS (b_mk_exists.spec binders body)
+  (body)
+
+def b_mk_exists.r_default.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (binders : (List (Int × Ty))) (body : Term),
+  Refines FS (b_mk_exists.spec binders body)
+  ((Term.mk (Kind.exists_ (used_binders binders body) body) Ty.bool))
+
+def sem_eq_untyped.r_ill_typed.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (v2 : Term) (res : Term), sem_eq_untyped.r_ill_typed O v1 v2 = some res →
   Refines FS (sem_eq_untyped.spec v1 v2) res
+
+def sem_eq_untyped.r_typed.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (v2 : Term) (res : Term), sem_eq_untyped.r_typed O v1 v2 = some res →
+  Refines FS (sem_eq_untyped.spec v1 v2) res
+
+def sem_eq_untyped.r_ill_typed.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (v2 : Term),
+  (! (decide ((ty v1) = (ty v2)))) = true →
+  Refines FS (sem_eq_untyped.spec v1 v2)
+  (v_false)
+
+def sem_eq_untyped.r_typed.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (v1 : Term) (v2 : Term),
+  Refines FS (sem_eq_untyped.spec v1 v2)
+  ((O.sem_eq v1 v2))
 
 def b_distinct.r_small.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
   ∀ (l : (List Term)) (res : Term), b_distinct.r_small O l = some res →
   Refines FS (b_distinct.spec l) res
 
+def b_distinct.r_distinct.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (l : (List Term)) (res : Term), b_distinct.r_distinct O l = some res →
+  Refines FS (b_distinct.spec l) res
+
+def b_distinct.r_not_distinct.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (l : (List Term)) (res : Term), b_distinct.r_not_distinct O l = some res →
+  Refines FS (b_distinct.spec l) res
+
 def b_distinct.r_default.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
   ∀ (l : (List Term)) (res : Term), b_distinct.r_default O l = some res →
   Refines FS (b_distinct.spec l) res
+
+def b_distinct.r_small.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (l : (List Term)),
+  (at_most_one l) = true →
+  Refines FS (b_distinct.spec l)
+  (v_true)
+
+def b_distinct.r_distinct.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (l : (List Term)),
+  (decide ((distinct_check l) = (some true))) = true →
+  Refines FS (b_distinct.spec l)
+  (v_true)
+
+def b_distinct.r_not_distinct.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (l : (List Term)),
+  (decide ((distinct_check l) = (some false))) = true →
+  Refines FS (b_distinct.spec l)
+  (v_false)
+
+def b_distinct.r_default.a1.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (l : (List Term)),
+  Refines FS (b_distinct.spec l)
+  ((Term.mk (Kind.nop Nop.distinct (O.orc.sort_by_tag l)) Ty.bool))
 
 def bv_of_bool.r_true_.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →

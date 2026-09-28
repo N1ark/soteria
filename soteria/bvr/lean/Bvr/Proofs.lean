@@ -1,4 +1,4 @@
-import Bvr.Proofs.Bool
+import Bvr.Proofs.BoolCases
 import Bvr.Proofs.Eq
 import Bvr.Proofs.Arith
 import Bvr.Proofs.ArithCases

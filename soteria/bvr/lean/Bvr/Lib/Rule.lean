@@ -14,8 +14,7 @@ macro "bvr_auto" : tactic => `(tactic| first
   | (bvr_rule_b; done)
   | (bvr_rule_typed; done)
   | (bvr_rule_ev; done)
-  | (bvr_rule_bounds; done)
-  | (bvr_cmp; done))
+  | (bvr_rule_bounds; done))
 
 /-- The rule tactic of `bv_lt_zero`: `v <s 0` is the sign bit of `v`. -/
 macro "bvr_msb" : tactic => `(tactic| (

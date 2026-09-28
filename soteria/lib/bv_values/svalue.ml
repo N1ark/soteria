@@ -505,9 +505,7 @@ module Make (V : Value_ext) () = struct
       masked (Z.to_int to_ - from_ + 1) (Z.shift_right l.z from_)
 
     let lit_zext k l = { w = l.w + Z.to_int k; z = l.z }
-
-    let lit_sext k l =
-      masked (l.w + Z.to_int k) (Z.signed_extract l.z 0 l.w)
+    let lit_sext k l = masked (l.w + Z.to_int k) (Z.signed_extract l.z 0 l.w)
 
     let lit_concat l r =
       { w = l.w + r.w; z = Z.logor (Z.shift_left l.z r.w) r.z }

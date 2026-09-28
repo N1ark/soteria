@@ -533,12 +533,58 @@ let cmp_ops = [ ("<", Lt); ("<=", Le); (">", Gt); (">=", Ge) ]
 let bit_ops =
   [ ("land", Land); ("lor", Lor); ("lxor", Lxor); ("lsl", Lsl); ("asr", Asr) ]
 
+(** Operators on terms: the smart constructor they call, and its leading
+    arguments. *)
+let term_ops =
+  let unchecked =
+    { e = ECall ("unchecked", []); ety = TData "checked"; eloc = Location.none }
+  in
+  let no = { e = EBool false; ety = TBool; eloc = Location.none } in
+  [
+    ("+", ("bv_add", [ unchecked ]));
+    ("-", ("bv_sub", [ unchecked ]));
+    ("*", ("bv_mul", [ unchecked ]));
+    ("~-", ("bv_neg", [ no ]));
+    ("land", ("bv_and", []));
+    ("lor", ("bv_or", []));
+    ("lxor", ("bv_xor", []));
+    ("lognot", ("bv_not", []));
+    ("lsl", ("bv_shl", []));
+    ("lsr", ("bv_lshr", []));
+    ("asr", ("bv_ashr", []));
+    ("++", ("bv_concat", []));
+    ("&&", ("b_and", []));
+    ("||", ("b_or", []));
+    ("not", ("b_not", []));
+    ("==", ("sem_eq", []));
+  ]
+
+(** A bit-vector value where a term is expected is its literal. *)
+let lift (e : Syntax.expr) =
+  match e.ety with
+  | TBv -> { e with e = ECall ("lit", [ e ]); ety = TTerm }
+  | _ -> e
+
 let rec expr env ?expected (e : expression) : Syntax.expr =
   let loc = e.pexp_loc in
   let mk ety d =
-    Option.iter (fun expected -> expect loc ~expected ety) expected;
-    { e = d; ety; eloc = loc }
+    match (expected, ety) with
+    | Some TTerm, TBv -> lift { e = d; ety; eloc = loc }
+    | _ ->
+        Option.iter (fun expected -> expect loc ~expected ety) expected;
+        { e = d; ety; eloc = loc }
   in
+  (* an operator on terms, if one of its operands is a term *)
+  let term_op op (args : Syntax.expr list) =
+    let f, pre = List.assoc op term_ops in
+    ignore (find_global env loc f);
+    let args = List.map lift args in
+    List.iter
+      (fun (a : Syntax.expr) -> expect a.eloc ~expected:TTerm a.ety)
+      args;
+    mk TTerm (ECall (f, pre @ args))
+  in
+  let is_term (a : Syntax.expr) = a.ety = TTerm in
   match e.pexp_desc with
   | Pexp_ident { txt = Lident x; _ } -> (
       match List.assoc_opt x env.vars with
@@ -631,10 +677,12 @@ let rec expr env ?expected (e : expression) : Syntax.expr =
           mk TTerm (ENode (k, t))
       | ("+" | "-" | "*"), [ a; b ] -> (
           let a = expr env a in
+          let b = expr env b in
           match a.ety with
+          | _ when is_term a || is_term b -> term_op op [ a; b ]
           | TBv ->
               (* modular arithmetic on bit-vector values *)
-              let b = expr env ~expected:TBv b in
+              expect b.eloc ~expected:TBv b.ety;
               let f =
                 match op with
                 | "+" -> "lit_add"
@@ -645,7 +693,7 @@ let rec expr env ?expected (e : expression) : Syntax.expr =
               mk TBv (ECall (f, [ a; b ]))
           | _ ->
               expect a.eloc ~expected:TInt a.ety;
-              let b = expr env ~expected:TInt b in
+              expect b.eloc ~expected:TInt b.ety;
               mk TInt (EBinop (Arith (List.assoc op int_ops), a, b)))
       | ("<" | "<=" | ">" | ">="), [ a; b ] ->
           let a = expr env ~expected:TInt a and b = expr env ~expected:TInt b in
@@ -658,32 +706,48 @@ let rec expr env ?expected (e : expression) : Syntax.expr =
               a.ety;
           mk TBool (EBinop (Arith (if op = "=" then Eq else Ne), a, b))
       | ("&&" | "||"), [ a; b ] ->
-          let a = expr env ~expected:TBool a
-          and b = expr env ~expected:TBool b in
-          mk TBool (EBinop (Arith (if op = "&&" then And else Or), a, b))
-      | ("land" | "lor" | "lxor" | "lsl" | "asr"), [ a; b ] -> (
           let a = expr env a in
+          let b = expr env b in
+          if is_term a || is_term b then term_op op [ a; b ]
+          else (
+            expect a.eloc ~expected:TBool a.ety;
+            expect b.eloc ~expected:TBool b.ety;
+            mk TBool (EBinop (Arith (if op = "&&" then And else Or), a, b)))
+      | ("==" | "++"), [ a; b ] -> term_op op [ expr env a; expr env b ]
+      | ("land" | "lor" | "lxor" | "lsl" | "lsr" | "asr"), [ a; b ] -> (
+          let a = expr env a in
+          let b = expr env b in
           match (a.ety, op) with
-          | TBv, ("land" | "lor" | "lxor" | "lsl") ->
+          | _ when is_term a || is_term b -> term_op op [ a; b ]
+          | TBv, _ ->
               (* bitwise operations on bit-vector values *)
-              let b = expr env ~expected:TBv b in
+              expect b.eloc ~expected:TBv b.ety;
               let f =
                 match op with
                 | "land" -> "lit_and"
                 | "lor" -> "lit_or"
                 | "lxor" -> "lit_xor"
-                | _ -> "lit_shl"
+                | "lsl" -> "lit_shl"
+                | "lsr" -> "lit_lshr"
+                | _ -> "lit_ashr"
               in
               ignore (find_global env loc f);
               mk TBv (ECall (f, [ a; b ]))
           | _ ->
               expect a.eloc ~expected:TInt a.ety;
-              let b = expr env ~expected:TInt b in
+              expect b.eloc ~expected:TInt b.ety;
+              if op = "lsr" then error loc "lsr is not defined on integers";
               mk TInt (EBinop (Bit (List.assoc op bit_ops), a, b)))
-      | "not", [ a ] -> mk TBool (EUnop (Not, expr env ~expected:TBool a))
+      | "not", [ a ] ->
+          let a = expr env a in
+          if is_term a then term_op op [ a ]
+          else (
+            expect a.eloc ~expected:TBool a.ety;
+            mk TBool (EUnop (Not, a)))
       | ("~-" | "-"), [ a ] -> (
           let a = expr env a in
           match a.ety with
+          | TTerm -> term_op "~-" [ a ]
           | TBv ->
               ignore (find_global env loc "lit_neg");
               mk TBv (ECall ("lit_neg", [ a ]))
@@ -693,6 +757,7 @@ let rec expr env ?expected (e : expression) : Syntax.expr =
       | "lognot", [ a ] -> (
           let a = expr env a in
           match a.ety with
+          | TTerm -> term_op op [ a ]
           | TBv ->
               ignore (find_global env loc "lit_not");
               mk TBv (ECall ("lit_not", [ a ]))

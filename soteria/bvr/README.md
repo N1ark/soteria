@@ -44,7 +44,7 @@ fn size (v : t) : int = size_of_ty (ty v)
 
 Rule functions are proved per alternative of their rules:
 
-- `BitVec l` binds `l : bv`, the value of the literal.
+- `#l` (or `BitVec l`) binds `l : bv`, the value of the literal.
 - Each alternative of a rule (after expanding or-patterns and `[@comm]`) has
   its own statement, over the variables of its pattern and with its guard as
   a hypothesis: `f.r_name.aI.Stmt`. The statement of the rule is proved from
@@ -65,13 +65,34 @@ Rule functions are proved per alternative of their rules:
   forms remain available.
 - Patterns match the kind of a term directly: `BitVec z`, `Add (c, l, r)`.
 
+### Operators on terms
+
+On terms, the operators below build (in expressions) or match (in patterns)
+their node; in expressions they call its smart constructor, unchecked, and in
+patterns they match any overflow check (use `Add (c, a, b)` to bind it).
+
+| operator | node | smart constructor |
+|---|---|---|
+| `a + b`, `a - b`, `a * b` | `Add`, `Sub`, `Mul` | `bv_add unchecked`, ... |
+| `-a`, `~a` | `Neg`, `BvNot` | `bv_neg false`, `bv_not` |
+| `a land b`, `a lor b`, `a lxor b` | `BitAnd`, `BitOr`, `BitXor` | `bv_and`, ... |
+| `a lsl b`, `a lsr b`, `a asr b` | `Shl`, `LShr`, `AShr` | `bv_shl`, ... |
+| `a ++ b` | `BvConcat` | `bv_concat` |
+| `a && b`, `a \|\| b`, `not a` | `And`, `Or`, `Not` | `b_and`, `b_or`, `b_not` |
+| `a == b` | `Eq` | `sem_eq` |
+
+On `bv`s, `+`, `-`, `*`, unary `-`, `land`, `lor`, `lxor`, `lsl`, `lsr`, `asr`
+and `~` are the modular operations (`lit_add`, ...), and a `bv` where a term is
+expected stands for its literal: `| lits: #l, #r -> l + r`.
+
 ## Patterns
 
-- `0`, `1`, ... match bit-vector literals; `true` and `false` match boolean
-  literals.
-- A repeated variable matches equal terms: `| p, Not p -> v_false`.
+- `0`, `1`, ... match bit-vector literals, `#_` any of them, and `#x` binds
+  one (to its value in rules, to its unsigned integer in helpers); `true` and
+  `false` match boolean literals.
+- A repeated variable matches equal terms: `| p, not p -> v_false`.
 - `p [@comm]` also matches the operands of the binary operator `p`, or the
-  components of the pair `p`, swapped: `(1, BvNot v) [@comm]` matches both
+  components of the pair `p`, swapped: `(1, ~v) [@comm]` matches both
   `1, ~v` and `~v, 1`.
 - Or-patterns, `as`, `when` guards, `Some`/`None`, lists and partial records
   (`{ unsigned = true; _ }`) are supported. Each alternative of an or-pattern

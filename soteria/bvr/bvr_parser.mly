@@ -65,6 +65,12 @@ let rec plist loc = function
   | [] -> pconstr loc "[]" None
   | x :: l -> pconstr loc "::" (Some (pat loc (Ppat_tuple [ x; plist loc l ])))
 
+(* An operator on terms in a pattern: the node of the operator, whose
+   parameters (e.g. the overflow checks of [Add]) are left unconstrained. *)
+let pnode loc op args =
+  let params = match op with "Add" | "Sub" | "Mul" | "Neg" -> [ pat loc Ppat_any ] | _ -> [] in
+  pconstr loc op (Some (tuple_or_one (fun l -> pat loc (Ppat_tuple l)) (params @ args)))
+
 let neg loc (e : expression) =
   match e.pexp_desc with
   | Pexp_constant (Pconst_integer (s, None)) -> exp loc (Pexp_constant (Pconst_integer ("-" ^ s, None)))
@@ -72,10 +78,11 @@ let neg loc (e : expression) =
 %}
 
 %token <string> LID UID INT
-%token AS ASR ASSERT ELSE FALSE FN IF IN LAND LET LOR LSL LXOR MATCH ORACLE PRIM RULE THEN TRUE WHEN WITH
+%token AS ASR ASSERT ELSE FALSE FN IF IN LAND LET LOR LSL LSR LXOR MATCH NOT ORACLE PRIM RULE THEN TRUE
+%token WHEN WITH
 %token LBRACKETAT COLONCOLON ARROW LTBAR LE GE NE ANDAND BARBAR
 %token LPAREN RPAREN LBRACKET RBRACKET LBRACE RBRACE COMMA SEMI COLON BAR EQ LT GT PLUS MINUS STAR DOT
-%token UNDERSCORE EOF
+%token EQEQ PLUSPLUS HASH TILDE UNDERSCORE EOF
 
 (* the bodies of [let], [match] and [if] extend as far as possible *)
 %nonassoc below_SEMI
@@ -159,10 +166,14 @@ cases:
 
 case:
   | c = case_body { c }
-  | r = LID COLON c = case_body
+  | r = rule_name COLON c = case_body
     { let loc = mkloc $loc(r) in
       let r = attr loc "r" [ eval_item loc (ident loc r) ] in
       { c with pc_lhs = { c.pc_lhs with ppat_attributes = c.pc_lhs.ppat_attributes @ [ r ] } } }
+
+rule_name:
+  | r = LID { r }
+  | NOT { "not" }
 
 case_body:
   | p = pattern g = option(preceded(WHEN, seq_expr)) ARROW e = seq_expr { { pc_lhs = p; pc_guard = g; pc_rhs = e } }
@@ -202,6 +213,7 @@ cmp_op:
   | GT { ">" }
   | GE { ">=" }
   | LTBAR { "<|" }
+  | EQEQ { "==" }
 
 (* the spec of a rule, which is followed by [=] *)
 spec_expr:
@@ -217,6 +229,7 @@ add_expr:
   | e = mul_expr { e }
   | a = add_expr PLUS b = mul_expr { binop (mkloc $loc) "+" a b }
   | a = add_expr MINUS b = mul_expr { binop (mkloc $loc) "-" a b }
+  | a = add_expr PLUSPLUS b = mul_expr { binop (mkloc $loc) "++" a b }
 
 mul_expr:
   | e = pow_expr { e }
@@ -232,16 +245,19 @@ pow_expr:
   | e = unary_expr { e }
   | a = unary_expr LSL b = pow_expr { binop (mkloc $loc) "lsl" a b }
   | a = unary_expr ASR b = pow_expr { binop (mkloc $loc) "asr" a b }
+  | a = unary_expr LSR b = pow_expr { binop (mkloc $loc) "lsr" a b }
 
 unary_expr:
   | e = app_expr { e }
   | MINUS e = unary_expr { neg (mkloc $loc) e }
+  | TILDE e = unary_expr { apply (mkloc $loc) (ident (mkloc $loc) "lognot") [ e ] }
 
 app_expr:
   | e = simple_expr { e }
   | f = LID args = nonempty_list(simple_expr) { apply (mkloc $loc) (ident (mkloc $loc(f)) f) args }
   | c = UID arg = simple_expr { econstr (mkloc $loc) c (Some arg) }
   | ASSERT e = simple_expr { exp (mkloc $loc) (Pexp_assert e) }
+  | NOT e = simple_expr { apply (mkloc $loc) (ident (mkloc $loc) "not") [ e ] }
 
 simple_expr:
   | x = LID { ident (mkloc $loc) x }
@@ -274,14 +290,55 @@ tuple_pat:
   | ps = separated_nonempty_list(COMMA, attr_pat) { tuple_or_one (fun l -> pat (mkloc $loc) (Ppat_tuple l)) ps }
 
 attr_pat:
-  | p = cons_pat { p }
+  | p = or_node_pat { p }
   | p = attr_pat LBRACKETAT a = LID RBRACKET
     { { p with ppat_attributes = p.ppat_attributes @ [ attr (mkloc $loc(a)) a [] ] } }
 
+(* operators on terms, as in expressions *)
+or_node_pat:
+  | p = and_node_pat { p }
+  | a = and_node_pat BARBAR b = or_node_pat { pnode (mkloc $loc) "Or" [ a; b ] }
+
+and_node_pat:
+  | p = eq_node_pat { p }
+  | a = eq_node_pat ANDAND b = and_node_pat { pnode (mkloc $loc) "And" [ a; b ] }
+
+eq_node_pat:
+  | p = cons_pat { p }
+  | a = cons_pat EQEQ b = cons_pat { pnode (mkloc $loc) "Eq" [ a; b ] }
+
 cons_pat:
-  | p = app_pat { p }
-  | a = app_pat COLONCOLON b = cons_pat
+  | p = add_pat { p }
+  | a = add_pat COLONCOLON b = cons_pat
     { let loc = mkloc $loc in pconstr loc "::" (Some (pat loc (Ppat_tuple [ a; b ]))) }
+
+add_pat:
+  | p = mul_pat { p }
+  | a = add_pat PLUS b = mul_pat { pnode (mkloc $loc) "Add" [ a; b ] }
+  | a = add_pat MINUS b = mul_pat { pnode (mkloc $loc) "Sub" [ a; b ] }
+  | a = add_pat PLUSPLUS b = mul_pat { pnode (mkloc $loc) "BvConcat" [ a; b ] }
+
+mul_pat:
+  | p = pow_pat { p }
+  | a = mul_pat STAR b = pow_pat { pnode (mkloc $loc) "Mul" [ a; b ] }
+  | a = mul_pat LAND b = pow_pat { pnode (mkloc $loc) "BitAnd" [ a; b ] }
+  | a = mul_pat LOR b = pow_pat { pnode (mkloc $loc) "BitOr" [ a; b ] }
+  | a = mul_pat LXOR b = pow_pat { pnode (mkloc $loc) "BitXor" [ a; b ] }
+
+pow_pat:
+  | p = unary_pat { p }
+  | a = unary_pat LSL b = pow_pat { pnode (mkloc $loc) "Shl" [ a; b ] }
+  | a = unary_pat LSR b = pow_pat { pnode (mkloc $loc) "LShr" [ a; b ] }
+  | a = unary_pat ASR b = pow_pat { pnode (mkloc $loc) "AShr" [ a; b ] }
+
+unary_pat:
+  | p = app_pat { p }
+  | MINUS p = unary_pat
+    { match p.ppat_desc with
+      | Ppat_constant (Pconst_integer (i, None)) -> pat (mkloc $loc) (Ppat_constant (Pconst_integer ("-" ^ i, None)))
+      | _ -> pnode (mkloc $loc) "Neg" [ p ] }
+  | TILDE p = unary_pat { pnode (mkloc $loc) "BvNot" [ p ] }
+  | NOT p = unary_pat { pnode (mkloc $loc) "Not" [ p ] }
 
 app_pat:
   | p = simple_pat { p }
@@ -294,7 +351,8 @@ simple_pat:
   | TRUE { pconstr (mkloc $loc) "true" None }
   | FALSE { pconstr (mkloc $loc) "false" None }
   | i = INT { pat (mkloc $loc) (Ppat_constant (Pconst_integer (i, None))) }
-  | MINUS i = INT { pat (mkloc $loc) (Ppat_constant (Pconst_integer ("-" ^ i, None))) }
+  | HASH x = LID { pconstr (mkloc $loc) "BitVec" (Some (pat (mkloc $loc(x)) (Ppat_var { txt = x; loc = mkloc $loc(x) }))) }
+  | HASH UNDERSCORE { pconstr (mkloc $loc) "BitVec" (Some (pat (mkloc $loc) Ppat_any)) }
   | LPAREN RPAREN { pconstr (mkloc $loc) "()" None }
   | LPAREN p = pattern RPAREN { p }
   | LPAREN p = pattern COLON t = typ RPAREN { pat (mkloc $loc) (Ppat_constraint (p, t)) }

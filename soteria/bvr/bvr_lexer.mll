@@ -17,8 +17,10 @@ let keywords =
     ("let", LET);
     ("lor", LOR);
     ("lsl", LSL);
+    ("lsr", LSR);
     ("lxor", LXOR);
     ("match", MATCH);
+    ("not", NOT);
     ("oracle", ORACLE);
     ("prim", PRIM);
     ("rule", RULE);
@@ -43,6 +45,8 @@ rule token = parse
   | uid as s { UID s }
   | "[@" { LBRACKETAT }
   | "::" { COLONCOLON }
+  | "==" { EQEQ }
+  | "++" { PLUSPLUS }
   | "->" { ARROW }
   | "<|" { LTBAR }
   | "<=" { LE }
@@ -67,6 +71,8 @@ rule token = parse
   | '-' { MINUS }
   | '*' { STAR }
   | '.' { DOT }
+  | '#' { HASH }
+  | '~' { TILDE }
   | eof { EOF }
   | _ as c { raise (Error (lexbuf.lex_start_p, Printf.sprintf "unexpected character %C" c)) }
 

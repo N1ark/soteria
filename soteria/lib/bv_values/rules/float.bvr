@@ -26,16 +26,16 @@ rule float_cast (rounding : rm) (fp : fp) (v : t) :
 rule float_eq (v1 v2 : t) : FEq (v1, v2) <| TBool =
   match (v1, v2) with
   | lits: Float f1, Float f2 -> of_bool (f_eq f1 f2)
-  | same: v, v -> b_not (float_is_floatclass NaN v1)
+  | same: v, v -> not (float_is_floatclass NaN v1)
   (* Against a constant, [fp.eq] is decidable structurally *)
   | lit_l: Float f, _ ->
       if f_is_nan f then v_false
       else if f_is_zero f then float_is_floatclass Zero v2
-      else sem_eq v1 v2
+      else v1 == v2
   | lit_r: _, Float f ->
       if f_is_nan f then v_false
       else if f_is_zero f then float_is_floatclass Zero v1
-      else sem_eq v1 v2
+      else v1 == v2
   | default: _ -> mk_commut_binop FEq v1 v2 <| TBool
 
 rule float_lt (v1 v2 : t) : FLt (v1, v2) <| TBool =
@@ -107,7 +107,7 @@ fn raw_fmod_of_rem (r v1 v2 : t) : t =
    cheaper way to obtain one can reuse it. *)
 rule float_fmod_of_rem (r v1 v2 : t) : raw_fmod_of_rem r v1 v2 =
   b_ite
-    (sem_eq (float_is_negative r) (float_is_negative v1))
+    (float_is_negative r == float_is_negative v1)
     r
     (float_add r
        (b_ite (float_is_negative v1) (float_neg (float_abs v2)) (float_abs v2)))

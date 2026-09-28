@@ -63,7 +63,7 @@ prim lit_udiv : bv -> bv -> bv
 prim lit_sdiv : bv -> bv -> bv
 
 (* Bitwise operations and shifts, at the width of the first operand; [land],
-   [lor], [lxor], [lognot] and [lsl] on [bv]s stand for the first five. Shifts
+   [lor], [lxor], [~], [lsl], [lsr] and [asr] on [bv]s stand for them. Shifts
    by at least the width give 0 (all ones for a negative [lit_ashr]). *)
 prim lit_and : bv -> bv -> bv
 prim lit_or : bv -> bv -> bv
@@ -195,9 +195,9 @@ fn lsb (z : int) : int = if z = 0 then 128 else log2 (z land -z)
 
 fn msb_of (v : t) : int =
   match v with
-  | BitVec z when z > 0 -> log2 z
+  | #z when z > 0 -> log2 z
   | 0 -> size v - 1
-  | BitAnd (bv1, bv2) -> zmin (msb_of bv1) (msb_of bv2)
+  | bv1 land bv2 -> zmin (msb_of bv1) (msb_of bv2)
   | Ite (_, l, r) -> zmax (msb_of l) (msb_of r)
   | BvExtend (false, _, v) -> msb_of v
   | _ -> size v - 1
@@ -253,7 +253,7 @@ fn sure_neq (a b : t) : bool =
   (not (ty a = ty b))
   ||
   match (a, b) with
-  | BitVec a, BitVec b -> not (a = b)
+  | #a, #b -> not (a = b)
   | Float a, Float b -> not (f_equal a b)
   | Bool a, Bool b -> not (a = b)
   | Ptr (la, oa), Ptr (lb, ob) -> sure_neq la lb || sure_neq oa ob
@@ -284,16 +284,16 @@ fn no_binders (l : (var * ty) list) : bool =
    it allows, read as an integer in its signedness ([c - 1] for [a < c]). *)
 fn upper_bound (v : t) : int =
   match v with
-  | Lt (s, _, (BitVec _ as c)) -> to_z s (bv_of_lit c) - 1
-  | Leq (s, _, (BitVec _ as c)) -> to_z s (bv_of_lit c)
+  | Lt (s, _, (#_ as c)) -> to_z s (bv_of_lit c) - 1
+  | Leq (s, _, (#_ as c)) -> to_z s (bv_of_lit c)
   | _ -> 0
 
 (* For a lower bound [c < a] or [c <= a] on [a], the smallest value of [a] that
    it allows ([c + 1] for [c < a]). *)
 fn lower_bound (v : t) : int =
   match v with
-  | Lt (s, (BitVec _ as c), _) -> to_z s (bv_of_lit c) + 1
-  | Leq (s, (BitVec _ as c), _) -> to_z s (bv_of_lit c)
+  | Lt (s, (#_ as c), _) -> to_z s (bv_of_lit c) + 1
+  | Leq (s, (#_ as c), _) -> to_z s (bv_of_lit c)
   | _ -> 0
 
 (* Compare *)

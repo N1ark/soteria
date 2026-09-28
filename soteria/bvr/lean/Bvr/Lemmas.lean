@@ -15,10 +15,6 @@ theorem eval_eq_ev {FS ρ t} (h : t.WT) : eval FS ρ t = ev FS ρ t := by
 /-- Types are matched exactly: [Ty.sort] is the identity. -/
 @[simp] theorem Ty.sort_eq (t : Ty) : t.sort = t := rfl
 
-theorem size_of_ty_of_sort {t : Ty} {n : Int} (h : t.sort = .bitVector n) :
-    size_of_ty t = n := by
-  simp at h; subst h; rfl
-
 theorem size_of_ty_of_bits {t : Ty} {n : Int} (h : t = .bitVector n ∨ t = .loc n) :
     size_of_ty t = n := by
   rcases h with rfl | rfl <;> rfl
@@ -41,9 +37,6 @@ def OLe (a b : Option Val) : Prop := ∀ v, a = some v → b = some v
 
 @[simp] theorem OLe.refl (a : Option Val) : OLe a a := fun _ h => h
 @[simp] theorem OLe.none (a : Option Val) : OLe none a := fun _ h => by cases h
-
-theorem OLe.some_iff {x : Val} {b : Option Val} : OLe (some x) b ↔ b = some x :=
-  ⟨fun h => h x rfl, fun h _ e => by cases e; exact h⟩
 
 theorem Refines.trans {FS : FloatSem} {a b c : Term} (h1 : Refines FS a b)
     (h2 : Refines FS b c) : Refines FS a c := by
@@ -232,22 +225,6 @@ end Bvr
 
 namespace Bvr
 
-/-- A unary operator can be pushed down the branches of an [ite]. -/
-theorem Refines.unop_ite {FS op g a b t t'} :
-    Refines FS (.mk (.unop op (.mk (.triop .ite g a b) t)) t')
-      (.mk (.triop .ite g (.mk (.unop op a) t') (.mk (.unop op b) t')) t') := by
-  refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
-  · have ⟨w1, w2⟩ := WT_unop.1 w
-    have ⟨w3, wg, wa, wb⟩ := WT_triop.1 w2
-    simp only [Triop.WT] at w3
-    obtain ⟨h1, h2, h3⟩ := w3
-    refine ⟨WT_triop.2 ⟨?_, wg, WT_unop.2 ⟨?_, wa⟩, WT_unop.2 ⟨?_, wb⟩⟩, rfl⟩
-    all_goals simp_all [Triop.WT]
-  · rw [eval_unop w, eval_ite (WT_unop.1 w).2] at e
-    have ⟨_, _, wa', wb'⟩ := WT_triop.1 w'
-    rw [eval_ite w', eval_unop wa', eval_unop wb']
-    split at e <;> simp_all
-
 end Bvr
 
 namespace Bvr
@@ -338,19 +315,5 @@ theorem BitVec.ofInt_zlognot {w : Nat} (z : Int) :
 end Bvr
 
 namespace Bvr
-
-/-- A rule with several alternatives fired through one of them. -/
-theorem orElse_eq_some {α} {a b : Option α} {r : α} (h : (a <|> b) = some r) :
-    a = some r ∨ b = some r := by
-  cases a <;> simp_all [HOrElse.hOrElse, OrElse.orElse, Option.orElse]
-
-theorem WT_and {a b t} : (Term.mk (.binop .and_ a b) t).WT ↔
-    a.ty.sort = .bool ∧ b.ty.sort = .bool ∧ t = .bool ∧ a.WT ∧ b.WT := by
-  simp [Term.WT, Binop.WT]
-  constructor
-  · rintro ⟨⟨h1, h2, h3⟩, h4, h5⟩; exact ⟨h1, h2, by cases t <;> simp_all [Ty.sort], h4, h5⟩
-  · rintro ⟨h1, h2, rfl, h4, h5⟩; exact ⟨⟨h1, h2, rfl⟩, h4, h5⟩
-
-theorem Ty.sort_eq_bool {t : Ty} : t.sort = .bool ↔ t = .bool := by simp
 
 end Bvr

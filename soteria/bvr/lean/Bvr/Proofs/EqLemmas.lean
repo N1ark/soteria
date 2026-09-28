@@ -9,9 +9,6 @@ open Classical
 
 /-! ## Evaluation yields values of the sort of the term -/
 
-theorem hasSort_bool_iff {v : Val} : v.hasSort .bool ↔ ∃ b, v = .bool b := by
-  cases v <;> simp [Val.hasSort]
-
 @[simp] theorem Val.hasSort_bool {b : Bool} {T : Ty} : (Val.bool b).hasSort T ↔ T = .bool := by
   cases T <;> simp [Val.hasSort]
 
@@ -177,11 +174,6 @@ end
 theorem eval_hasSort {FS ρ t v} (h : eval FS ρ t = some v) : v.hasSort t.ty.sort :=
   ev_hasSort ρ t (eval_WT h) v (by rw [← eval_eq_ev (eval_WT h)]; exact h)
 
-theorem eval_bool_val {FS ρ t v} (h : eval FS ρ t = some v) (ht : t.ty = .bool) :
-    ∃ b, v = .bool b := by
-  have := eval_hasSort h; rw [Ty.sort_eq, ht] at this
-  cases v <;> simp_all [Val.hasSort]
-
 /-! ## Equality -/
 
 theorem WT_eq {a b t} : (Term.mk (.binop .eq a b) t).WT ↔
@@ -228,8 +220,6 @@ theorem Refines.b_ite {FS : FloatSem} {O : Ops} {g a b g' a' b'} (hO : O.Sound F
 @[simp] theorem eval_of_bool {FS ρ} (b : Bool) : eval FS ρ (of_bool b) = some (.bool b) := by
   cases b <;> simp [of_bool]
 
-theorem Refines.of_bool_WT' {b : Bool} : (of_bool b).WT ∧ (of_bool b).ty = .bool := by simp
-
 theorem WT_float {f t} : (Term.mk (.float f) t).WT ↔ t = .float f.prec ∧ f.bits < 2 ^ f.prec.size := by
   simp [Term.WT]
 
@@ -238,14 +228,6 @@ theorem eval_float {FS ρ f t} (h : (Term.mk (.float f) t).WT) :
   rw [eval_eq_ev h, ev]
 
 theorem FloatLit.WF_of_WT {f t} (h : (Term.mk (.float f) t).WT) : f.WF := (WT_float.1 h).2
-
-theorem FloatLit.eq_of_val {f g : FloatLit} (hp : f.prec = g.prec) (hf : f.WF) (hg : g.WF)
-    (h : f.val.toNat = g.val.toNat) : f = g := by
-  cases f; cases g; simp only [FloatLit.mk.injEq] at *; subst hp
-  simp only [FloatLit.val, BitVec.toNat_ofNat] at h
-  simp only [FloatLit.WF] at hf hg
-  refine ⟨rfl, ?_⟩
-  rwa [Nat.mod_eq_of_lt hf, Nat.mod_eq_of_lt hg] at h
 
 theorem WT_ptr {l o t} : (Term.mk (.ptr l o) t).WT ↔ ∃ n : Int, 0 < n ∧ t = .pointer n ∧
     l.ty = .loc n ∧ o.ty = .bitVector n ∧ l.WT ∧ o.WT := by
@@ -272,23 +254,6 @@ theorem eval_ptr_eq_some {FS ρ l o t v} (h : (Term.mk (.ptr l o) t).WT) :
     intro n x y h1 h2 _
     exact hne n x n y h1 h2
 
-theorem eval_bitVec_range {FS ρ z t} (h : (Term.mk (.bitVec z) t).WT) :
-    ∃ n : Nat, 0 < n ∧ (t = .bitVector n ∨ t = .loc n) ∧ 0 ≤ z ∧ z < 2 ^ n ∧
-      eval FS ρ (.mk (.bitVec z) t) = some (.bv n (BitVec.ofInt n z)) := by
-  obtain ⟨n, hn, hT, h1, h2⟩ := WT_bitVec.1 h
-  exact ⟨n, hn, hT, h1, h2, by rw [eval_bitVec' (n := n) h hT]; simp⟩
-
-theorem BitVec.ofInt_inj {n : Nat} {a b : Int} (ha : 0 ≤ a) (ha' : a < 2 ^ n) (hb : 0 ≤ b)
-    (hb' : b < 2 ^ n) : BitVec.ofInt n a = BitVec.ofInt n b ↔ a = b := by
-  constructor
-  · intro h
-    have := congrArg BitVec.toNat h
-    simp only [BitVec.toNat_ofInt] at this
-    rw [Int.emod_eq_of_lt ha (by exact_mod_cast ha'), Int.emod_eq_of_lt hb (by exact_mod_cast hb')]
-      at this
-    omega
-  · rintro rfl; rfl
-
 /-! ## Floats -/
 
 end EqL
@@ -296,11 +261,6 @@ end EqL
 namespace FBits
 
 variable {p : Prec}
-
-theorem eq_comm' (x y : FBits p) : x.eq y = y.eq x := by
-  unfold eq
-  cases x.isNaN <;> cases y.isNaN <;> cases x.isZero <;> cases y.isZero <;>
-    simp [Bool.and_comm, BEq.comm]
 
 @[simp] theorem eq_self' (x : FBits p) : x.eq x = !x.isNaN := by
   unfold eq; cases x.isNaN <;> simp
@@ -312,9 +272,6 @@ theorem not_isNaN_of_isZero {x : FBits p} (h : x.isZero = true) : x.isNaN = fals
 theorem eq_of_isNaN_left {x : FBits p} (y : FBits p) (h : x.isNaN = true) : x.eq y = false := by
   simp [eq, h]
 
-theorem eq_of_isNaN_right (x : FBits p) {y : FBits p} (h : y.isNaN = true) : x.eq y = false := by
-  simp [eq, h]
-
 theorem eq_of_isZero_left {x : FBits p} (y : FBits p) (h : x.isZero = true) :
     x.eq y = y.isZero := by
   have hx := not_isNaN_of_isZero h
@@ -324,10 +281,6 @@ theorem eq_of_isZero_left {x : FBits p} (y : FBits p) (h : x.isZero = true) :
   · have : (x == y) = false := by
       simp only [beq_eq_false_iff_ne]; rintro rfl; exact hy h
     simp [hx, hy, this]
-
-theorem eq_of_isZero_right (x : FBits p) {y : FBits p} (h : y.isZero = true) :
-    x.eq y = x.isZero := by
-  rw [eq_comm']; exact eq_of_isZero_left x h
 
 theorem eq_of_ne_left {x : FBits p} (y : FBits p) (h1 : x.isNaN = false) (h2 : x.isZero = false) :
     x.eq y = decide (x = y) := by
@@ -437,17 +390,6 @@ theorem FloatLit.val_ofNat_toNat {p : Prec} (x : FBits p) :
 
 /-! ## Bit-vector operations -/
 
-theorem eval_bv_of_ty {FS ρ t v} {n : Int} (h : eval FS ρ t = some v)
-    (ht : t.ty = .bitVector n ∨ t.ty = .loc n) : 0 < n ∧ ∃ x, v = .bv n.toNat x := by
-  have := eval_hasSort h
-  rw [Ty.sort_eq] at this
-  rcases v with _ | ⟨m, x⟩ | _ | _ | _ | _ <;> rcases ht with ht | ht <;> rw [ht] at this <;>
-    simp [Val.hasSort] at this
-  all_goals
-    obtain ⟨h1, h2⟩ := this
-    subst h1
-    exact ⟨by omega, x, by simp⟩
-
 theorem checkedOp_eq_some {c : Checked} {so uo : ∀ {n : Nat}, BitVec n → BitVec n → Bool}
     {f : ∀ {n : Nat}, BitVec n → BitVec n → BitVec n} {a b v} :
     checkedOp c so uo f a b = some v ↔ ∃ n x y, a = some (.bv n x) ∧ b = some (.bv n y) ∧
@@ -471,35 +413,11 @@ theorem bvBin_eq_some {f : ∀ {n : Nat}, BitVec n → BitVec n → Option Val} 
     exact ⟨_, _, _, rfl, rfl, h⟩
   · rintro ⟨n, x, y, rfl, rfl, h⟩; simp [bvBin, h]
 
-theorem WT_bvbin {op a b t}
-    (hop : (∃ c, op = .add c) ∨ (∃ c, op = .sub c) ∨ (∃ c, op = .mul c) ∨ op = .bitAnd ∨
-      op = .bitOr) :
-    (Term.mk (.binop op a b) t).WT ↔
-      (∃ n : Int, 0 < n ∧ a.ty = .bitVector n) ∧ b.ty = a.ty ∧ t = a.ty ∧ a.WT ∧ b.WT := by
-  rcases hop with ⟨c, rfl⟩ | ⟨c, rfl⟩ | ⟨c, rfl⟩ | rfl | rfl <;>
-    simp [Term.WT, Binop.WT, and_assoc]
-
-theorem WT_bvunop {op a t} (hop : (∃ c, op = .neg c) ∨ op = .bvNot) :
-    (Term.mk (.unop op a) t).WT ↔
-      (∃ n : Int, 0 < n ∧ a.ty = .bitVector n) ∧ t = a.ty ∧ a.WT := by
-  rcases hop with ⟨c, rfl⟩ | rfl <;> simp [Term.WT, Unop.WT] <;> grind
-
 /-! ## If-then-else -/
 
 theorem WT_ite {g a b t} : (Term.mk (.triop .ite g a b) t).WT ↔
     g.ty = .bool ∧ b.ty = a.ty ∧ t = a.ty ∧ g.WT ∧ a.WT ∧ b.WT := by
   simp [Term.WT, Triop.WT, and_assoc]
-
-theorem eval_ite_eq_some {FS ρ g a b t v} (w : (Term.mk (.triop .ite g a b) t).WT) :
-    eval FS ρ (.mk (.triop .ite g a b) t) = some v ↔
-      (eval FS ρ g = some (.bool true) ∧ eval FS ρ a = some v) ∨
-        (eval FS ρ g = some (.bool false) ∧ eval FS ρ b = some v) := by
-  rw [eval_ite w]; split <;> simp_all
-
-theorem eval_ite_of {FS ρ g a b t} (w : (Term.mk (.triop .ite g a b) t).WT) {c : Bool}
-    (hg : eval FS ρ g = some (.bool c)) :
-    eval FS ρ (.mk (.triop .ite g a b) t) = if c then eval FS ρ a else eval FS ρ b := by
-  rw [eval_ite w, hg]; cases c <;> rfl
 
 end EqL
 end Bvr

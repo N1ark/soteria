@@ -120,12 +120,6 @@ theorem WT_arith {op : Binop} {a b : Term} {t : Ty}
   refine ⟨wa, wb, rfl, hb, n.toNat, by omega, ?_⟩
   rw [ha]; congr; omega
 
-theorem bvBin_map {k : Nat} (F : ∀ {n : Nat}, BitVec n → BitVec n → Option Val)
-    (a b : Option (BitVec k)) :
-    bvBin F (a.map (Val.bv k)) (b.map (Val.bv k)) =
-      (match a, b with | some x, some y => F x y | _, _ => none) := by
-  cases a <;> cases b <;> simp [bvBin]
-
 /-- The value of an arithmetic node. -/
 theorem evalBV_binop {FS ρ n} {op : Binop} {a b : Term} {t : Ty}
     (hop : ∀ a b t, op.WT a b t ↔ (∃ n : Int, 0 < n ∧ a = .bitVector n) ∧ b = a ∧ t = a)

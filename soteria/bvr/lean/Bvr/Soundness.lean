@@ -2898,6 +2898,70 @@ theorem bv_div.r_default.proof : bv_div.r_default.Stmt := by
   repeat' rcases Lib.orElse_some h with h | h
   · bvr_arm h (bv_div.r_default.a1.ok FS O hO)
 
+theorem bv_lt_zero.r_sext.a1.ok : bv_lt_zero.r_sext.a1.Stmt := bvr_proof% bv_lt_zero.r_sext.a1
+
+theorem bv_lt_zero.r_sext.proof : bv_lt_zero.r_sext.Stmt := by
+  intro FS O hO v res h
+  simp only [bv_lt_zero.r_sext] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt_zero.r_sext.a1.ok FS O hO)
+
+theorem bv_lt_zero.r_zext.a1.ok : bv_lt_zero.r_zext.a1.Stmt := bvr_proof% bv_lt_zero.r_zext.a1
+
+theorem bv_lt_zero.r_zext.proof : bv_lt_zero.r_zext.Stmt := by
+  intro FS O hO v res h
+  simp only [bv_lt_zero.r_zext] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt_zero.r_zext.a1.ok FS O hO)
+
+theorem bv_lt_zero.r_srem.a1.ok : bv_lt_zero.r_srem.a1.Stmt := bvr_proof% bv_lt_zero.r_srem.a1
+
+theorem bv_lt_zero.r_srem.proof : bv_lt_zero.r_srem.Stmt := by
+  intro FS O hO v res h
+  simp only [bv_lt_zero.r_srem] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt_zero.r_srem.a1.ok FS O hO)
+
+theorem bv_lt_zero.r_concat.a1.ok : bv_lt_zero.r_concat.a1.Stmt := bvr_proof% bv_lt_zero.r_concat.a1
+
+theorem bv_lt_zero.r_concat.proof : bv_lt_zero.r_concat.Stmt := by
+  intro FS O hO v res h
+  simp only [bv_lt_zero.r_concat] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt_zero.r_concat.a1.ok FS O hO)
+
+theorem bv_lt_zero.r_not.a1.ok : bv_lt_zero.r_not.a1.Stmt := bvr_proof% bv_lt_zero.r_not.a1
+
+theorem bv_lt_zero.r_not.proof : bv_lt_zero.r_not.Stmt := by
+  intro FS O hO v res h
+  simp only [bv_lt_zero.r_not] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt_zero.r_not.a1.ok FS O hO)
+
+theorem bv_lt_zero.r_of_bool.a1.ok : bv_lt_zero.r_of_bool.a1.Stmt := bvr_proof% bv_lt_zero.r_of_bool.a1
+
+theorem bv_lt_zero.r_of_bool.proof : bv_lt_zero.r_of_bool.Stmt := by
+  intro FS O hO v res h
+  simp only [bv_lt_zero.r_of_bool] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt_zero.r_of_bool.a1.ok FS O hO)
+
+theorem bv_lt_zero.r_ite.a1.ok : bv_lt_zero.r_ite.a1.Stmt := bvr_proof% bv_lt_zero.r_ite.a1
+
+theorem bv_lt_zero.r_ite.proof : bv_lt_zero.r_ite.Stmt := by
+  intro FS O hO v res h
+  simp only [bv_lt_zero.r_ite] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt_zero.r_ite.a1.ok FS O hO)
+
+theorem bv_lt_zero.r_default.a1.ok : bv_lt_zero.r_default.a1.Stmt := bvr_proof% bv_lt_zero.r_default.a1
+
+theorem bv_lt_zero.r_default.proof : bv_lt_zero.r_default.Stmt := by
+  intro FS O hO v res h
+  simp only [bv_lt_zero.r_default] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_lt_zero.r_default.a1.ok FS O hO)
+
 theorem bv_lt.r_lits.a1.ok : bv_lt.r_lits.a1.Stmt := bvr_proof% bv_lt.r_lits.a1
 
 theorem bv_lt.r_lits.proof : bv_lt.r_lits.Stmt := by
@@ -4516,6 +4580,19 @@ theorem bv_div.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (signed : 
   refine Refines.firstSome_cons (fun res h => bv_div.r_default.proof FS O hO signed v1 v2 res h) ?_
   exact Refines.firstSome_nil
 
+theorem bv_lt_zero.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v : Term) :
+  Refines FS (bv_lt_zero.spec v) (bv_lt_zero.step O v) := by
+  unfold bv_lt_zero.step
+  refine Refines.firstSome_cons (fun res h => bv_lt_zero.r_sext.proof FS O hO v res h) ?_
+  refine Refines.firstSome_cons (fun res h => bv_lt_zero.r_zext.proof FS O hO v res h) ?_
+  refine Refines.firstSome_cons (fun res h => bv_lt_zero.r_srem.proof FS O hO v res h) ?_
+  refine Refines.firstSome_cons (fun res h => bv_lt_zero.r_concat.proof FS O hO v res h) ?_
+  refine Refines.firstSome_cons (fun res h => bv_lt_zero.r_not.proof FS O hO v res h) ?_
+  refine Refines.firstSome_cons (fun res h => bv_lt_zero.r_of_bool.proof FS O hO v res h) ?_
+  refine Refines.firstSome_cons (fun res h => bv_lt_zero.r_ite.proof FS O hO v res h) ?_
+  refine Refines.firstSome_cons (fun res h => bv_lt_zero.r_default.proof FS O hO v res h) ?_
+  exact Refines.firstSome_nil
+
 theorem bv_lt.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (signed : Bool) (v1 : Term) (v2 : Term) :
   Refines FS (bv_lt.spec signed v1 v2) (bv_lt.step O signed v1 v2) := by
   unfold bv_lt.step
@@ -4842,6 +4919,7 @@ theorem ptr_ofs.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (p : Term
       bv_ashr := fun v1 v2 => Refines.refl,
       bv_mul := fun checked v1 v2 => Refines.refl,
       bv_div := fun signed v1 v2 => Refines.refl,
+      bv_lt_zero := fun v => Refines.refl,
       bv_lt := fun signed v1 v2 => Refines.refl,
       bv_leq := fun signed v1 v2 => Refines.refl,
       bv_add_overflows := fun signed v1 v2 => Refines.refl,
@@ -4905,6 +4983,7 @@ theorem ptr_ofs.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (p : Term
       bv_ashr := bv_ashr.step_sound FS _ hO,
       bv_mul := bv_mul.step_sound FS _ hO,
       bv_div := bv_div.step_sound FS _ hO,
+      bv_lt_zero := bv_lt_zero.step_sound FS _ hO,
       bv_lt := bv_lt.step_sound FS _ hO,
       bv_leq := bv_leq.step_sound FS _ hO,
       bv_add_overflows := bv_add_overflows.step_sound FS _ hO,

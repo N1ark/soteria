@@ -172,6 +172,11 @@ theorem lift_bv_div (hO : O.Sound FS) {signed : Bool} {v1 v1' : Term} {v2 v2' : 
   Refines FS (bv_div.spec signed v1 v2) (O.bv_div signed v1' v2') :=
   Refines.trans (by simp only [bvr_spec]; bvr_congr) (hO.bv_div signed v1' v2')
 
+theorem lift_bv_lt_zero (hO : O.Sound FS) {v v' : Term}
+  (h_v : Refines FS v v') :
+  Refines FS (bv_lt_zero.spec v) (O.bv_lt_zero v') :=
+  Refines.trans (by simp only [bvr_spec, size]; bvr_congr) (hO.bv_lt_zero v')
+
 theorem lift_bv_lt (hO : O.Sound FS) {signed : Bool} {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :

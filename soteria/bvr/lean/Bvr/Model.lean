@@ -358,6 +358,7 @@ def raw_fmod_of_rem (r : Term) (v1 : Term) (v2 : Term) : Term :=
   bv_ashr : Term → Term → Term
   bv_mul : Checked → Term → Term → Term
   bv_div : Bool → Term → Term → Term
+  bv_lt_zero : Term → Term
   bv_lt : Bool → Term → Term → Term
   bv_leq : Bool → Term → Term → Term
   bv_add_overflows : Bool → Term → Term → Term
@@ -394,47 +395,6 @@ def raw_fmod_of_rem (r : Term) (v1 : Term) (v2 : Term) : Term :=
 def mk_commut_binop (O : Ops) (op : Binop) (l : Term) (r : Term) : Kind :=
   (if (O.orc.tag_le l r) then (Kind.binop op l r) else (Kind.binop op r l))
 
-mutual
-
-def lt_zero_aux (O : Ops) (v : Term) : Term :=
-  (let lt_zero := fun (v : Term) =>
-    (Term.mk (Kind.binop (Binop.lt true) v (bv_zero (size v))) Ty.bool);
-  (let not_eq_0 := fun (v : Term) =>
-    (O.b_not (O.sem_eq v (bv_zero (size v))));
-  ((firstSome [(match v with
-                 | (Term.mk (Kind.unop (Unop.bvExtend true _) v) _) =>
-                 some ((lt_zero_aux O v))
-                 | _ => none),
-    (match v with
-      | (Term.mk (Kind.unop (Unop.bvExtend false k) _) _) =>
-      (if (decide (k > (0 : Int))) then some (v_false) else none)
-      | _ => none),
-    (match v with
-      | (Term.mk (Kind.binop (Binop.rem true) l _) _) =>
-      some ((O.b_and (lt_zero_aux O l) (not_eq_0 v)))
-      | _ => none),
-    (match v with
-      | (Term.mk (Kind.binop Binop.bvConcat l _) _) =>
-      some ((lt_zero_aux O l))
-      | _ => none),
-    (match v with
-      | (Term.mk (Kind.unop Unop.bvNot v) _) =>
-      some ((O.b_not (lt_zero_aux O v)))
-      | _ => none),
-    (match v with
-      | (Term.mk (Kind.unop (Unop.bvOfBool n) _) _) =>
-      (if (decide (n > (1 : Int))) then some (v_false) else none)
-      | _ => none),
-    (match v with
-      | (Term.mk (Kind.triop Triop.ite _ l r) _) =>
-      some ((let pos_l := (lt_zero_aux O l);
-            (let pos_r := (lt_zero_aux O r);
-            (if (equal pos_l pos_r) then pos_l else (lt_zero v)))))
-      | _ => none)]).getD
-    (match v with | _ => (lt_zero v)))))
-termination_by sizeOf v
-decreasing_by all_goals (simp_wf; omega)
-
 def signed_to_unsigned_cmp (O : Ops) (is_leq : Bool) (c_on_left : Bool) (c : BvVal) (v1 : Term) (v2 : Term) : Term :=
   (let bits := (size v1);
   (let sign_bit := (mk_bv bits (zshiftl (1 : Int) (bits - (1 : Int))));
@@ -447,8 +407,6 @@ def signed_to_unsigned_cmp (O : Ops) (is_leq : Bool) (c_on_left : Bool) (c : BvV
        (if nonneg then (O.b_and c_cmp in_pos) else (O.b_or in_pos c_cmp)))
   else (let in_neg := (O.bv_leq false sign_bit v1);
        (if nonneg then (O.b_or c_cmp in_neg) else (O.b_and in_neg c_cmp))))))))
-
-end
 
 @[bvr_spec] def b_and.spec (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop Binop.and_ v1 v2) Ty.bool)
@@ -533,6 +491,9 @@ end
 
 @[bvr_spec] def bv_div.spec (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop (Binop.div signed) v1 v2) (ty v1))
+
+@[bvr_spec] def bv_lt_zero.spec (v : Term) : Term :=
+  (Term.mk (Kind.binop (Binop.lt true) v (bv_zero (size v))) Ty.bool)
 
 @[bvr_spec] def bv_lt.spec (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool)
@@ -3418,6 +3379,63 @@ def bv_div.r_default (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option 
 def bv_div.step (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [bv_div.r_lits O signed v1 v2, bv_div.r_one O signed v1 v2, bv_div.r_mul_lits O signed v1 v2, bv_div.r_mul_div O signed v1 v2, bv_div.r_div_mul O signed v1 v2, bv_div.r_div_div O signed v1 v2, bv_div.r_zext O signed v1 v2, bv_div.r_default O signed v1 v2]).getD (bv_div.spec signed v1 v2)
 
+def bv_lt_zero.r_sext (O : Ops) (v : Term) : Option Term :=
+  (match v with
+    | (Term.mk (Kind.unop (Unop.bvExtend true _) x) _) =>
+    (whenSome true ((O.bv_lt_zero x)))
+    | _ => none)
+
+def bv_lt_zero.r_zext (O : Ops) (v : Term) : Option Term :=
+  (match v with
+    | (Term.mk (Kind.unop (Unop.bvExtend false k) _) _) =>
+    (whenSome (decide (k > (0 : Int))) (v_false))
+    | _ => none)
+
+def bv_lt_zero.r_srem (O : Ops) (v : Term) : Option Term :=
+  (match v with
+    | (Term.mk (Kind.binop (Binop.rem true) l _) _) =>
+    (whenSome true
+    ((O.b_and (O.bv_lt_zero l) (O.b_not (O.sem_eq v (bv_zero (size v)))))))
+    | _ => none)
+
+def bv_lt_zero.r_concat (O : Ops) (v : Term) : Option Term :=
+  (match v with
+    | (Term.mk (Kind.binop Binop.bvConcat l _) _) =>
+    (whenSome true ((O.bv_lt_zero l)))
+    | _ => none)
+
+def bv_lt_zero.r_not (O : Ops) (v : Term) : Option Term :=
+  (match v with
+    | (Term.mk (Kind.unop Unop.bvNot x) _) =>
+    (whenSome true ((O.b_not (O.bv_lt_zero x))))
+    | _ => none)
+
+def bv_lt_zero.r_of_bool (O : Ops) (v : Term) : Option Term :=
+  (match v with
+    | (Term.mk (Kind.unop (Unop.bvOfBool n) _) _) =>
+    (whenSome (decide (n > (1 : Int))) (v_false))
+    | _ => none)
+
+def bv_lt_zero.r_ite (O : Ops) (v : Term) : Option Term :=
+  (match v with
+    | (Term.mk (Kind.triop Triop.ite _ l r) _) =>
+    (whenSome true
+    ((let pos_l := (O.bv_lt_zero l);
+     (let pos_r := (O.bv_lt_zero r);
+     (if (equal pos_l pos_r)
+     then pos_l
+     else (Term.mk (Kind.binop (Binop.lt true) v (bv_zero (size v))) Ty.bool))))))
+    | _ => none)
+
+def bv_lt_zero.r_default (O : Ops) (v : Term) : Option Term :=
+  (match v with
+    | _ =>
+    (whenSome true
+    ((Term.mk (Kind.binop (Binop.lt true) v (bv_zero (size v))) Ty.bool))))
+
+def bv_lt_zero.step (O : Ops) (v : Term) : Term :=
+  (firstSome [bv_lt_zero.r_sext O v, bv_lt_zero.r_zext O v, bv_lt_zero.r_srem O v, bv_lt_zero.r_concat O v, bv_lt_zero.r_not O v, bv_lt_zero.r_of_bool O v, bv_lt_zero.r_ite O v, bv_lt_zero.r_default O v]).getD (bv_lt_zero.spec v)
+
 def bv_lt.r_lits (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | l@(Term.mk (Kind.bitVec _) _), r@(Term.mk (Kind.bitVec _) _) =>
@@ -3598,7 +3616,7 @@ def bv_lt.r_lt_zero (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option T
   (match v1, v2 with
     | _, (Term.mk (Kind.bitVec bvr__2) _) =>
     (whenSome ((decide (bvr__2 = (0 : Int))) && (signed && (! (is_checked_unsigned_op v1))))
-    ((lt_zero_aux O v1)))
+    ((O.bv_lt_zero v1)))
     | _, _ => none)
 
 def bv_lt.r_max_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
@@ -4864,6 +4882,7 @@ def opsRaw (orc : Oracle) : Ops :=
     bv_ashr := fun v1 v2 => bv_ashr.spec v1 v2,
     bv_mul := fun checked v1 v2 => bv_mul.spec checked v1 v2,
     bv_div := fun signed v1 v2 => bv_div.spec signed v1 v2,
+    bv_lt_zero := fun v => bv_lt_zero.spec v,
     bv_lt := fun signed v1 v2 => bv_lt.spec signed v1 v2,
     bv_leq := fun signed v1 v2 => bv_leq.spec signed v1 v2,
     bv_add_overflows := fun signed v1 v2 => bv_add_overflows.spec signed v1 v2,
@@ -4927,6 +4946,7 @@ def opsStep (O : Ops) : Ops :=
     bv_ashr := bv_ashr.step O,
     bv_mul := bv_mul.step O,
     bv_div := bv_div.step O,
+    bv_lt_zero := bv_lt_zero.step O,
     bv_lt := bv_lt.step O,
     bv_leq := bv_leq.step O,
     bv_add_overflows := bv_add_overflows.step O,

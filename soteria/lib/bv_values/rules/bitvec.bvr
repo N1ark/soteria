@@ -566,21 +566,21 @@ let cancellable (signed : bool) (a : t) : bool =
   if signed then match a with BitVec _ -> to_z true (bv_of_lit a) > 0 | _ -> false
   else sure_neq a (bv_zero (size a))
 
-let rec lt_zero_aux (v : t) : t =
-  let lt_zero (v : t) = Lt (true, v, bv_zero (size v)) <| TBool in
-  let not_eq_0 (v : t) = b_not (sem_eq v (bv_zero (size v))) in
+let[@spec Lt (true, v, bv_zero (size v)) <| TBool] [@cases] bv_lt_zero (v : t)
+    : t =
   match v with
-  | BvExtend (true, _, v) -> lt_zero_aux v
-  | BvExtend (false, k, _) when k > 0 -> v_false
-  | Rem (true, l, _) -> b_and (lt_zero_aux l) (not_eq_0 v)
-  | BvConcat (l, _) -> lt_zero_aux l
-  | BvNot v -> b_not (lt_zero_aux v)
-  | BvOfBool (n, _) when n > 1 -> v_false
-  | Ite (_, l, r) ->
-      let pos_l = lt_zero_aux l in
-      let pos_r = lt_zero_aux r in
-      if equal pos_l pos_r then pos_l else lt_zero v
-  | _ -> lt_zero v
+  | BvExtend (true, _, x) [@r sext] -> bv_lt_zero x
+  | BvExtend (false, k, _) [@r zext] when k > 0 -> v_false
+  | Rem (true, l, _) [@r srem] ->
+      b_and (bv_lt_zero l) (b_not (sem_eq v (bv_zero (size v))))
+  | BvConcat (l, _) [@r concat] -> bv_lt_zero l
+  | BvNot x [@r not] -> b_not (bv_lt_zero x)
+  | BvOfBool (n, _) [@r of_bool] when n > 1 -> v_false
+  | Ite (_, l, r) [@r ite] ->
+      let pos_l = bv_lt_zero l in
+      let pos_r = bv_lt_zero r in
+      if equal pos_l pos_r then pos_l else Lt (true, v, bv_zero (size v)) <| TBool
+  | _ [@r default] -> Lt (true, v, bv_zero (size v)) <| TBool
 
 let[@spec Lt (signed, v1, v2) <| TBool] [@cases] bv_lt (signed : bool) (v1 : t)
     (v2 : t) : t =
@@ -641,7 +641,7 @@ let[@spec Lt (signed, v1, v2) <| TBool] [@cases] bv_lt (signed : bool) (v1 : t)
   | _, Ite (b, l, r) [@r ite_r] ->
       b_ite b (bv_lt signed v1 l) (bv_lt signed v1 r)
   | _, 0 [@r lt_zero] when signed && not (is_checked_unsigned_op v1) ->
-      lt_zero_aux v1
+      bv_lt_zero v1
   | BitVec x, _ [@r max_l] when is_max_of signed x -> v_false
   | _, BitVec x [@r min_r] when is_min_of signed x -> v_false
   | BitVec x, _ [@r min_l] when is_min_of signed x -> b_not (sem_eq v1 v2)

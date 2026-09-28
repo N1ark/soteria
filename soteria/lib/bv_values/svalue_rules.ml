@@ -1872,36 +1872,35 @@ module Make (P : PRIMS) = struct
         (P.node (Svalue_ast.Binop ((Svalue_ast.Binop.Div (signed)), v1, v2)) (P.ty v1))
       ))
   
-  and lt_zero_aux (v : t) : t =
-      (let lt_zero (v : t) =
-        (P.node (Svalue_ast.Binop ((Svalue_ast.Binop.Lt (true)), v, (P.bv_zero (size v)))) Svalue_ast.TBool) in
-      (let not_eq_0 (v : t) =
-        (b_not (sem_eq v (P.bv_zero (size v)))) in
+  and bv_lt_zero (v : t) : t =
       (match v with
-      | { Hc.node = { Svalue_ast.kind = Svalue_ast.Unop ((Svalue_ast.Unop.BvExtend (true, _)), v); _ }; _ } ->
-        (lt_zero_aux v)
+      | { Hc.node = { Svalue_ast.kind = Svalue_ast.Unop ((Svalue_ast.Unop.BvExtend (true, _)), x); _ }; _ } ->
+        (bv_lt_zero x)
       | { Hc.node = { Svalue_ast.kind = Svalue_ast.Unop ((Svalue_ast.Unop.BvExtend (false, k)), _); _ }; _ }
         when (let k = Z.of_int k in
         (Z.gt k Z.zero)) ->
         let k = Z.of_int k in
         P.v_false
       | { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Rem (true)), l, _); _ }; _ } ->
-        (b_and (lt_zero_aux l) (not_eq_0 v))
+        (b_and (bv_lt_zero l) (b_not (sem_eq v (P.bv_zero (size v)))))
       | { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.BvConcat), l, _); _ }; _ } ->
-        (lt_zero_aux l)
-      | { Hc.node = { Svalue_ast.kind = Svalue_ast.Unop ((Svalue_ast.Unop.BvNot), v); _ }; _ } ->
-        (b_not (lt_zero_aux v))
+        (bv_lt_zero l)
+      | { Hc.node = { Svalue_ast.kind = Svalue_ast.Unop ((Svalue_ast.Unop.BvNot), x); _ }; _ } ->
+        (b_not (bv_lt_zero x))
       | { Hc.node = { Svalue_ast.kind = Svalue_ast.Unop ((Svalue_ast.Unop.BvOfBool (n)), _); _ }; _ }
         when (let n = Z.of_int n in
         (Z.gt n Z.one)) ->
         let n = Z.of_int n in
         P.v_false
       | { Hc.node = { Svalue_ast.kind = Svalue_ast.Triop ((Svalue_ast.Triop.Ite), _, l, r); _ }; _ } ->
-        (let pos_l = (lt_zero_aux l) in
-        (let pos_r = (lt_zero_aux r) in
-        (if (P.equal pos_l pos_r) then pos_l else (lt_zero v))))
-      | _ -> (lt_zero v)
-      )))
+        (let pos_l = (bv_lt_zero l) in
+        (let pos_r = (bv_lt_zero r) in
+        (if (P.equal pos_l pos_r)
+        then pos_l
+        else (P.node (Svalue_ast.Binop ((Svalue_ast.Binop.Lt (true)), v, (P.bv_zero (size v)))) Svalue_ast.TBool))))
+      | _ ->
+        (P.node (Svalue_ast.Binop ((Svalue_ast.Binop.Lt (true)), v, (P.bv_zero (size v)))) Svalue_ast.TBool)
+      )
   
   and bv_lt (signed : bool) (v1 : t) (v2 : t) : t =
       (assert ((P.equal_ty (P.ty v1) (P.ty v2)));
@@ -2039,7 +2038,7 @@ module Make (P : PRIMS) = struct
         (b_ite b (bv_lt signed v1 l) (bv_lt signed v1 r))
       | (_, { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (bvr__2); _ }; _ })
         when ((((Z.equal bvr__2 Z.zero)) && (signed && (not (is_checked_unsigned_op v1))))) ->
-        (lt_zero_aux v1)
+        (bv_lt_zero v1)
       | (({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec _; _ }; _ } as x), _)
         when (let x = P.bv_of_lit x in
         (is_max_of signed x)) ->

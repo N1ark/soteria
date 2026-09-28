@@ -238,10 +238,6 @@ theorem WT_bitVec {z t} :
       ∃ n : Nat, 0 < n ∧ (t = .bitVector n ∨ t = .loc n) ∧ 0 ≤ z ∧ z < 2 ^ n := by
   simp [Term.WT]
 
-theorem Ty.width_of_sort {t : Ty} {n : Nat} (h : t = .bitVector n ∨ t = .loc n) :
-    t.width = n := by
-  simp [Ty.width, size_of_ty_of_bits h]
-
 theorem eval_bitVec {FS ρ z t} (h : (Term.mk (.bitVec z) t).WT) :
     eval FS ρ (.mk (.bitVec z) t) = some (.bv t.width (BitVec.ofInt _ z)) := by
   rw [eval_eq_ev h, ev]
@@ -300,17 +296,6 @@ theorem eval_mk_masked {FS ρ} {n z : Int} (hn : 0 < n) :
   simp only [Int.toNat_natCast, BitVec.ofInt_emod_two_pow]
 
 /-! ## Integers and bit-vectors -/
-
-theorem BitVec.ofInt_sub {w : Nat} (x y : Int) :
-    BitVec.ofInt w (x - y) = BitVec.ofInt w x - BitVec.ofInt w y := by
-  rw [Int.sub_eq_add_neg, BitVec.ofInt_add, BitVec.ofInt_neg, BitVec.sub_eq_add_neg]
-
-theorem BitVec.not_eq_neg_sub_one {w : Nat} (x : BitVec w) : ~~~x = -x - 1 := by
-  rw [BitVec.neg_eq_not_add]; exact (BitVec.add_sub_cancel _ _).symm
-
-theorem BitVec.ofInt_zlognot {w : Nat} (z : Int) :
-    BitVec.ofInt w (zlognot z) = ~~~ BitVec.ofInt w z := by
-  rw [BitVec.not_eq_neg_sub_one, zlognot, BitVec.ofInt_sub, BitVec.ofInt_neg]; simp
 
 end Bvr
 

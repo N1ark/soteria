@@ -58,16 +58,8 @@ variable {w : Nat}
 
 theorem bit_of_eq {x y : BitVec w} (h : x = y) (i : Nat) (hi : i < w) : x[i] = y[i] := by rw [h]
 
-theorem and_or_of_bits_in {m n : BitVec w} (h : m &&& n = m) (v : BitVec w) :
-    m &&& (v ||| n) = m := by
-  ext i hi; have := bit_of_eq h i hi; simp at this ⊢; grind
-
 theorem and_or_of_disjoint {m n : BitVec w} (h : m &&& n = 0) (v : BitVec w) :
     m &&& (v ||| n) = v &&& m := by
-  ext i hi; have := bit_of_eq h i hi; simp at this ⊢; grind
-
-theorem or_and_of_bits_in {m1 m2 : BitVec w} (h : m2 &&& m1 = m2) (v : BitVec w) :
-    m1 ||| v &&& m2 = m1 := by
   ext i hi; have := bit_of_eq h i hi; simp at this ⊢; grind
 
 theorem lshr_and_of_bits_in {s : Nat} {m : BitVec w}

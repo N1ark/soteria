@@ -36,10 +36,6 @@ theorem to_z_bv_of_lit {z : Int} {T : Ty} (w : (Term.mk (.bitVec z) T).WT) :
   obtain ⟨k, hk, hT, h0, h1⟩ := WT_bitVec.1 w
   rcases hT with rfl | rfl <;> simp [bv_of_lit, to_z, size_of_ty, toNat_ofInt_of_lt h0 h1] <;> omega
 
-theorem ofInt_eq_zero_of_lt {n : Nat} {z : Int} (h0 : 0 ≤ z) (h1 : z < 2 ^ n) :
-    BitVec.ofInt n z = 0#n ↔ z = 0 := by
-  rw [BitVec.toNat_eq, toNat_ofInt_of_lt h0 h1]; simp; omega
-
 /-! ## Powers of two and lowest set bits of literals -/
 
 @[simp] theorem log2_two_pow (k : Nat) : log2 ((2 : Int) ^ k) = k := by

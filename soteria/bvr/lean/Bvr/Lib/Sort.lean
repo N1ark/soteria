@@ -50,21 +50,6 @@ theorem fBin_eq_some {f : (p : Prec) → FBits p → FBits p → Option Val} {a 
     · simp at h
   · rintro ⟨p, x, y, rfl, rfl, h⟩; simpa [fBin] using h
 
-theorem checkedOp_eq_some {c so uo f a b v} :
-    checkedOp c so uo f a b = some v ↔
-      ∃ n x y, a = some (.bv n x) ∧ b = some (.bv n y) ∧ (c.signed → so x y = false) ∧
-        (c.unsigned → uo x y = false) ∧ v = .bv n (f x y) := by
-  unfold checkedOp; rw [bvBin_eq_some]
-  constructor
-  · rintro ⟨n, x, y, rfl, rfl, h⟩
-    refine ⟨n, x, y, rfl, rfl, ?_⟩
-    split at h
-    · simp at h
-    · simp at h; grind
-  · rintro ⟨n, x, y, rfl, rfl, h1, h2, rfl⟩
-    refine ⟨n, x, y, rfl, rfl, ?_⟩
-    rw [ite_eq_right_iff.mpr (by grind)]
-
 theorem binop_hasSort {FS op a b t v va vb} (w : op.WT a b t)
     (ha : ∀ x, va = some x → x.hasSort a) (hb : ∀ x, vb = some x → x.hasSort b)
     (h : evBinop FS op va vb = some v) : v.hasSort t := by

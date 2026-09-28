@@ -13,11 +13,6 @@ theorem WT_eq {a b t} : (Term.mk (.binop .eq a b) t).WT ↔
     a.ty = b.ty ∧ t = .bool ∧ a.WT ∧ b.WT := by
   simp [Term.WT, Binop.WT, and_assoc]
 
-theorem eval_eq_some {FS ρ a b t v} (h : eval FS ρ (.mk (.binop .eq a b) t) = some v) :
-    ∃ x y, eval FS ρ a = some x ∧ eval FS ρ b = some y ∧ v = .bool (decide (x = y)) := by
-  rw [eval_binop (eval_WT h)] at h
-  cases ha : eval FS ρ a <;> cases hb : eval FS ρ b <;> simp_all [evBinop]
-
 theorem eval_eq_of {FS ρ a b t x y} (w : (Term.mk (.binop .eq a b) t).WT)
     (ha : eval FS ρ a = some x) (hb : eval FS ρ b = some y) :
     eval FS ρ (.mk (.binop .eq a b) t) = some (.bool (decide (x = y))) := by

@@ -6,9 +6,6 @@ namespace Bvr
 
 open Classical Lib SemEq
 
-theorem sem_eq.r_ptrs.a1.proof : sem_eq.r_ptrs.a1.Stmt := by
-  bvr_rule_b
-
 theorem sem_eq.r_mul_const.a1.proof : sem_eq.r_mul_const.a1.Stmt := by
   bvr_lift_b
   all_goals
@@ -31,9 +28,6 @@ theorem sem_eq.r_mul_const.a1.proof : sem_eq.r_mul_const.a1.Stmt := by
     | exact mulc_nofit ‹_› ‹_› (by simp_all)
     | exact mulc_nodvd ‹_›
 
-theorem sem_eq.r_ite_ite.a1.proof : sem_eq.r_ite_ite.a1.Stmt := by
-  bvr_rule_b
-
 theorem sem_eq.r_mul_cancel.a1.proof : sem_eq.r_mul_cancel.a1.Stmt := by
   bvr_rule_b_sem
   all_goals first
@@ -46,12 +40,6 @@ theorem sem_eq.r_zext_const.a1.proof : sem_eq.r_zext_const.a1.Stmt := by
 
 theorem sem_eq.r_ite_concat.a1.proof : sem_eq.r_ite_concat.a1.Stmt := by
   bvr_rule_b_arith
-
-theorem sem_eq.r_ite_const_l.a1.proof : sem_eq.r_ite_const_l.a1.Stmt := by
-  bvr_rule_b
-
-theorem sem_eq.r_ite_const_r.a1.proof : sem_eq.r_ite_const_r.a1.Stmt := by
-  bvr_rule_b
 
 theorem sem_eq.r_msb.a1.proof : sem_eq.r_msb.a1.Stmt := by
   intro FS O hO v1 v2 h

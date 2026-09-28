@@ -7,7 +7,7 @@ namespace Bvr
 open Classical Lib SemEq
 
 theorem sem_eq.r_mul_const.a1.proof : sem_eq.r_mul_const.a1.Stmt := by
-  bvr_lift_b
+  bvr_rule_lift
   all_goals
     refine Refines.eq_mul_const (by simp only [is_checked, Bool.or_eq_true]; assumption)
       (fun W hW hx wx hs => ?_) (fun W N M X ρ hW hx hs hn hm ex => ?_)

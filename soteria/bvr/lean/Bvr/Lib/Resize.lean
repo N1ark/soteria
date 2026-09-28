@@ -291,26 +291,9 @@ macro "bvr_close" : tactic => `(tactic| first
   | (bvr_ovf; done)
   | ((try bvr_split); subst_vars; bvr_bits; done))
 
-/-- `bvr_rule_core`, splitting all the `if`s of the body (rather than the
-outermost one), so that the calls under them are lifted too. -/
-macro "bvr_rule_core_r" : tactic => `(tactic| (
-  intro FS O hO
-  intros
-  (try bvr_flags)
-  (try subst_vars)
-  simp only [bvr_spec, ty, mk_commut_binop]
-  (repeat' split)
-  all_goals (try bvr_lift_body)
-  all_goals (try simp only [bvr_spec, ty])
-  all_goals (try (first | exact Refines.refl | (bvr_comm; done)))
-  all_goals (try first
-    | apply Refines.denB (fun _ => rfl)
-    | apply Refines.den
-    | apply Refines.denB)))
-
 /-- `bvr_rule_sem`, with the integers of the literals in range. -/
 macro "bvr_rule_sem_r" : tactic => `(tactic| (
-  bvr_rule_core_r
+  bvr_rule_core
   all_goals first
     | (bvr_wt_r; done)
     | (bvr_sem_core
@@ -319,7 +302,7 @@ macro "bvr_rule_sem_r" : tactic => `(tactic| (
 /-- `bvr_rule`, with the integers of the literals in range, and the bitwise
 equalities proved bit by bit. -/
 macro "bvr_rule_r" : tactic => `(tactic| (
-  bvr_rule_core_r
+  bvr_rule_core
   all_goals first
     | (bvr_wt_r; done)
     | (bvr_sem_core

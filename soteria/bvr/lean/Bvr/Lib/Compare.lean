@@ -539,19 +539,6 @@ macro "bvr_cmp_facts" : tactic => `(tactic| (
   (try bvr_split)
   (try subst_vars)))
 
-/-- `bvr_rule_core`, splitting all the conditionals of the body. -/
-macro "bvr_cmp_core" : tactic => `(tactic| (
-  intro FS O hO
-  intros
-  (try bvr_flags)
-  (try subst_vars)
-  simp only [bvr_spec, ty, signed_to_unsigned_cmp]
-  (repeat' split)
-  all_goals (try bvr_lift_body)
-  all_goals (try simp only [bvr_spec, ty])
-  all_goals (try exact Refines.refl)
-  all_goals (try apply Refines.denB (fun _ => rfl))))
-
 /-- The value half of `Refines.denB`, reduced to facts on the values of the
 atoms, with the literals as variables. -/
 macro "bvr_cmp_sem" : tactic => `(tactic| (
@@ -611,7 +598,7 @@ macro "bvr_cmp_omega" : tactic => `(tactic| (
 /-- Proves the statement of an alternative of `bv_lt` or `bv_leq`, as far as
 it can. -/
 macro "bvr_cmp" : tactic => `(tactic| (
-  bvr_cmp_core
+  bvr_rule_core
   all_goals first
     | (bvr_wt; done)
     | (bvr_cmp_wt; done)
@@ -622,7 +609,7 @@ macro "bvr_cmp" : tactic => `(tactic| (
 syntax "bvr_cmp_using " "[" Lean.Parser.Tactic.simpLemma,* "]" : tactic
 macro_rules
   | `(tactic| bvr_cmp_using [$ls,*]) => `(tactic| (
-      bvr_cmp_core
+      bvr_rule_core
       all_goals first
         | (bvr_wt; done)
         | (bvr_cmp_wt; done)

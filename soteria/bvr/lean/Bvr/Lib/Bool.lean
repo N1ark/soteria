@@ -521,15 +521,7 @@ theorem por_eq_false {a b} : por a b = some (.bool false) ↔
 /-- `bvr_rule` for the rules that hold at any type: the value half is proved
 by evaluation (`ev`), splitting on the guards of the `ite`s. -/
 macro "bvr_rule_ev" : tactic => `(tactic| (
-  intro FS O hO
-  intros
-  (try bvr_flags)
-  (try subst_vars)
-  simp only [bvr_spec, ty, mk_commut_binop]
-  (try split)
-  all_goals (try bvr_lift_body)
-  all_goals (try simp only [bvr_spec, ty])
-  all_goals (try (first | exact Refines.refl | (bvr_comm; done)))
+  bvr_rule_lift
   all_goals refine Refines.intro ?_ (fun ρ v w w' e => ?_)
   case' refine_1 => simp only [Ty.sort_eq]; bvr_wt
   case' refine_2 =>
@@ -539,22 +531,10 @@ macro "bvr_rule_ev" : tactic => `(tactic| (
     repeat' split at e
     all_goals simp_all [evBinop, evUnop_not_eq_bool, pand_eq_true, por_eq_false]))
 
-theorem is_bv_iff {t : Ty} : is_bv t = true ↔ ∃ n, t = .bitVector n := by
-  cases t <;> simp [is_bv, firstSome]
-
 /-- `bvr_rule`, for the rules whose spec is a boolean (resp. bit-vector) at a
 type that its typing determines. -/
 macro "bvr_rule_typed" : tactic => `(tactic| (
-  intro FS O hO
-  intros
-  (try bvr_flags)
-  (try simp only [ty, Term.ty_mk, is_bv_iff] at *)
-  (try bvr_split)
-  (try subst_vars)
-  simp only [bvr_spec, ty, mk_commut_binop]
-  (try split)
-  all_goals (try bvr_lift_body)
-  all_goals (try simp only [bvr_spec, ty])
+  bvr_rule_lift
   all_goals first
     | (refine Refines.denB ?_ ?_ ?_
        · intro w; bvr_facts; all_goals first | rfl | simp_all)

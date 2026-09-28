@@ -2,6 +2,7 @@ import Bvr.Lib.Meta
 import Bvr.Lifts
 import Bvr.Lib.Lit
 import Bvr.Lib.Ovf
+import Bvr.Lib.Float
 
 /-!
 # Tactics for the rule proofs
@@ -186,24 +187,49 @@ macro "bvr_nat" : tactic => `(tactic| (
   (try simp (disch := assumption) only [emod_two_pow_of_lt, toNat_ofInt_of_lt] at *)
   first | assumption | omega))
 
-/-- Proves the statement of an alternative of a `[@cases]` rule, as far as it
-can: lifts the calls of its body to their specs, reduces the refinement to the
-values of the atoms, and leaves what `simp_all` and `grind` do not close. -/
-macro "bvr_rule_core" : tactic => `(tactic| (
+/-- The first steps of the proof of an alternative of a `[@cases]` rule: takes
+its guard, unfolds its spec, splits the conditionals of its body, lifts the
+calls of the body to their specs, and closes the refinement if it is one of
+reflexivity, commutativity or an equality at any type. -/
+macro "bvr_rule_lift" : tactic => `(tactic| (
   intro FS O hO
   intros
   (try bvr_flags)
+  (try simp only [ty, Term.ty_mk, is_bv_iff] at *)
+  (try bvr_split)
   (try subst_vars)
-  simp only [bvr_spec, ty, mk_commut_binop]
-  (try split)
+  simp only [bvr_spec, ty, mk_commut_binop, signed_to_unsigned_cmp]
+  (repeat' split)
   all_goals (try bvr_lift_body)
   all_goals (try simp only [bvr_spec, ty])
-  all_goals (try (first | exact Refines.refl | (bvr_comm; done)))
+  all_goals (try first
+    | exact Refines.refl
+    | (bvr_comm; done)
+    | exact Refines.eq_same
+    | exact Refines.eq_ite_ite
+    | exact Refines.eq_ite_l
+    | exact Refines.eq_ite_r
+    | exact Refines.eq_lits
+    | exact Refines.eq_floats
+    | exact Refines.eq_ptrs)))
+
+/-- Reduces the refinements to their typing and value halves, on the structural
+values of the terms. -/
+macro "bvr_rule_apply" : tactic => `(tactic|
   all_goals (try first
     | apply Refines.denB (fun _ => rfl)
     | apply Refines.den
-    | apply Refines.denB)))
+    | apply Refines.denB))
 
+/-- `bvr_rule_lift`, then the reduction of the refinement to its typing and
+value halves, on the structural values of the terms. -/
+macro "bvr_rule_core" : tactic => `(tactic| (
+  bvr_rule_lift
+  bvr_rule_apply))
+
+/-- Proves the statement of an alternative of a `[@cases]` rule, as far as it
+can: lifts the calls of its body to their specs, reduces the refinement to the
+values of the atoms, and leaves what `simp_all` and `grind` do not close. -/
 macro "bvr_rule" : tactic => `(tactic| (
   bvr_rule_core
   all_goals first

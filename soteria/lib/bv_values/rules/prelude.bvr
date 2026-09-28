@@ -258,3 +258,12 @@ let rec sure_neq (a : t) (b : t) : bool =
   | Bool a, Bool b -> not (a = b)
   | Ptr (la, oa), Ptr (lb, ob) -> sure_neq la lb || sure_neq oa ob
   | _ -> false
+
+(* Compare *)
+
+(* whether [l] is the least (resp. greatest) integer of its width *)
+let is_min_of (signed : bool) (l : bv) : bool =
+  to_z signed l = min_for signed (width l)
+
+let is_max_of (signed : bool) (l : bv) : bool =
+  to_z signed l = max_for signed (width l)

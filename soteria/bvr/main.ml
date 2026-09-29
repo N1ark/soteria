@@ -10,6 +10,9 @@ let () =
         let sources = List.map Filename.basename files in
         match backend with
         | "ocaml" -> Gen_ocaml.program ~sources Format.std_formatter prog
+        | "lean-model" -> Gen_lean.model ~sources Format.std_formatter prog
+        | "lean-statements" ->
+            Gen_lean.statements ~sources Format.std_formatter prog
         | _ ->
             prerr_endline "unknown backend";
             exit 2
@@ -17,5 +20,5 @@ let () =
         Format.eprintf "%a: %s@." Check.pp_loc loc msg;
         exit 1)
   | _ ->
-      prerr_endline "usage: bvr ocaml FILE...";
+      prerr_endline "usage: bvr (ocaml | lean-model | lean-statements) FILE...";
       exit 2

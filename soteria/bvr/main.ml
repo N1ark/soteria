@@ -1,5 +1,6 @@
-(** [bvr ocaml FILE...]: generates the OCaml implementation of the BVR rules in
-    [FILE...], on standard output. *)
+(** [bvr (ocaml | lean-model | lean-statements | lean-lifts | lean-soundness)
+     FILE...]: generates the OCaml implementation or the Lean model of the BVR
+    rules in [FILE...], on standard output. *)
 
 let () =
   match Array.to_list Sys.argv with
@@ -13,6 +14,10 @@ let () =
         | "lean-model" -> Gen_lean.model ~sources Format.std_formatter prog
         | "lean-statements" ->
             Gen_lean.statements ~sources Format.std_formatter prog
+        | "lean-lifts" -> Gen_lean.lifts ~sources Format.std_formatter prog
+        | "lean-soundness" ->
+            Gen_lean.soundness ~sources ~proofs:[ "Bvr.Proofs" ]
+              Format.std_formatter prog
         | _ ->
             prerr_endline "unknown backend";
             exit 2
@@ -20,5 +25,7 @@ let () =
         Format.eprintf "%a: %s@." Check.pp_loc loc msg;
         exit 1)
   | _ ->
-      prerr_endline "usage: bvr (ocaml | lean-model | lean-statements) FILE...";
+      prerr_endline
+        "usage: bvr (ocaml | lean-model | lean-statements | lean-lifts | \
+         lean-soundness) FILE...";
       exit 2

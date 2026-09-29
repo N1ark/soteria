@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   lean:
-    name: Check the Lean model of the Bv_values rules
+    name: Check the proofs of the Bv_values rules
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -30,5 +30,13 @@ jobs:
           sh elan-init.sh -y --default-toolchain none
           echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
 
-      - name: Build the model
+      - name: Build the proofs
         run: lake build
+
+      - name: Check that no proof is missing
+        run: |
+          lake env lean check_axioms.lean | tee axioms.txt
+          if grep -q sorryAx axioms.txt; then
+            echo "::error::Some rules of soteria/lib/bv_values/rules are not proved"
+            exit 1
+          fi

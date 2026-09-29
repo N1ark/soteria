@@ -8,6 +8,9 @@ promotes it to the source tree, where it is committed, and
 `[%%include_file "svalue_rules.gen.ml"]` (a ppx, in `ppx/`) includes it in
 `Svalue.Make`, so that it is compiled along with the primitives it uses.
 
+It also generates a Lean model of the rules, with one soundness statement per
+rule, which are proved in `lean/` (see [Proofs](#proofs)).
+
 bvr is a small, pure, first-order language with its own typing. Its syntax is
 that of OCaml, apart from the declarations and rule names below; it is parsed
 by `bvr_parser.mly`.
@@ -38,8 +41,9 @@ fn size (v : t) : int = size_of_ty (ty v)
 - `fn f params : ty = body` declares a helper. All functions can call each
   other.
 - `prim f : a -> b` declares a primitive, implemented by hand in
-  `Svalue.Make.Prims`; `oracle f : a -> b` declares one whose behaviour the
-  rules may not rely on (Floatml's arithmetic, the hash-consing order).
+  `Svalue.Make.Prims` and in `lean/Bvr/Prims.lean`; `oracle f : a -> b`
+  declares one that the Lean model takes as a parameter, so that the proofs
+  may not rely on its behaviour (Floatml's arithmetic, the hash-consing order).
 
 ## Rules
 
@@ -103,3 +107,28 @@ expected stands for its literal: `| lits: #l, #r -> l + r`.
 - Or-patterns, `as`, `when` guards, `Some`/`None`, lists and partial records
   (`{ unsigned = true; _ }`) are supported. Each alternative of an or-pattern
   is tried in turn, together with the guard.
+
+## Proofs
+
+`lean/` is a Lean project. Its generated files are checked to be up to date by
+`dune test` (run `dune promote` after changing the rules):
+
+- `Model.lean` is a Lean model of the rule functions, over the primitives of
+  `Prims.lean`, and `Semantics.lean` gives terms their meaning (written by
+  hand).
+- `Statements.lean` states that every alternative of every rule is sound: its
+  result *refines* its spec (the raw term it simplifies): it has the same
+  sort, and the same value wherever the raw term has one.
+- `Soundness.lean` proves each rule from its alternatives, and every function
+  from its rules, up to `Bvr.opsN_sound`: the whole simplifier is sound.
+
+An alternative is one case of a rule, after expanding its or-patterns and the
+swaps of commutative operands; its statement is over the variables of its
+pattern, with its guard as a hypothesis (`f.r_name.aI.Stmt`). Its proof is
+`f.r_name.aI.proof` in `lean/Bvr/Proofs/` if there is one, and otherwise the
+tactic of the library of its function (`lean/Bvr/Lib/`). An alternative that
+only swaps commutative operands is proved from the unswapped one, if its guard
+and body do not depend on the swap.
+
+`lake build` checks every proof, and CI checks that the soundness theorem
+depends on no `sorry` (`check_axioms.lean`).

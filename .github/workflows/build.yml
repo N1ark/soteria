@@ -85,6 +85,11 @@ jobs:
             exit 1
           fi
       # OCaml build
+      # opam installs system dependencies (cargo) with apt, whose package
+      # index on the runner image may be stale
+      - name: Update the apt package index
+        if: runner.os == 'Linux'
+        run: sudo apt-get update
       - name: setup dependencies
         run: make ocaml-deps
       - name: Build OCaml stuff

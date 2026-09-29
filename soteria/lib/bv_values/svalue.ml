@@ -92,7 +92,7 @@ module Make (V : Value_ext) () = struct
     in
     aux ~ignore:Var.Set.empty sv
 
-  let size_of = function
+  let[@inline] size_of = function
     | TBitVector n -> n
     | TPointer n -> n
     | TLoc n -> n
@@ -143,16 +143,6 @@ module Make (V : Value_ext) () = struct
   let[@inline] equal (a : t) (b : t) = Int.equal a.tag b.tag
   let[@inline] compare (a : t) (b : t) = Int.compare a.tag b.tag
   let pp_full ft t = pp_t_node Fmt.nop (Ext.pp pp) Ext.pp_ty ft t.node
-
-  let rec sure_neq a b =
-    (not (equal_ty a.node.ty b.node.ty))
-    ||
-    match (a.node.kind, b.node.kind) with
-    | BitVec a, BitVec b -> not (Z.equal a b)
-    | Float a, Float b -> not (F.equal a b)
-    | Bool a, Bool b -> a <> b
-    | Ptr (la, oa), Ptr (lb, ob) -> sure_neq la lb || sure_neq oa ob
-    | _ -> false
 
   module Hcons = Hc.Make (struct
     type t = t_node
@@ -374,11 +364,231 @@ module Make (V : Value_ext) () = struct
     val is_positive : t -> t
   end
 
+  (** {2 Constants} *)
+
+  let v_true = Bool true <| TBool
+  let v_false = Bool false <| TBool
+
+  let mk_bv n bv =
+    assert (n > 0);
+    assert (Z.(zero <= bv && bv < one lsl n));
+    BitVec bv <| t_bv n
+
+  (* Bitwidth -> [(1 lsl n) - 1] mask. Memoized to avoid re-allocating the mask
+     bignum on each [mk_masked] call (expensive in pathological cases). *)
+  let mask_cache : Z.t Array.t = Array.init 256 (fun n -> Z.(pred (one lsl n)))
+  let mask_of_bits n = if n <= 255 then mask_cache.(n) else Z.(pred (one lsl n))
+
+  let mk_masked n bv =
+    let mask = mask_of_bits n in
+    BitVec (Z.logand bv mask) <| t_bv n
+
+  (* Index [n-1] holds the cached value for bitwidth [n]; we skip [n=0] because
+     [mk] asserts [n > 0]. *)
+  let zero_cache : t Array.t = Array.init 256 (fun n -> mk_bv (n + 1) Z.zero)
+
+  let[@inline] bv_zero n =
+    if n <= 256 then zero_cache.(n - 1) else mk_bv n Z.zero
+
+  let one_cache : t Array.t = Array.init 256 (fun n -> mk_bv (n + 1) Z.one)
+  let[@inline] bv_one n = if n <= 256 then one_cache.(n - 1) else mk_bv n Z.one
+
+  (** {2 Simplification rules}
+
+      The simplifying smart constructors are generated from the rules in
+      [rules/*.bvr]; see [soteria/bvr]. *)
+
+  module Prims = struct
+    type nonrec ghost = ghost
+    type ext = ghost V.t
+    type ext_ty = ghost V.ty
+    type nonrec t = t
+
+    let node = ( <| )
+    let equal_ty = equal_ty
+    let sort_by_tag l = List.sort (fun l r -> Int.compare l.tag r.tag) l
+
+    let used_binders binders body =
+      let body_vars = Var.Hashset.of_iter (iter_vars body |> Iter.map fst) in
+      List.filter (fun (v, _) -> Var.Hashset.mem body_vars v) binders
+
+    (* Zarith represents small integers as OCaml ints, but compares them in C:
+       these compare them in OCaml, as Zarith's arithmetic does *)
+    external is_small_int : Z.t -> bool = "%obj_is_int"
+    external unsafe_to_int : Z.t -> int = "%identity"
+
+    let[@inline] zcompare a b =
+      if is_small_int a && is_small_int b then
+        Stdlib.compare (unsafe_to_int a : int) (unsafe_to_int b)
+      else Z.compare a b
+
+    let[@inline] zequal a b =
+      if is_small_int a && is_small_int b then a == b else Z.equal a b
+
+    let[@inline] size_of_ty ty = Z.of_int (size_of ty)
+
+    let fp_of_ty = function
+      | TFloat fp -> fp
+      | _ -> L.failwith "Unsupported float type"
+
+    let mk_bv n z = mk_bv (Z.to_int n) z
+    let mk_masked n z = mk_masked (Z.to_int n) z
+    let bv_zero n = bv_zero (Z.to_int n)
+    let bv_one n = bv_one (Z.to_int n)
+    let v_true = v_true
+    let v_false = v_false
+
+    type bv = { w : int; z : Z.t }
+
+    let[@inline] bv_of_lit v =
+      match v.node.kind with
+      | BitVec z -> { w = size_of v.node.ty; z }
+      | _ -> L.failwith "bv_of_lit: not a literal"
+
+    let lit l = mk_bv (Z.of_int l.w) l.z
+
+    (* [to_z signed (bv_of_lit v)] and [width (bv_of_lit v)], for a literal
+       [v] *)
+    let[@inline] lit_to_z signed v =
+      match v.node.kind with
+      | BitVec z ->
+          if signed then Z.signed_extract z 0 (size_of v.node.ty) else z
+      | _ -> L.failwith "bv_of_lit: not a literal"
+
+    let[@inline] lit_width v = Z.of_int (size_of v.node.ty)
+    let width l = Z.of_int l.w
+    let to_z signed l = if signed then Z.signed_extract l.z 0 l.w else l.z
+    let masked w z = { w; z = Z.extract z 0 w }
+    let of_z n z = masked (Z.to_int n) z
+    let lit_add a b = masked a.w (Z.add a.z b.z)
+    let lit_sub a b = masked a.w (Z.sub a.z b.z)
+    let lit_mul a b = masked a.w (Z.mul a.z b.z)
+    let lit_neg a = masked a.w (Z.neg a.z)
+
+    let lit_udiv a b =
+      let d = Z.extract b.z 0 a.w in
+      if Z.equal d Z.zero then masked a.w Z.minus_one
+      else masked a.w (Z.div a.z d)
+
+    let lit_sdiv a b =
+      let n = Z.signed_extract a.z 0 a.w and d = Z.signed_extract b.z 0 a.w in
+      if Z.equal d Z.zero then
+        masked a.w (if Z.lt n Z.zero then Z.one else Z.minus_one)
+      else masked a.w (Z.div n d)
+
+    let bv_equal a b = a.w = b.w && Z.equal a.z b.z
+    let lit_and a b = masked a.w (Z.logand a.z b.z)
+    let lit_or a b = masked a.w (Z.logor a.z b.z)
+    let lit_xor a b = masked a.w (Z.logxor a.z b.z)
+    let lit_not a = masked a.w (Z.lognot a.z)
+
+    (* the shift amount, if it is less than the width *)
+    let shift_amount a b =
+      let s = Z.extract b.z 0 a.w in
+      if Z.lt s (Z.of_int a.w) then Some (Z.to_int s) else None
+
+    let lit_shl a b =
+      match shift_amount a b with
+      | Some s -> masked a.w (Z.shift_left a.z s)
+      | None -> masked a.w Z.zero
+
+    let lit_lshr a b =
+      match shift_amount a b with
+      | Some s -> masked a.w (Z.shift_right a.z s)
+      | None -> masked a.w Z.zero
+
+    let lit_ashr a b =
+      let n = Z.signed_extract a.z 0 a.w in
+      match shift_amount a b with
+      | Some s -> masked a.w (Z.shift_right n s)
+      | None -> masked a.w (if Z.lt n Z.zero then Z.minus_one else Z.zero)
+
+    let lit_urem a b =
+      let d = Z.extract b.z 0 a.w in
+      if Z.equal d Z.zero then a else masked a.w (Z.rem a.z d)
+
+    let lit_srem a b =
+      let n = Z.signed_extract a.z 0 a.w and d = Z.signed_extract b.z 0 a.w in
+      if Z.equal d Z.zero then a else masked a.w (Z.rem n d)
+
+    let lit_smod a b =
+      let n = Z.signed_extract a.z 0 a.w and d = Z.signed_extract b.z 0 a.w in
+      if Z.equal d Z.zero then a
+      else
+        let r = Z.rem n d in
+        if Z.equal r Z.zero || Z.sign r = Z.sign d then masked a.w r
+        else masked a.w (Z.add r d)
+
+    let lit_extract from_ to_ l =
+      let from_ = Z.to_int from_ in
+      masked (Z.to_int to_ - from_ + 1) (Z.shift_right l.z from_)
+
+    let lit_zext k l = { w = l.w + Z.to_int k; z = l.z }
+    let lit_sext k l = masked (l.w + Z.to_int k) (Z.signed_extract l.z 0 l.w)
+
+    let lit_concat l r =
+      { w = l.w + r.w; z = Z.logor (Z.shift_left l.z r.w) r.z }
+
+    let signed_extract z o l = Z.signed_extract z (Z.to_int o) (Z.to_int l)
+    let popcount z = Z.of_int (Z.popcount z)
+    let log2 z = Z.of_int (Z.log2 z)
+    let tdiv = Z.div
+    let trem = Z.rem
+    let divisible = Z.divisible
+    let fp_size fp = Z.of_int (FloatPrecision.size fp)
+    let fp_of_size n = FloatPrecision.of_size (Z.to_int n)
+    let f_equal = F.equal
+    let f_bits_equal = F.bits_equal
+    let f_to_bits = F.to_z
+    let f_of_bits = F.of_bits_z
+    let f_nan = F.nan
+    let f_is_class fc f = FloatClass.as_fpclass fc = F.fpclass f
+    let f_is_nan = F.is_nan
+    let f_is_zero = F.is_zero
+    let f_is_negative = F.is_negative
+    let f_is_positive = F.is_positive
+    let f_eq = F.eq
+    let f_lt = F.lt
+    let f_le = F.le
+    let f_add = F.add
+    let f_sub = F.sub
+    let f_mul = F.mul
+    let f_div = F.div
+    let f_rem = F.rem
+    let f_fmod = F.fmod
+    let f_min = F.min
+    let f_max = F.max
+    let f_fma = F.fma
+    let f_abs = F.abs
+    let f_neg = F.neg
+    let f_sqrt = F.sqrt
+    let f_round = F.round
+    let f_convert = F.convert
+
+    let f_to_int rounding signed size f =
+      match int_size_of_size (Z.to_int size) with
+      | Some int_size -> F.float2int f int_size rounding ~signed
+      | None -> None
+
+    let f_of_int rounding signed fp size z =
+      match int_size_of_size (Z.to_int size) with
+      | Some int_size -> Some (F.int2float z int_size fp rounding ~signed)
+      | None -> None
+  end
+
+  module R = struct
+    module P = Prims
+
+    [%%include_file "svalue_rules.gen.ml"]
+  end
+
+  let sure_neq = R.sure_neq
+
   (** {2 Booleans} *)
 
-  module rec Bool : Bool = struct
-    let v_true = Bool true <| TBool
-    let v_false = Bool false <| TBool
+  module Bool : Bool = struct
+    let v_true = v_true
+    let v_false = v_false
 
     let[@inline] to_bool t =
       if equal t v_true then Some true
@@ -389,428 +599,12 @@ module Make (V : Value_ext) () = struct
       (* avoid re-alloc and re-hashconsing *)
       if b then v_true else v_false
 
-    (* Recognize an upper-bound constraint [a < c] / [a <= c], returning the
-       bounded value, the signedness, the original node, and the inclusive upper
-       bound as an integer in that signedness. [as_lower_bound] is symmetric for
-       [c < a] / [c <= a] (returning an inclusive lower bound). *)
-    let as_upper_bound v =
-      match v.node.kind with
-      | Binop (Lt s, a, { node = { kind = BitVec c; _ }; _ }) ->
-          Some (a, s, v, Z.pred (BitVec.bv_to_z s (size_of a.node.ty) c))
-      | Binop (Leq s, a, { node = { kind = BitVec c; _ }; _ }) ->
-          Some (a, s, v, BitVec.bv_to_z s (size_of a.node.ty) c)
-      | _ -> None
-
-    let as_lower_bound v =
-      match v.node.kind with
-      | Binop (Lt s, { node = { kind = BitVec c; _ }; _ }, a) ->
-          Some (a, s, v, Z.succ (BitVec.bv_to_z s (size_of a.node.ty) c))
-      | Binop (Leq s, { node = { kind = BitVec c; _ }; _ }, a) ->
-          Some (a, s, v, BitVec.bv_to_z s (size_of a.node.ty) c)
-      | _ -> None
-
-    (* For two bounds on the same value (same signedness), [&&] keeps the
-       tighter and [||] keeps the looser; either way the kept node already
-       implies (resp. is implied by) the other, so we can drop it. Callers only
-       invoke these once both operands have matched as upper (resp. lower)
-       bounds, so the [None] cases are unreachable. *)
-    let combine_upper_bounds ~keep_tighter v1 v2 =
-      match (as_upper_bound v1, as_upper_bound v2) with
-      | Some (_, _, _, u1), Some (_, _, _, u2) ->
-          if Stdlib.( = ) (Z.leq u1 u2) keep_tighter then v1 else v2
-      | _ -> assert false
-
-    let combine_lower_bounds ~keep_tighter v1 v2 =
-      match (as_lower_bound v1, as_lower_bound v2) with
-      | Some (_, _, _, l1), Some (_, _, _, l2) ->
-          if Stdlib.( = ) (Z.geq l1 l2) keep_tighter then v1 else v2
-      | _ -> assert false
-
-    (* Whether [ubv] (an upper bound on some [a]) and [lbv] (a lower bound on
-       the same [a]) jointly cover the whole domain, i.e. the lower bound starts
-       no later than one past the upper bound. *)
-    let complementary_bounds ubv lbv =
-      match (as_upper_bound ubv, as_lower_bound lbv) with
-      | Some (a1, s1, _, u), Some (a2, s2, _, l) ->
-          Stdlib.( = ) s1 s2 && equal a1 a2 && Z.leq l (Z.succ u)
-      | _ -> false
-
-    (* Whether [boundv] (a bound on some [a]) is implied by [eqv] (an equality
-       [a == k] with [k] constant), i.e. [k] satisfies the bound. *)
-    let bound_implied_by_eq boundv eqv =
-      match eqv.node.kind with
-      | Binop (Eq, a, { node = { kind = BitVec k; _ }; _ })
-      | Binop (Eq, { node = { kind = BitVec k; _ }; _ }, a) -> (
-          let k_in s = BitVec.bv_to_z s (size_of a.node.ty) k in
-          (match as_upper_bound boundv with
-            | Some (ba, s, _, u) -> equal ba a && Z.leq (k_in s) u
-            | None -> false)
-          ||
-          match as_lower_bound boundv with
-          | Some (ba, s, _, l) -> equal ba a && Z.geq (k_in s) l
-          | None -> false)
-      | _ -> false
-
-    let rec and_ v1 v2 =
-      match (v1.node.kind, v2.node.kind) with
-      | _, _ when equal v1 v2 -> v1
-      | Bool false, _ | _, Bool false -> v_false
-      | Bool true, _ -> v2
-      | _, Bool true -> v1
-      (* p && !p <=> false *)
-      | _, Unop (Not, p) when equal v1 p -> v_false
-      | Unop (Not, p), _ when equal v2 p -> v_false
-      (* (a && b) && a <=> a && b *)
-      | Binop (And, a, b), _ when equal a v2 || equal b v2 -> v1
-      | _, Binop (And, a, b) when equal v1 a || equal v1 b -> v2
-      (* (a || b) && a <=> a *)
-      | Binop (Or, a, b), _ when equal a v2 || equal b v2 -> v2
-      | _, Binop (Or, a, b) when equal v1 a || equal v1 b -> v1
-      | Binop (Eq, l1, r1), Binop (Eq, l2, r2)
-        when (equal l1 l2 && sure_neq r1 r2)
-             || (equal l1 r2 && sure_neq r1 l2)
-             || (equal r1 l2 && sure_neq l1 r2)
-             || (equal r1 r2 && sure_neq l1 l2) ->
-          v_false
-      (* only for constants: if [bv1] or [bv2] could be undefined (an operation
-         whose overflow check does not hold), the conjunction could still be
-         false thanks to the other conjunct, while the merged equality would be
-         undefined *)
-      | ( Binop
-            ( Eq,
-              ({ node = { kind = BitVec _; _ }; _ } as bv1),
-              { node = { kind = Unop (BvExtract (s1, e1), x); _ }; _ } ),
-          Binop
-            ( Eq,
-              ({ node = { kind = BitVec _; _ }; _ } as bv2),
-              { node = { kind = Unop (BvExtract (s2, e2), y); _ }; _ } ) )
-        when equal x y && (e1 + 1 = s2 || e2 + 1 = s1) ->
-          let bv, xy =
-            if e1 + 1 = s2 then (BitVec.concat bv2 bv1, BitVec.extract s1 e2 x)
-            else (BitVec.concat bv1 bv2, BitVec.extract s2 e1 x)
-          in
-          sem_eq bv xy
-      (* two upper (resp. lower) bounds on the same value (e.g. [a < c1] && [a
-         <= c2]) keep the tighter one *)
-      | ( Binop ((Lt s1 | Leq s1), a1, { node = { kind = BitVec _; _ }; _ }),
-          Binop ((Lt s2 | Leq s2), a2, { node = { kind = BitVec _; _ }; _ }) )
-        when s1 = s2 && equal a1 a2 ->
-          combine_upper_bounds ~keep_tighter:true v1 v2
-      | ( Binop ((Lt s1 | Leq s1), { node = { kind = BitVec _; _ }; _ }, a1),
-          Binop ((Lt s2 | Leq s2), { node = { kind = BitVec _; _ }; _ }, a2) )
-        when s1 = s2 && equal a1 a2 ->
-          combine_lower_bounds ~keep_tighter:true v1 v2
-      | _ -> mk_commut_binop And v1 v2 <| TBool
-
-    and or_ v1 v2 =
-      match (v1.node.kind, v2.node.kind) with
-      | _, _ when equal v1 v2 -> v1
-      | Bool true, _ | _, Bool true -> v_true
-      | Bool false, _ -> v2
-      | _, Bool false -> v1
-      (* p || !p <=> true *)
-      | _, Unop (Not, p) when equal v1 p -> v_true
-      | Unop (Not, p), _ when equal v2 p -> v_true
-      | Binop (Lt s1, l1, r1), Binop (Lt s2, l2, r2)
-        when s1 = s2 && equal l1 r2 && equal r1 l2 ->
-          not (sem_eq l1 r1)
-      | Binop (Lt s1, l1, r1), Binop (Leq s2, l2, r2)
-      | Binop (Leq s1, l1, r1), Binop (Lt s2, l2, r2)
-        when s1 = s2 && equal l1 r2 && equal r1 l2 ->
-          v_true
-      | Binop (Or, a, b), _ when equal a v2 || equal b v2 -> v1
-      | _, Binop (Or, a, b) when equal v1 a || equal v1 b -> v2
-      (* (a && b) || a <=> a *)
-      | Binop (And, a, b), _ when equal a v2 || equal b v2 -> v2
-      | _, Binop (And, a, b) when equal v1 a || equal v1 b -> v1
-      (* an upper and a lower bound on the same value that (at least) touch
-         cover the whole domain, e.g. [a <= 2] || [3 <= a] *)
-      | Binop ((Lt _ | Leq _), _, _), Binop ((Lt _ | Leq _), _, _)
-        when complementary_bounds v1 v2 || complementary_bounds v2 v1 ->
-          v_true
-      (* a bound absorbs an equality it already allows, e.g. [a < c] || [a ==
-         0] *)
-      | Binop ((Lt _ | Leq _), _, _), Binop (Eq, _, _)
-        when bound_implied_by_eq v1 v2 ->
-          v1
-      | Binop (Eq, _, _), Binop ((Lt _ | Leq _), _, _)
-        when bound_implied_by_eq v2 v1 ->
-          v2
-      (* two upper (resp. lower) bounds on the same value keep the looser one *)
-      | ( Binop ((Lt s1 | Leq s1), a1, { node = { kind = BitVec _; _ }; _ }),
-          Binop ((Lt s2 | Leq s2), a2, { node = { kind = BitVec _; _ }; _ }) )
-        when s1 = s2 && equal a1 a2 ->
-          combine_upper_bounds ~keep_tighter:false v1 v2
-      | ( Binop ((Lt s1 | Leq s1), { node = { kind = BitVec _; _ }; _ }, a1),
-          Binop ((Lt s2 | Leq s2), { node = { kind = BitVec _; _ }; _ }, a2) )
-        when s1 = s2 && equal a1 a2 ->
-          combine_lower_bounds ~keep_tighter:false v1 v2
-      | _ -> mk_commut_binop Or v1 v2 <| TBool
-
-    and not sv =
-      if equal sv v_true then v_false
-      else if equal sv v_false then v_true
-      else
-        match sv.node.kind with
-        | Unop (Not, sv) -> sv
-        | Binop (Lt signed, v1, v2) -> BitVec.leq ~signed v2 v1
-        | Binop (Leq signed, v1, v2) -> BitVec.lt ~signed v2 v1
-        | Binop (Or, v1, v2) -> and_ (not v1) (not v2)
-        | Binop (And, v1, v2) -> or_ (not v1) (not v2)
-        | Triop (Ite, g, a, b) -> ite g (not a) (not b)
-        | Binop (Eq, { node = { kind = BitVec bv; ty = TBitVector 1 }; _ }, v)
-        | Binop (Eq, v, { node = { kind = BitVec bv; ty = TBitVector 1 }; _ })
-          ->
-            sem_eq (BitVec.mk 1 Z.(one - bv)) v
-        | Nop (Distinct, [ l; r ]) -> sem_eq l r
-        | _ -> Unop (Not, sv) <| TBool
-
-    and ite guard if_ else_ =
-      match (guard.node.kind, if_.node.kind, else_.node.kind) with
-      | Bool true, _, _ -> if_
-      | Bool false, _, _ -> else_
-      | _, Bool true, Bool false -> guard
-      | _, Bool false, Bool true -> not guard
-      | _, Bool false, _ -> and_ (not guard) else_
-      | _, Bool true, _ -> or_ guard else_
-      | _, _, Bool false -> and_ guard if_
-      | _, _, Bool true -> or_ (not guard) if_
-      | _, BitVec o, BitVec z
-        when Z.(equal o one) && Z.equal z Z.zero && is_bv if_.node.ty ->
-          BitVec.of_bool (size_of if_.node.ty) guard
-      | Unop (Not, g), _, _ -> ite g else_ if_
-      | _ when equal guard if_ -> or_ guard else_
-      | _ when equal guard else_ -> and_ guard if_
-      | _, Triop (Ite, g, x, _), _ when equal g guard -> ite guard x else_
-      | _, _, Triop (Ite, g, _, y) when equal g guard -> ite guard if_ y
-      | Binop (And, a, b), Triop (Ite, g, x, _), _ when equal g a || equal g b
-        ->
-          ite guard x else_
-      | Binop (Or, a, b), _, Triop (Ite, g, _, y) when equal g a || equal g b ->
-          ite guard if_ y
-      | _ when equal if_ else_ -> if_
-      | _ -> Triop (Ite, guard, if_, else_) <| if_.node.ty
-
-    and sem_eq v1 v2 =
-      match[@warning "-ambiguous-var-in-pattern-guard"]
-        (v1.node.kind, v2.node.kind)
-      with
-      | _ when equal v1 v2 -> v_true
-      | Bool b1, Bool b2 -> of_bool (b1 = b2)
-      | Ptr (l1, o1), Ptr (l2, o2) -> and_ (sem_eq l1 l2) (sem_eq o1 o2)
-      | BitVec b1, BitVec b2 -> of_bool (Z.equal b1 b2)
-      | Float f1, Float f2 -> of_bool (F.bits_equal f1 f2)
-      (* Arithmetics *)
-      | BitVec _, Unop (Neg _, v2) -> sem_eq (BitVec.neg v1) v2
-      | Unop (Neg _, v1), BitVec _ -> sem_eq v1 (BitVec.neg v2)
-      | BitVec _, Unop (BvNot, v2) -> sem_eq (BitVec.not v1) v2
-      | Unop (BvNot, v1), BitVec _ -> sem_eq v1 (BitVec.not v2)
-      | BitVec _, Binop (Add _, ({ node = { kind = BitVec _; _ }; _ } as l), r)
-      | BitVec _, Binop (Add _, r, ({ node = { kind = BitVec _; _ }; _ } as l))
-        ->
-          sem_eq (BitVec.sub v1 l) r
-      | Binop (Add _, ({ node = { kind = BitVec _; _ }; _ } as l), r), BitVec _
-      | Binop (Add _, r, ({ node = { kind = BitVec _; _ }; _ } as l)), BitVec _
-        ->
-          sem_eq (BitVec.sub v2 l) r
-      | BitVec _, Binop (Sub _, l, ({ node = { kind = BitVec _; _ }; _ } as r))
-        ->
-          sem_eq (BitVec.add v1 r) l
-      | BitVec _, Binop (Sub _, ({ node = { kind = BitVec _; _ }; _ } as l), r)
-        ->
-          sem_eq (BitVec.sub l v1) r
-      | Binop (Sub _, l, ({ node = { kind = BitVec _; _ }; _ } as r)), BitVec _
-        ->
-          sem_eq (BitVec.add v2 r) l
-      | Binop (Sub _, ({ node = { kind = BitVec _; _ }; _ } as l), r), BitVec _
-        ->
-          sem_eq (BitVec.sub l v2) r
-      | _, Binop (Add _, v2, { node = { kind = BitVec bv; _ }; _ })
-        when equal v1 v2 ->
-          of_bool Z.(equal bv zero)
-      | _, Binop (Add _, { node = { kind = BitVec bv; _ }; _ }, v2)
-        when equal v1 v2 ->
-          of_bool Z.(equal bv zero)
-      | Binop (Add _, { node = { kind = BitVec bv; _ }; _ }, v1), _
-        when equal v1 v2 ->
-          of_bool Z.(equal bv zero)
-      | Binop (Add _, v1, { node = { kind = BitVec bv; _ }; _ }), _
-        when equal v1 v2 ->
-          of_bool Z.(equal bv zero)
-      | ( ( Binop (Add _, ({ node = { kind = BitVec bv_l; _ }; _ } as l), y)
-          | Binop (Add _, y, ({ node = { kind = BitVec bv_l; _ }; _ } as l)) ),
-          ( Binop (Add _, ({ node = { kind = BitVec bv_r; _ }; _ } as r), x)
-          | Binop (Add _, x, ({ node = { kind = BitVec bv_r; _ }; _ } as r)) ) )
-        ->
-          (* y + l == x + r <=> y == x + (r - l) <=> y + (l - r) == x *)
-
-          (* we pick the option that will make a positive constant
-             (superstition); this rewrite holds modulo 2^n regardless of
-             overflow, but the rebuilt sum carries no overflow guarantee, so it
-             stays unchecked. *)
-          if Z.geq bv_l bv_r then
-            sem_eq x
-              (BitVec.add ~checked:unchecked y
-                 (BitVec.sub ~checked:unchecked l r))
-          else
-            sem_eq y
-              (BitVec.add ~checked:unchecked x
-                 (BitVec.sub ~checked:unchecked r l))
-      | ( BitVec n,
-          ( Binop (Mul ck, { node = { kind = BitVec m; _ }; _ }, x)
-          | Binop (Mul ck, x, { node = { kind = BitVec m; _ }; _ }) ) )
-      | ( ( Binop (Mul ck, { node = { kind = BitVec m; _ }; _ }, x)
-          | Binop (Mul ck, x, { node = { kind = BitVec m; _ }; _ }) ),
-          BitVec n )
-        when is_checked ck ->
-          (* the multiplication is exact in a checked signedness, so read the
-             constants in that signedness: the result must be a multiple of [m],
-             and dividing recovers [x] *)
-          let sz = size_of x.node.ty in
-          let signed = Stdlib.not ck.unsigned in
-          let m = BitVec.bv_to_z signed sz m in
-          let n = BitVec.bv_to_z signed sz n in
-          if Z.(equal m zero) then of_bool (Z.equal n Z.zero)
-          else if Z.(equal n zero) then sem_eq x (BitVec.zero sz)
-          else if Z.(divisible n m) then
-            let q = Z.(n / m) in
-            let fits =
-              if signed then
-                let h = Z.(one lsl Stdlib.(sz - 1)) in
-                Z.leq (Z.neg h) q && Z.lt q h
-              else Z.leq Z.zero q && Z.lt q Z.(one lsl sz)
-            in
-            if fits then sem_eq x (BitVec.mk_masked sz q) else v_false
-          else v_false
-      (* distributing over a shared guard lets the branches cancel pairwise *)
-      | Triop (Ite, b, l, r), Triop (Ite, b', l', r') when equal b b' ->
-          ite b (sem_eq l l') (sem_eq r r')
-      (* Cancelling a common factor [a] from [a*b == a*d] is only sound when [a]
-         is odd (invertible modulo 2^n), or when [a] is non-zero and both
-         multiplications are overflow-checked (so they behave like exact integer
-         arithmetic). *)
-      | ( Binop (Mul ck1, { node = { kind = BitVec a; _ }; _ }, b),
-          Binop (Mul ck2, { node = { kind = BitVec c; _ }; _ }, d) )
-        when Z.(equal a c)
-             && (Z.is_odd a
-                || (Stdlib.not (Z.equal a Z.zero)
-                   && is_checked (checked_meet ck1 ck2))) ->
-          sem_eq b d
-      | ( Binop (Mul ck1, b, { node = { kind = BitVec a; _ }; _ }),
-          Binop (Mul ck2, d, { node = { kind = BitVec c; _ }; _ }) )
-        when Z.(equal a c)
-             && (Z.is_odd a
-                || (Stdlib.not (Z.equal a Z.zero)
-                   && is_checked (checked_meet ck1 ck2))) ->
-          sem_eq b d
-      | ( Binop (Mul ck1, { node = { kind = BitVec a; _ }; _ }, b),
-          Binop (Mul ck2, d, { node = { kind = BitVec c; _ }; _ }) )
-        when Z.(equal a c)
-             && (Z.is_odd a
-                || (Stdlib.not (Z.equal a Z.zero)
-                   && is_checked (checked_meet ck1 ck2))) ->
-          sem_eq b d
-      | ( Binop (Mul ck1, b, { node = { kind = BitVec a; _ }; _ }),
-          Binop (Mul ck2, { node = { kind = BitVec c; _ }; _ }, d) )
-        when Z.(equal a c)
-             && (Z.is_odd a
-                || (Stdlib.not (Z.equal a Z.zero)
-                   && is_checked (checked_meet ck1 ck2))) ->
-          sem_eq b d (* Bitvectors *)
-      (* 0 == L | R ==> 0 == L && 0 == R, splitting is better for the PC *)
-      | (BitVec z, Binop (BitOr, l, r) | Binop (BitOr, l, r), BitVec z)
-        when Z.equal z Z.zero ->
-          let z = BitVec.zero (size_of v1.node.ty) in
-          and_ (sem_eq l z) (sem_eq r z)
-      (* for N == (M & X), if N has bits set that aren't in M, then it must be
-         false, since the mask would unset them *)
-      | BitVec n, Binop (BitAnd, { node = { kind = BitVec mask; _ }; _ }, _)
-      | BitVec n, Binop (BitAnd, _, { node = { kind = BitVec mask; _ }; _ })
-      | Binop (BitAnd, { node = { kind = BitVec mask; _ }; _ }, _), BitVec n
-      | Binop (BitAnd, _, { node = { kind = BitVec mask; _ }; _ }), BitVec n
-        when let sz = size_of v1.node.ty in
-             let full_mask = Z.(pred (one lsl sz)) in
-             let mask_not = Z.(lognot mask land full_mask) in
-             Stdlib.not Z.(equal (n land mask_not) Z.zero) ->
-          v_false
-      | (BitVec _ as z), Binop (BvConcat, l, r)
-      | Binop (BvConcat, l, r), (BitVec _ as z) ->
-          let z = z <| v1.node.ty in
-          let size_r = size_of r.node.ty in
-          let size_l = size_of l.node.ty in
-          let z_r = BitVec.extract 0 (size_r - 1) z in
-          let z_l = BitVec.extract size_r (size_r + size_l - 1) z in
-          and_ (sem_eq l z_l) (sem_eq r z_r)
-      | Unop (BvExtend (false, by), bv), BitVec z
-      | BitVec z, Unop (BvExtend (false, by), bv) ->
-          let size_bv = size_of bv.node.ty in
-          (* if any of the bits of z are set in [size_bv, size_bv+by), this
-             cannot be true since they're extended to 0 *)
-          let mask = Z.(pred (one lsl by) lsl size_bv) in
-          if Stdlib.not Z.(equal (z land mask) Z.zero) then v_false
-          else
-            let z_bv = BitVec.mk size_bv z in
-            sem_eq bv z_bv
-      (* ite(b, A::B, C::D) == l :: r <=>
-       * ite(b, A, C) == l && ite(b, B, D) == r *)
-      | ( Triop
-            ( Ite,
-              b,
-              ({ node = { kind = BitVec _; _ }; _ } as t),
-              ({ node = { kind = BitVec _; _ }; _ } as e) ),
-          Binop (BvConcat, l, r) )
-      | ( Binop (BvConcat, l, r),
-          Triop
-            ( Ite,
-              b,
-              ({ node = { kind = BitVec _; _ }; _ } as t),
-              ({ node = { kind = BitVec _; _ }; _ } as e) ) ) ->
-          let size_r = size_of r.node.ty in
-          let size_l = size_of l.node.ty in
-          let t_r = BitVec.extract 0 (size_r - 1) t in
-          let t_l = BitVec.extract size_r (size_r + size_l - 1) t in
-          let e_r = BitVec.extract 0 (size_r - 1) e in
-          let e_l = BitVec.extract size_r (size_r + size_l - 1) e in
-          and_ (sem_eq (ite b t_l e_l) l) (sem_eq (ite b t_r e_r) r)
-      | Binop (BvConcat, l1, r1), Binop (BvConcat, l2, r2)
-        when size_of l1.node.ty = size_of l2.node.ty ->
-          and_ (sem_eq l1 l2) (sem_eq r1 r2)
-      (* BvOfBool and If-then-elses *)
-      | Triop (Ite, b, l, t), (BitVec _ | Bool _) ->
-          ite b (sem_eq l v2) (sem_eq t v2)
-      | (BitVec _ | Bool _), Triop (Ite, b, l, t) ->
-          ite b (sem_eq v1 l) (sem_eq v1 t)
-      | Bool false, _ -> not v2
-      | _, Bool false -> not v1
-      | Bool true, _ -> v2
-      | _, Bool true -> v1
-      | Unop (BvOfBool _, b), Unop (BvOfBool _, c) -> sem_eq b c
-      | Unop (Not, b), Unop (Not, c) -> sem_eq b c
-      | Unop (BvOfBool _, b), BitVec z | BitVec z, Unop (BvOfBool _, b) ->
-          if Z.equal z Z.one then b
-          else if Z.equal z Z.zero then not b
-          else v_false
-      (* special case: for BVs, check if we can infer the most significant set
-         bits and extract *)
-      | _ when is_bv v1.node.ty && is_bv v2.node.ty ->
-          let current_size = size_of v1.node.ty in
-          let msb = max (BitVec.msb_of v1) (BitVec.msb_of v2) in
-          if 0 <= msb && msb < current_size - 1 then
-            let v1' = BitVec.extract 0 msb v1 in
-            let v2' = BitVec.extract 0 msb v2 in
-            sem_eq v1' v2'
-          else
-            (* regular sem_eq *)
-            mk_commut_binop Eq v1 v2 <| TBool
-      | _ -> mk_commut_binop Eq v1 v2 <| TBool
-
-    (* TODO: merge binders if the body is an exists *)
-    let mk_exists binders body =
-      let body_vars = Var.Hashset.of_iter (iter_vars body |> Iter.map fst) in
-      let binders =
-        List.filter (fun (v, _) -> Var.Hashset.mem body_vars v) binders
-      in
-      match binders with [] -> body | _ -> Exists (binders, body) <| TBool
+    let and_ = R.b_and
+    let or_ = R.b_or
+    let not = R.b_not
+    let ite = R.b_ite
+    let sem_eq = R.sem_eq
+    let mk_exists = R.b_mk_exists
 
     (** * [exists_n ~not_in tys mk] creates an existential with [length tys]
         variables of types [tys], that are not in [not_in], and with body
@@ -847,8 +641,7 @@ module Make (V : Value_ext) () = struct
         | [ v1; v2; v3 ] -> mk v1 v2 v3
         | _ -> L.failwith "exists_3: unreachable")
 
-    let sem_eq_untyped v1 v2 =
-      if equal_ty v1.node.ty v2.node.ty then sem_eq v1 v2 else v_false
+    let sem_eq_untyped = R.sem_eq_untyped
 
     let and_lazy v1 v2 =
       match v1.node.kind with Bool false -> v_false | _ -> and_ v1 (v2 ())
@@ -865,1658 +658,62 @@ module Make (V : Value_ext) () = struct
           split_ands s2 f
       | _ -> f sv
 
-    (* If l is not none, it is the list represented by the sequence S *)
-    let distinct_raw s ?l () =
-      (* [Distinct l] when l is empty or of size 1 is always true *)
-      match Seq.compare_length_with s 2 with
-      | -1 -> v_true
-      | _ -> (
-          let cross_product = Seq.self_cross_product s in
-          let rec aux seq =
-            match seq () with
-            | Seq.Nil -> Some true
-            | Seq.Cons ((a, b), rest) ->
-                if equal a b then Some false
-                else if sure_neq a b then aux rest
-                else None
-          in
-          let res = aux cross_product in
-          match (res, l) with
-          | Some true, _ -> v_true
-          | Some false, _ -> v_false
-          | None, Some l -> mk_commut_nop ~idem:false Distinct l <| TBool
-          | None, None ->
-              mk_commut_nop ~idem:false Distinct (List.of_seq s) <| TBool)
-
-    let distinct_seq s = distinct_raw s ()
-    let distinct l = distinct_raw (List.to_seq l) ~l ()
+    let distinct_seq s = R.b_distinct (List.of_seq s)
+    let distinct l = R.b_distinct l
   end
 
   (** {2 Bit vectors} *)
-  and BitVec : BitVec = struct
-    let mk n bv =
-      assert (n > 0);
-      assert (Z.(zero <= bv && bv < one lsl n));
-      BitVec bv <| t_bv n
-
-    (* Bitwidth -> [(1 lsl n) - 1] mask. Memoized to avoid re-allocating the
-       mask bignum on each [mk_masked] call (expensive in pathological
-       cases). *)
-    let mask_cache : Z.t Array.t =
-      Array.init 256 (fun n -> Z.(pred (one lsl n)))
-
-    let mask_of_bits n =
-      if n <= 255 then mask_cache.(n) else Z.(pred (one lsl n))
-
-    let mk_masked n bv =
-      let mask = mask_of_bits n in
-      BitVec (Z.logand bv mask) <| t_bv n
-
+  module BitVec : BitVec = struct
+    let mk = mk_bv
+    let mk_masked = mk_masked
     let mki n i = mk n (Z.of_int i)
-
-    (* Index [n-1] holds the cached value for bitwidth [n]; we skip [n=0]
-       because [mk] asserts [n > 0]. *)
-    let zero_cache : t Array.t = Array.init 256 (fun n -> mk (n + 1) Z.zero)
-    let[@inline] zero n = if n <= 256 then zero_cache.(n - 1) else mk n Z.zero
-    let one_cache : t Array.t = Array.init 256 (fun n -> mk (n + 1) Z.one)
-    let[@inline] one n = if n <= 256 then one_cache.(n - 1) else mk n Z.one
+    let zero = bv_zero
+    let one = bv_one
 
     (** [bv_to_z signed bits z] parses a BitVector [z], for a given bitwidth
         [bits], with [signed], into an integer. *)
     let bv_to_z signed bits z = if signed then Z.signed_extract z 0 bits else z
 
     let to_z v = match v.node.kind with BitVec z -> Some z | _ -> None
-
-    (** [max_for signed n] is the inclusive maximum for a bitvector of size [n]
-        when it is [signed] *)
-    let max_for signed n =
-      let n = if signed then n - 1 else n in
-      Z.(pred (one lsl n))
-
-    (** [min_for signed n] is the inclusive minimum for a bitvector of size [n]
-        when it is [signed] *)
-    let min_for signed n =
-      if signed then Z.(neg (one lsl Stdlib.( - ) n 1)) else Z.zero
-
-    (** [is_right_mask z] is true if [z] is of the form [0*1+] *)
-    let is_right_mask z = Z.(z > zero && popcount (succ z) = 1)
-
-    (** [right_mask_size z] is, for a [z] of the form [0*1{n}], [n]. If [z] is
-        not of the form [0*1{n}], the result is undefined, so use
-        [is_right_mask] before. *)
-    let right_mask_size z = Z.(log2 (succ z))
-
-    (** [covers_bitwidth bits z] is true if [z] is of the form [1+] and covers
-        the whole bitwidth of size [bits]. *)
-    let covers_bitwidth bits z = is_right_mask z && right_mask_size z = bits
-
-    let is_pow2 z = Z.(gt z zero && popcount z = 1)
-
-    (** [lsb z] returns the least significant bit of z that is set, or 128 if z
-        is 0. *)
-    let lsb z = if Z.equal z Z.zero then 128 else Z.(logand z (neg z) |> log2)
-
-    let rec msb_of v =
-      match v.node.kind with
-      | BitVec z when Z.(z > zero) -> Z.log2 z
-      | BitVec z when Z.(equal z zero) -> size_of v.node.ty - 1
-      | Binop (BitAnd, bv1, bv2) -> min (msb_of bv1) (msb_of bv2)
-      | Triop (Ite, _, l, r) -> max (msb_of l) (msb_of r)
-      | Unop (BvExtend (false, __), v) -> msb_of v
-      | _ -> size_of v.node.ty - 1
-
-    let overflows ~signed n l r op =
-      let minz = min_for signed n in
-      let maxz = max_for signed n in
-      let l = bv_to_z signed n l in
-      let r = bv_to_z signed n r in
-      let res = op l r in
-      Z.Compare.(res < minz || res > maxz)
-
-    (* Re-associating a checked add/sub folds two of its constants ([a], [b])
-       into a single one via [op]. The rebuilt operation can overflow even when
-       the originals didn't (the fold wraps), so the [checked] flag only
-       survives in a signedness where that constant fold does not itself
-       overflow. *)
-    let mask_checked_after_fold c a b op =
-      match (a.node.kind, b.node.kind) with
-      | BitVec za, BitVec zb ->
-          let n = size_of a.node.ty in
-          let keep ~signed =
-            checked_has ~signed c && Stdlib.not (overflows ~signed n za zb op)
-          in
-          { signed = keep ~signed:true; unsigned = keep ~signed:false }
-      | _ -> unchecked
-
-    let ovf_check ~signed n l r op = Bool.of_bool @@ overflows ~signed n l r op
-
-    let of_bool n b =
-      if equal Bool.v_true b then one n
-      else if equal Bool.v_false b then zero n
-      else Unop (BvOfBool n, b) <| TBitVector n
-
-    let to_bool v =
-      match v.node.kind with
-      | BitVec z -> Bool.of_bool (Stdlib.not (Z.equal z Z.zero))
-      | Unop (BvOfBool _, sv') -> sv'
-      | _ -> Bool.not (Bool.sem_eq v (zero (size_of v.node.ty)))
-
-    let not_bool v =
-      let n = size_of v.node.ty in
-      match v.node.kind with
-      | BitVec z -> if Z.equal z Z.zero then one n else zero n
-      | Unop (BvOfBool n, g) -> of_bool n (Bool.not g)
-      | _ -> of_bool n (Bool.sem_eq v (zero n))
-
-    let rec add ?(checked = unchecked) v1 v2 =
-      assert (equal_ty v1.node.ty v2.node.ty);
-      match[@warning "-ambiguous-var-in-pattern-guard"]
-        (v1.node.kind, v2.node.kind)
-      with
-      | BitVec l, BitVec r -> mk_masked (size_of v1.node.ty) Z.(l + r)
-      | Unop (Neg _, v1), _ -> sub v2 v1
-      | _, Unop (Neg _, v2) -> sub v1 v2
-      | _, BitVec z when Z.equal z Z.zero -> v1
-      | BitVec z, _ when Z.equal z Z.zero -> v2
-      | (BitVec z, Unop (BvNot, v) | Unop (BvNot, v), BitVec z)
-        when Z.equal z Z.one ->
-          neg v
-      | Binop (Add c, ({ node = { kind = BitVec _; _ }; _ } as c1), r), BitVec _
-      | Binop (Add c, r, ({ node = { kind = BitVec _; _ }; _ } as c1)), BitVec _
-        ->
-          let checked =
-            mask_checked_after_fold (checked_meet checked c) c1 v2 Z.( + )
-          in
-          add ~checked (add c1 v2) r
-      | Binop (Sub c, l, ({ node = { kind = BitVec _; _ }; _ } as c1)), BitVec _
-        ->
-          let checked =
-            mask_checked_after_fold (checked_meet checked c) v2 c1 Z.( - )
-          in
-          add ~checked l (sub v2 c1)
-      | Binop (Sub c, ({ node = { kind = BitVec _; _ }; _ } as c1), r), BitVec _
-        ->
-          let checked =
-            mask_checked_after_fold (checked_meet checked c) c1 v2 Z.( + )
-          in
-          sub ~checked (add c1 v2) r
-      | _, Binop (Sub _, l, r) when equal r v1 -> l
-      | Binop (Sub _, l, r), _ when equal r v2 -> l
-      (* (a + b) + (c - a) = b + c (holds modulo 2^n) *)
-      | Binop (Add _, a, b), Binop (Sub _, c, a') when equal a a' -> add b c
-      | Binop (Add _, b, a), Binop (Sub _, c, a') when equal a a' -> add b c
-      | Binop (Sub _, c, a'), Binop (Add _, a, b) when equal a a' -> add b c
-      | Binop (Sub _, c, a'), Binop (Add _, b, a) when equal a a' -> add b c
-      | Binop (Mul ck1, l1, r1), Binop (Mul ck2, l2, r2)
-        when equal l1 l2 || equal l1 r2 || equal r1 l2 || equal r1 r2 ->
-          (* if neither product nor the sum overflows unsigned, then neither
-             does the factored product *)
-          let checked =
-            if (checked_meet (checked_meet checked ck1) ck2).unsigned then
-              checked_unsigned
-            else unchecked
-          in
-          if equal l1 l2 then mul ~checked l1 (add r1 r2)
-          else if equal l1 r2 then mul ~checked l1 (add r1 l2)
-          else if equal r1 l2 then mul ~checked r1 (add l1 r2)
-          else mul ~checked r1 (add l1 l2)
-      | ( Binop (Mul ck1, ({ node = { kind = BitVec l1; _ }; _ } as v_l1), r1),
-          Binop (Mul ck2, ({ node = { kind = BitVec l2; _ }; _ } as v_l2), r2) )
-      | ( Binop (Mul ck1, r1, ({ node = { kind = BitVec l1; _ }; _ } as v_l1)),
-          Binop (Mul ck2, ({ node = { kind = BitVec l2; _ }; _ } as v_l2), r2) )
-      | ( Binop (Mul ck1, ({ node = { kind = BitVec l1; _ }; _ } as v_l1), r1),
-          Binop (Mul ck2, r2, ({ node = { kind = BitVec l2; _ }; _ } as v_l2)) )
-      | ( Binop (Mul ck1, r1, ({ node = { kind = BitVec l1; _ }; _ } as v_l1)),
-          Binop (Mul ck2, r2, ({ node = { kind = BitVec l2; _ }; _ } as v_l2)) )
-        when (checked_meet (checked_meet checked ck1) ck2).unsigned
-             && Stdlib.not (Z.equal l1 Z.zero && Z.equal l2 Z.zero)
-             && (Z.divisible l1 l2 || Z.divisible l2 l1) ->
-          let checked = checked_unsigned in
-          if Z.divisible l2 l1 then
-            let common = mk (size_of v1.node.ty) (Z.div l2 l1) in
-            mul ~checked v_l1 (add ~checked r1 (mul ~checked common r2))
-          else
-            let common = mk (size_of v1.node.ty) (Z.div l1 l2) in
-            mul ~checked v_l2 (add ~checked r2 (mul ~checked common r1))
-      | Triop (Ite, b, l, r), BitVec x | BitVec x, Triop (Ite, b, l, r) ->
-          (* only propagate down ites if we know it's concrete *)
-          let n = size_of v1.node.ty in
-          let x = mk n x in
-          Bool.ite b (add ~checked l x) (add ~checked r x)
-      | _ -> mk_commut_binop (Add checked) v1 v2 <| v1.node.ty
-
-    and sub ?(checked = unchecked) v1 v2 =
-      match (v1.node.kind, v2.node.kind) with
-      | BitVec l, BitVec r -> mk_masked (size_of v1.node.ty) Z.(l - r)
-      | _, BitVec z when Z.equal z Z.zero -> v1
-      | BitVec z, _ when Z.equal z Z.zero ->
-          (* 0 - x = -x; the subtraction overflows (signed) iff x = INT_MIN, so
-             a signed-checked subtraction yields a signed-checked negation. *)
-          neg ~checked:checked.signed v2
-      | _, _ when equal v1 v2 -> zero (size_of v1.node.ty)
-      (* BAD PERF:!!!! *)
-      | _, Unop (Neg _, v2) -> add v1 v2
-      | Binop (Sub c, ({ node = { kind = BitVec _; _ }; _ } as c1), s), BitVec _
-        ->
-          let checked =
-            mask_checked_after_fold (checked_meet c checked) c1 v2 Z.( - )
-          in
-          sub ~checked (sub c1 v2) s
-      | Binop (Sub c, s, ({ node = { kind = BitVec _; _ }; _ } as c1)), BitVec _
-        ->
-          let checked =
-            mask_checked_after_fold (checked_meet c checked) c1 v2 Z.( + )
-          in
-          sub ~checked s (add c1 v2)
-      | BitVec _, Binop (Add c, ({ node = { kind = BitVec _; _ }; _ } as r), l)
-      | BitVec _, Binop (Add c, l, ({ node = { kind = BitVec _; _ }; _ } as r))
-        ->
-          let checked =
-            mask_checked_after_fold (checked_meet c checked) v1 r Z.( - )
-          in
-          sub ~checked (sub v1 r) l
-      | ( Binop (Add c, ({ node = { kind = BitVec bv1; _ }; _ } as r), l),
-          BitVec bv2 )
-      | ( Binop (Add c, l, ({ node = { kind = BitVec bv1; _ }; _ } as r)),
-          BitVec bv2 ) ->
-          (* if bv1 < bv2 there would be an overflow which causes problems since
-             the operation can't be deemed checked anymore. *)
-          if Z.lt bv1 bv2 then
-            let checked =
-              mask_checked_after_fold (checked_meet c checked) v2 r Z.( - )
-            in
-            sub ~checked l (neg (sub r v2))
-          else
-            let checked =
-              mask_checked_after_fold (checked_meet c checked) r v2 Z.( - )
-            in
-            add ~checked l (sub r v2)
-      | Binop (Add _, l, r), _ when equal l v2 -> r
-      | Binop (Add _, l, r), _ when equal r v2 -> l
-      | Binop (Add _, l1, r1), Binop (Add _, l2, r2) when equal l1 l2 ->
-          sub r1 r2
-      | _l, Binop (Sub _, l', r) when equal v1 l' -> r
-      (* distributing over a shared guard lets the branches cancel pairwise *)
-      | Triop (Ite, b, l, r), Triop (Ite, b', l', r') when equal b b' ->
-          Bool.ite b (sub l l') (sub r r')
-      (* only propagate down ites if we know it's concrete *)
-      | Triop (Ite, b, l, r), BitVec _ -> Bool.ite b (sub l v2) (sub r v2)
-      | BitVec _, Triop (Ite, b, l, r) -> Bool.ite b (sub v1 l) (sub v1 r)
-      | Unop (BvOfBool n, b), BitVec _ -> Bool.ite b (sub (one n) v2) (neg v2)
-      | BitVec _, Unop (BvOfBool n, b) -> Bool.ite b (sub v1 (one n)) v1
-      | _ -> Binop (Sub checked, v1, v2) <| v1.node.ty
-
-    and neg ?(checked = false) v =
-      let n = size_of v.node.ty in
-      match v.node.kind with
-      | BitVec bv -> mk_masked n Z.(neg bv)
-      | Unop (Neg _, v) -> v
-      | Triop (Ite, b, l, r) -> Bool.ite b (neg ~checked l) (neg ~checked r)
-      | Unop (BvOfBool n, b) -> Bool.ite b (neg (one n)) (zero n)
-      | _ -> Unop (Neg checked, v) <| v.node.ty
-
-    (** [mod_ v1 v2] is the signed remainder of [v1 / v2], which takes the sign
-        of the divisor [v2] if [signed]. For an unsigned version, use
-        [rem ~signed:false]. *)
-    and mod_ v1 v2 =
-      match (v1.node.kind, v2.node.kind) with
-      (* by zero, the result is the dividend (as in SMT-LIB) *)
-      | _, BitVec r when Z.equal r Z.zero -> v1
-      | BitVec l, BitVec r ->
-          let size = size_of v1.node.ty in
-          let l = bv_to_z true size l in
-          let r = bv_to_z true size r in
-          let res = Z.(l mod r) in
-          let res =
-            if Z.(res < zero) && Stdlib.not Z.(r < zero) then Z.(res + r)
-            else if Z.(res > zero) && Z.(r < zero) then Z.(res + r)
-            else res
-          in
-          mk_masked size res
-      | _ -> Binop (Mod, v1, v2) <| v1.node.ty
-
-    (** [rem ~signed v1 v2] is the remainder of [v1 / v2], which takes the sign
-        of the dividend [v1] if [signed]. *)
-    and rem ~signed v1 v2 =
-      match (v1.node.kind, v2.node.kind) with
-      (* by zero, the result is the dividend (as in SMT-LIB) *)
-      | _, BitVec r when Z.equal r Z.zero -> v1
-      | BitVec l, BitVec r ->
-          let size = size_of v1.node.ty in
-          let l = bv_to_z signed size l in
-          let r = bv_to_z signed size r in
-          mk_masked size Z.(l mod r)
-      | BitVec z, _ when Z.equal Z.zero z -> zero (size_of v1.node.ty)
-      | _, BitVec r when Stdlib.not signed && Z.(equal r one) ->
-          zero (size_of v1.node.ty)
-      | _, BitVec r when Stdlib.not signed && is_pow2 r ->
-          let size = size_of v1.node.ty in
-          let bitwidth = Z.log2 r in
-          let lower = extract 0 (bitwidth - 1) v1 in
-          extend ~signed:false (size - bitwidth) lower
-      (* (d + r) %u d = r %u d, when the addition does not wrap *)
-      | ( Binop
-            (Add { unsigned = true; _ }, { node = { kind = BitVec l; _ }; _ }, r),
-          BitVec d )
-        when Stdlib.not signed && Z.(equal l d) ->
-          rem ~signed r v2
-      | ( Binop
-            (Add { unsigned = true; _ }, r, { node = { kind = BitVec l; _ }; _ }),
-          BitVec d )
-        when Stdlib.not signed && Z.(equal l d) ->
-          rem ~signed r v2
-      | ( Binop (Rem false, r, ({ node = { kind = BitVec r1; _ }; _ } as v_r1)),
-          BitVec r2 )
-        when Stdlib.not signed
-             && Z.(gt r1 zero && gt r2 zero)
-             && Z.(equal zero (rem r1 r2) || equal zero (rem r2 r1)) ->
-          let rhs = if Z.(equal (min r1 r2) r1) then v_r1 else v2 in
-          rem ~signed r rhs
-      | _ -> Binop (Rem signed, v1, v2) <| v1.node.ty
-
-    and not (v : t) =
-      match v.node.kind with
-      | BitVec bv ->
-          let n = size_of v.node.ty in
-          mk_masked n Z.(lognot bv)
-      | Triop (Ite, b, l, r) -> Bool.ite b (not l) (not r)
-      | _ -> Unop (BvNot, v) <| v.node.ty
-
-    and and_ v1 v2 =
-      let n = size_of v1.node.ty in
-      assert (n == size_of v2.node.ty);
-      match (v1.node.kind, v2.node.kind) with
-      | BitVec l, BitVec r -> mk n Z.(logand l r)
-      | BitVec mask, _ when Z.(equal mask zero) -> v1
-      | _, BitVec mask when Z.(equal mask zero) -> v2
-      | BitVec mask, _ when covers_bitwidth n mask -> v2
-      | _, BitVec mask when covers_bitwidth n mask -> v1
-      (* For (x >> s) & m, the mask is irrelevant if it entirely covers [bitsize
-         - s] *)
-      | ( (Binop (LShr, _, { node = { kind = BitVec shift; _ }; _ }) as base),
-          BitVec mask )
-      | ( BitVec mask,
-          (Binop (LShr, _, { node = { kind = BitVec shift; _ }; _ }) as base) )
-        when let shift_i = Z.to_int shift in
-             shift_i >= 0
-             && shift_i < n
-             &&
-             let bitwidth = n - shift_i in
-             let low_mask = Z.(pred (one lsl bitwidth)) in
-             Z.(equal (mask land low_mask) low_mask) ->
-          base <| t_bv n
-      | BitVec _, Triop (Ite, b, l, r) -> Bool.ite b (and_ v1 l) (and_ v1 r)
-      | Triop (Ite, b, l, r), BitVec _ -> Bool.ite b (and_ l v2) (and_ r v2)
-      | BitVec m1, Binop (BitAnd, x, { node = { kind = BitVec m2; _ }; _ })
-      | BitVec m1, Binop (BitAnd, { node = { kind = BitVec m2; _ }; _ }, x)
-      | Binop (BitAnd, x, { node = { kind = BitVec m2; _ }; _ }), BitVec m1
-      | Binop (BitAnd, { node = { kind = BitVec m2; _ }; _ }, x), BitVec m1 ->
-          and_ x (mk n (Z.logand m1 m2))
-      (* collapse M & (N | (P & X)) into (M & N) | (M & P & X) where M, N and P
-         concrete *)
-      | ( (BitVec _ as m),
-          Binop
-            ( BitOr,
-              ({ node = { kind = BitVec _; _ }; _ } as n),
-              {
-                node =
-                  {
-                    kind =
-                      Binop
-                        (BitAnd, ({ node = { kind = BitVec _; _ }; _ } as p), x);
-                    _;
-                  };
-                _;
-              } ) )
-      | ( (BitVec _ as m),
-          Binop
-            ( BitOr,
-              ({ node = { kind = BitVec _; _ }; _ } as n),
-              {
-                node =
-                  {
-                    kind =
-                      Binop
-                        (BitAnd, x, ({ node = { kind = BitVec _; _ }; _ } as p));
-                    _;
-                  };
-                _;
-              } ) )
-      | ( (BitVec _ as m),
-          Binop
-            ( BitOr,
-              {
-                node =
-                  {
-                    kind =
-                      Binop
-                        (BitAnd, ({ node = { kind = BitVec _; _ }; _ } as p), x);
-                    _;
-                  };
-                _;
-              },
-              ({ node = { kind = BitVec _; _ }; _ } as n) ) )
-      | ( (BitVec _ as m),
-          Binop
-            ( BitOr,
-              {
-                node =
-                  {
-                    kind =
-                      Binop
-                        (BitAnd, x, ({ node = { kind = BitVec _; _ }; _ } as p));
-                    _;
-                  };
-                _;
-              },
-              ({ node = { kind = BitVec _; _ }; _ } as n) ) )
-      | ( Binop
-            ( BitOr,
-              ({ node = { kind = BitVec _; _ }; _ } as n),
-              {
-                node =
-                  {
-                    kind =
-                      Binop
-                        (BitAnd, ({ node = { kind = BitVec _; _ }; _ } as p), x);
-                    _;
-                  };
-                _;
-              } ),
-          (BitVec _ as m) )
-      | ( Binop
-            ( BitOr,
-              ({ node = { kind = BitVec _; _ }; _ } as n),
-              {
-                node =
-                  {
-                    kind =
-                      Binop
-                        (BitAnd, x, ({ node = { kind = BitVec _; _ }; _ } as p));
-                    _;
-                  };
-                _;
-              } ),
-          (BitVec _ as m) )
-      | ( Binop
-            ( BitOr,
-              {
-                node =
-                  {
-                    kind =
-                      Binop
-                        (BitAnd, ({ node = { kind = BitVec _; _ }; _ } as p), x);
-                    _;
-                  };
-                _;
-              },
-              ({ node = { kind = BitVec _; _ }; _ } as n) ),
-          (BitVec _ as m) )
-      | ( Binop
-            ( BitOr,
-              {
-                node =
-                  {
-                    kind =
-                      Binop
-                        (BitAnd, x, ({ node = { kind = BitVec _; _ }; _ } as p));
-                    _;
-                  };
-                _;
-              },
-              ({ node = { kind = BitVec _; _ }; _ } as n) ),
-          (BitVec _ as m) ) ->
-          let ty = v1.node.ty in
-          let m = m <| ty in
-          or_ (and_ m n) (and_ m p |> and_ x)
-      (* M & (N | X) *)
-      | BitVec m_and, Binop (BitOr, x, { node = { kind = BitVec m_or; _ }; _ })
-      | BitVec m_and, Binop (BitOr, { node = { kind = BitVec m_or; _ }; _ }, x)
-      | Binop (BitOr, x, { node = { kind = BitVec m_or; _ }; _ }), BitVec m_and
-      | Binop (BitOr, { node = { kind = BitVec m_or; _ }; _ }, x), BitVec m_and
-        ->
-          let overlap = Z.logand m_and m_or in
-          if Z.equal overlap m_and then
-            (* M & (N | X) when M & N == M ==> M (all bits already set by the
-               or) *)
-            mk n m_and
-          else if Z.equal overlap Z.zero then
-            (* M & (N | X) when M & N == 0 ==> M & X (no bits set by the or) *)
-            and_ x (mk n m_and)
-          else (* give up *)
-            mk_commut_binop BitAnd v1 v2 <| t_bv n
-      (* if it's a right mask, it's usually beneficial to propagate it *)
-      | (BitVec mask, Binop (BitAnd, l, r) | Binop (BitAnd, l, r), BitVec mask)
-        when is_right_mask mask ->
-          let n = size_of v1.node.ty in
-          let mask = mk n mask in
-          and_ (and_ mask l) (and_ mask r)
-      | BitVec o, Unop (BvOfBool _, _) when Z.equal o Z.one -> v2
-      | Unop (BvOfBool _, _), BitVec o when Z.equal o Z.one -> v1
-      | Unop (BvOfBool _, b1), Unop (BvOfBool _, b2) ->
-          of_bool n (Bool.and_ b1 b2)
-      | ( Triop (Ite, b1, l1, { node = { kind = BitVec r1; _ }; _ }),
-          Triop (Ite, b2, l2, { node = { kind = BitVec r2; _ }; _ }) )
-        when Z.(equal r1 zero) && Z.(equal r2 zero) ->
-          let n = size_of v1.node.ty in
-          Bool.ite (Bool.and_ b1 b2) (and_ l1 l2) (zero n)
-      | _, _ -> mk_commut_binop BitAnd v1 v2 <| t_bv n
-
-    and or_ v1 v2 =
-      assert (is_bv v1.node.ty && is_bv v2.node.ty);
-      match[@warning "-ambiguous-var-in-pattern-guard"]
-        (v1.node.kind, v2.node.kind)
-      with
-      | BitVec l, BitVec r ->
-          let n = size_of v1.node.ty in
-          mk n Z.(l lor r)
-      | BitVec z, _ when Z.equal z Z.zero -> v2
-      | _, BitVec z when Z.equal z Z.zero -> v1
-      | _, _ when equal v1 v2 -> v1
-      (* m1 | (x & m2) where m2 is a subset of m1's bits means the & is
-         redundant *)
-      | BitVec m1, Binop (BitAnd, _, { node = { kind = BitVec m2; _ }; _ })
-      | BitVec m1, Binop (BitAnd, { node = { kind = BitVec m2; _ }; _ }, _)
-      | Binop (BitAnd, _, { node = { kind = BitVec m2; _ }; _ }), BitVec m1
-      | Binop (BitAnd, { node = { kind = BitVec m2; _ }; _ }, _), BitVec m1
-        when Z.(equal (logand m1 m2) m2) ->
-          mk (size_of v1.node.ty) m1
-      | BitVec m1, Binop (BitOr, x, { node = { kind = BitVec m2; _ }; _ })
-      | BitVec m1, Binop (BitOr, { node = { kind = BitVec m2; _ }; _ }, x)
-      | Binop (BitOr, x, { node = { kind = BitVec m2; _ }; _ }), BitVec m1
-      | Binop (BitOr, { node = { kind = BitVec m2; _ }; _ }, x), BitVec m1 ->
-          or_ x (mk (size_of v1.node.ty) (Z.logor m1 m2))
-      (* 0x0..0X..X | (0x0..0Y..Y << N) when N = |X..X| ==> 0x0..0Y..YX..X *)
-      | ( Unop (BvExtend (false, nx), base),
-          Binop
-            ( Shl,
-              { node = { kind = Unop (BvExtend (false, _), tail); _ }; _ },
-              { node = { kind = BitVec shift; _ }; _ } ) )
-        when Z.to_int shift = size_of base.node.ty ->
-          let tail_size = size_of tail.node.ty in
-          if nx = tail_size then concat tail base
-          else if nx > tail_size then
-            let new_base = concat tail base in
-            extend ~signed:false (nx - tail_size) new_base
-          else
-            let new_tail = extract 0 (nx - 1) tail in
-            concat new_tail base
-      | Unop (BvOfBool n, b1), Unop (BvOfBool _, b2) ->
-          of_bool n (Bool.or_ b1 b2)
-      | _ -> mk_commut_binop BitOr v1 v2 <| v1.node.ty
-
-    and xor v1 v2 =
-      match (v1.node.kind, v2.node.kind) with
-      | BitVec l, BitVec r ->
-          let n = size_of v1.node.ty in
-          mk n Z.(l lxor r)
-      | BitVec z, _ when Z.equal z Z.zero -> v2
-      | _, BitVec z when Z.equal z Z.zero -> v1
-      | Unop (BvOfBool n, b1), Unop (BvOfBool _, b2) ->
-          of_bool n (Bool.not (Bool.sem_eq b1 b2))
-      | _ -> mk_commut_binop BitXor v1 v2 <| v1.node.ty
-
-    (** [extract from_ to_ v] returns a bitvector covering bits from index
-        [from_], to index [to_], inclusive. [0 <= from_ <= to_ < size_of v] must
-        hold. *)
-    and extract from_ to_ v =
-      let prev_size = size_of v.node.ty in
-      assert (0 <= from_ && from_ <= to_ && to_ < prev_size);
-      let size = to_ - from_ + 1 in
-      match v.node.kind with
-      | BitVec bv -> mk_masked size Z.(bv asr from_)
-      | _ when from_ = 0 && to_ = prev_size - 1 -> v
-      | Binop (((BitAnd | BitOr | BitXor) as bop), v1, v2) -> (
-          let v1 = extract from_ to_ v1 in
-          let v2 = extract from_ to_ v2 in
-          match bop with
-          | BitAnd -> and_ v1 v2
-          | BitOr -> or_ v1 v2
-          | BitXor -> xor v1 v2
-          | _ -> L.failwith "unreachable binop")
-      | Binop (Shl, v1, { node = { kind = BitVec x; _ }; _ }) ->
-          (* extract[from_, to_](v1 << x) *)
-          let shift = Z.to_int x in
-          if from_ >= shift then
-            (* All extracted bits come from the original v1, shifted *)
-            extract (from_ - shift) (to_ - shift) v1
-          else if to_ < shift then
-            (* All extracted bits are zeros introduced by the shift *)
-            zero size
-          else
-            (* Some bits are zeros, some are from v1 *)
-            (* bits [from_, shift-1] are 0, bits [shift, to_] come from v1[0, to_-shift] *)
-            let high_part = extract 0 (to_ - shift) v1 in
-            let low_zeros = zero (shift - from_) in
-            concat high_part low_zeros
-      | Binop (LShr, v1, { node = { kind = BitVec x; _ }; _ }) ->
-          (* extract[from_, to_](v1 >> x) *)
-          (* After right shift by x, bit i of result = bit (i+x) of original if i+x < prev_size, else 0 *)
-          let shift = Z.to_int x in
-          if from_ + shift >= prev_size then
-            (* All extracted bits are zeros introduced by the shift *)
-            zero size
-          else if to_ + shift < prev_size then
-            (* All extracted bits come from the original v1, shifted *)
-            extract (from_ + shift) (to_ + shift) v1
-          else
-            (* Some bits are from v1, some are zeros *)
-            (* bits [from_, prev_size-shift-1] come from v1[from_+shift, prev_size-1] *)
-            (* bits [prev_size-shift, to_] are 0 *)
-            let low_part = extract (from_ + shift) (prev_size - 1) v1 in
-            let high_zeros = zero (to_ - (prev_size - shift - 1)) in
-            concat high_zeros low_part
-      | Triop (Ite, b, l, r) ->
-          let l = extract from_ to_ l in
-          let r = extract from_ to_ r in
-          Bool.ite b l r
-      | Unop (BvExtend (false, by), _) when from_ >= prev_size - by ->
-          (* zero extension, and we're extracting only the extended bits *)
-          zero size
-      | Unop (BvExtend (true, by), v)
-        when from_ >= prev_size - by && from_ = to_ ->
-          (* sign extension, and we're extracting an extended bit: msb of the
-             prev value *)
-          let prev_size = size_of v.node.ty in
-          extract (prev_size - 1) (prev_size - 1) v
-      | Unop (BvExtend (signed, _), v) when from_ = 0 ->
-          (* extracting from the beginning of an extended value *)
-          let orig_size = size_of v.node.ty in
-          if to_ = orig_size - 1 then
-            (* extracting exactly the original bits *)
-            v
-          else if to_ < orig_size then
-            (* extracting subset of original bits *)
-            extract from_ to_ v
-          else
-            (* we can reduce the extend *)
-            extend ~signed (to_ - orig_size + 1) v
-      | Unop (BvExtend (_, by), v) when to_ <= prev_size - by - 1 ->
-          (* extracting from original bits *)
-          extract from_ to_ v
-      | Unop (BvExtract (prev_from_, _), v) ->
-          extract (prev_from_ + from_) (prev_from_ + to_) v
-      | Binop (BvConcat, l, r) ->
-          let size_r = size_of r.node.ty in
-          if from_ >= size_r then extract (from_ - size_r) (to_ - size_r) l
-          else if to_ < size_r then extract from_ to_ r
-          else
-            let r' = extract from_ (size_r - 1) r in
-            let l' = extract 0 (to_ - size_r) l in
-            concat l' r'
-      | Binop (Add _, l, r) when from_ = 0 ->
-          let l_low = extract from_ to_ l in
-          let r_low = extract from_ to_ r in
-          add l_low r_low
-      | Binop (Add _, { node = { kind = BitVec n; _ }; _ }, x) when to_ < lsb n
-        ->
-          extract from_ to_ x
-      | Binop (Add _, x, { node = { kind = BitVec n; _ }; _ }) when to_ < lsb n
-        ->
-          extract from_ to_ x
-      | Binop (Mul _, { node = { kind = BitVec n; _ }; _ }, _)
-        when is_pow2 n && to_ < Z.log2 n ->
-          zero size
-      | Binop (Mul _, l, r) when from_ = 0 ->
-          (* i think the extraction is necessarily unchecked? *)
-          let l_low = extract from_ to_ l in
-          let r_low = extract from_ to_ r in
-          mul ~checked:unchecked l_low r_low
-      | Binop (Rem false, l, { node = { kind = BitVec n; _ }; _ })
-        when from_ = 0 && is_pow2 n && Z.log2 n < to_ ->
-          (* extract[0,N](X % 2^M) when M < N can be pushed down *)
-          let l = extract from_ to_ l in
-          rem ~signed:false l (mk (to_ + 1) n)
-      | _ -> Unop (BvExtract (from_, to_), v) <| t_bv size
-
-    and extend ~signed extend_by v =
-      assert (is_bv v.node.ty);
-      let n = size_of v.node.ty in
-      let to_ = n + extend_by in
-      assert (extend_by > 0);
-      match v.node.kind with
-      | BitVec bv ->
-          if signed then
-            (* Sign extend: replicate the MSB *)
-            mk_masked to_ (Z.signed_extract bv 0 n)
-          else
-            (* Zero extend: do nothing *)
-            mk to_ bv
-      | Unop (BvExtend (prev_signed, prev_by), v) when prev_signed = signed ->
-          (* combine extensions *)
-          extend ~signed (prev_by + extend_by) v
-      | Triop (Ite, b, l, r) ->
-          let l = extend ~signed extend_by l in
-          let r = extend ~signed extend_by r in
-          Bool.ite b l r
-      (* can't extend if signed && n == 1, as it should be all 1s *)
-      | Unop (BvOfBool n, b) when Stdlib.not signed || n > 1 -> of_bool to_ b
-      (* | Unop (BvExtract (_, t), v)
-        when Stdlib.not signed && to_ = size_of v.node.ty && t = to_ - 1 ->
-          (* extend[N](extract[L-N, L-1] X) == X >> N, where L = size_of X *)
-          lshr v (mki to_ extend_by) *)
-      (* unlike with extract, we don't want to propagate extend within the expression for &, |, ^,
-           as that will require a more expensive bit-blasting. *)
-      (* We also note the following reduction is *not valid*, as some upper bits may be set;
-           e.g. given i2bv[3](8) = 0b000, extend[1](i2bv[3](8)) = 0b0000, whereas
-                i2bv[4](8) = 0b1000
-        | Unop (BvOfInt, v) -> Unop (BvOfInt, v) <| t_bv signed to_ *)
-      | _ -> Unop (BvExtend (signed, extend_by), v) <| t_bv to_
-
-    (** [concat v1 v2] for [v1] of size [n] and [v2] of size [m] is a bitvector
-        of size [n + m] where the first [m] bits are [v2] and the following [n]
-        are [v1] *)
-    and concat v1 v2 =
-      let n1 = size_of v1.node.ty in
-      let n2 = size_of v2.node.ty in
-      match (v1.node.kind, v2.node.kind) with
-      | BitVec l, BitVec r -> mk_masked (n1 + n2) Z.(r + shift_left l n2)
-      | Unop (BvExtract (from1, to1), v1), Unop (BvExtract (from2, to2), v2)
-        when to2 + 1 = from1 && equal v1 v2 ->
-          extract from2 to1 v1
-      (* safeguard: to avoid infinite loops, we keep bv-concats of extracts
-         left-dominant *)
-      | ( Unop (BvExtract _, _),
-          Binop
-            ( BvConcat,
-              { node = { kind = Unop (BvExtract _, _); _ }; _ },
-              { node = { kind = Unop (BvExtract _, _); _ }; _ } ) ) ->
-          Binop (BvConcat, v1, v2) <| t_bv (n1 + n2)
-      (* We re-order (extract A ++ (extract B ++ X)) to ((extract A ++ extract
-         B) ++ X) *)
-      | ( Unop (BvExtract _, x),
-          Binop
-            ( BvConcat,
-              ({ node = { kind = Unop (BvExtract _, y); _ }; _ } as left),
-              right ) )
-        when equal x y ->
-          concat (concat v1 left) right
-      (* We re-order ((X ++ extract A) ++ extract B) to (X ++ (extract A ++
-         extract B)) *)
-      | ( Binop
-            ( BvConcat,
-              left,
-              ({ node = { kind = Unop (BvExtract _, x); _ }; _ } as right) ),
-          Unop (BvExtract _, y) )
-        when equal x y ->
-          concat left (concat right v2)
-      | Triop (Ite, b1, l1, r1), Triop (Ite, b2, l2, r2) when equal b1 b2 ->
-          Bool.ite b1 (concat l1 l2) (concat r1 r2)
-      | _, _ -> Binop (BvConcat, v1, v2) <| t_bv (n1 + n2)
-
-    and shl v1 v2 =
-      match (v1.node.kind, v2.node.kind) with
-      | BitVec l, BitVec r -> mk_masked (size_of v1.node.ty) Z.(l lsl to_int r)
-      | _, BitVec s when Z.equal s Z.zero -> v1
-      | _, BitVec s when Z.geq s (Z.of_int (size_of v1.node.ty)) ->
-          zero (size_of v1.node.ty)
-      | Binop (Shl, v, { node = { kind = BitVec s1; _ }; _ }), BitVec s2 ->
-          let n = size_of v1.node.ty in
-          shl v (mk n Z.(s1 + s2))
-      | Binop (LShr, x, { node = { kind = BitVec sr; _ }; _ }), BitVec sl ->
-          if Z.leq sl sr then
-            (* (x >> s1) << s2 where s2 < s1 = x >> (s1 - s2) & (mask with lower
-               bits cleared) *)
-            let n = size_of v1.node.ty in
-            let mask = Z.(lognot (pred (one lsl to_int sl))) in
-            and_ (lshr x (mk n Z.(sr - sl))) (mk_masked n mask)
-          else
-            (* (x >> s1) << s2 where s2 > s1 = x << (s2 - s1) & (mask with lower
-               bits cleared) *)
-            let n = size_of v1.node.ty in
-            let shift = Z.(sl - sr) in
-            let mask = Z.(lognot (pred (one lsl to_int sr))) in
-            shl (and_ x (mk_masked n mask)) (mk n shift)
-      | Binop (BitAnd, x, { node = { kind = BitVec mask; _ }; _ }), BitVec s
-      | Binop (BitAnd, { node = { kind = BitVec mask; _ }; _ }, x), BitVec s ->
-          (* (x & mask) << s = (x << s) & (mask << s) *)
-          let n = size_of v1.node.ty in
-          let shifted_mask = Z.(mask lsl to_int s) in
-          and_ (shl x v2) (mk_masked n shifted_mask)
-      | Binop (BitOr, x, { node = { kind = BitVec mask; _ }; _ }), BitVec s
-      | Binop (BitOr, { node = { kind = BitVec mask; _ }; _ }, x), BitVec s ->
-          (* (x | mask) << s = (x << s) | (mask << s) *)
-          let n = size_of v1.node.ty in
-          let shifted_mask = Z.(mask lsl to_int s) in
-          or_ (shl x v2) (mk_masked n shifted_mask)
-      | _ -> Binop (Shl, v1, v2) <| v1.node.ty
-
-    and lshr v1 v2 =
-      match (v1.node.kind, v2.node.kind) with
-      | BitVec l, BitVec r -> mk_masked (size_of v1.node.ty) Z.(l asr to_int r)
-      | _, BitVec s when Z.equal s Z.zero -> v1
-      | _, BitVec s when Z.geq s (Z.of_int (size_of v1.node.ty)) ->
-          zero (size_of v1.node.ty)
-      | Binop (LShr, v, { node = { kind = BitVec s1; _ }; _ }), BitVec s2 ->
-          let n = size_of v1.node.ty in
-          lshr v (mk n Z.(s1 + s2))
-      | Binop (BitAnd, x, { node = { kind = BitVec mask; _ }; _ }), BitVec s
-      | Binop (BitAnd, { node = { kind = BitVec mask; _ }; _ }, x), BitVec s ->
-          (* (x & mask) >> s = (x >> s) & (mask >> s) *)
-          let n = size_of v1.node.ty in
-          let shifted_mask = Z.(mask asr to_int s) in
-          and_ (lshr x v2) (mk n shifted_mask)
-      | Binop (BitOr, x, { node = { kind = BitVec mask; _ }; _ }), BitVec s
-      | Binop (BitOr, { node = { kind = BitVec mask; _ }; _ }, x), BitVec s ->
-          (* (x | mask) >> s = (x >> s) | (mask >> s) *)
-          let n = size_of v1.node.ty in
-          let shifted_mask = Z.(mask asr to_int s) in
-          or_ (lshr x v2) (mk n shifted_mask)
-      | _ -> Binop (LShr, v1, v2) <| v1.node.ty
-
-    and ashr v1 v2 =
-      let size = size_of v1.node.ty in
-      let size_z = Z.of_int (size_of v1.node.ty) in
-      match (v1.node.kind, v2.node.kind) with
-      | BitVec l, BitVec r ->
-          let n = size_of v1.node.ty in
-          mk_masked n Z.(Z.signed_extract l 0 n asr to_int r)
-      | _, BitVec s when Z.equal s Z.zero -> v1
-      | _, BitVec s when Z.geq s size_z ->
-          ashr v1 (mk_masked size (Z.pred size_z))
-      | Binop (AShr, v, { node = { kind = BitVec s1; _ }; _ }), BitVec s2 ->
-          ashr v (mk size Z.(s1 + s2))
-      | _ -> Binop (AShr, v1, v2) <| v1.node.ty
-
-    and mul ?(checked = unchecked) v1 v2 =
-      assert (equal_ty v1.node.ty v2.node.ty);
-      match (v1.node.kind, v2.node.kind) with
-      | BitVec l, BitVec r -> mk_masked (size_of v1.node.ty) Z.(l * r)
-      | _, BitVec z when Z.equal z Z.one -> v1
-      | BitVec z, _ when Z.equal z Z.one -> v2
-      | _, BitVec z when Z.equal z Z.zero -> zero (size_of v1.node.ty)
-      | BitVec z, _ when Z.equal z Z.zero -> zero (size_of v1.node.ty)
-      (* c * (-x) = (-c) * x (holds mod 2^n); with a checked negation (x <>
-         INT_MIN) and c <> INT_MIN, the signed no-overflow guarantee carries
-         over to the rebuilt product. *)
-      | (BitVec c, Unop (Neg true, x) | Unop (Neg true, x), BitVec c)
-        when Stdlib.not
-               (Z.equal
-                  (bv_to_z true (size_of v1.node.ty) c)
-                  (min_for true (size_of v1.node.ty))) ->
-          let n = size_of v1.node.ty in
-          mul ~checked:(checked_meet checked checked_signed) (neg (mk n c)) x
-      | ( ( Binop (Mul ckm, x, { node = { kind = BitVec n; _ }; _ })
-          | Binop (Mul ckm, { node = { kind = BitVec n; _ }; _ }, x) ),
-          BitVec m )
-      | ( BitVec m,
-          ( Binop (Mul ckm, { node = { kind = BitVec n; _ }; _ }, x)
-          | Binop (Mul ckm, x, { node = { kind = BitVec n; _ }; _ }) ) )
-        when is_checked (checked_meet checked ckm) ->
-          let size = size_of v1.node.ty in
-          let checked = checked_meet checked ckm in
-          (* the signed check only carries over if [n * m] does not overflow *)
-          let checked =
-            if overflows ~signed:true size n m Z.mul then
-              checked_meet checked checked_unsigned
-            else checked
-          in
-          mul ~checked x (mk_masked size Z.(n * m))
-      (* only propagate down ites if we know it's concrete *)
-      | Triop (Ite, b, l, r), BitVec x | BitVec x, Triop (Ite, b, l, r) ->
-          let n = size_of v1.node.ty in
-          let x = mk n x in
-          Bool.ite b (mul l x) (mul r x)
-      | _ -> mk_commut_binop (Mul checked) v1 v2 <| v1.node.ty
-
-    let rec div ~signed v1 v2 =
-      assert (equal_ty v1.node.ty v2.node.ty);
-      match (v1.node.kind, v2.node.kind) with
-      | BitVec l, BitVec r ->
-          let size = size_of v1.node.ty in
-          let l = bv_to_z signed size l in
-          let r = bv_to_z signed size r in
-          (* division by zero gives all ones, or 1 for signed negative
-             dividends *)
-          let res =
-            if Z.(equal r zero) then
-              if signed && Z.(lt l zero) then Z.one else Z.minus_one
-            else Z.(l / r)
-          in
-          mk_masked size res
-      | _, BitVec r when Z.equal r Z.one -> v1
-      (* this case shouldn't happen but it avoids conflicts for the next two
-         patterns *)
-      | ( Binop
-            ( Mul checked,
-              ({ node = { kind = BitVec _; _ }; _ } as l),
-              ({ node = { kind = BitVec _; _ }; _ } as r) ),
-          BitVec _ ) ->
-          div ~signed (mul ~checked l r) v2
-      | ( Binop
-            (Mul { unsigned = true; _ }, { node = { kind = BitVec n; _ }; _ }, x),
-          BitVec d )
-      | ( Binop
-            (Mul { unsigned = true; _ }, x, { node = { kind = BitVec n; _ }; _ }),
-          BitVec d )
-        when Stdlib.not signed
-             && Stdlib.not (Z.equal d Z.zero)
-             && Z.(divisible n d) ->
-          (* (x * n) / d = x * (n / d) when n % d == 0 *)
-          mul ~checked:checked_unsigned x (mk (size_of v1.node.ty) Z.(n / d))
-      | ( Binop
-            (Mul { unsigned = true; _ }, { node = { kind = BitVec n; _ }; _ }, x),
-          BitVec d )
-      | ( Binop
-            (Mul { unsigned = true; _ }, x, { node = { kind = BitVec n; _ }; _ }),
-          BitVec d )
-        when Stdlib.not signed && Z.(divisible d n) ->
-          (* (x * n) / d = x / (d / n) when d % n == 0 *)
-          let divisor = Z.(d / n) in
-          div ~signed x (mk (size_of v1.node.ty) divisor)
-      | Binop (Div false, x, { node = { kind = BitVec n; _ }; _ }), BitVec d
-        when Stdlib.not signed
-             && Stdlib.not (Z.equal n Z.zero)
-             && (Stdlib.not @@ overflows ~signed (size_of v1.node.ty) n d Z.mul)
-        ->
-          (* (x /u n) /u d = x /u (n * d) (if n * d doesn't overflow); not for
-             signed divisions, which wrap for INT_MIN / -1 *)
-          div ~signed x (mk (size_of v1.node.ty) Z.(n * d))
-      | Unop (BvExtend (false, by), x), BitVec z
-        when Stdlib.not signed && msb_of v2 < size_of x.node.ty ->
-          (* extend[uN](X) / N when msb(N) < size(X) <=> extend[uN](X / N) *)
-          let v2 = mk (size_of x.node.ty) z in
-          extend ~signed:false by (div ~signed x v2)
-      | _ -> Binop (Div signed, v1, v2) <| v1.node.ty
-
-    (* Whether [v] is an addition, subtraction or multiplication involving a
-       constant that is known not to overflow when interpreted as unsigned. The
-       unsigned [lt]/[leq] cases can reduce such operations, so a signed
-       comparison against one is worth rewriting to unsigned. *)
-    let is_checked_unsigned_op v =
-      match v.node.kind with
-      | Binop ((Add c | Sub c | Mul c), { node = { kind = BitVec _; _ }; _ }, _)
-      | Binop ((Add c | Sub c | Mul c), _, { node = { kind = BitVec _; _ }; _ })
-        ->
-          c.unsigned
-      | _ -> false
-
-    (* An inclusive upper bound on the unsigned value of [v], derived from its
-       most significant possibly-set bit (e.g. [x & 0b11 <= 3]). Conservative:
-       an unknown value bounds to the full width's maximum. *)
-    let unsigned_ub v = Z.(pred (one lsl Stdlib.(msb_of v + 1)))
-
-    (* When rewriting a checked comparison [y + l <op> x + r] into one with a
-       single symbolic sum (e.g. [y <op> x + (r - l)]), that rebuilt sum is only
-       guaranteed not to overflow when the joined constant [d] lies between [0]
-       and [base] (then [v + d] sits between the in-range values [v] and [v +
-       base]). [base] and [d] are the signed values of the constants. *)
-    let const_keeps_in_range ~base d =
-      Z.leq (Z.min Z.zero base) d && Z.leq d (Z.max Z.zero base)
-
-    let rec lt ~signed v1 v2 =
-      assert (equal_ty v1.node.ty v2.node.ty);
-      let bits = size_of v1.node.ty in
-      match (v1.node.kind, v2.node.kind) with
-      | BitVec l, BitVec r ->
-          Bool.of_bool @@ Z.lt (bv_to_z signed bits l) (bv_to_z signed bits r)
-      | _ when equal v1 v2 -> Bool.v_false
-      (* -a < -b <=> b < a, when neither negation overflows *)
-      | Unop (Neg true, a), Unop (Neg true, b) when signed -> lt ~signed b a
-      (* -a < c <=> -c < a, when -a doesn't overflow and c <> INT_MIN *)
-      | Unop (Neg true, a), BitVec c
-        when signed
-             && Stdlib.not
-                  (Z.equal (bv_to_z signed bits c) (min_for signed bits)) ->
-          lt ~signed (neg v2) a
-      (* c < -a <=> a < -c, when -a doesn't overflow and c <> INT_MIN *)
-      | BitVec c, Unop (Neg true, a)
-        when signed
-             && Stdlib.not
-                  (Z.equal (bv_to_z signed bits c) (min_for signed bits)) ->
-          lt ~signed a (neg v1)
-      | ( BitVec bv_v1,
-          ( Binop
-              (Add checked, ({ node = { kind = BitVec bv_r; _ }; _ } as r), x)
-          | Binop
-              (Add checked, x, ({ node = { kind = BitVec bv_r; _ }; _ } as r))
-            ) )
-        when checked_has ~signed checked ->
-          if Stdlib.not signed && Z.lt bv_v1 bv_r then Bool.v_true
-          else if overflows ~signed bits bv_v1 bv_r Z.( - ) then
-            Binop (Lt signed, v1, v2) <| TBool
-          else lt ~signed (sub ~checked:(checked_of_signed signed) v1 r) x
-      | ( ( Binop
-              (Add checked, ({ node = { kind = BitVec bv_l; _ }; _ } as l), x)
-          | Binop
-              (Add checked, x, ({ node = { kind = BitVec bv_l; _ }; _ } as l))
-            ),
-          BitVec bv_v2 )
-        when checked_has ~signed checked ->
-          if Stdlib.not signed && Z.lt bv_v2 bv_l then Bool.v_false
-          else if overflows ~signed bits bv_v2 bv_l Z.( - ) then
-            Binop (Lt signed, v1, v2) <| TBool
-          else lt ~signed x (sub ~checked:(checked_of_signed signed) v2 l)
-      | _, Binop (Add checked, v2, v2')
-        when checked_has ~signed checked && (equal v1 v2 || equal v1 v2') ->
-          (* a < a + b when + doesn't overflow is equivalent to 0 < b *)
-          let b = if equal v1 v2 then v2' else v2 in
-          lt ~signed (zero bits) b
-      | Binop (Add checked, v1, v1'), _
-        when checked_has ~signed checked && (equal v2 v1 || equal v2 v1') ->
-          (* a + b < a when + doesn't overflow is equivalent to b < 0 *)
-          let b = if equal v2 v1 then v1' else v1 in
-          lt ~signed b (zero bits)
-      | ( ( Binop
-              (Add checked_l, ({ node = { kind = BitVec bv_l; _ }; _ } as l), y)
-          | Binop
-              (Add checked_l, y, ({ node = { kind = BitVec bv_l; _ }; _ } as l))
-            ),
-          ( Binop
-              (Add checked_r, ({ node = { kind = BitVec bv_r; _ }; _ } as r), x)
-          | Binop
-              (Add checked_r, x, ({ node = { kind = BitVec bv_r; _ }; _ } as r))
-            ) )
-        when checked_has ~signed checked_l && checked_has ~signed checked_r ->
-          (* y + l < x + r <=> y + (l - r) < x <=> y < x + (r - l); only sound
-             when the rebuilt symbolic sum is known not to overflow. *)
-          let int_l = bv_to_z signed bits bv_l in
-          let int_r = bv_to_z signed bits bv_r in
-          let chk = checked_of_signed signed in
-          if const_keeps_in_range ~base:int_l Z.(int_l - int_r) then
-            lt ~signed (add ~checked:chk y (sub ~checked:chk l r)) x
-          else if const_keeps_in_range ~base:int_r Z.(int_r - int_l) then
-            lt ~signed y (add ~checked:chk x (sub ~checked:chk r l))
-          else Binop (Lt signed, v1, v2) <| TBool
-      | _, BitVec x when Stdlib.not signed && Z.(equal x one) ->
-          (* unsigned x < 1 is x == 0 *)
-          Bool.sem_eq v1 (zero bits)
-      (* x < ite(b, 1, 0)
-       * => ite(b, x < 1, x < 0)
-       * => ite(b, x = 0, false)
-       * => b && x = 0 *)
-      | _, Unop (BvOfBool n, b) when Stdlib.not signed ->
-          Bool.and_ b (Bool.sem_eq v1 (zero n))
-      | Triop (Ite, b, l, r), _ ->
-          Bool.ite b (lt ~signed l v2) (lt ~signed r v2)
-      | _, Triop (Ite, b, l, r) ->
-          Bool.ite b (lt ~signed v1 l) (lt ~signed v1 r)
-      | _, BitVec x
-        when signed
-             && Z.(equal x zero)
-             && Stdlib.not (is_checked_unsigned_op v1) ->
-          let lt_zero v =
-            Binop (Lt signed, v, zero (size_of v.node.ty)) <| TBool
-          in
-          let not_eq_0 v =
-            Bool.not (Bool.sem_eq v (zero (size_of v.node.ty)))
-          in
-          (* this function returns if this node is negative if we can tell, and
-             otherwise the node that represents the sign bit *)
-          let rec aux_lt_zero v =
-            match v.node.kind with
-            | Unop (BvExtend (true, _), v) -> aux_lt_zero v
-            | Unop (BvExtend (false, _), _) -> Bool.v_false
-            | Binop (Rem true, l, _) -> Bool.and_ (aux_lt_zero l) (not_eq_0 v)
-            | Binop (BvConcat, l, _) -> aux_lt_zero l
-            | Unop (BvNot, v) -> Bool.not (aux_lt_zero v)
-            | Unop (BvOfBool n, _) when n > 1 -> Bool.v_false
-            | Triop (Ite, _, l, r) ->
-                let pos_l = aux_lt_zero l in
-                let pos_r = aux_lt_zero r in
-                if pos_l = pos_r then pos_l else lt_zero v
-            | _ -> lt_zero v
-          in
-          aux_lt_zero v1
-      | BitVec x, _ when Z.equal (bv_to_z signed bits x) (max_for signed bits)
-        ->
-          Bool.v_false
-      | _, BitVec x when Z.equal (bv_to_z signed bits x) (min_for signed bits)
-        ->
-          Bool.v_false
-      | BitVec x, _ when Z.equal (bv_to_z signed bits x) (min_for signed bits)
-        ->
-          Bool.not (Bool.sem_eq v1 v2)
-      | _, BitVec x when Z.equal (bv_to_z signed bits x) (max_for signed bits)
-        ->
-          Bool.not (Bool.sem_eq v1 v2)
-      | ( BitVec c2,
-          ( Binop (Mul checked, x, ({ node = { kind = BitVec c1; _ }; _ } as v2))
-          | Binop (Mul checked, ({ node = { kind = BitVec c1; _ }; _ } as v2), x)
-            ) )
-        when checked_has ~signed checked ->
-          (* PROOF FOR c2 < x * c1
-           * (assert (and
-           *   (not (bvsmulo x c1))
-           *   (not (= c1 #x00))
-           *   (let
-           *     (
-           *       (c1neg (bvslt c1 #x00))
-           *       (c2neg (bvslt c2 #x00))
-           *       (divs (= (bvsrem c2 c1) #x00)))
-           *     (not
-           *       (= (bvslt c2 (bvmul x c1))
-           *         (ite (or divs (not c2neg))
-           *           (ite c1neg
-           *             (or (and (= c1 #xff) (= c2 #x80))
-           *               (bvslt x (bvsdiv c2 c1)))
-           *             (bvslt (bvsdiv c2 c1) x))
-           *           (ite c1neg
-           *             (bvsle x (bvsdiv c2 c1))
-           *             (bvsle (bvsdiv c2 c1) x)))))))) *)
-          let c1 = bv_to_z signed bits c1 in
-          let c2 = bv_to_z signed bits c2 in
-          (* be careful bc c1 = v2 and c2 = v1 in this case *)
-          if Z.equal c1 Z.zero then (* the product is 0 *)
-            Bool.of_bool (Z.lt c2 Z.zero)
-          else if Z.divisible c2 c1 || Z.geq c2 Z.zero then
-            if Z.lt c1 Z.zero then
-              if
-                signed
-                && Z.equal c1 (Z.of_int (-1))
-                && Z.equal c2 (min_for signed bits)
-              then Bool.v_true
-              else lt ~signed x (div ~signed v1 v2)
-            else lt ~signed (div ~signed v1 v2) x
-          else if Z.lt c1 Z.zero then leq ~signed x (div ~signed v1 v2)
-          else leq ~signed (div ~signed v1 v2) x
-      | ( ( Binop (Mul checked, x, ({ node = { kind = BitVec c1; _ }; _ } as v1))
-          | Binop (Mul checked, ({ node = { kind = BitVec c1; _ }; _ } as v1), x)
-            ),
-          BitVec c2 )
-        when checked_has ~signed checked ->
-          (* PROOF FOR : x * c1 < c2
-           * (assert (and
-           *   (not (bvsmulo x c1))
-           *   (not (= c1 #x00))
-           *   (let
-           *     (
-           *       (c1neg (bvslt c1 #x00))
-           *       (c2neg (bvslt c2 #x00))
-           *       (divs (= (bvsrem c2 c1) #x00)))
-           *     (not
-           *       (= (bvslt (bvmul x c1) c2)
-           *         (ite (or divs c2neg)
-           *           (ite c1neg
-           *             (and (not (and (= c1 #xff) (= c2 #x80)))
-           *               (bvslt (bvsdiv c2 c1) x))
-           *             (bvslt x (bvsdiv c2 c1)))
-           *           (ite c1neg
-           *             (bvsle (bvsdiv c2 c1) x)
-           *             (bvsle x (bvsdiv c2 c1))))))))) *)
-          let c1 = bv_to_z signed bits c1 in
-          let c2 = bv_to_z signed bits c2 in
-          (* the product is 0 *)
-          if Z.equal c1 Z.zero then Bool.of_bool (Z.gt c2 Z.zero)
-          else if Z.divisible c2 c1 || Z.lt c2 Z.zero then
-            if Z.lt c1 Z.zero then
-              if
-                signed
-                && Z.equal c1 (Z.of_int (-1))
-                && Z.equal c2 (min_for signed bits)
-              then Bool.v_false
-              else lt ~signed (div ~signed v2 v1) x
-            else lt ~signed x (div ~signed v2 v1)
-          else if Z.lt c1 Z.zero then leq ~signed (div ~signed v2 v1) x
-          else leq ~signed x (div ~signed v2 v1)
-      | Binop (Mul checked_l, l1, r1), Binop (Mul checked_r, l2, r2)
-        when checked_has ~signed checked_l && checked_has ~signed checked_r ->
-          (* Can only cancel common factor if it's provably non-zero, and
-             positive if signed *)
-          let is_nonzero v =
-            if signed then
-              match v.node.kind with
-              | BitVec x -> Z.gt (bv_to_z true bits x) Z.zero
-              | _ -> false
-            else sure_neq v (zero (size_of v.node.ty))
-          in
-          if equal l1 l2 && is_nonzero l1 then lt ~signed r1 r2
-          else if equal l1 r2 && is_nonzero l1 then lt ~signed r1 l2
-          else if equal r1 l2 && is_nonzero r1 then lt ~signed l1 r2
-          else if equal r1 r2 && is_nonzero r1 then lt ~signed l1 l2
-          else Binop (Lt signed, v1, v2) <| TBool
-      | ( BitVec bv_v1,
-          Binop (Sub checked, x, ({ node = { kind = BitVec bv_k; _ }; _ } as k))
-        )
-        when checked_has ~signed checked ->
-          (* v1 < x - k <=> v1 + k < x (when v1 + k doesn't overflow) *)
-          if overflows ~signed bits bv_v1 bv_k Z.( + ) then
-            if Stdlib.not signed then Bool.v_false
-            else Binop (Lt signed, v1, v2) <| TBool
-          else lt ~signed (add ~checked:(checked_of_signed signed) v1 k) x
-      | ( BitVec bv_v1,
-          Binop (Sub checked, ({ node = { kind = BitVec bv_k; _ }; _ } as k), x)
-        )
-        when checked_has ~signed checked ->
-          (* v1 < k - x <=> x < k - v1 (when k - v1 doesn't overflow) *)
-          if overflows ~signed bits bv_k bv_v1 Z.( - ) then
-            if Stdlib.not signed then Bool.v_false
-            else Binop (Lt signed, v1, v2) <| TBool
-          else lt ~signed x (sub ~checked:(checked_of_signed signed) k v1)
-      | ( Binop (Sub checked, x, ({ node = { kind = BitVec bv_k; _ }; _ } as k)),
-          BitVec bv_v2 )
-        when checked_has ~signed checked ->
-          (* x - k < v2 <=> x < v2 + k (when v2 + k doesn't overflow) *)
-          if overflows ~signed bits bv_v2 bv_k Z.( + ) then
-            if Stdlib.not signed then Bool.v_true
-            else Binop (Lt signed, v1, v2) <| TBool
-          else lt ~signed x (add ~checked:(checked_of_signed signed) v2 k)
-      | ( Binop (Sub checked, ({ node = { kind = BitVec bv_k; _ }; _ } as k), x),
-          BitVec bv_v2 )
-        when checked_has ~signed checked ->
-          (* k - x < v2 <=> k - v2 < x (when k - v2 doesn't overflow) *)
-          if overflows ~signed bits bv_k bv_v2 Z.( - ) then
-            if Stdlib.not signed then Bool.v_true
-            else Binop (Lt signed, v1, v2) <| TBool
-          else lt ~signed (sub ~checked:(checked_of_signed signed) k v2) x
-      (* v1 <u c is true when v1's value can't reach c *)
-      | _, BitVec c when Stdlib.not signed && Z.lt (unsigned_ub v1) c ->
-          Bool.v_true
-      (* c <u v2 is false when v2's value can't exceed c *)
-      | BitVec c, _ when Stdlib.not signed && Z.leq (unsigned_ub v2) c ->
-          Bool.v_false
-      | BitVec c, _ when signed && is_checked_unsigned_op v2 ->
-          signed_to_unsigned_cmp ~is_leq:false ~c_on_left:true c v1 v2
-      | _, BitVec c when signed && is_checked_unsigned_op v1 ->
-          signed_to_unsigned_cmp ~is_leq:false ~c_on_left:false c v1 v2
-      | _ -> Binop (Lt signed, v1, v2) <| TBool
-
-    and leq ~signed v1 v2 =
-      assert (equal_ty v1.node.ty v2.node.ty);
-      let bits = size_of v1.node.ty in
-      match (v1.node.kind, v2.node.kind) with
-      | _ when equal v1 v2 -> Bool.v_true
-      | BitVec l, BitVec r ->
-          Bool.of_bool @@ Z.leq (bv_to_z signed bits l) (bv_to_z signed bits r)
-      (* -a <= -b <=> b <= a, when neither negation overflows *)
-      | Unop (Neg true, a), Unop (Neg true, b) when signed -> leq ~signed b a
-      (* -a <= c <=> -c <= a, when -a doesn't overflow and c <> INT_MIN *)
-      | Unop (Neg true, a), BitVec c
-        when signed
-             && Stdlib.not
-                  (Z.equal (bv_to_z signed bits c) (min_for signed bits)) ->
-          leq ~signed (neg v2) a
-      (* c <= -a <=> a <= -c, when -a doesn't overflow and c <> INT_MIN *)
-      | BitVec c, Unop (Neg true, a)
-        when signed
-             && Stdlib.not
-                  (Z.equal (bv_to_z signed bits c) (min_for signed bits)) ->
-          leq ~signed a (neg v1)
-      | ( BitVec bv_v1,
-          ( Binop
-              (Add checked, ({ node = { kind = BitVec bv_r; _ }; _ } as r), x)
-          | Binop
-              (Add checked, x, ({ node = { kind = BitVec bv_r; _ }; _ } as r))
-            ) )
-        when checked_has ~signed checked ->
-          if Stdlib.not signed && Z.lt bv_v1 bv_r then Bool.v_true
-          else if overflows ~signed bits bv_v1 bv_r Z.( - ) then
-            Binop (Leq signed, v1, v2) <| TBool
-          else leq ~signed (sub ~checked:(checked_of_signed signed) v1 r) x
-      | ( ( Binop
-              (Add checked, ({ node = { kind = BitVec bv_l; _ }; _ } as l), x)
-          | Binop
-              (Add checked, x, ({ node = { kind = BitVec bv_l; _ }; _ } as l))
-            ),
-          BitVec bv_v2 )
-        when checked_has ~signed checked ->
-          if Stdlib.not signed && Z.lt bv_v2 bv_l then Bool.v_false
-          else if overflows ~signed bits bv_v2 bv_l Z.( - ) then
-            Binop (Leq signed, v1, v2) <| TBool
-          else leq ~signed x (sub ~checked:(checked_of_signed signed) v2 l)
-      | ( ( Binop
-              (Add checked_l, ({ node = { kind = BitVec bv_l; _ }; _ } as l), y)
-          | Binop
-              (Add checked_l, y, ({ node = { kind = BitVec bv_l; _ }; _ } as l))
-            ),
-          ( Binop
-              (Add checked_r, ({ node = { kind = BitVec bv_r; _ }; _ } as r), x)
-          | Binop
-              (Add checked_r, x, ({ node = { kind = BitVec bv_r; _ }; _ } as r))
-            ) )
-        when checked_has ~signed checked_l && checked_has ~signed checked_r ->
-          (* y + l <= x + r <=> y + (l - r) <= x <=> y <= x + (r - l); only
-             sound when the rebuilt symbolic sum is known not to overflow. *)
-          let int_l = bv_to_z signed bits bv_l in
-          let int_r = bv_to_z signed bits bv_r in
-          let chk = checked_of_signed signed in
-          if const_keeps_in_range ~base:int_l Z.(int_l - int_r) then
-            leq ~signed (add ~checked:chk y (sub ~checked:chk l r)) x
-          else if const_keeps_in_range ~base:int_r Z.(int_r - int_l) then
-            leq ~signed y (add ~checked:chk x (sub ~checked:chk r l))
-          else Binop (Leq signed, v1, v2) <| TBool
-      | _, Binop (Add checked, v2, v2')
-        when checked_has ~signed checked && (equal v1 v2 || equal v1 v2') ->
-          (* a <= b + a when + doesn't overflow is equivalent to 0 <= b *)
-          let b = if equal v1 v2 then v2' else v2 in
-          leq ~signed (zero bits) b
-      | Binop (Add checked, v1, v1'), _
-        when checked_has ~signed checked && (equal v2 v1 || equal v2 v1') ->
-          (* a + b <= a when + doesn't overflow is equivalent to b <= 0 *)
-          let b = if equal v2 v1 then v1' else v1 in
-          leq ~signed b (zero bits)
-      | BitVec x, _ when Z.equal (bv_to_z signed bits x) (min_for signed bits)
-        ->
-          Bool.v_true
-      | _, BitVec x when Z.equal (bv_to_z signed bits x) (max_for signed bits)
-        ->
-          Bool.v_true
-      | ( BitVec c2,
-          ( Binop (Mul checked, x, ({ node = { kind = BitVec c1; _ }; _ } as v2))
-          | Binop (Mul checked, ({ node = { kind = BitVec c1; _ }; _ } as v2), x)
-            ) )
-        when checked_has ~signed checked ->
-          (* PROOF FOR : c2 <= x * c1
-           * (assert (and
-           *   (not (bvsmulo x c1))
-           *   (not (= c1 #x00))
-           *   (let
-           *     (
-           *       (c1neg (bvslt c1 #x00))
-           *       (c2neg (bvslt c2 #x00))
-           *       (divs (= (bvsrem c2 c1) #x00)))
-           *       (not
-           *         (= (bvsle c2 (bvmul x c1) )
-           *           (ite divs
-           *             (ite c1neg
-           *               (or (and (= c1 #xff) (= c2 #x80))
-           *                 (bvsle x (bvsdiv c2 c1)))
-           *               (bvsle (bvsdiv c2 c1) x))
-           *             (ite c1neg
-           *               (ite c2neg
-           *                 (bvsle x (bvsdiv c2 c1))
-           *                 (bvslt x (bvsdiv c2 c1)))
-           *               (ite c2neg
-           *                 (bvsle (bvsdiv c2 c1) x)
-           *                 (bvslt (bvsdiv c2 c1) x))))))))) *)
-          let c1 = bv_to_z signed bits c1 in
-          let c2 = bv_to_z signed bits c2 in
-          (* be careful bc c1 = v2 and c2 = v1 in this case *)
-          if Z.equal c1 Z.zero then (* the product is 0 *)
-            Bool.of_bool (Z.leq c2 Z.zero)
-          else if Z.divisible c2 c1 then
-            if Z.lt c1 Z.zero then
-              if
-                signed
-                && Z.equal c1 (Z.of_int (-1))
-                && Z.equal c2 (min_for signed bits)
-              then Bool.v_true
-              else leq ~signed x (div ~signed v1 v2)
-            else leq ~signed (div ~signed v1 v2) x
-          else if Z.lt c1 Z.zero then
-            if Z.lt c2 Z.zero then leq ~signed x (div ~signed v1 v2)
-            else lt ~signed x (div ~signed v1 v2)
-          else if Z.lt c2 Z.zero then leq ~signed (div ~signed v1 v2) x
-          else lt ~signed (div ~signed v1 v2) x
-      | ( ( Binop (Mul checked, x, ({ node = { kind = BitVec c1; _ }; _ } as v1))
-          | Binop (Mul checked, ({ node = { kind = BitVec c1; _ }; _ } as v1), x)
-            ),
-          BitVec c2 )
-        when checked_has ~signed checked ->
-          (* PROOF FOR : x * c1 <= c2
-           * (assert (and
-           *   (not (bvsmulo x c1))
-           *   (not (= c1 #x00))
-           *   (let
-           *     (
-           *       (c1neg (bvslt c1 #x00))
-           *       (c2neg (bvslt c2 #x00))
-           *       (divs (= (bvsrem c2 c1) #x00)))
-           *     (not
-           *       (= (bvsle (bvmul x c1) c2)
-           *         (ite divs
-           *           (ite c1neg
-           *             (and (not (and (= c1 #xff) (= c2 #x80)))
-           *               (bvsle (bvsdiv c2 c1) x))
-           *             (bvsle x (bvsdiv c2 c1)))
-           *           (ite c1neg
-           *             (ite c2neg
-           *               (bvslt (bvsdiv c2 c1) x)
-           *               (bvsle (bvsdiv c2 c1) x))
-           *             (ite c2neg
-           *               (bvslt x (bvsdiv c2 c1))
-           *               (bvsle x (bvsdiv c2 c1)))))))))) *)
-          let c1 = bv_to_z signed bits c1 in
-          let c2 = bv_to_z signed bits c2 in
-          (* the product is 0 *)
-          if Z.equal c1 Z.zero then Bool.of_bool (Z.geq c2 Z.zero)
-          else if Z.divisible c2 c1 then
-            if Z.lt c1 Z.zero then
-              if
-                signed
-                && Z.equal c1 (Z.of_int (-1))
-                && Z.equal c2 (min_for signed bits)
-              then Bool.v_false
-              else leq ~signed (div ~signed v2 v1) x
-            else leq ~signed x (div ~signed v2 v1)
-          else if Z.lt c1 Z.zero then
-            if Z.lt c2 Z.zero then lt ~signed (div ~signed v2 v1) x
-            else leq ~signed (div ~signed v2 v1) x
-          else if Z.lt c2 Z.zero then lt ~signed x (div ~signed v2 v1)
-          else leq ~signed x (div ~signed v2 v1)
-      | Binop (Mul checked_l, l1, r1), Binop (Mul checked_r, l2, r2)
-        when checked_has ~signed checked_l && checked_has ~signed checked_r ->
-          (* Can only cancel common factor if it's provably non-zero, and
-             positive if signed *)
-          let is_nonzero v =
-            if signed then
-              match v.node.kind with
-              | BitVec x -> Z.gt (bv_to_z true bits x) Z.zero
-              | _ -> false
-            else sure_neq v (zero (size_of v.node.ty))
-          in
-          if equal l1 l2 && is_nonzero l1 then leq ~signed r1 r2
-          else if equal l1 r2 && is_nonzero l1 then leq ~signed r1 l2
-          else if equal r1 l2 && is_nonzero r1 then leq ~signed l1 r2
-          else if equal r1 r2 && is_nonzero r1 then leq ~signed l1 l2
-          else Binop (Leq signed, v1, v2) <| TBool
-      | Binop (Div false, _, { node = { kind = BitVec d; _ }; _ }), BitVec n
-        when Stdlib.not signed && Z.(gt (mul n d) (max_for false bits)) ->
-          Bool.v_true
-      | Triop (Ite, b, l, r), BitVec _ ->
-          Bool.ite b (leq ~signed l v2) (leq ~signed r v2)
-      | BitVec _, Triop (Ite, b, l, r) ->
-          Bool.ite b (leq ~signed v1 l) (leq ~signed v1 r)
-      | ( BitVec bv_v1,
-          Binop (Sub checked, x, ({ node = { kind = BitVec bv_k; _ }; _ } as k))
-        )
-        when checked_has ~signed checked ->
-          (* v1 <= x - k <=> v1 + k <= x (when v1 + k doesn't overflow) *)
-          if overflows ~signed bits bv_v1 bv_k Z.( + ) then
-            if Stdlib.not signed then Bool.v_false
-            else Binop (Leq signed, v1, v2) <| TBool
-          else leq ~signed (add ~checked:(checked_of_signed signed) v1 k) x
-      | ( BitVec bv_v1,
-          Binop (Sub checked, ({ node = { kind = BitVec bv_k; _ }; _ } as k), x)
-        )
-        when checked_has ~signed checked ->
-          (* v1 <= k - x <=> x <= k - v1 (when k - v1 doesn't overflow) *)
-          if overflows ~signed bits bv_k bv_v1 Z.( - ) then
-            if Stdlib.not signed then Bool.v_false
-            else Binop (Leq signed, v1, v2) <| TBool
-          else leq ~signed x (sub ~checked:(checked_of_signed signed) k v1)
-      | ( Binop (Sub checked, x, ({ node = { kind = BitVec bv_k; _ }; _ } as k)),
-          BitVec bv_v2 )
-        when checked_has ~signed checked ->
-          (* x - k <= v2 <=> x <= v2 + k (when v2 + k doesn't overflow) *)
-          if overflows ~signed bits bv_v2 bv_k Z.( + ) then
-            if Stdlib.not signed then Bool.v_true
-            else Binop (Leq signed, v1, v2) <| TBool
-          else leq ~signed x (add ~checked:(checked_of_signed signed) v2 k)
-      | ( Binop (Sub checked, ({ node = { kind = BitVec bv_k; _ }; _ } as k), x),
-          BitVec bv_v2 )
-        when checked_has ~signed checked ->
-          (* k - x <= v2 <=> k - v2 <= x (when k - v2 doesn't overflow) *)
-          if overflows ~signed bits bv_k bv_v2 Z.( - ) then
-            if Stdlib.not signed then Bool.v_true
-            else Binop (Leq signed, v1, v2) <| TBool
-          else leq ~signed (sub ~checked:(checked_of_signed signed) k v2) x
-      (* v1 <=u c is true when v1's value can't exceed c *)
-      | _, BitVec c when Stdlib.not signed && Z.leq (unsigned_ub v1) c ->
-          Bool.v_true
-      (* c <=u v2 is false when v2's value can't reach c *)
-      | BitVec c, _ when Stdlib.not signed && Z.lt (unsigned_ub v2) c ->
-          Bool.v_false
-      | BitVec c, _ when signed && is_checked_unsigned_op v2 ->
-          signed_to_unsigned_cmp ~is_leq:true ~c_on_left:true c v1 v2
-      | _, BitVec c when signed && is_checked_unsigned_op v1 ->
-          signed_to_unsigned_cmp ~is_leq:true ~c_on_left:false c v1 v2
-      | _ -> Binop (Leq signed, v1, v2) <| TBool
-
-    and signed_to_unsigned_cmp ~is_leq ~c_on_left c v1 v2 =
-      (* Rewrites a signed comparison [v1 R v2] (with [R] being [<=] when
-         [is_leq], else [<]) where the concrete operand [c] is on the
-         [c_on_left] side and the other operand is a checked-unsigned operation,
-         into an equivalent unsigned formula. This lets the checked-unsigned
-         reductions fire. Splitting the non-constant operand [X] at the sign
-         threshold [s = 2^(bits-1)] (so [X <u s] is its non-negative half), and
-         with [c_cmp] the same comparison taken unsigned: - [c] on the left: [c
-         R X <=> c_cmp && X <u s] if [c >=s 0] [c R X <=> X <u s || c_cmp] if [c
-         <s 0] - [c] on the right: [X R c <=> c_cmp || s <=u X] if [c >=s 0] [X
-         R c <=> s <=u X && c_cmp] if [c <s 0] *)
-      let bits = size_of v1.node.ty in
-      let sign_bit = mk bits Z.(one lsl Stdlib.( - ) bits 1) in
-      let c_cmp =
-        if is_leq then leq ~signed:false v1 v2 else lt ~signed:false v1 v2
-      in
-      let nonneg = Z.geq (bv_to_z true bits c) Z.zero in
-      if c_on_left then
-        let in_pos = lt ~signed:false v2 sign_bit in
-        if nonneg then Bool.and_ c_cmp in_pos else Bool.or_ in_pos c_cmp
-      else
-        let in_neg = leq ~signed:false sign_bit v1 in
-        if nonneg then Bool.or_ c_cmp in_neg else Bool.and_ in_neg c_cmp
-
+    let msb_of v = Z.to_int (R.msb_of v)
+    let add ?(checked = unchecked) v1 v2 = R.bv_add checked v1 v2
+    let sub ?(checked = unchecked) v1 v2 = R.bv_sub checked v1 v2
+    let mul ?(checked = unchecked) v1 v2 = R.bv_mul checked v1 v2
+    let div ~signed v1 v2 = R.bv_div signed v1 v2
+    let rem ~signed v1 v2 = R.bv_rem signed v1 v2
+    let mod_ = R.bv_mod
+    let neg ?(checked = false) v = R.bv_neg checked v
+    let add_overflows ~signed v1 v2 = R.bv_add_overflows signed v1 v2
+    let sub_overflows ~signed v1 v2 = R.bv_sub_overflows signed v1 v2
+    let mul_overflows ~signed v1 v2 = R.bv_mul_overflows signed v1 v2
+    let neg_overflows = R.bv_neg_overflows
+    let lt ~signed v1 v2 = R.bv_lt signed v1 v2
+    let leq ~signed v1 v2 = R.bv_leq signed v1 v2
     let gt ~signed v1 v2 = lt ~signed v2 v1
     let geq ~signed v1 v2 = leq ~signed v2 v1
-
-    let add_overflows ~signed v1 v2 =
-      match (v1.node.kind, v2.node.kind) with
-      | BitVec l, BitVec r -> ovf_check ~signed (size_of v1.node.ty) l r Z.( + )
-      | BitVec z, _ when Z.equal z Z.zero -> Bool.v_false
-      | _, BitVec z when Z.equal z Z.zero -> Bool.v_false
-      | _ when size_of v1.node.ty == 1 ->
-          let one = one 1 in
-          Bool.and_ (Bool.sem_eq v1 one) (Bool.sem_eq v2 one)
-      | BitVec z, _ when Stdlib.not signed ->
-          let n = size_of v1.node.ty in
-          let m = max_for signed n in
-          gt ~signed v2 (mk n Z.(m - z))
-      | _, BitVec z when Stdlib.not signed ->
-          let n = size_of v1.node.ty in
-          let m = max_for signed n in
-          gt ~signed v1 (mk n Z.(m - z))
-      | (BitVec z, x | x, BitVec z) when signed ->
-          let x = if x == v1.node.kind then v1 else v2 in
-          let n = size_of v1.node.ty in
-          let z = bv_to_z signed n z in
-          if Z.gt z Z.zero then
-            (* z > 0 so overflows if max - z < x *)
-            let max = max_for signed n in
-            gt ~signed x (mk n (Z.sub max z))
-          else
-            (* z < 0 so overflows if x < min - z *)
-            let min = min_for signed n in
-            lt ~signed x (mk_masked n (Z.sub min z))
-      | Unop (BvOfBool n, b1), Unop (BvOfBool _, b2) ->
-          if signed && n == 2 then
-            (* Signed addition of two booleans of size 2 overflows iff they are
-               both true *)
-            Bool.and_ b1 b2
-          else Bool.v_false
-      | Unop (BvOfBool _, b), other | other, Unop (BvOfBool _, b) ->
-          (* ite(b, 1, 0) + x only overflows if b && x == max *)
-          let n = size_of v1.node.ty in
-          let max = max_for signed n in
-          let other = other <| t_bv n in
-          Bool.and_ b (Bool.sem_eq other (mk n max))
-      | _ -> mk_commut_binop (AddOvf signed) v1 v2 <| TBool
-
-    let mul_overflows ~signed v1 v2 =
-      match (v1.node.kind, v2.node.kind) with
-      | BitVec l, BitVec r -> ovf_check ~signed (size_of v1.node.ty) l r Z.( * )
-      | _ when signed && size_of v1.node.ty == 1 ->
-          (* We need to special-case size one because the other simplifications
-             will mess with that case, and it's pretty easy to simplify. *)
-          let one = one 1 in
-          Bool.and_ (Bool.sem_eq v1 one) (Bool.sem_eq v2 one)
-      | _
-        when if signed then msb_of v1 + msb_of v2 < size_of v1.node.ty - 2
-             else msb_of v1 + msb_of v2 < size_of v1.node.ty - 1 ->
-          Bool.v_false
-      | BitVec z, x | x, BitVec z ->
-          (* z is a known constant *)
-          if Z.equal z Z.zero || Z.equal z Z.one then Bool.v_false
-          else
-            let n = size_of v1.node.ty in
-            let z = bv_to_z signed n z in
-            if signed then
-              (* For signed overflow, the correct condition is: z * x overflows
-                 iff x < min_x or x > max_x, where min_x = ceil((-2^(n-1))/z),
-                 max_x = floor((2^(n-1)-1)/z) for z > 0, and swapped for z <
-                 0. *)
-              let min_val = Z.neg (Z.shift_left Z.one (n - 1)) in
-              let max_val = Z.pred (Z.shift_left Z.one (n - 1)) in
-              if Z.equal z (Z.of_int (-1)) then
-                (* z = -1: only overflows when x = MIN_VALUE *)
-                Bool.sem_eq (x <| v1.node.ty) (mk_masked n min_val)
-              else
-                let min_x, max_x =
-                  if Z.gt z Z.zero then (* z > 0 *)
-                    let min_x = Z.(min_val / z) in
-                    let max_x = Z.(max_val / z) in
-                    (min_x, max_x)
-                  else (* z < 0 *)
-                    let min_x = Z.(max_val / z) in
-                    let max_x = Z.(min_val / z) in
-                    (min_x, max_x)
-                in
-                Bool.or_
-                  (lt ~signed (x <| v1.node.ty) (mk_masked n min_x))
-                  (gt ~signed (x <| v1.node.ty) (mk_masked n max_x))
-            else
-              (* For unsigned overflow, * z * x overflows iff x > floor((2^n -
-                 1) / z) *)
-              let maxn = Z.pred (Z.shift_left Z.one n) in
-              let bound = Z.(maxn / z) in
-              gt ~signed (x <| v1.node.ty) (mk n bound)
-      (* `x * (y / x)` cannot overflow with unsigned ops *)
-      | _, Binop (Div false, _, v2) when Stdlib.not signed && equal v1 v2 ->
-          Bool.v_false
-      | Binop (Div false, _, v1), _ when Stdlib.not signed && equal v1 v2 ->
-          Bool.v_false
-      | _ -> mk_commut_binop (MulOvf signed) v1 v2 <| TBool
-
-    let neg_overflows v =
-      let n = size_of v.node.ty in
-      Bool.sem_eq (mk_masked n (min_for true n)) v
-
-    let sub_overflows ~signed v1 v2 =
-      match (v1.node.kind, v2.node.kind) with
-      | BitVec l, BitVec r -> ovf_check ~signed (size_of v1.node.ty) l r Z.( - )
-      | _ when equal v1 v2 -> Bool.v_false
-      | _ ->
-          if Stdlib.not signed then lt ~signed v1 v2
-          else Binop (SubOvf signed, v1, v2) <| TBool
+    let concat = R.bv_concat
+    let extend ~signed extend_by v = R.bv_extend signed (Z.of_int extend_by) v
+    let extract from_ to_ v = R.bv_extract (Z.of_int from_) (Z.of_int to_) v
+    let and_ = R.bv_and
+    let or_ = R.bv_or
+    let xor = R.bv_xor
+    let shl = R.bv_shl
+    let lshr = R.bv_lshr
+    let ashr = R.bv_ashr
+    let not = R.bv_not
+    let of_bool n b = R.bv_of_bool (Z.of_int n) b
+    let to_bool = R.bv_to_bool
+    let not_bool = R.bv_not_bool
 
     let of_float ~rounding ~signed ~size v =
-      let default () =
-        Unop (BvOfFloat (rounding, signed, size), v) <| t_bv size
-      in
-      match (v.node.kind, int_size_of_size size) with
-      | Float f, Some int_size -> (
-          match F.float2int f int_size rounding ~signed with
-          | Some z -> mk_masked size z
-          (* NaN, infinite, or out of range: SMT-Lib leaves the result
-             unspecified, so we keep the term symbolic. *)
-          | None -> default ())
-      | _ -> default ()
+      R.bv_of_float rounding signed (Z.of_int size) v
 
-    let to_float ~rounding ~signed ~fp v =
-      match (v.node.kind, int_size_of_size (size_of v.node.ty)) with
-      | BitVec z, Some int_size ->
-          Float.mk_raw fp (F.int2float z int_size fp rounding ~signed)
-      | _ -> Unop (FloatOfBv (rounding, signed, fp), v) <| t_float fp
-
-    let to_float_raw v =
-      let fp = FloatPrecision.of_size (size_of v.node.ty) in
-      match v.node.kind with
-      | BitVec z -> Float.mk_raw fp (F.of_bits_z fp z)
-      | _ -> Unop (FloatOfBvRaw fp, v) <| t_float fp
+    let to_float ~rounding ~signed ~fp v = R.bv_to_float rounding signed fp v
+    let to_float_raw = R.bv_to_float_raw
   end
 
   (** {2 Floating point} *)
-  and Float : Float = struct
+  module Float : Float = struct
     let fp_of v =
       match v.node.ty with
       | TFloat fp -> fp
@@ -2573,130 +770,32 @@ module Make (V : Value_ext) () = struct
           Some (BitVec.mk_masked size (F.to_z f))
       | _ -> None
 
-    let[@inline] is_floatclass fc =
-     fun sv ->
-      match sv.node.kind with
-      | Float f -> Bool.of_bool (FloatClass.as_fpclass fc = F.fpclass f)
-      | _ -> Unop (FIs fc, sv) <| TBool
-
+    let is_floatclass fc sv = R.float_is_floatclass fc sv
     let is_normal = is_floatclass Normal
     let is_subnormal = is_floatclass Subnormal
     let is_infinite = is_floatclass Infinite
     let is_nan = is_floatclass NaN
     let is_zero = is_floatclass Zero
-
-    let is_negative v =
-      match v.node.kind with
-      | Float f -> Bool.of_bool (F.is_negative f)
-      | _ -> Unop (FIsNeg, v) <| TBool
-
-    let is_positive v =
-      match v.node.kind with
-      | Float f -> Bool.of_bool (F.is_positive f)
-      | _ -> Unop (FIsPos, v) <| TBool
-
-    let cast ~rounding ~fp v =
-      match v.node.kind with
-      | Float f -> mk_raw fp (F.convert rounding fp f)
-      | _ -> Unop (FloatOfFloat (rounding, fp), v) <| t_float fp
-
-    let eq v1 v2 =
-      match (v1.node.kind, v2.node.kind) with
-      | Float f1, Float f2 -> Bool.of_bool (F.eq f1 f2)
-      | _ when equal v1 v2 -> Bool.not (is_nan v1)
-      (* Against a constant, [fp.eq] is decidable structurally *)
-      | Float f, _ ->
-          if F.is_nan f then Bool.v_false
-          else if F.is_zero f then is_zero v2
-          else Bool.sem_eq v1 v2
-      | _, Float f ->
-          if F.is_nan f then Bool.v_false
-          else if F.is_zero f then is_zero v1
-          else Bool.sem_eq v1 v2
-      | _ -> mk_commut_binop FEq v1 v2 <| TBool
-
-    let lt v1 v2 =
-      match (v1.node.kind, v2.node.kind) with
-      | Float f1, Float f2 -> Bool.of_bool (F.lt f1 f2)
-      | _ -> Binop (FLt, v1, v2) <| TBool
-
-    let leq v1 v2 =
-      match (v1.node.kind, v2.node.kind) with
-      | Float f1, Float f2 -> Bool.of_bool (F.le f1 f2)
-      | _ -> Binop (FLeq, v1, v2) <| TBool
-
+    let is_negative = R.float_is_negative
+    let is_positive = R.float_is_positive
+    let cast ~rounding ~fp v = R.float_cast rounding fp v
+    let eq = R.float_eq
+    let lt = R.float_lt
+    let leq = R.float_leq
     let gt v1 v2 = lt v2 v1
     let geq v1 v2 = leq v2 v1
-
-    let add v1 v2 =
-      match (v1.node.kind, v2.node.kind) with
-      | Float f1, Float f2 -> Float (F.add f1 f2) <| v1.node.ty
-      | _ -> Binop (FAdd, v1, v2) <| v1.node.ty
-
-    let sub v1 v2 =
-      match (v1.node.kind, v2.node.kind) with
-      | Float f1, Float f2 -> Float (F.sub f1 f2) <| v1.node.ty
-      | _ -> Binop (FSub, v1, v2) <| v1.node.ty
-
-    let div v1 v2 =
-      match (v1.node.kind, v2.node.kind) with
-      | Float f1, Float f2 -> Float (F.div f1 f2) <| v1.node.ty
-      | _ -> Binop (FDiv, v1, v2) <| v1.node.ty
-
-    let mul v1 v2 =
-      match (v1.node.kind, v2.node.kind) with
-      | Float f1, Float f2 -> Float (F.mul f1 f2) <| v1.node.ty
-      | _ -> Binop (FMul, v1, v2) <| v1.node.ty
-
-    let rem v1 v2 =
-      match (v1.node.kind, v2.node.kind) with
-      | Float f1, Float f2 -> Float (F.rem f1 f2) <| v1.node.ty
-      | _ -> Binop (FRem, v1, v2) <| v1.node.ty
-
-    let abs v =
-      match v.node.kind with
-      | Float f -> Float (F.abs f) <| v.node.ty
-      | Unop (FAbs, _) -> v
-      | _ -> Unop (FAbs, v) <| v.node.ty
-
-    let neg v =
-      match v.node.kind with
-      | Float f -> Float (F.neg f) <| v.node.ty
-      | Unop (FNeg, v) -> v
-      | _ -> Unop (FNeg, v) <| v.node.ty
-
-    let fma a b c =
-      match (a.node.kind, b.node.kind, c.node.kind) with
-      | Float fa, Float fb, Float fc -> Float (F.fma fa fb fc) <| a.node.ty
-      | _ -> Triop (Fma, a, b, c) <| a.node.ty
-
-    (* C's [fmod] (and so Rust's [%] on floats), which truncates [x/y] where
-       {!rem} rounds it to nearest. SMT-Lib has no such operator, so we emulate
-       it. *)
-    (* [fmod] given an already-computed IEEE remainder, so a caller that has a
-       cheaper way to obtain one can reuse it. *)
-    let fmod_of_rem r v1 v2 =
-      let correction = Bool.ite (is_negative v1) (neg (abs v2)) (abs v2) in
-      Bool.ite
-        (Bool.sem_eq (is_negative r) (is_negative v1))
-        r (add r correction)
-
-    let fmod v1 v2 =
-      match (v1.node.kind, v2.node.kind) with
-      | Float f1, Float f2 -> Float (F.fmod f1 f2) <| v1.node.ty
-      | _ -> fmod_of_rem (rem v1 v2) v1 v2
-
-    (* [fp.min]/[fp.max]: the non-NaN argument wins, and which of [-0.0] and
-       [+0.0] is returned is left unspecified. *)
-    let min v1 v2 =
-      match (v1.node.kind, v2.node.kind) with
-      | Float f1, Float f2 -> Float (F.min f1 f2) <| v1.node.ty
-      | _ -> Binop (FMin, v1, v2) <| v1.node.ty
-
-    let max v1 v2 =
-      match (v1.node.kind, v2.node.kind) with
-      | Float f1, Float f2 -> Float (F.max f1 f2) <| v1.node.ty
-      | _ -> Binop (FMax, v1, v2) <| v1.node.ty
+    let add = R.float_add
+    let sub = R.float_sub
+    let div = R.float_div
+    let mul = R.float_mul
+    let rem = R.float_rem
+    let abs = R.float_abs
+    let neg = R.float_neg
+    let fma = R.float_fma
+    let fmod_of_rem = R.float_fmod_of_rem
+    let fmod = R.float_fmod
+    let min = R.float_min
+    let max = R.float_max
 
     (* The IEEE 754-2019 [minimum]/[maximum]: unlike {!min}/{!max} a NaN
        propagates, and [-0.0] is strictly below [+0.0]. SMT-Lib has neither, so
@@ -2713,15 +812,8 @@ module Make (V : Value_ext) () = struct
       @@ Bool.ite (lt v2 v1) v1
       @@ Bool.ite (is_negative v1) v2 v1
 
-    let sqrt v =
-      match v.node.kind with
-      | Float f -> Float (F.sqrt f) <| v.node.ty
-      | _ -> Unop (FSqrt, v) <| v.node.ty
-
-    let round rm sv =
-      match sv.node.kind with
-      | Float f -> Float (F.round rm f) <| sv.node.ty
-      | _ -> Unop (FRound rm, sv) <| sv.node.ty
+    let sqrt = R.float_sqrt
+    let round rm sv = R.float_round rm sv
   end
 
   (** {2 Pointers} *)
@@ -2731,22 +823,12 @@ module Make (V : Value_ext) () = struct
       assert (size_of l.node.ty = size_of o.node.ty);
       Ptr (l, o) <| TPointer (size_of o.node.ty)
 
-    let loc p =
-      match p.node.kind with
-      | Ptr (l, _) -> l
-      | _ -> Unop (GetPtrLoc, p) <| TLoc (size_of p.node.ty)
-
+    let loc = R.ptr_loc
     let null_loc n = BitVec Z.zero <| TLoc n
     let is_null_loc l = Bool.sem_eq l (null_loc (size_of l.node.ty))
     let loc_of_z n z = BitVec z <| TLoc n
     let loc_of_int n i = loc_of_z n (Z.of_int i)
-
-    let ofs p =
-      match p.node.kind with
-      | Ptr (_, o) -> o
-      | _ ->
-          let n = size_of p.node.ty in
-          Unop (GetPtrOfs, p) <| TBitVector n
+    let ofs = R.ptr_ofs
 
     let decompose p =
       match p.node.kind with Ptr (l, o) -> (l, o) | _ -> (loc p, ofs p)

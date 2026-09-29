@@ -1,0 +1,136 @@
+(* Floating point *)
+
+fn fp_of (v : t) : fp = fp_of_ty (ty v)
+
+rule float_is_floatclass (fc : fc) (sv : t) : FIs (fc, sv) <| TBool =
+  match sv with
+  | lit: Float f -> of_bool (f_is_class fc f)
+  | default: _ -> FIs (fc, sv) <| TBool
+
+rule float_is_negative (v : t) : FIsNeg v <| TBool =
+  match v with
+  | lit: Float f -> of_bool (f_is_negative f)
+  | default: _ -> FIsNeg v <| TBool
+
+rule float_is_positive (v : t) : FIsPos v <| TBool =
+  match v with
+  | lit: Float f -> of_bool (f_is_positive f)
+  | default: _ -> FIsPos v <| TBool
+
+rule float_cast (rounding : rm) (fp : fp) (v : t) :
+    FloatOfFloat (rounding, fp, v) <| TFloat fp =
+  match v with
+  | lit: Float f -> Float (f_convert rounding fp f) <| TFloat fp
+  | default: _ -> FloatOfFloat (rounding, fp, v) <| TFloat fp
+
+rule float_eq (v1 v2 : t) : FEq (v1, v2) <| TBool =
+  match (v1, v2) with
+  | lits: Float f1, Float f2 -> of_bool (f_eq f1 f2)
+  | same: v, v -> not (float_is_floatclass NaN v)
+  (* Against a constant, [fp.eq] is decidable structurally *)
+  | lit: (Float f as l), x ->
+      if f_is_nan f then v_false
+      else if f_is_zero f then float_is_floatclass Zero x
+      else l == x
+  | default: _ -> mk_commut_binop FEq v1 v2 <| TBool
+
+rule float_lt (v1 v2 : t) : FLt (v1, v2) <| TBool =
+  match (v1, v2) with
+  | lits: Float f1, Float f2 -> of_bool (f_lt f1 f2)
+  | default: _ -> FLt (v1, v2) <| TBool
+
+rule float_leq (v1 v2 : t) : FLeq (v1, v2) <| TBool =
+  match (v1, v2) with
+  | lits: Float f1, Float f2 -> of_bool (f_le f1 f2)
+  | default: _ -> FLeq (v1, v2) <| TBool
+
+rule float_add (v1 v2 : t) : FAdd (v1, v2) <| ty v1 =
+  match (v1, v2) with
+  | lits: Float f1, Float f2 -> Float (f_add f1 f2) <| ty v1
+  | default: _ -> FAdd (v1, v2) <| ty v1
+
+rule float_sub (v1 v2 : t) : FSub (v1, v2) <| ty v1 =
+  match (v1, v2) with
+  | lits: Float f1, Float f2 -> Float (f_sub f1 f2) <| ty v1
+  | default: _ -> FSub (v1, v2) <| ty v1
+
+rule float_div (v1 v2 : t) : FDiv (v1, v2) <| ty v1 =
+  match (v1, v2) with
+  | lits: Float f1, Float f2 -> Float (f_div f1 f2) <| ty v1
+  | default: _ -> FDiv (v1, v2) <| ty v1
+
+rule float_mul (v1 v2 : t) : FMul (v1, v2) <| ty v1 =
+  match (v1, v2) with
+  | lits: Float f1, Float f2 -> Float (f_mul f1 f2) <| ty v1
+  | default: _ -> FMul (v1, v2) <| ty v1
+
+rule float_rem (v1 v2 : t) : FRem (v1, v2) <| ty v1 =
+  match (v1, v2) with
+  | lits: Float f1, Float f2 -> Float (f_rem f1 f2) <| ty v1
+  | default: _ -> FRem (v1, v2) <| ty v1
+
+rule float_abs (v : t) : FAbs v <| ty v =
+  match v with
+  | lit: Float f -> Float (f_abs f) <| ty v
+  | abs: FAbs _ -> v
+  | default: _ -> FAbs v <| ty v
+
+rule float_neg (v : t) : FNeg v <| ty v =
+  match v with
+  | lit: Float f -> Float (f_neg f) <| ty v
+  | neg: FNeg v -> v
+  | default: _ -> FNeg v <| ty v
+
+rule float_fma (a b c : t) : Fma (a, b, c) <| ty a =
+  match (a, b, c) with
+  | lits: Float fa, Float fb, Float fc -> Float (f_fma fa fb fc) <| ty a
+  | default: _ -> Fma (a, b, c) <| ty a
+
+(* C's [fmod] (and so Rust's [%] on floats), which truncates [x/y] where
+   [f_rem] rounds it to nearest. SMT-Lib has no such operator, so we emulate
+   it. [raw_fmod_of_rem] is that emulation, without simplifications; it serves
+   as the specification of [float_fmod_of_rem] and [f_fmod]. *)
+fn raw_fmod_of_rem (r v1 v2 : t) : t =
+  let is_neg (v : t) = FIsNeg v <| TBool in
+  let abs2 = FAbs v2 <| ty v2 in
+  let correction =
+    Ite (is_neg v1, FNeg abs2 <| ty v2, abs2) <| ty v2
+  in
+  Ite (Eq (is_neg r, is_neg v1) <| TBool, r, FAdd (r, correction) <| ty r)
+  <| ty r
+
+(* [fmod] given an already-computed IEEE remainder, so a caller that has a
+   cheaper way to obtain one can reuse it. *)
+rule float_fmod_of_rem (r v1 v2 : t) : raw_fmod_of_rem r v1 v2 =
+  b_ite
+    (float_is_negative r == float_is_negative v1)
+    r
+    (float_add r
+       (b_ite (float_is_negative v1) (float_neg (float_abs v2)) (float_abs v2)))
+
+rule float_fmod (v1 v2 : t) : raw_fmod_of_rem (FRem (v1, v2) <| ty v1) v1 v2 =
+  match (v1, v2) with
+  | lits: Float f1, Float f2 -> Float (f_fmod f1 f2) <| ty v1
+  | default: _ -> float_fmod_of_rem (float_rem v1 v2) v1 v2
+
+(* [fp.min]/[fp.max]: the non-NaN argument wins, and which of [-0.0] and [+0.0]
+   is returned is left unspecified. *)
+rule float_min (v1 v2 : t) : FMin (v1, v2) <| ty v1 =
+  match (v1, v2) with
+  | lits: Float f1, Float f2 -> Float (f_min f1 f2) <| ty v1
+  | default: _ -> FMin (v1, v2) <| ty v1
+
+rule float_max (v1 v2 : t) : FMax (v1, v2) <| ty v1 =
+  match (v1, v2) with
+  | lits: Float f1, Float f2 -> Float (f_max f1 f2) <| ty v1
+  | default: _ -> FMax (v1, v2) <| ty v1
+
+rule float_sqrt (v : t) : FSqrt v <| ty v =
+  match v with
+  | lit: Float f -> Float (f_sqrt f) <| ty v
+  | default: _ -> FSqrt v <| ty v
+
+rule float_round (rm : rm) (sv : t) : FRound (rm, sv) <| ty sv =
+  match sv with
+  | lit: Float f -> Float (f_round rm f) <| ty sv
+  | default: _ -> FRound (rm, sv) <| ty sv

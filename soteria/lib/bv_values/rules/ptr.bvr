@@ -1,0 +1,13 @@
+(* Pointers *)
+
+rule ptr_loc (p : t) : GetPtrLoc p <| TLoc (size p) =
+  match p with
+  | ptr: Ptr (l, _) -> l
+  | default: _ -> GetPtrLoc p <| TLoc (size p)
+
+rule ptr_ofs (p : t) : GetPtrOfs p <| TBitVector (size p) =
+  match p with
+  | ptr: Ptr (_, o) -> o
+  | default: _ ->
+      let n = size p in
+      GetPtrOfs p <| TBitVector n

@@ -30,9 +30,11 @@
    ppx_deriving_yojson
    ppx_subliner
    ppx_mixins
-   ppx_matches))
+   ppx_matches
+   ppx_include_file))
  (preprocessor_deps
   (file "logs/assets/soteria_logs.js")
-  (file "logs/assets/soteria_logs.css"))
+  (file "logs/assets/soteria_logs.css")
+  (file "bv_values/svalue_rules.gen.ml"))
  (instrumentation
   (backend landmarks --auto)))

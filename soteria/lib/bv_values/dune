@@ -2,7 +2,7 @@
 ; source tree so that they are committed and reviewed with them.
 
 (rule
- (targets svalue_rules.ml)
+ (targets svalue_rules.gen.ml)
  (mode promote)
  (deps
   (glob_files rules/*.bvr))

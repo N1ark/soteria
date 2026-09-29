@@ -52,10 +52,10 @@ let binding loc ?(attrs = []) p params ret body =
 
 let item loc d = { pstr_desc = d; pstr_loc = loc }
 
-let prim loc name attrs t kind =
+let prim loc name t kind =
   item loc
     (Pstr_primitive
-       { pval_name = { txt = name; loc }; pval_type = t; pval_prim = [ kind ]; pval_attributes = attrs; pval_loc = loc })
+       { pval_name = { txt = name; loc }; pval_type = t; pval_prim = [ kind ]; pval_attributes = []; pval_loc = loc })
 
 let rec elist loc = function
   | [] -> econstr loc "[]" None
@@ -98,15 +98,12 @@ let neg loc (e : expression) =
 
 %%
 
-prim_attrs:
-  | l = list(LBRACKETAT a = LID RBRACKET { attr (mkloc $loc) a [] }) { l }
-
 file:
   | items = list(item) EOF { items }
 
 item:
-  | PRIM x = LID a = prim_attrs COLON t = typ { prim (mkloc $loc) x a t "" }
-  | ORACLE x = LID a = prim_attrs COLON t = typ { prim (mkloc $loc) x a t "oracle" }
+  | PRIM x = LID COLON t = typ { prim (mkloc $loc) x t "" }
+  | ORACLE x = LID COLON t = typ { prim (mkloc $loc) x t "oracle" }
   | FN x = LID ps = params ret = option(preceded(COLON, typ)) EQ body = seq_expr
     { let loc = mkloc $loc in
       item loc (Pstr_value (Nonrecursive, [ binding loc (pat loc (Ppat_var { txt = x; loc })) ps ret body ])) }

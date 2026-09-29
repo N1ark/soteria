@@ -1,5 +1,6 @@
-(** OCaml backend. The output is a functor over the primitives, whose body
-    defines every BVR function. It is not meant to be read. *)
+(** OCaml backend. The output defines every BVR function, in terms of a module
+    [P] of primitives; it is included in [Svalue.Make], where [P] is in scope.
+    It is not meant to be read. *)
 
 open Syntax
 
@@ -20,7 +21,7 @@ let constr_path (c : constr) =
 
 let rec ocaml_ty ft = function
   | TInt -> pf ft "Z.t"
-  | TBv -> pf ft "Svalue_prims.bv"
+  | TBv -> pf ft "bv"
   | TBool -> pf ft "bool"
   | TUnit -> pf ft "unit"
   | TTerm -> pf ft "t"
@@ -93,11 +94,17 @@ let rec pat ft (p : pat) =
 (* ---------------------------------------------------------------- *)
 (* Expressions *)
 
-(** Whether [x] occurs in [e], ignoring shadowing. *)
-let rec mentions x (e : expr) =
-  let go = mentions x in
+(** Whether [x] occurs in [e], ignoring shadowing. With [~decoded], only counts
+    the occurrences of the literal [x] that need its value, that is not those as
+    the argument of [to_z] and [width], which read it from the term. *)
+let rec mentions ?(decoded = false) x (e : expr) =
+  let go = mentions ~decoded x in
   match e.e with
   | EVar y -> x = y
+  | ECall (("to_z" | "width"), args) when decoded -> (
+      match List.rev args with
+      | { e = EVar y; _ } :: l when y = x -> List.exists go l
+      | _ -> List.exists go args)
   | EInt _ | EBool _ | EUnit | ENone | ENil -> false
   | ECall (_, l) | EConstr (_, l) | ELocalCall (_, l) | ETuple l ->
       List.exists go l
@@ -121,12 +128,11 @@ let int_lit ft z =
   else if Z.fits_int z then pf ft "(Z.of_int (%s))" (Z.to_string z)
   else pf ft "(Z.of_string %S)" (Z.to_string z)
 
-type ctx = { prims : string list; instance : string list; consts : string list }
-
-(** Primitives that depend on the instance of [Svalue.Make] are parameters of
-    the functor, the others are in [Svalue_prims]. *)
-let prim ctx f =
-  if List.mem f ctx.instance then "P." ^ f else "Svalue_prims." ^ f
+type ctx = {
+  prims : string list;
+  consts : string list;
+  raw : string list;  (** literal binders that are not decoded *)
+}
 
 let rec expr ctx ft (e : expr) =
   let expr = expr ctx in
@@ -151,12 +157,16 @@ let rec expr ctx ft (e : expr) =
   | ECall ("kind", [ a ]) -> pf ft "%a.Hc.node.Svalue_ast.kind" expr a
   | ECall ("tag_le", [ a; b ]) ->
       pf ft "(Int.compare %a.Hc.tag %a.Hc.tag <= 0)" expr a expr b
+  | ECall ("to_z", [ s; { e = EVar x; _ } ]) when List.mem x ctx.raw ->
+      pf ft "(P.lit_to_z %a %s)" expr s x
+  | ECall ("width", [ { e = EVar x; _ } ]) when List.mem x ctx.raw ->
+      pf ft "(P.lit_width %s)" x
   | ECall (f, []) ->
-      if List.mem f ctx.prims then pf ft "%s" (prim ctx f)
+      if List.mem f ctx.prims then pf ft "P.%s" f
       else if List.mem f ctx.consts then pf ft "%s" f
       else pf ft "(%s ())" f
   | ECall (f, args) ->
-      let f = if List.mem f ctx.prims then prim ctx f else f in
+      let f = if List.mem f ctx.prims then "P." ^ f else f in
       pf ft "(%s %a)" f (list ~sep:" " expr) args
   | ELocalCall (f, args) -> pf ft "(%s %a)" f (list ~sep:" " expr) args
   | EUnop (Neg, a) -> pf ft "(Z.neg %a)" expr a
@@ -179,7 +189,7 @@ let rec expr ctx ft (e : expr) =
             | TInt -> "Z.equal"
             | TBool -> "Bool.equal"
             | TSty -> "P.equal_ty"
-            | TBv -> "Svalue_prims.bv_equal"
+            | TBv -> "P.bv_equal"
             | _ -> "Stdlib.( = )"
           in
           pf ft "(%s(%s %a %a))" neg eq expr a expr b
@@ -195,8 +205,8 @@ let rec expr ctx ft (e : expr) =
   | EIf (c, a, b) ->
       pf ft "@[<hv>(if %a@ then %a@ else %a)@]" expr c expr a expr b
   | ELet (p, rhs, body) ->
-      pf ft "@[<v>(let %a = %a in@ %a%a)@]" pat p expr rhs (small_lets ctx body)
-        p expr body
+      pf ft "@[<v>(let %a = %a in@ %a%a)@]" pat p expr rhs (small_lets body) p
+        (in_scope ctx p body) body
   | ELetFun (f, params, fbody, body) ->
       pf ft "@[<v>(let %s %a =@;<1 2>%a in@ %a)@]" f
         (list ~sep:" " (fun ft (x, t) -> pf ft "(%s : %a)" x ocaml_ty t))
@@ -218,22 +228,34 @@ let rec expr ctx ft (e : expr) =
   | EAssert (c, body) -> pf ft "@[<v>(assert %a;@ %a)@]" expr c expr body
 
 (** Converts the binders of [p] that [e] uses. *)
-and small_lets ctx e ft p =
-  let used x = mentions x e in
+and small_lets e ft p =
   List.iter
     (fun x -> pf ft "let %s = Z.of_int %s in@ " x x)
-    (List.filter used (small_binders p));
+    (List.filter (fun x -> mentions x e) (small_binders p));
   List.iter
-    (fun x -> pf ft "let %s = %s %s in@ " x (prim ctx "bv_of_lit") x)
-    (List.filter used (Check.lit_binders p))
+    (fun x -> pf ft "let %s = P.bv_of_lit %s in@ " x x)
+    (List.filter (fun x -> mentions ~decoded:true x e) (Check.lit_binders p))
+
+(** Prints [e], in the scope of the binders of [p]. *)
+and in_scope ctx p e =
+  let raw =
+    List.filter
+      (fun x -> not (mentions ~decoded:true x e))
+      (Check.lit_binders p)
+  in
+  let shadowed x = List.mem_assoc x (Check.binders p) in
+  expr { ctx with raw = raw @ List.filter (fun x -> not (shadowed x)) ctx.raw }
 
 and case ctx ft (c : case) =
   let guard ft = function
     | None -> ()
-    | Some g -> pf ft "@ when (%a%a)" (small_lets ctx g) c.pat (expr ctx) g
+    | Some g ->
+        pf ft "@ when (%a%a)" (small_lets g) c.pat (in_scope ctx c.pat g) g
   in
   pf ft "@[<hv 2>| %a%a ->@ %a%a@]@ " pat c.pat guard c.guard
-    (small_lets ctx c.body) c.pat (expr ctx) c.body
+    (small_lets c.body) c.pat
+    (in_scope ctx c.pat c.body)
+    c.body
 
 (* ---------------------------------------------------------------- *)
 (* Call graph *)
@@ -353,37 +375,12 @@ let program ~sources ft (p : program) =
         | _ -> [])
       groups
   in
-  let ctx =
-    {
-      prims = List.map (fun p -> p.pname) p.prims;
-      instance =
-        List.filter_map
-          (fun (p : prim) -> if p.instance then Some p.pname else None)
-          p.prims;
-      consts;
-    }
-  in
+  let ctx = { prims = List.map (fun p -> p.pname) p.prims; consts; raw = [] } in
   pf ft "@[<v>(* Generated by bvr from %a. Do not edit. *)@ @ "
     (list Format.pp_print_string)
     sources;
   pf ft "[@@@@@@warning \"-a\"]@ @ ";
-  pf ft "@[<v 2>module type PRIMS = sig@ type ghost@ type ext@ type ext_ty@ ";
-  pf ft "type t = (ghost, ext, ext_ty) Svalue_ast.t@ ";
-  pf ft
-    "val node : (ghost, ext, ext_ty) Svalue_ast.t_kind -> ext_ty Svalue_ast.ty \
-     -> t@ ";
-  pf ft "val equal_ty : ext_ty Svalue_ast.ty -> ext_ty Svalue_ast.ty -> bool@ ";
-  List.iter
-    (fun (pr : prim) ->
-      if pr.instance then
-        let args = match pr.pargs with [] -> [ TUnit ] | l -> l in
-        let args = if pr.pargs = [] then [] else args in
-        pf ft "val %s : %a%a@ " pr.pname
-          (list ~sep:"" (fun ft t -> pf ft "%a -> " ocaml_ty t))
-          args ocaml_ty pr.pret)
-    p.prims;
-  pf ft "@]@ end@ @ ";
-  pf ft "@[<v 2>module Make (P : PRIMS) = struct@ open P@ @ ";
+  pf ft "open P@ @ ";
   List.iter
     (fun group ->
       let kw =
@@ -397,4 +394,4 @@ let program ~sources ft (p : program) =
           pf ft "@[<hv 2>%s %a@]@ @ " (if i = 0 then kw else "and") (fn ctx) f)
         group)
     groups;
-  pf ft "@]@ end@]@."
+  pf ft "@]@."

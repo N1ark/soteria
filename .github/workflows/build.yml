@@ -134,10 +134,17 @@ jobs:
       - name: Install gmake (macOS)
         run: brew install make
         if: ${{ (!steps.restore-charon-cache.outputs.cache-hit || !steps.restore-obol-cache.outputs.cache-hit) && runner.os == 'macOS' }}
+      # Obol's Cargo.toml fetches Charon from soteria-tools, which is not
+      # reachable: fetch it from the N1ark fork instead
       - name: Install Obol if not cached
         run: |
           $GITHUB_WORKSPACE/scripts/versionsync.py pull obol --init
           cp -r ../obol/bin obol-bin
+        env:
+          CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+          GIT_CONFIG_COUNT: "1"
+          GIT_CONFIG_KEY_0: url.https://github.com/N1ark/.insteadOf
+          GIT_CONFIG_VALUE_0: https://github.com/soteria-tools/
         if: ${{ !steps.restore-obol-cache.outputs.cache-hit }}
       - name: Add Obol to path
         run: echo "$PWD/obol-bin/" >> $GITHUB_PATH

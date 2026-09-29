@@ -50,6 +50,13 @@ theorem factor_ok' {n : Nat} {a b x y : BitVec n} (ha : a.toNat ≠ 0 ∨ b.toNa
   rw [BitVec.add_comm]
   exact factor_ok ha hd h1 h2 (by rw [uadd_ok] at *; omega)
 
+theorem umul_add_ok {n : Nat} {a x y : BitVec n} (h1 : a.umulOverflow x = false)
+    (h2 : a.umulOverflow y = false) (h3 : (a * x).uaddOverflow (a * y) = false) :
+    a.umulOverflow (x + y) = false := by
+  rw [uadd_ok, toNat_mul_ok h1, toNat_mul_ok h2, ← Nat.mul_add] at h3
+  rw [umul_ok, BitVec.toNat_add]
+  exact Nat.lt_of_le_of_lt (Nat.mul_le_mul_left _ (Nat.mod_le _ _)) h3
+
 theorem mul_div_ok {w : Nat} {n d x : BitVec w} (hd0 : d.toNat ≠ 0) (hd : d.toNat ∣ n.toNat)
     (h : n.umulOverflow x = false) :
     x.umulOverflow (n.smtUDiv d) = false ∧ x * n.smtUDiv d = (n * x).smtUDiv d := by
@@ -112,6 +119,14 @@ theorem bv_add.r_default.a1.proof : bv_add.r_default.a1.Stmt := by
   split
   · exact Refines.refl
   · exact Refines.comm (by simp [Binop.Comm]) (fun _ => rfl)
+
+theorem bv_add.r_factor.a1.proof : bv_add.r_factor.a1.Stmt := by
+  bvr_rule_sem
+  all_goals bvr_split
+  all_goals subst_vars
+  all_goals first
+    | exact umul_add_ok ‹_› ‹_› ‹_›
+    | exact BitVec.mul_add ..
 
 theorem bv_add.r_factor_const.a1.proof : bv_add.r_factor_const.a1.Stmt := by
   bvr_rule_sem

@@ -2001,24 +2001,32 @@ def bv_add.r_add_sub (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Opt
 
 def bv_add.r_factor (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.mul _) a b) _), (Term.mk (Kind.binop (Binop.mul _) bvr__9 c) _) =>
+    | (Term.mk (Kind.binop (Binop.mul ck1) a b) _), (Term.mk (Kind.binop (Binop.mul ck2) bvr__9 c) _) =>
     (whenSome (equal a bvr__9)
-    ((O.bv_mul unchecked a (O.bv_add unchecked b c))))
+    ((if (checked_meet (checked_meet checked ck1) ck2).unsigned
+     then (O.bv_mul checked_unsigned a (O.bv_add unchecked b c))
+     else (O.bv_mul unchecked a (O.bv_add unchecked b c)))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.mul _) a b) _), (Term.mk (Kind.binop (Binop.mul _) c bvr__9) _) =>
+        | (Term.mk (Kind.binop (Binop.mul ck1) a b) _), (Term.mk (Kind.binop (Binop.mul ck2) c bvr__9) _) =>
         (whenSome (equal a bvr__9)
-        ((O.bv_mul unchecked a (O.bv_add unchecked b c))))
+        ((if (checked_meet (checked_meet checked ck1) ck2).unsigned
+         then (O.bv_mul checked_unsigned a (O.bv_add unchecked b c))
+         else (O.bv_mul unchecked a (O.bv_add unchecked b c)))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.mul _) b a) _), (Term.mk (Kind.binop (Binop.mul _) bvr__9 c) _) =>
+        | (Term.mk (Kind.binop (Binop.mul ck1) b a) _), (Term.mk (Kind.binop (Binop.mul ck2) bvr__9 c) _) =>
         (whenSome (equal a bvr__9)
-        ((O.bv_mul unchecked a (O.bv_add unchecked b c))))
+        ((if (checked_meet (checked_meet checked ck1) ck2).unsigned
+         then (O.bv_mul checked_unsigned a (O.bv_add unchecked b c))
+         else (O.bv_mul unchecked a (O.bv_add unchecked b c)))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.mul _) b a) _), (Term.mk (Kind.binop (Binop.mul _) c bvr__9) _) =>
+        | (Term.mk (Kind.binop (Binop.mul ck1) b a) _), (Term.mk (Kind.binop (Binop.mul ck2) c bvr__9) _) =>
         (whenSome (equal a bvr__9)
-        ((O.bv_mul unchecked a (O.bv_add unchecked b c))))
+        ((if (checked_meet (checked_meet checked ck1) ck2).unsigned
+         then (O.bv_mul checked_unsigned a (O.bv_add unchecked b c))
+         else (O.bv_mul unchecked a (O.bv_add unchecked b c)))))
         | _, _ => none)
 
 def bv_add.r_factor_const (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=

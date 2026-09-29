@@ -1522,22 +1522,22 @@ theorem bv_add.r_add_sub.proof : bv_add.r_add_sub.Stmt := by
 theorem bv_add.r_factor.a1.ok : bv_add.r_factor.a1.Stmt := bvr_proof% bv_add.r_factor.a1
 
 theorem bv_add.r_factor.a2.ok : bv_add.r_factor.a2.Stmt := by
-  intro FS O hO checked w__1 a b t__5 w__7 c bvr__9 t__11 hg
+  intro FS O hO checked ck1 a b t__5 ck2 c bvr__9 t__11 hg
   exact Refines.trans
     (by simp only [bv_add.spec, ty, Term.ty_mk]; bvr_comm)
-    (bv_add.r_factor.a1.ok FS O hO checked w__1 a b t__5 w__7 bvr__9 c t__11 hg)
+    (bv_add.r_factor.a1.ok FS O hO checked ck1 a b t__5 ck2 bvr__9 c t__11 hg)
 
 theorem bv_add.r_factor.a3.ok : bv_add.r_factor.a3.Stmt := by
-  intro FS O hO checked w__1 b a t__5 w__7 bvr__9 c t__11 hg
+  intro FS O hO checked ck1 b a t__5 ck2 bvr__9 c t__11 hg
   exact Refines.trans
     (by simp only [bv_add.spec, ty, Term.ty_mk]; bvr_comm)
-    (bv_add.r_factor.a1.ok FS O hO checked w__1 a b t__5 w__7 bvr__9 c t__11 hg)
+    (bv_add.r_factor.a1.ok FS O hO checked ck1 a b t__5 ck2 bvr__9 c t__11 hg)
 
 theorem bv_add.r_factor.a4.ok : bv_add.r_factor.a4.Stmt := by
-  intro FS O hO checked w__1 b a t__5 w__7 c bvr__9 t__11 hg
+  intro FS O hO checked ck1 b a t__5 ck2 c bvr__9 t__11 hg
   exact Refines.trans
     (by simp only [bv_add.spec, ty, Term.ty_mk]; bvr_comm)
-    (bv_add.r_factor.a1.ok FS O hO checked w__1 a b t__5 w__7 bvr__9 c t__11 hg)
+    (bv_add.r_factor.a1.ok FS O hO checked ck1 a b t__5 ck2 bvr__9 c t__11 hg)
 
 theorem bv_add.r_factor.proof : bv_add.r_factor.Stmt := by
   intro FS O hO checked v1 v2 res h

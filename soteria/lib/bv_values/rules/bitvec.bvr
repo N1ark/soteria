@@ -44,8 +44,12 @@ rule bv_add (checked : checked) (v1 v2 : t) : Add (checked, v1, v2) <| ty v1 =
   | sub_cancel: r + (l - r) -> l
   (* (a + b) + (c - a) = b + c (holds modulo 2^n) *)
   | add_sub: (a + b) + (c - a) -> b + c
-  (* a * b + a * c = a * (b + c) *)
-  | factor: a * b + a * c -> a * (b + c)
+  (* a * b + a * c = a * (b + c); if neither product nor the sum overflows
+     unsigned, then neither does a * (b + c) *)
+  | factor: Mul (ck1, a, b) + Mul (ck2, a, c) ->
+      if (checked_meet (checked_meet checked ck1) ck2).unsigned then
+        bv_mul checked_unsigned a (b + c)
+      else a * (b + c)
   | factor_const:
       Mul (ck1, (#k1 as v_k1), r1) + Mul (ck2, (#k2 as v_k2), r2)
     when (checked_meet (checked_meet checked ck1) ck2).unsigned

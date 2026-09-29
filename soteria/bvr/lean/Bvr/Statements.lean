@@ -2210,31 +2210,39 @@ def bv_add.r_add_sub.a4.Stmt : Prop :=
 
 def bv_add.r_factor.a1.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (checked : Checked) (w__1 : Checked) (a : Term) (b : Term) (t__5 : Ty) (w__7 : Checked) (bvr__9 : Term) (c : Term) (t__11 : Ty),
+  ∀ (checked : Checked) (ck1 : Checked) (a : Term) (b : Term) (t__5 : Ty) (ck2 : Checked) (bvr__9 : Term) (c : Term) (t__11 : Ty),
   (equal a bvr__9) = true →
-  Refines FS (bv_add.spec checked (Term.mk (Kind.binop (Binop.mul w__1) a b) t__5) (Term.mk (Kind.binop (Binop.mul w__7) bvr__9 c) t__11))
-  ((O.bv_mul unchecked a (O.bv_add unchecked b c)))
+  Refines FS (bv_add.spec checked (Term.mk (Kind.binop (Binop.mul ck1) a b) t__5) (Term.mk (Kind.binop (Binop.mul ck2) bvr__9 c) t__11))
+  ((if (checked_meet (checked_meet checked ck1) ck2).unsigned
+   then (O.bv_mul checked_unsigned a (O.bv_add unchecked b c))
+   else (O.bv_mul unchecked a (O.bv_add unchecked b c))))
 
 def bv_add.r_factor.a2.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (checked : Checked) (w__1 : Checked) (a : Term) (b : Term) (t__5 : Ty) (w__7 : Checked) (c : Term) (bvr__9 : Term) (t__11 : Ty),
+  ∀ (checked : Checked) (ck1 : Checked) (a : Term) (b : Term) (t__5 : Ty) (ck2 : Checked) (c : Term) (bvr__9 : Term) (t__11 : Ty),
   (equal a bvr__9) = true →
-  Refines FS (bv_add.spec checked (Term.mk (Kind.binop (Binop.mul w__1) a b) t__5) (Term.mk (Kind.binop (Binop.mul w__7) c bvr__9) t__11))
-  ((O.bv_mul unchecked a (O.bv_add unchecked b c)))
+  Refines FS (bv_add.spec checked (Term.mk (Kind.binop (Binop.mul ck1) a b) t__5) (Term.mk (Kind.binop (Binop.mul ck2) c bvr__9) t__11))
+  ((if (checked_meet (checked_meet checked ck1) ck2).unsigned
+   then (O.bv_mul checked_unsigned a (O.bv_add unchecked b c))
+   else (O.bv_mul unchecked a (O.bv_add unchecked b c))))
 
 def bv_add.r_factor.a3.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (checked : Checked) (w__1 : Checked) (b : Term) (a : Term) (t__5 : Ty) (w__7 : Checked) (bvr__9 : Term) (c : Term) (t__11 : Ty),
+  ∀ (checked : Checked) (ck1 : Checked) (b : Term) (a : Term) (t__5 : Ty) (ck2 : Checked) (bvr__9 : Term) (c : Term) (t__11 : Ty),
   (equal a bvr__9) = true →
-  Refines FS (bv_add.spec checked (Term.mk (Kind.binop (Binop.mul w__1) b a) t__5) (Term.mk (Kind.binop (Binop.mul w__7) bvr__9 c) t__11))
-  ((O.bv_mul unchecked a (O.bv_add unchecked b c)))
+  Refines FS (bv_add.spec checked (Term.mk (Kind.binop (Binop.mul ck1) b a) t__5) (Term.mk (Kind.binop (Binop.mul ck2) bvr__9 c) t__11))
+  ((if (checked_meet (checked_meet checked ck1) ck2).unsigned
+   then (O.bv_mul checked_unsigned a (O.bv_add unchecked b c))
+   else (O.bv_mul unchecked a (O.bv_add unchecked b c))))
 
 def bv_add.r_factor.a4.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (checked : Checked) (w__1 : Checked) (b : Term) (a : Term) (t__5 : Ty) (w__7 : Checked) (c : Term) (bvr__9 : Term) (t__11 : Ty),
+  ∀ (checked : Checked) (ck1 : Checked) (b : Term) (a : Term) (t__5 : Ty) (ck2 : Checked) (c : Term) (bvr__9 : Term) (t__11 : Ty),
   (equal a bvr__9) = true →
-  Refines FS (bv_add.spec checked (Term.mk (Kind.binop (Binop.mul w__1) b a) t__5) (Term.mk (Kind.binop (Binop.mul w__7) c bvr__9) t__11))
-  ((O.bv_mul unchecked a (O.bv_add unchecked b c)))
+  Refines FS (bv_add.spec checked (Term.mk (Kind.binop (Binop.mul ck1) b a) t__5) (Term.mk (Kind.binop (Binop.mul ck2) c bvr__9) t__11))
+  ((if (checked_meet (checked_meet checked ck1) ck2).unsigned
+   then (O.bv_mul checked_unsigned a (O.bv_add unchecked b c))
+   else (O.bv_mul unchecked a (O.bv_add unchecked b c))))
 
 def bv_add.r_factor_const.a1.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →

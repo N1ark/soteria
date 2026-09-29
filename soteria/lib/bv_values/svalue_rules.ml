@@ -1051,18 +1051,26 @@ module Make (P : PRIMS) = struct
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Sub (_)), c, bvr__10); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Add (_)), b, a); _ }; _ })
         when ((Int.equal a.Hc.tag bvr__10.Hc.tag)) ->
         (bv_add unchecked b c)
-      | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (_)), a, b); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (_)), bvr__9, c); _ }; _ })
+      | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (ck1)), a, b); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (ck2)), bvr__9, c); _ }; _ })
         when ((Int.equal a.Hc.tag bvr__9.Hc.tag)) ->
-        (bv_mul unchecked a (bv_add unchecked b c))
-      | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (_)), a, b); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (_)), c, bvr__9); _ }; _ })
+        (if (checked_meet (checked_meet checked ck1) ck2).Svalue_ast.unsigned
+        then (bv_mul checked_unsigned a (bv_add unchecked b c))
+        else (bv_mul unchecked a (bv_add unchecked b c)))
+      | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (ck1)), a, b); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (ck2)), c, bvr__9); _ }; _ })
         when ((Int.equal a.Hc.tag bvr__9.Hc.tag)) ->
-        (bv_mul unchecked a (bv_add unchecked b c))
-      | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (_)), b, a); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (_)), bvr__9, c); _ }; _ })
+        (if (checked_meet (checked_meet checked ck1) ck2).Svalue_ast.unsigned
+        then (bv_mul checked_unsigned a (bv_add unchecked b c))
+        else (bv_mul unchecked a (bv_add unchecked b c)))
+      | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (ck1)), b, a); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (ck2)), bvr__9, c); _ }; _ })
         when ((Int.equal a.Hc.tag bvr__9.Hc.tag)) ->
-        (bv_mul unchecked a (bv_add unchecked b c))
-      | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (_)), b, a); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (_)), c, bvr__9); _ }; _ })
+        (if (checked_meet (checked_meet checked ck1) ck2).Svalue_ast.unsigned
+        then (bv_mul checked_unsigned a (bv_add unchecked b c))
+        else (bv_mul unchecked a (bv_add unchecked b c)))
+      | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (ck1)), b, a); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (ck2)), c, bvr__9); _ }; _ })
         when ((Int.equal a.Hc.tag bvr__9.Hc.tag)) ->
-        (bv_mul unchecked a (bv_add unchecked b c))
+        (if (checked_meet (checked_meet checked ck1) ck2).Svalue_ast.unsigned
+        then (bv_mul checked_unsigned a (bv_add unchecked b c))
+        else (bv_mul unchecked a (bv_add unchecked b c)))
       | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (ck1)), (({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec _; _ }; _ } as k1) as v_k1), r1); _ }; _ }, { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mul (ck2)), (({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec _; _ }; _ } as k2) as v_k2), r2); _ }; _ })
         when (let k1 = Svalue_prims.bv_of_lit k1 in
         let k2 = Svalue_prims.bv_of_lit k2 in

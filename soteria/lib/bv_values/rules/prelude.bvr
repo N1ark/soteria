@@ -1,6 +1,8 @@
 (* Primitives and pure helpers used by the rules. Primitives are implemented
-   by hand, in svalue.ml. Oracles are primitives whose behaviour the rules may
-   not rely on: the hash-consing order and Floatml's float arithmetic. *)
+   by hand, once in OCaml (svalue.ml) and once in Lean (Bvr/Prims.lean).
+   Oracles have no Lean definition: the Lean model is parameterised by them,
+   and the properties that the proofs rely on are stated in Bvr/Semantics.lean.
+   They are the hash-consing order and Floatml's float arithmetic. *)
 
 (* {1 Primitives} *)
 

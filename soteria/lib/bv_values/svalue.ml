@@ -1467,12 +1467,19 @@ module Make (V : Value_ext) () = struct
       | Binop (Add _, b, a), Binop (Sub _, c, a') when equal a a' -> add b c
       | Binop (Sub _, c, a'), Binop (Add _, a, b) when equal a a' -> add b c
       | Binop (Sub _, c, a'), Binop (Add _, b, a) when equal a a' -> add b c
-      | Binop (Mul _, l1, r1), Binop (Mul _, l2, r2)
+      | Binop (Mul ck1, l1, r1), Binop (Mul ck2, l2, r2)
         when equal l1 l2 || equal l1 r2 || equal r1 l2 || equal r1 r2 ->
-          if equal l1 l2 then mul l1 (add r1 r2)
-          else if equal l1 r2 then mul l1 (add r1 l2)
-          else if equal r1 l2 then mul r1 (add l1 r2)
-          else mul r1 (add l1 l2)
+          (* if neither product nor the sum overflows unsigned, then neither
+             does the factored product *)
+          let checked =
+            if (checked_meet (checked_meet checked ck1) ck2).unsigned then
+              checked_unsigned
+            else unchecked
+          in
+          if equal l1 l2 then mul ~checked l1 (add r1 r2)
+          else if equal l1 r2 then mul ~checked l1 (add r1 l2)
+          else if equal r1 l2 then mul ~checked r1 (add l1 r2)
+          else mul ~checked r1 (add l1 l2)
       | ( Binop (Mul ck1, ({ node = { kind = BitVec l1; _ }; _ } as v_l1), r1),
           Binop (Mul ck2, ({ node = { kind = BitVec l2; _ }; _ } as v_l2), r2) )
       | ( Binop (Mul ck1, r1, ({ node = { kind = BitVec l1; _ }; _ } as v_l1)),

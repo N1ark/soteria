@@ -200,6 +200,11 @@ fn msb_of (v : t) : int =
   | bv1 land bv2 -> zmin (msb_of bv1) (msb_of bv2)
   | Ite (_, l, r) -> zmax (msb_of l) (msb_of r)
   | BvExtend (false, _, v) -> msb_of v
+  (* [x %u k] is below [k], and so is [x mod k] for a positive [k] *)
+  | Rem (false, _, #k) when k > 1 -> log2 (k - 1)
+  | Mod (_, #k) when k > 1 && k < 1 lsl (size v - 1) -> log2 (k - 1)
+  (* [k %s x] is between [0] and [k], for a non-negative [k] *)
+  | Rem (true, #k, _) when k > 0 && k < 1 lsl (size v - 1) -> log2 k
   | _ -> size v - 1
 
 (* whether [op l r] overflows, for [n]-bit bit-vectors *)

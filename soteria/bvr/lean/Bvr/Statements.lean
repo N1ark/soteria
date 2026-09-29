@@ -2300,7 +2300,7 @@ def bv_add.r_default.a1.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
   ∀ (checked : Checked) (v1 : Term) (v2 : Term),
   Refines FS (bv_add.spec checked v1 v2)
-  ((Term.mk (mk_commut_binop O (Binop.add checked) v1 v2) (ty v1)))
+  ((Term.mk (mk_commut_binop O (Binop.add (no_wrap checked v1 v2)) v1 v2) (ty v1)))
 
 def bv_sub.r_lits.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →

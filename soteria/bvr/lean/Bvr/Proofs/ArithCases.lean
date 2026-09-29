@@ -1,4 +1,4 @@
-import Bvr.Lib.Tactic
+import Bvr.Lib.Compare
 
 /-! Addition, subtraction, multiplication and division, proved per alternative. -/
 
@@ -104,6 +104,14 @@ theorem zext_div_ok {m n : Nat} (hmn : m ≤ n) (x : BitVec m) {z : Int} (h0 : 0
       toNat_ofInt_of_lt h0 hzm, toNat_ofInt_of_lt h0 hzn, Nat.mod_eq_of_lt (by omega),
       Nat.mod_eq_of_lt (by have := Nat.div_le_self x.toNat z.toNat; omega)]
   · simp
+
+theorem bv_add.r_default.a1.proof : bv_add.r_default.a1.Stmt := by
+  intro FS O hO checked v1 v2
+  simp only [bv_add.spec, mk_commut_binop]
+  refine Refines.trans Refines.add_no_wrap ?_
+  split
+  · exact Refines.refl
+  · exact Refines.comm (by simp [Binop.Comm]) (fun _ => rfl)
 
 theorem bv_add.r_factor_const.a1.proof : bv_add.r_factor_const.a1.Stmt := by
   bvr_rule_sem

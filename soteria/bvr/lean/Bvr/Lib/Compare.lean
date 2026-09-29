@@ -173,6 +173,45 @@ elab "bvr_cancel_facts" : tactic => liftMetaTactic fun g => g.withContext do
     catch _ => pure ()
   return [g]
 
+/-- An addition that cannot wrap around, by the bounds on its operands, may be
+checked unsigned. -/
+theorem Refines.add_no_wrap {FS : FloatSem} {c : Checked} {a b : Term} {t : Ty} :
+    Refines FS (.mk (.binop (.add c) a b) t) (.mk (.binop (.add (no_wrap c a b)) a b) t) := by
+  unfold no_wrap
+  split
+  · rename_i h
+    simp only [Bool.and_eq_true, decide_eq_true_eq] at h
+    obtain ⟨_, h⟩ := h
+    refine Refines.den (fun w => ?_) (fun w => ?_) (fun n w ht ρ x e => ?_)
+    · have ⟨w1, _, _⟩ := WT_binop.1 w
+      simp only [Binop.WT] at w1
+      obtain ⟨⟨m, _, _⟩, _, ht⟩ := w1
+      exact ⟨m, by simp_all⟩
+    · have ⟨w1, wa, wb⟩ := WT_binop.1 w
+      exact ⟨WT_binop.2 ⟨by simpa [Binop.WT] using w1, wa, wb⟩, rfl⟩
+    · have ⟨w1, wa, wb⟩ := WT_binop.1 w
+      simp only [Binop.WT, Term.ty_mk] at w1 ht
+      obtain ⟨⟨_, _, ha⟩, hb, htt⟩ := w1
+      rcases a with ⟨ka, Ta⟩
+      rcases b with ⟨kb, Tb⟩
+      simp only [Term.ty_mk] at ha hb htt
+      subst htt; subst hb
+      subst ht
+      simp only [Ty.sort_eq] at *
+      simp only [Lib.den] at e ⊢
+      cases ea : Lib.den FS ρ n (Term.mk ka (.bitVector n)) <;>
+        cases eb : Lib.den FS ρ n (Term.mk kb (.bitVector n)) <;> rw [ea, eb] at e <;>
+        simp only [ckOp, reduceCtorEq] at e ⊢
+      rename_i xa xb
+      have la := den_le_unsigned_ub wa xa ea
+      have lb := den_le_unsigned_ub wb xb eb
+      simp only [size_eq, Term.ty_mk, size_of_ty_bitVector, zshiftl, Int.one_mul] at h
+      have hn : ((2 ^ n : Nat) : Int) = (2 : Int) ^ ((n : Int)).toNat := by simp
+      have hov : xa.uaddOverflow xb = false := uadd_ok.2 (by omega)
+      simp only [hov, Bool.and_false, Bool.or_false] at e ⊢
+      exact e
+  · exact Refines.refl
+
 /-- A quotient by `d` is at most `n` when `n * d` overflows. -/
 theorem smtUDiv_ule_of_umulOverflow {w : Nat} {x n d : BitVec w} (h : n.umulOverflow d = true) :
     (x.smtUDiv d).ule n = true := by

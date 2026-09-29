@@ -118,6 +118,24 @@ def msb_of (v : Term) : Int :=
     (match v with
       | (Term.mk (Kind.unop (Unop.bvExtend false _) v) _) =>
       some ((msb_of v))
+      | _ => none),
+    (match v with
+      | (Term.mk (Kind.binop (Binop.rem false) _ (Term.mk (Kind.bitVec k) _)) _) =>
+      (if (decide (k > (1 : Int)))
+      then some ((log2 (k - (1 : Int))))
+      else none)
+      | _ => none),
+    (match v with
+      | (Term.mk (Kind.binop Binop.mod_ _ (Term.mk (Kind.bitVec k) _)) _) =>
+      (if ((decide (k > (1 : Int))) && (decide (k < (zshiftl (1 : Int) ((size v) - (1 : Int))))))
+      then some ((log2 (k - (1 : Int))))
+      else none)
+      | _ => none),
+    (match v with
+      | (Term.mk (Kind.binop (Binop.rem true) (Term.mk (Kind.bitVec k) _) _) _) =>
+      (if ((decide (k > (0 : Int))) && (decide (k < (zshiftl (1 : Int) ((size v) - (1 : Int))))))
+      then some ((log2 k))
+      else none)
       | _ => none)]).getD
     (match v with | _ => ((size v) - (1 : Int))))
 termination_by sizeOf v
@@ -237,6 +255,14 @@ def is_min_of (signed : Bool) (l : BvVal) : Bool :=
 def is_max_of (signed : Bool) (l : BvVal) : Bool :=
   (decide ((to_z signed l) = (max_for signed (width l))))
 
+def unsigned_ub (v : Term) : Int :=
+  ((zshiftl (1 : Int) ((msb_of v) + (1 : Int))) - (1 : Int))
+
+def no_wrap (c : Checked) (v1 : Term) (v2 : Term) : Checked :=
+  (if ((is_bv (ty v1)) && (decide (((unsigned_ub v1) + (unsigned_ub v2)) < (zshiftl (1 : Int) (size v1)))))
+  then ({ signed := c.signed, unsigned := true } : Checked)
+  else c)
+
 def cancellable (signed : Bool) (a : Term) : Bool :=
   (if signed
   then ((firstSome [(match a with
@@ -277,9 +303,6 @@ def is_checked_unsigned_op (v : Term) : Bool :=
       some (c.unsigned)
       | _ => none)]).getD
     (match v with | _ => false))
-
-def unsigned_ub (v : Term) : Int :=
-  ((zshiftl (1 : Int) ((msb_of v) + (1 : Int))) - (1 : Int))
 
 mutual
 
@@ -2064,7 +2087,7 @@ def bv_add.r_default (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Opt
   (match v1, v2 with
     | _, _ =>
     (whenSome true
-    ((Term.mk (mk_commut_binop O (Binop.add checked) v1 v2) (ty v1)))))
+    ((Term.mk (mk_commut_binop O (Binop.add (no_wrap checked v1 v2)) v1 v2) (ty v1)))))
 
 def bv_add.step (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [bv_add.r_lits O checked v1 v2, bv_add.r_neg O checked v1 v2, bv_add.r_zero O checked v1 v2, bv_add.r_not_one O checked v1 v2, bv_add.r_add_const O checked v1 v2, bv_add.r_sub_const_r O checked v1 v2, bv_add.r_sub_const_l O checked v1 v2, bv_add.r_sub_cancel O checked v1 v2, bv_add.r_add_sub O checked v1 v2, bv_add.r_factor O checked v1 v2, bv_add.r_factor_const O checked v1 v2, bv_add.r_ite O checked v1 v2, bv_add.r_default O checked v1 v2]).getD (bv_add.spec checked v1 v2)

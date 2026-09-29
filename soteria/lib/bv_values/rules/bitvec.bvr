@@ -61,7 +61,13 @@ rule bv_add (checked : checked) (v1 v2 : t) : Add (checked, v1, v2) <| ty v1 =
   (* only propagate down ites if we know it's concrete *)
   | ite: Ite (b, l, r) + (#_ as x) ->
       b_ite b (bv_add checked l x) (bv_add checked r x)
-  | default: _ -> mk_commut_binop (Add checked) v1 v2 <| ty v1
+  | default: _ -> mk_commut_binop (Add (no_wrap checked v1 v2)) v1 v2 <| ty v1
+
+(* [c], with the unsigned check when [v1 + v2] cannot wrap around *)
+fn no_wrap (c : checked) (v1 v2 : t) : checked =
+  if is_bv (ty v1) && unsigned_ub v1 + unsigned_ub v2 < 1 lsl size v1 then
+    { signed = c.signed; unsigned = true }
+  else c
 
 rule bv_sub (checked : checked) (v1 v2 : t) : Sub (checked, v1, v2) <| ty v1 =
   match v1 - v2 with

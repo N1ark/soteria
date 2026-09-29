@@ -178,6 +178,15 @@ module Make (P : PRIMS) = struct
         (zmax (msb_of l) (msb_of r))
       | { Hc.node = { Svalue_ast.kind = Svalue_ast.Unop ((Svalue_ast.Unop.BvExtend (false, _)), v); _ }; _ } ->
         (msb_of v)
+      | { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Rem (false)), _, { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (k); _ }; _ }); _ }; _ }
+        when ((Z.gt k Z.one)) ->
+        (P.log2 (Z.sub k Z.one))
+      | { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Mod), _, { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (k); _ }; _ }); _ }; _ }
+        when (((Z.gt k Z.one) && (Z.lt k (Z.shift_left Z.one (Z.to_int (Z.sub (size v) Z.one)))))) ->
+        (P.log2 (Z.sub k Z.one))
+      | { Hc.node = { Svalue_ast.kind = Svalue_ast.Binop ((Svalue_ast.Binop.Rem (true)), { Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (k); _ }; _ }, _); _ }; _ }
+        when (((Z.gt k Z.zero) && (Z.lt k (Z.shift_left Z.one (Z.to_int (Z.sub (size v) Z.one)))))) ->
+        (P.log2 k)
       | _ -> (Z.sub (size v) Z.one)
       )
   
@@ -281,6 +290,14 @@ module Make (P : PRIMS) = struct
   let is_max_of (signed : bool) (l : bv) : bool =
       ((Z.equal (P.to_z signed l) (max_for signed (P.width l))))
   
+  let unsigned_ub (v : t) : Z.t =
+      (Z.sub (Z.shift_left Z.one (Z.to_int (Z.add (msb_of v) Z.one))) Z.one)
+  
+  let no_wrap (c : Svalue_ast.checked) (v1 : t) (v2 : t) : Svalue_ast.checked =
+      (if ((is_bv (P.ty v1)) && (Z.lt (Z.add (unsigned_ub v1) (unsigned_ub v2)) (Z.shift_left Z.one (Z.to_int (size v1)))))
+      then { Svalue_ast.signed = c.Svalue_ast.signed; Svalue_ast.unsigned = true }
+      else c)
+  
   let bv_of_bool (n : Z.t) (b : t) : t =
       (match b with
       | { Hc.node = { Svalue_ast.kind = Svalue_ast.Bool (true); _ }; _ } ->
@@ -321,9 +338,6 @@ module Make (P : PRIMS) = struct
         c.Svalue_ast.unsigned
       | _ -> false
       )
-  
-  let unsigned_ub (v : t) : Z.t =
-      (Z.sub (Z.shift_left Z.one (Z.to_int (Z.add (msb_of v) Z.one))) Z.one)
   
   let rec b_and (v1 : t) (v2 : t) : t =
       (match v1, v2 with
@@ -1206,7 +1220,7 @@ module Make (P : PRIMS) = struct
       | (({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec (_); _ }; _ } as x), { Hc.node = { Svalue_ast.kind = Svalue_ast.Triop ((Svalue_ast.Triop.Ite), b, l, r); _ }; _ }) ->
         (b_ite b (bv_add checked l x) (bv_add checked r x))
       | _ ->
-        (P.node (mk_commut_binop (Svalue_ast.Binop.Add (checked)) v1 v2) (P.ty v1))
+        (P.node (mk_commut_binop (Svalue_ast.Binop.Add ((no_wrap checked v1 v2))) v1 v2) (P.ty v1))
       ))
   
   and bv_sub (checked : Svalue_ast.checked) (v1 : t) (v2 : t) : t =

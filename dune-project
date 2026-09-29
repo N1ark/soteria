@@ -65,9 +65,7 @@
   (qcheck-core :with-test)
   (qcheck-alcotest :with-test)
   (menhir
-   (and
-    :with-test
-    (>= 20230415)))
+   (>= 20230415))
   (dune
    (>= 3.23))
   (ppxlib

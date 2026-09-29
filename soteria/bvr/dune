@@ -1,0 +1,9 @@
+(executable
+ (name main)
+ (libraries ppxlib fmt zarith))
+
+(menhir
+ (modules bvr_parser))
+
+(ocamllex
+ (modules bvr_lexer))

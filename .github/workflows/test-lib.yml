@@ -60,6 +60,11 @@ jobs:
             fi
           done
 
+      # opam installs system dependencies (cargo) with apt, whose package
+      # index on the runner image may be stale
+      - name: Update the apt package index
+        run: sudo apt-get update
+
       # The command opam CI actually runs
       - name: Install soteria with tests and docs
         run: opam install ./pkg/soteria.opam --with-test --with-doc -y

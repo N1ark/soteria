@@ -412,7 +412,20 @@ module Make (V : Value_ext) () = struct
       let body_vars = Var.Hashset.of_iter (iter_vars body |> Iter.map fst) in
       List.filter (fun (v, _) -> Var.Hashset.mem body_vars v) binders
 
-    let size_of_ty ty = Z.of_int (size_of ty)
+    (* Zarith represents small integers as OCaml ints, but compares them in C:
+       these compare them in OCaml, as Zarith's arithmetic does *)
+    external is_small_int : Z.t -> bool = "%obj_is_int"
+    external unsafe_to_int : Z.t -> int = "%identity"
+
+    let[@inline] zcompare a b =
+      if is_small_int a && is_small_int b then
+        Stdlib.compare (unsafe_to_int a : int) (unsafe_to_int b)
+      else Z.compare a b
+
+    let[@inline] zequal a b =
+      if is_small_int a && is_small_int b then a == b else Z.equal a b
+
+    let[@inline] size_of_ty ty = Z.of_int (size_of ty)
 
     let fp_of_ty = function
       | TFloat fp -> fp

@@ -174,19 +174,20 @@ let rec expr ctx ft (e : expr) =
   | EUnop (Lognot, a) -> pf ft "(Z.lognot %a)" expr a
   | EBinop (Arith op, a, b) -> (
       let z name = pf ft "(Z.%s %a %a)" name expr a expr b in
+      let cmp c = pf ft "(P.zcompare %a %a %s 0)" expr a expr b c in
       match op with
       | Add -> z "add"
       | Sub -> z "sub"
       | Mul -> z "mul"
-      | Lt -> z "lt"
-      | Le -> z "leq"
-      | Gt -> z "gt"
-      | Ge -> z "geq"
+      | Lt -> cmp "<"
+      | Le -> cmp "<="
+      | Gt -> cmp ">"
+      | Ge -> cmp ">="
       | Eq | Ne ->
           let neg = if op = Ne then "not " else "" in
           let eq =
             match a.ety with
-            | TInt -> "Z.equal"
+            | TInt -> "P.zequal"
             | TBool -> "Bool.equal"
             | TSty -> "P.equal_ty"
             | TBv -> "P.bv_equal"

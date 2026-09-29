@@ -1253,11 +1253,18 @@ let program (str : structure) : program =
         match si.pstr_desc with
         | Pstr_primitive vd ->
             let pargs, pret = arrow_of_core vd.pval_type in
+            let instance =
+              match vd.pval_attributes with
+              | [] -> false
+              | [ { attr_name = { txt = "instance"; _ }; _ } ] -> true
+              | a :: _ -> error a.attr_loc "unknown primitive attribute"
+            in
             ( {
                 pname = vd.pval_name.txt;
                 pargs;
                 pret;
                 oracle = vd.pval_prim = [ "oracle" ];
+                instance;
               }
               :: prims,
               raws )

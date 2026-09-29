@@ -1,5 +1,7 @@
 (* Primitives and pure helpers used by the rules. Primitives are implemented
-   by hand, once in OCaml (svalue.ml) and once in Lean (Bvr/Prims.lean).
+   by hand, once in OCaml and once in Lean (Bvr/Prims.lean). In OCaml, those
+   marked [@instance], which build terms or depend on the extension, are in
+   svalue.ml, and the others in svalue_prims.ml.
    Oracles have no Lean definition: the Lean model is parameterised by them,
    and the properties that the proofs rely on are stated in Bvr/Semantics.lean.
    They are the hash-consing order and Floatml's float arithmetic. *)
@@ -18,7 +20,7 @@ oracle tag_le : t -> t -> bool
 oracle sort_by_tag : t list -> t list
 
 (* The binders of [binders] that occur free in the body. *)
-prim used_binders : (var * ty) list -> t -> (var * ty) list
+prim used_binders [@instance] : (var * ty) list -> t -> (var * ty) list
 
 (* The size of a bit-vector, location or pointer type; fails otherwise. *)
 prim size_of_ty : ty -> int
@@ -28,14 +30,14 @@ prim fp_of_ty : ty -> fp
 
 (* [mk_bv n z] is the bit-vector literal [z] of size [n]; asserts that [z] is
    in range. *)
-prim mk_bv : int -> int -> t
+prim mk_bv [@instance] : int -> int -> t
 
 (* [mk_masked n z] is the bit-vector literal [z mod 2^n] of size [n]. *)
-prim mk_masked : int -> int -> t
-prim bv_zero : int -> t
-prim bv_one : int -> t
-prim v_true : t
-prim v_false : t
+prim mk_masked [@instance] : int -> int -> t
+prim bv_zero [@instance] : int -> t
+prim bv_one [@instance] : int -> t
+prim v_true [@instance] : t
+prim v_false [@instance] : t
 
 (* Bit-vector values: a width, and a value of that width *)
 
@@ -43,7 +45,7 @@ prim v_false : t
 prim bv_of_lit : t -> bv
 
 (* [lit l] is the literal of type [TBitVector (width l)] whose value is [l]. *)
-prim lit : bv -> t
+prim lit [@instance] : bv -> t
 prim width : bv -> int
 
 (* [to_z signed l] is [l] read as a signed or unsigned integer. *)

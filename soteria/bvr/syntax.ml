@@ -267,5 +267,12 @@ type fn = {
   floc : Location.t;
 }
 
-type prim = { pname : string; pargs : ty list; pret : ty; oracle : bool }
+type prim = {
+  pname : string;
+  pargs : ty list;
+  pret : ty;
+  oracle : bool;
+  instance : bool;
+}
+
 type program = { prims : prim list; fns : fn list }

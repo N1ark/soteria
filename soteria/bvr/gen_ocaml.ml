@@ -20,7 +20,7 @@ let constr_path (c : constr) =
 
 let rec ocaml_ty ft = function
   | TInt -> pf ft "Z.t"
-  | TBv -> pf ft "bv"
+  | TBv -> pf ft "Svalue_prims.bv"
   | TBool -> pf ft "bool"
   | TUnit -> pf ft "unit"
   | TTerm -> pf ft "t"
@@ -93,6 +93,27 @@ let rec pat ft (p : pat) =
 (* ---------------------------------------------------------------- *)
 (* Expressions *)
 
+(** Whether [x] occurs in [e], ignoring shadowing. *)
+let rec mentions x (e : expr) =
+  let go = mentions x in
+  match e.e with
+  | EVar y -> x = y
+  | EInt _ | EBool _ | EUnit | ENone | ENil -> false
+  | ECall (_, l) | EConstr (_, l) | ELocalCall (_, l) | ETuple l ->
+      List.exists go l
+  | ENode (a, b) | EBinop (_, a, b) | ECons (a, b) | EAssert (a, b) ->
+      go a || go b
+  | ELet (_, a, b) | ELetFun (_, _, a, b) -> go a || go b
+  | EUnop (_, a) | ESome a | EField (a, _) -> go a
+  | EIf (a, b, c) -> go a || go b || go c
+  | ERecord l -> List.exists (fun (_, e) -> go e) l
+  | EMatch (scruts, cases) ->
+      List.exists go scruts
+      || List.exists
+           (fun (c : case) ->
+             Option.fold ~none:false ~some:go c.guard || go c.body)
+           cases
+
 let int_lit ft z =
   if Z.equal z Z.zero then pf ft "Z.zero"
   else if Z.equal z Z.one then pf ft "Z.one"
@@ -100,7 +121,12 @@ let int_lit ft z =
   else if Z.fits_int z then pf ft "(Z.of_int (%s))" (Z.to_string z)
   else pf ft "(Z.of_string %S)" (Z.to_string z)
 
-type ctx = { prims : string list }
+type ctx = { prims : string list; instance : string list; consts : string list }
+
+(** Primitives that depend on the instance of [Svalue.Make] are parameters of
+    the functor, the others are in [Svalue_prims]. *)
+let prim ctx f =
+  if List.mem f ctx.instance then "P." ^ f else "Svalue_prims." ^ f
 
 let rec expr ctx ft (e : expr) =
   let expr = expr ctx in
@@ -119,10 +145,18 @@ let rec expr ctx ft (e : expr) =
       pf ft "(%s%s (%a))" (constr_path c) c.c_name (list arg)
         (List.combine c.c_args args)
   | ENode (k, t) -> pf ft "(P.node %a %a)" expr k expr t
+  | ECall ("equal", [ a; b ]) ->
+      pf ft "(Int.equal %a.Hc.tag %a.Hc.tag)" expr a expr b
+  | ECall ("ty", [ a ]) -> pf ft "%a.Hc.node.Svalue_ast.ty" expr a
+  | ECall ("kind", [ a ]) -> pf ft "%a.Hc.node.Svalue_ast.kind" expr a
+  | ECall ("tag_le", [ a; b ]) ->
+      pf ft "(Int.compare %a.Hc.tag %a.Hc.tag <= 0)" expr a expr b
   | ECall (f, []) ->
-      if List.mem f ctx.prims then pf ft "P.%s" f else pf ft "(%s ())" f
+      if List.mem f ctx.prims then pf ft "%s" (prim ctx f)
+      else if List.mem f ctx.consts then pf ft "%s" f
+      else pf ft "(%s ())" f
   | ECall (f, args) ->
-      let f = if List.mem f ctx.prims then "P." ^ f else f in
+      let f = if List.mem f ctx.prims then prim ctx f else f in
       pf ft "(%s %a)" f (list ~sep:" " expr) args
   | ELocalCall (f, args) -> pf ft "(%s %a)" f (list ~sep:" " expr) args
   | EUnop (Neg, a) -> pf ft "(Z.neg %a)" expr a
@@ -143,8 +177,9 @@ let rec expr ctx ft (e : expr) =
           let eq =
             match a.ety with
             | TInt -> "Z.equal"
+            | TBool -> "Bool.equal"
             | TSty -> "P.equal_ty"
-            | TBv -> "P.bv_equal"
+            | TBv -> "Svalue_prims.bv_equal"
             | _ -> "Stdlib.( = )"
           in
           pf ft "(%s(%s %a %a))" neg eq expr a expr b
@@ -160,8 +195,8 @@ let rec expr ctx ft (e : expr) =
   | EIf (c, a, b) ->
       pf ft "@[<hv>(if %a@ then %a@ else %a)@]" expr c expr a expr b
   | ELet (p, rhs, body) ->
-      pf ft "@[<v>(let %a = %a in@ %a%a)@]" pat p expr rhs small_lets p expr
-        body
+      pf ft "@[<v>(let %a = %a in@ %a%a)@]" pat p expr rhs (small_lets ctx body)
+        p expr body
   | ELetFun (f, params, fbody, body) ->
       pf ft "@[<v>(let %s %a =@;<1 2>%a in@ %a)@]" f
         (list ~sep:" " (fun ft (x, t) -> pf ft "(%s : %a)" x ocaml_ty t))
@@ -182,19 +217,23 @@ let rec expr ctx ft (e : expr) =
   | EField (e, f) -> pf ft "%a.Svalue_ast.%s" expr e f
   | EAssert (c, body) -> pf ft "@[<v>(assert %a;@ %a)@]" expr c expr body
 
-and small_lets ft p =
-  List.iter (fun x -> pf ft "let %s = Z.of_int %s in@ " x x) (small_binders p);
+(** Converts the binders of [p] that [e] uses. *)
+and small_lets ctx e ft p =
+  let used x = mentions x e in
   List.iter
-    (fun x -> pf ft "let %s = P.bv_of_lit %s in@ " x x)
-    (Check.lit_binders p)
+    (fun x -> pf ft "let %s = Z.of_int %s in@ " x x)
+    (List.filter used (small_binders p));
+  List.iter
+    (fun x -> pf ft "let %s = %s %s in@ " x (prim ctx "bv_of_lit") x)
+    (List.filter used (Check.lit_binders p))
 
 and case ctx ft (c : case) =
   let guard ft = function
     | None -> ()
-    | Some g -> pf ft "@ when (%a%a)" small_lets c.pat (expr ctx) g
+    | Some g -> pf ft "@ when (%a%a)" (small_lets ctx g) c.pat (expr ctx) g
   in
-  pf ft "@[<hv 2>| %a%a ->@ %a%a@]@ " pat c.pat guard c.guard small_lets c.pat
-    (expr ctx) c.body
+  pf ft "@[<hv 2>| %a%a ->@ %a%a@]@ " pat c.pat guard c.guard
+    (small_lets ctx c.body) c.pat (expr ctx) c.body
 
 (* ---------------------------------------------------------------- *)
 (* Call graph *)
@@ -267,6 +306,29 @@ let sccs (fns : fn list) : fn list list =
       List.filter (fun f -> List.mem f.name scc) fns)
     !result
 
+(** The number of nodes of [e]. *)
+let rec weight (e : expr) =
+  match e.e with
+  | EVar _ | EInt _ | EBool _ | EUnit | ENone | ENil | EConstr (_, []) -> 1
+  | ECall (_, l) | EConstr (_, l) | ELocalCall (_, l) | ETuple l ->
+      List.fold_left (fun n e -> n + weight e) 1 l
+  | ENode (a, b)
+  | EBinop (_, a, b)
+  | ECons (a, b)
+  | EAssert (a, b)
+  | ELet (_, a, b)
+  | ELetFun (_, _, a, b) ->
+      1 + weight a + weight b
+  | EUnop (_, a) | ESome a | EField (a, _) -> 1 + weight a
+  | EIf (a, b, c) -> 1 + weight a + weight b + weight c
+  | ERecord l -> List.fold_left (fun n (_, e) -> n + weight e) 1 l
+  | EMatch (scruts, cases) ->
+      List.fold_left
+        (fun n (c : case) ->
+          n + weight c.body + Option.fold ~none:0 ~some:weight c.guard)
+        (List.fold_left (fun n e -> n + weight e) 1 scruts)
+        cases
+
 let is_recursive (fns : fn list) =
   match fns with [ f ] -> List.mem f.name (calls [] f.body) | _ -> true
 
@@ -275,43 +337,64 @@ let is_recursive (fns : fn list) =
 
 let fn ctx ft (f : fn) =
   let params ft = function
-    | [] -> pf ft "()"
-    | ps ->
-        list ~sep:" " (fun ft (x, t) -> pf ft "(%s : %a)" x ocaml_ty t) ft ps
+    | [] when List.mem f.name ctx.consts -> ()
+    | [] -> pf ft " ()"
+    | ps -> List.iter (fun (x, t) -> pf ft " (%s : %a)" x ocaml_ty t) ps
   in
-  pf ft "%s %a : %a =@;<1 2>%a" f.name params f.params ocaml_ty f.ret (expr ctx)
+  pf ft "%s%a : %a =@;<1 2>%a" f.name params f.params ocaml_ty f.ret (expr ctx)
     f.body
 
 let program ~sources ft (p : program) =
-  let ctx = { prims = List.map (fun p -> p.pname) p.prims } in
+  let groups = sccs p.fns in
+  let consts =
+    List.concat_map
+      (function
+        | [ f ] when f.params = [] && not (is_recursive [ f ]) -> [ f.name ]
+        | _ -> [])
+      groups
+  in
+  let ctx =
+    {
+      prims = List.map (fun p -> p.pname) p.prims;
+      instance =
+        List.filter_map
+          (fun (p : prim) -> if p.instance then Some p.pname else None)
+          p.prims;
+      consts;
+    }
+  in
   pf ft "@[<v>(* Generated by bvr from %a. Do not edit. *)@ @ "
     (list Format.pp_print_string)
     sources;
   pf ft "[@@@@@@warning \"-a\"]@ @ ";
   pf ft "@[<v 2>module type PRIMS = sig@ type ghost@ type ext@ type ext_ty@ ";
   pf ft "type t = (ghost, ext, ext_ty) Svalue_ast.t@ ";
-  pf ft "type bv@ ";
   pf ft
     "val node : (ghost, ext, ext_ty) Svalue_ast.t_kind -> ext_ty Svalue_ast.ty \
      -> t@ ";
   pf ft "val equal_ty : ext_ty Svalue_ast.ty -> ext_ty Svalue_ast.ty -> bool@ ";
-  pf ft "val bv_equal : bv -> bv -> bool@ ";
   List.iter
     (fun (pr : prim) ->
-      let args = match pr.pargs with [] -> [ TUnit ] | l -> l in
-      let args = if pr.pargs = [] then [] else args in
-      pf ft "val %s : %a%a@ " pr.pname
-        (list ~sep:"" (fun ft t -> pf ft "%a -> " ocaml_ty t))
-        args ocaml_ty pr.pret)
+      if pr.instance then
+        let args = match pr.pargs with [] -> [ TUnit ] | l -> l in
+        let args = if pr.pargs = [] then [] else args in
+        pf ft "val %s : %a%a@ " pr.pname
+          (list ~sep:"" (fun ft t -> pf ft "%a -> " ocaml_ty t))
+          args ocaml_ty pr.pret)
     p.prims;
   pf ft "@]@ end@ @ ";
   pf ft "@[<v 2>module Make (P : PRIMS) = struct@ open P@ @ ";
   List.iter
     (fun group ->
-      let kw = if is_recursive group then "let rec" else "let" in
+      let kw =
+        match group with
+        | _ when is_recursive group -> "let rec"
+        | [ f ] when f.params <> [] && weight f.body <= 12 -> "let[@inline]"
+        | _ -> "let"
+      in
       List.iteri
         (fun i f ->
           pf ft "@[<hv 2>%s %a@]@ @ " (if i = 0 then kw else "and") (fn ctx) f)
         group)
-    (sccs p.fns);
+    groups;
   pf ft "@]@ end@]@."

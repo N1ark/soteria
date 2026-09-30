@@ -1,8 +1,10 @@
 (* The grammar of BVR. It builds an OCaml parse tree, which [Check] then
    converts to typed BVR: rules become functions with [[@spec]] and [[@cases]]
    attributes, and rule names [[@r]] attributes on their patterns. In the
-   declaration of a language, types are OCaml type declarations, and operators
-   [[@infix]] or [[@prefix]] expressions. *)
+   declaration of a language, types are OCaml type declarations, nodes are types
+   [node] with a [[@node]] attribute, and operators [[@infix]] or [[@prefix]]
+   expressions; [extend rule f] items are [function]s of the rules they add to
+   [f], with [[@extend]] and [[@before]] attributes. *)
 
 %{
 open Ppxlib
@@ -55,6 +57,20 @@ let binding loc ?(attrs = []) p params ret body =
 
 let item loc d = { pstr_desc = d; pstr_loc = loc }
 
+(* [node C ...] in the declaration of a language: a type [node] with the only
+   constructor [C], which [Check] places where [C] appears in a type *)
+let node_decl loc c =
+  {
+    ptype_name = { txt = "node"; loc };
+    ptype_params = [];
+    ptype_cstrs = [];
+    ptype_kind = Ptype_variant [ c ];
+    ptype_private = Public;
+    ptype_manifest = None;
+    ptype_attributes = [ attr loc "node" [] ];
+    ptype_loc = loc;
+  }
+
 let prim loc name t kind =
   item loc
     (Pstr_primitive
@@ -79,7 +95,8 @@ let neg loc (e : expression) =
 %}
 
 %token <string> LID UID INT STRING
-%token AS ASR ASSERT ELSE FALSE FN IF IN INFIX LAND LET LOR LSL LSR LXOR MATCH NOT OF ORACLE PREFIX PRIM
+%token AS ASR ASSERT BEFORE ELSE EXTEND FALSE FN IF IN INFIX LAND LET LOR LSL LSR LXOR MATCH NODE NOT OF
+%token ORACLE PREFIX PRIM
 %token RULE THEN TRUE TYPE WHEN WITH
 %token LBRACKETAT COLONCOLON ARROW LTBAR LE GE NE ANDAND BARBAR
 %token LPAREN RPAREN LBRACKET RBRACKET LBRACE RBRACE COMMA SEMI COLON BAR EQ LT GT PLUS MINUS STAR DOT
@@ -113,6 +130,16 @@ item:
       let attrs = [ attr loc "spec" [ eval_item loc spec ]; attr loc "cases" [] ] in
       let t = typ loc (Ptyp_constr (lid loc "t", [])) in
       item loc (Pstr_value (Nonrecursive, [ binding loc ~attrs (pat loc (Ppat_var { txt = x; loc })) ps (Some t) body ])) }
+  | EXTEND RULE x = LID before = option(preceded(BEFORE, rule_name)) EQ BAR? cs = cases
+    { let loc = mkloc $loc in
+      let attrs =
+        attr loc "extend" [ eval_item loc (string loc x) ]
+        :: Option.to_list (Option.map (fun r -> attr loc "before" [ eval_item loc (string loc r) ]) before)
+      in
+      item loc (Pstr_eval (exp loc (Pexp_function ([], None, Pfunction_cases (cs, loc, []))), attrs)) }
+  | NODE c = constr_decl
+    { let loc = mkloc $loc in
+      item loc (Pstr_type (Recursive, [ node_decl loc c ])) }
   | TYPE x = LID attrs = list(decl_attr) kind = option(preceded(EQ, type_kind))
     { let loc = mkloc $loc in
       item loc
@@ -252,6 +279,7 @@ case:
 rule_name:
   | r = LID { r }
   | NOT { "not" }
+  | EXTEND { "extend" }
 
 case_body:
   | p = pattern g = option(preceded(WHEN, seq_expr)) ARROW e = seq_expr { { pc_lhs = p; pc_guard = g; pc_rhs = e } }

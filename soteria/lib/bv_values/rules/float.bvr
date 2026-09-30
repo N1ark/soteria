@@ -116,3 +116,8 @@ rule float_sqrt (v : t) : FSqrt v <| ty v =
 rule float_round (rm : rm) (sv : t) : FRound (rm, sv) <| ty sv =
   match sv with
   | default: _ -> FRound (rm, sv) <| ty sv
+
+(* The rules of the bool module on floats *)
+
+extend rule sem_eq before neg =
+  | floats: Float f1 == Float f2 -> of_bool (f_bits_equal f1 f2)

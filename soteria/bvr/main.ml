@@ -1,11 +1,12 @@
-(** [bvr BACKEND LANG FILE...]: generates, from the BVR rules in [FILE...],
-    written in the language declared in [LANG]:
+(** [bvr BACKEND FILE...]: generates, from the BVR rules in the [.bvr] files,
+    written in the language declared by the [.bvl] files (a language and the
+    modules it is made of), in order:
     - [ocaml]: their OCaml implementation;
     - [ocaml-check]: the OCaml check that the OCaml types of the language agree
-      with its declaration (which does not need [FILE...]);
+      with its declaration (which does not need the rules);
     - [ocaml-tests]: the OCaml differential tests of their rule functions;
     - [lean-types], [lean-syntax]: the Lean definitions of the types of the
-      language (which do not need [FILE...]);
+      language (which do not need the rules);
     - [lean-signatures]: the Lean check of the types of their primitives;
     - [lean-typing]: the Lean typing predicates of the operators;
     - [lean-model], [lean-statements], [lean-lifts], [lean-soundness]: their
@@ -17,7 +18,6 @@
 
 (** The generated Lean files, with the backend of each. *)
 let lean_files ~lang ~sources prog =
-  let lang = [ Filename.basename lang ] in
   [
     ("Types", "lean-types", fun ft -> Gen_lean.types ~sources:lang ft);
     ("Syntax", "lean-syntax", fun ft -> Gen_lean.syntax ~sources:lang ft);
@@ -47,28 +47,31 @@ let usage () =
   prerr_endline
     "usage: bvr (ocaml | ocaml-check | ocaml-tests | lean-types | lean-syntax \
      | lean-signatures | lean-typing | lean-model | lean-statements | \
-     lean-lifts | lean-soundness | lean-all) LANG FILE...";
+     lean-lifts | lean-soundness | lean-all) FILE...";
   exit 2
 
 let () =
   match Array.to_list Sys.argv with
-  | _ :: backend :: lang :: files -> (
+  | _ :: backend :: files -> (
       try
-        Check.language (Check.parse_file lang);
+        let langs, files =
+          List.partition (fun f -> Filename.check_suffix f ".bvl") files
+        in
+        if langs = [] then usage ();
+        Check.language (List.concat_map Check.parse_file langs);
         let prog =
           lazy
             (if files = [] then usage ();
              Check.program (List.concat_map Check.parse_file files))
         in
+        let lang = List.map Filename.basename langs in
         let sources = List.map Filename.basename files in
         let lean = lean_files ~lang ~sources prog in
         match backend with
         | "ocaml" ->
             Gen_ocaml.program ~sources Format.std_formatter (Lazy.force prog)
         | "ocaml-check" ->
-            Gen_ocaml.lang_check
-              ~sources:[ Filename.basename lang ]
-              Format.std_formatter
+            Gen_ocaml.lang_check ~sources:lang Format.std_formatter
         | "ocaml-tests" ->
             Gen_tests.program ~sources Format.std_formatter (Lazy.force prog)
         | "lean-all" ->

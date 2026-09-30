@@ -2,6 +2,13 @@
    written: its types, the constructors of its terms and the operators on
    them, which bvr no longer hard-codes.
 
+   It is made of the modules [bool], [bitvec], [float] and [ptr], in this
+   order, each declared by its [.bvl] file with its rules in its [.bvr] file.
+   A module declares its nodes ([node C ...], with the syntax and attributes
+   of the constructors below) and its operators on terms; this file declares
+   the types, as the OCaml AST has them, and places each node in one of them,
+   by its name alone ([| And] in [binop]).
+
    bvr generates the Lean definitions of these types, with the same names
    (CamelCased for types: [ext_ty] is [ExtTy]), except for the abstract types,
    which are defined by hand in [Bvr/Abstract.lean]. In OCaml, the types are
@@ -50,102 +57,86 @@ type checked [@ocaml "Svalue_ast.checked"] =
 
 type kind [@ocaml "(ghost, ext, ext_ty) Svalue_ast.t_kind"] [@noeq] =
   | Var of var
-  | Bool of bool [@literal]
-  | Float of float
-  | Ptr of t * t
-  | BitVec of int [@literal]
+  | Bool
+  | Float
+  | Ptr
+  | BitVec
   | Seq of t list
   | Unop of unop * t [@operators]
   | Binop of binop * t * t [@operators]
   | Triop of triop * t * t * t [@operators]
   | Nop of nop * t list [@operators]
-  | Exists of (var * ty) list * t
+  | Exists
   | Extension of ext
 
 type unop [@ocaml "Svalue_ast.Unop.t"] =
-  | Not : TBool -> TBool
-  | GetPtrLoc : TPointer n -> TLoc n
-  | GetPtrOfs : TPointer n -> TBitVector n
-  | BvOfBool of nat (n) : TBool -> TBitVector n
-  | BvOfFloat of rm * bool * nat (_, _, n) : TFloat p -> TBitVector n
-  | FloatOfBv of rm * bool * fp (_, _, p) : TBitVector n -> TFloat p
-  | FloatOfBvRaw of fp (p) : TBitVector (fp_size p) -> TFloat p
-  | FloatOfFloat of rm * fp (_, p) : TFloat q -> TFloat p [@fold "f_convert"]
-  | BvExtract of nat * nat (i, j) : TBitVector n -> TBitVector (j - i + 1)
-      when 0 <= i && i <= j && j < n [@fold "lit_extract"]
-  | BvExtend of bool * nat (_, k) : TBitVector n -> TBitVector (n + k)
-      when 0 <= k
-  | BvNot : TBitVector n -> TBitVector n [@fold "lit_not"] [@distrib_ite]
-  | Neg of bool : TBitVector n -> TBitVector n
-      [@fold "lit_neg"] [@invol] [@distrib_ite]
-  | FAbs : TFloat p -> TFloat p [@fold "f_abs"]
-  | FNeg : TFloat p -> TFloat p [@fold "f_neg"]
-  | FSqrt : TFloat p -> TFloat p [@fold "f_sqrt"]
-  | FIs of fc : TFloat p -> TBool [@fold "f_is_class"]
-  | FIsNeg : TFloat p -> TBool [@fold "f_is_negative"]
-  | FIsPos : TFloat p -> TBool [@fold "f_is_positive"]
-  | FRound of rm : TFloat p -> TFloat p [@fold "f_round"]
+  | Not
+  | GetPtrLoc
+  | GetPtrOfs
+  | BvOfBool
+  | BvOfFloat
+  | FloatOfBv
+  | FloatOfBvRaw
+  | FloatOfFloat
+  | BvExtract
+  | BvExtend
+  | BvNot
+  | Neg
+  | FAbs
+  | FNeg
+  | FSqrt
+  | FIs
+  | FIsNeg
+  | FIsPos
+  | FRound
 
 type binop [@ocaml "Svalue_ast.Binop.t"] =
-  | And : TBool -> TBool -> TBool [@comm] [@idem]
-  | Or : TBool -> TBool -> TBool [@comm] [@idem]
-  | Eq : a -> b -> TBool when a = b [@comm]
-  | FEq : TFloat p -> TFloat p -> TBool [@comm] [@fold "f_eq"]
-  | FLeq : TFloat p -> TFloat p -> TBool [@fold "f_le"]
-  | FLt : TFloat p -> TFloat p -> TBool [@fold "f_lt"]
-  | FAdd : TFloat p -> TFloat p -> TFloat p [@fold "f_add"]
-  | FSub : TFloat p -> TFloat p -> TFloat p [@fold "f_sub"]
-  | FMul : TFloat p -> TFloat p -> TFloat p [@fold "f_mul"]
-  | FDiv : TFloat p -> TFloat p -> TFloat p [@fold "f_div"]
-  | FRem : TFloat p -> TFloat p -> TFloat p [@fold "f_rem"]
-  | FMin : TFloat p -> TFloat p -> TFloat p [@fold "f_min"]
-  | FMax : TFloat p -> TFloat p -> TFloat p [@fold "f_max"]
-  | Add of checked : TBitVector n -> TBitVector n -> TBitVector n [@comm]
-      [@fold "lit_add"]
-  | Sub of checked : TBitVector n -> TBitVector n -> TBitVector n
-      [@fold "lit_sub"]
-  | Mul of checked : TBitVector n -> TBitVector n -> TBitVector n [@comm]
-      [@fold "lit_mul"] [@unit "1"] [@zero "0"]
-  | Div of bool : TBitVector n -> TBitVector n -> TBitVector n
-  | Rem of bool : TBitVector n -> TBitVector n -> TBitVector n
-  | Mod : TBitVector n -> TBitVector n -> TBitVector n [@fold "lit_smod"]
-  | AddOvf of bool : TBitVector n -> TBitVector n -> TBool [@comm]
-      [@fold "add_overflows"]
-  | SubOvf of bool : TBitVector n -> TBitVector n -> TBool
-      [@fold "sub_overflows"]
-  | MulOvf of bool : TBitVector n -> TBitVector n -> TBool [@comm]
-      [@fold "mul_overflows"]
-  | Lt of bool : TBitVector n -> TBitVector n -> TBool
-  | Leq of bool : TBitVector n -> TBitVector n -> TBool
-  | BvConcat : TBitVector n -> TBitVector m -> TBitVector (n + m)
-      [@fold "lit_concat"]
-  | BitAnd : TBitVector n -> TBitVector n -> TBitVector n [@comm]
-      [@fold "lit_and"] [@zero "0"]
-  | BitOr : TBitVector n -> TBitVector n -> TBitVector n [@comm]
-      [@fold "lit_or"] [@unit "0"] [@idem]
-  | BitXor : TBitVector n -> TBitVector n -> TBitVector n [@comm]
-      [@fold "lit_xor"] [@unit "0"]
-  | Shl : TBitVector n -> TBitVector n -> TBitVector n
-      [@fold "lit_shl"] [@unit "0"]
-  | LShr : TBitVector n -> TBitVector n -> TBitVector n
-      [@fold "lit_lshr"] [@unit "0"]
-  | AShr : TBitVector n -> TBitVector n -> TBitVector n
-      [@fold "lit_ashr"] [@unit "0"]
+  | And
+  | Or
+  | Eq
+  | FEq
+  | FLeq
+  | FLt
+  | FAdd
+  | FSub
+  | FMul
+  | FDiv
+  | FRem
+  | FMin
+  | FMax
+  | Add
+  | Sub
+  | Mul
+  | Div
+  | Rem
+  | Mod
+  | AddOvf
+  | SubOvf
+  | MulOvf
+  | Lt
+  | Leq
+  | BvConcat
+  | BitAnd
+  | BitOr
+  | BitXor
+  | Shl
+  | LShr
+  | AShr
 
 type triop [@ocaml "Svalue_ast.Triop.t"] =
-  | Fma : TFloat p -> TFloat p -> TFloat p -> TFloat p
-  | Ite : TBool -> a -> a -> a
+  | Fma
+  | Ite
 
 type nop [@ocaml "Svalue_ast.Nop.t"] =
   | Distinct
 
 type ty [@ocaml "ext_ty Svalue_ast.ty"] =
   | TBool
-  | TFloat of fp
-  | TLoc of nat
-  | TPointer of nat
+  | TFloat
+  | TLoc
+  | TPointer
   | TSeq of ty
-  | TBitVector of nat
+  | TBitVector
   | TExtension of ext_ty
 
 type fp [@ocaml "Svalue_ast.FloatPrecision.t"] =
@@ -167,24 +158,3 @@ type fc [@ocaml "Svalue_ast.FloatClass.t"] =
   | Zero
   | Infinite
   | NaN
-
-(* Operators on terms: [a + b] is [bv_add unchecked a b] in expressions and
-   matches [Add (_, a, b)] in patterns, whatever its overflow check; on
-   bit-vector values, it is [lit_add a b]. *)
-
-infix "+" = Add, bv_add unchecked, lit_add
-infix "-" = Sub, bv_sub unchecked, lit_sub
-infix "*" = Mul, bv_mul unchecked, lit_mul
-infix "land" = BitAnd, bv_and, lit_and
-infix "lor" = BitOr, bv_or, lit_or
-infix "lxor" = BitXor, bv_xor, lit_xor
-infix "lsl" = Shl, bv_shl, lit_shl
-infix "lsr" = LShr, bv_lshr, lit_lshr
-infix "asr" = AShr, bv_ashr, lit_ashr
-infix "++" = BvConcat, bv_concat
-infix "&&" = And, b_and
-infix "||" = Or, b_or
-infix "==" = Eq, sem_eq
-prefix "-" = Neg, bv_neg false, lit_neg
-prefix "~" = BvNot, bv_not, lit_not
-prefix "not" = Not, b_not

@@ -8,7 +8,9 @@ let keywords =
     ("as", AS);
     ("asr", ASR);
     ("assert", ASSERT);
+    ("before", BEFORE);
     ("else", ELSE);
+    ("extend", EXTEND);
     ("false", FALSE);
     ("fn", FN);
     ("if", IF);
@@ -21,6 +23,7 @@ let keywords =
     ("lsr", LSR);
     ("lxor", LXOR);
     ("match", MATCH);
+    ("node", NODE);
     ("not", NOT);
     ("of", OF);
     ("oracle", ORACLE);

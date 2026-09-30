@@ -10,6 +10,10 @@
     %{exe:../../bvr/main.exe}
     ocaml-tests
     %{dep:../../lib/bv_values/rules/lang.bvl}
+    %{dep:../../lib/bv_values/rules/bool.bvl}
+    %{dep:../../lib/bv_values/rules/bitvec.bvl}
+    %{dep:../../lib/bv_values/rules/float.bvl}
+    %{dep:../../lib/bv_values/rules/ptr.bvl}
     %{dep:../../lib/bv_values/rules/prelude.bvr}
     %{dep:../../lib/bv_values/rules/bool.bvr}
     %{dep:../../lib/bv_values/rules/bitvec.bvr}

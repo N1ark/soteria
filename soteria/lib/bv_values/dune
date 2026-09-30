@@ -5,7 +5,7 @@
  (targets svalue_rules.gen.ml)
  (mode promote)
  (deps
-  rules/lang.bvl
+  (glob_files rules/*.bvl)
   (glob_files rules/*.bvr))
  (action
   (with-stdout-to
@@ -14,6 +14,10 @@
     %{exe:../../bvr/main.exe}
     ocaml
     rules/lang.bvl
+    rules/bool.bvl
+    rules/bitvec.bvl
+    rules/float.bvl
+    rules/ptr.bvl
     rules/prelude.bvr
     rules/bool.bvr
     rules/bitvec.bvr
@@ -25,8 +29,16 @@
 (rule
  (targets lang_check.gen.ml)
  (mode promote)
- (deps rules/lang.bvl)
+ (deps
+  (glob_files rules/*.bvl))
  (action
   (with-stdout-to
    %{targets}
-   (run %{exe:../../bvr/main.exe} ocaml-check rules/lang.bvl))))
+   (run
+    %{exe:../../bvr/main.exe}
+    ocaml-check
+    rules/lang.bvl
+    rules/bool.bvl
+    rules/bitvec.bvl
+    rules/float.bvl
+    rules/ptr.bvl))))

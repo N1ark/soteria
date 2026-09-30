@@ -1321,6 +1321,51 @@ let language (str : structure) =
         | _ -> error si.pstr_loc "unsupported item in a language declaration")
       str
   in
+  (* the nodes of the modules, placed where the types name them *)
+  let nodes, tds =
+    List.partition
+      (fun (td : type_declaration) -> has_attr "node" td.ptype_attributes)
+      tds
+  in
+  let nodes =
+    List.fold_left
+      (fun nodes (td : type_declaration) ->
+        match td.ptype_kind with
+        | Ptype_variant [ cd ] ->
+            if List.mem_assoc cd.pcd_name.txt nodes then
+              error cd.pcd_loc "node %s is declared twice" cd.pcd_name.txt;
+            nodes @ [ (cd.pcd_name.txt, cd) ]
+        | _ -> error td.ptype_loc "expected a node")
+      [] nodes
+  in
+  let placed = ref [] in
+  let place (cd : constructor_declaration) =
+    match List.assoc_opt cd.pcd_name.txt nodes with
+    | None -> cd
+    | Some n ->
+        let name = cd.pcd_name.txt in
+        if cd.pcd_args <> Pcstr_tuple [] || cd.pcd_attributes <> [] then
+          error cd.pcd_loc "%s is declared by a node, and placed by its name"
+            name;
+        if List.mem name !placed then
+          error cd.pcd_loc "node %s is placed twice" name;
+        placed := name :: !placed;
+        n
+  in
+  let tds =
+    List.map
+      (fun (td : type_declaration) ->
+        match td.ptype_kind with
+        | Ptype_variant cds ->
+            { td with ptype_kind = Ptype_variant (List.map place cds) }
+        | _ -> td)
+      tds
+  in
+  List.iter
+    (fun (name, (cd : constructor_declaration)) ->
+      if not (List.mem name !placed) then
+        error cd.pcd_loc "node %s is not placed in any type" name)
+    nodes;
   (* the types first, so that they can refer to each other *)
   let decls =
     List.map
@@ -2034,8 +2079,92 @@ let typings env0 =
     typed;
   List.map (fun (n, rt) -> typing env0 (Option.get (find_constr n)) rt) typed
 
+(** Adds the cases of each [extend rule f] item to the rule function [f], which
+    an earlier item defines: before its rule [r] for [extend rule f before r],
+    and otherwise last, but before a final catch-all case [_]. *)
+let extend_rules (str : structure) =
+  let splice loc f before (ext : Ppxlib.case list) (cs : Ppxlib.case list) =
+    ignore
+      (List.fold_left
+         (fun names c ->
+           match case_rule c with
+           | Some r when List.mem r names ->
+               error c.pc_lhs.ppat_loc
+                 "extend rule %s: %s already has a rule %s" f f r
+           | Some r -> r :: names
+           | None -> names)
+         (List.filter_map case_rule cs)
+         ext);
+    match before with
+    | Some r -> (
+        let rec go = function
+          | c :: cs when case_rule c = Some r -> Some (ext @ (c :: cs))
+          | c :: cs -> Option.map (List.cons c) (go cs)
+          | [] -> None
+        in
+        match go cs with
+        | Some cs -> cs
+        | None -> error loc "extend rule %s: %s has no rule %s" f f r)
+    | None -> (
+        match List.rev cs with
+        | ({ pc_lhs = { ppat_desc = Ppat_any; _ }; pc_guard = None; _ } as last)
+          :: rest ->
+            List.rev rest @ ext @ [ last ]
+        | _ -> cs @ ext)
+  in
+  let rec insert loc f before ext (e : expression) =
+    match e.pexp_desc with
+    | Pexp_sequence (a, b) ->
+        { e with pexp_desc = Pexp_sequence (a, insert loc f before ext b) }
+    | Pexp_let (r, vbs, b) ->
+        { e with pexp_desc = Pexp_let (r, vbs, insert loc f before ext b) }
+    | Pexp_match (s, cs) ->
+        { e with pexp_desc = Pexp_match (s, splice loc f before ext cs) }
+    | _ -> error loc "extend rule %s: %s does not end with a match" f f
+  in
+  let extend items (si : structure_item) =
+    match si.pstr_desc with
+    | Pstr_eval
+        ( {
+            pexp_desc = Pexp_function ([], None, Pfunction_cases (ext, _, _));
+            _;
+          },
+          attrs )
+      when has_attr "extend" attrs ->
+        let loc = si.pstr_loc in
+        let f = string_attr (Option.get (find_attr "extend" attrs)) in
+        let before = Option.map string_attr (find_attr "before" attrs) in
+        let rec go = function
+          | ({ pstr_desc = Pstr_value (r, [ vb ]); _ } as item) :: items
+            when (match vb.pvb_pat.ppat_desc with
+                   | Ppat_var { txt; _ } -> txt = f
+                   | _ -> false)
+                 && Option.is_some (spec_of_attrs vb.pvb_attributes) -> (
+              match vb.pvb_expr.pexp_desc with
+              | Pexp_function (ps, ret, Pfunction_body body) ->
+                  let body = insert loc f before ext body in
+                  let pvb_expr =
+                    {
+                      vb.pvb_expr with
+                      pexp_desc = Pexp_function (ps, ret, Pfunction_body body);
+                    }
+                  in
+                  {
+                    item with
+                    pstr_desc = Pstr_value (r, [ { vb with pvb_expr } ]);
+                  }
+                  :: items
+              | _ -> error loc "extend rule %s: %s is not a rule" f f)
+          | item :: items -> item :: go items
+          | [] -> error loc "extend rule %s: no rule %s is defined before" f f
+        in
+        go items
+    | _ -> si :: items
+  in
+  List.rev (List.fold_left extend [] str)
+
 let program (str : structure) : program =
-  let str = desugar_ops#structure str in
+  let str = desugar_ops#structure (extend_rules str) in
   let prims, raws =
     List.fold_left
       (fun (prims, raws) (si : structure_item) ->

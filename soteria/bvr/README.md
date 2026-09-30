@@ -22,9 +22,11 @@ by `bvr_parser.mly`.
 ## The language
 
 bvr does not hard-code the language of Bv_values: the types of its terms,
-their constructors and the operators on them are declared in
-`soteria/lib/bv_values/rules/lang.bvl`, which `bvr` reads before the rules
-(`bvr BACKEND lang.bvl FILE...`). Attributes mark the literals, the
+their constructors and the operators on them are declared in `.bvl` files,
+`soteria/lib/bv_values/rules/lang.bvl` and the declarations of its modules
+(see [Modules](#modules)), which `bvr` reads before the rules
+(`bvr BACKEND lang.bvl bool.bvl ... prelude.bvr bool.bvr ...`: the `.bvl`
+files, then the `.bvr` files, each in order). Attributes mark the literals, the
 commutative operators and the kind constructors that operators stand for, and
 declare the laws of operators (see [Laws](#laws)); `infix` and `prefix` declare
 what the operators on terms build and match (see
@@ -47,7 +49,28 @@ The typing of the operators is declared with their constructors, as sorts
 predicates (`Typing.lean`).
 
 `t` (terms), `bv` and `var` are built into bvr, as are `int`, `bool` and
-`unit`; `type`, `of`, `infix` and `prefix` are keywords.
+`unit`; `type`, `of`, `infix`, `prefix`, `node`, `extend` and `before` are
+keywords.
+
+## Modules
+
+A language is made of modules, each with its declarations (`bool.bvl`) and
+its rules (`bool.bvr`): Bv_values of `bool`, then `bitvec`, `float` and `ptr`.
+The language itself (`lang.bvl`) only declares its types, as its OCaml AST has
+them.
+
+- `node C ...`, in a module, declares the constructor `C` as a type would
+  (`node And : TBool -> TBool -> TBool [@comm] [@idem]`), and the language
+  places it in one of its types, where it names it alone (`| And` in
+  `binop`). The module declares what the node is (its arguments, typing,
+  laws and operators), and the language where its AST has it.
+- `extend rule f = | r: p -> e ...`, in the rules of a module, adds rules to
+  the rule function `f` of a module below it, as if they were written in `f`:
+  last, but before its final catch-all case `_`, or with `extend rule f before
+  r`, before its rule `r`. The rules of `bool` on bit-vectors are in
+  `bitvec.bvr`, for instance. A function's rules are tried in order, so this
+  keeps the order of the rules independent of the modules they are written
+  in.
 
 ## Functions
 
@@ -100,7 +123,7 @@ fn size (v : t) : int = size_of_ty (ty v)
 
 ## Laws
 
-Attributes on an operator in `lang.bvl` declare its algebraic laws, from which
+Attributes on an operator in its declaration declare its algebraic laws, from which
 bvr derives the first rules of its *rule function* (the rule function whose
 spec is the operator over the function's parameters, e.g. `bv_mul` for
 `Mul (checked, v1, v2)`), in this order, before the rules written by hand. The

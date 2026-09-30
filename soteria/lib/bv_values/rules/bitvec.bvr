@@ -910,3 +910,174 @@ rule bv_to_float_raw (v : t) :
   | default: _ ->
       let fp = fp_of_size (size v) in
       FloatOfBvRaw (fp, v) <| TFloat fp
+
+(* The rules of the bool module on bit-vectors *)
+
+extend rule b_and =
+  (* only for constants: if [bv1] or [bv2] could be undefined (an operation
+     whose overflow check does not hold), the conjunction could still be false
+     thanks to the other conjunct, while the merged equality would be
+     undefined *)
+  | eq_extracts:
+      (#_ as bv1) == BvExtract (s1, e1, x) && (#_ as bv2) == BvExtract (s2, e2, x)
+    when e1 + 1 = s2 || e2 + 1 = s1 ->
+      if e1 + 1 = s2 then bv2 ++ bv1 == bv_extract s1 e2 x
+      else bv1 ++ bv2 == bv_extract s2 e1 x
+  (* two upper (resp. lower) bounds on the same value (e.g. [a < c1] && [a <=
+     c2]) keep the tighter one *)
+  | upper_bounds:
+      (Lt (s, a, #_) | Leq (s, a, #_)) && (Lt (s, a, #_) | Leq (s, a, #_)) ->
+      if upper_bound v1 <= upper_bound v2 then v1 else v2
+  | lower_bounds:
+      (Lt (s, #_, a) | Leq (s, #_, a)) && (Lt (s, #_, a) | Leq (s, #_, a)) ->
+      if lower_bound v1 >= lower_bound v2 then v1 else v2
+
+extend rule b_or before or_ =
+  (* [a < b || b < a] <=> [a != b] *)
+  | lt_lt: Lt (s, a, b) || Lt (s, b, a) -> not (a == b)
+  (* [a < b || b <= a] <=> true *)
+  | lt_leq: Lt (s, a, b) || Leq (s, b, a) -> v_true
+
+extend rule b_or =
+  (* an upper and a lower bound on the same value that (at least) touch cover
+     the whole domain, e.g. [a <= 2] || [3 <= a] *)
+  | complementary:
+      ((Lt (s, a, #_) | Leq (s, a, #_)) as ub)
+      || ((Lt (s, #_, a) | Leq (s, #_, a)) as lb)
+    when lower_bound lb <= upper_bound ub + 1 ->
+      v_true
+  (* a bound absorbs an equality it already allows, e.g. [a < c] || [a ==
+     0] *)
+  | upper_eq: ((Lt (s, a, #_) | Leq (s, a, #_)) as b) || a == #k
+    when to_z s k <= upper_bound b ->
+      b
+  | lower_eq: ((Lt (s, #_, a) | Leq (s, #_, a)) as b) || a == #k
+    when lower_bound b <= to_z s k ->
+      b
+  (* two upper (resp. lower) bounds on the same value keep the looser one *)
+  | upper_bounds:
+      (Lt (s, a, #_) | Leq (s, a, #_)) || (Lt (s, a, #_) | Leq (s, a, #_)) ->
+      if upper_bound v1 <= upper_bound v2 then v2 else v1
+  | lower_bounds:
+      (Lt (s, #_, a) | Leq (s, #_, a)) || (Lt (s, #_, a) | Leq (s, #_, a)) ->
+      if lower_bound v1 >= lower_bound v2 then v2 else v1
+
+extend rule b_not before or_ =
+  | lt: Lt (signed, v1, v2) -> bv_leq signed v2 v1
+  | leq: Leq (signed, v1, v2) -> bv_lt signed v2 v1
+
+extend rule b_not before distinct =
+  | eq_bit: (#bv as c) == v when ty c = TBitVector 1 -> ~bv == v
+
+extend rule b_ite before not_guard =
+  | bv_of_bool: _, 1, 0 when is_bv (ty if_) -> bv_of_bool (size if_) guard
+
+extend rule sem_eq before ite_ite =
+  | bvs: #b1 == #b2 -> of_bool (to_z false b1 = to_z false b2)
+  (* Arithmetics *)
+  | neg: (#_ as c) == -x -> -c == x
+  | not: (#_ as c) == ~x -> ~c == x
+  (* c == l + r <=> c - l == r, for constants c and l *)
+  | add_const: (#_ as c) == (#_ as l) + r -> c - l == r
+  (* c == l - r <=> c + r == l, and c == l - r <=> l - c == r *)
+  | sub_const1: (#_ as c) == l - (#_ as r) -> c + r == l
+  | sub_const2: (#_ as c) == (#_ as l) - r -> l - c == r
+  (* x == x + c <=> c == 0 *)
+  | self_add: x == x + #bv -> of_bool (to_z false bv = 0)
+  | add_add: (#bv_l as l) + y == (#bv_r as r) + x ->
+      (* y + l == x + r <=> y == x + (r - l) <=> y + (l - r) == x *)
+      (* we pick the option that will make a positive constant (superstition);
+         this rewrite holds modulo 2^n regardless of overflow, but the rebuilt
+         sum carries no overflow guarantee, so it stays unchecked. *)
+      if to_z false bv_l >= to_z false bv_r then x == y + (l - r)
+      else y == x + (r - l)
+  | mul_const: #n == Mul (ck, #m, x) when is_checked ck ->
+      (* the multiplication is exact in a checked signedness, so read the
+         constants in that signedness: the result must be a multiple of [m], and
+         dividing recovers [x] *)
+      let sz = size x in
+      let signed = not ck.unsigned in
+      let m = to_z signed m in
+      let n = to_z signed n in
+      if m = 0 then of_bool (n = 0)
+      else if n = 0 then x == bv_zero sz
+      else if divisible n m then
+        let q = tdiv n m in
+        let fits =
+          if signed then
+            let h = 1 lsl (sz - 1) in
+            -h <= q && q < h
+          else 0 <= q && q < 1 lsl sz
+        in
+        if fits then x == mk_masked sz q else v_false
+      else v_false
+
+extend rule sem_eq before false_ =
+  (* Cancelling a common factor [a] from [a*b == a*d] is only sound when [a] is
+     odd (invertible modulo 2^n), or when [a] is non-zero and both
+     multiplications are overflow-checked (so they behave like exact integer
+     arithmetic). *)
+  | mul_cancel: Mul (ck1, #a, b) == Mul (ck2, #a', d)
+    when to_z false a = to_z false a'
+         && (to_z false a land 1 = 1
+            || (to_z false a <> 0 && is_checked (checked_meet ck1 ck2))) ->
+      b == d
+  (* Bitvectors *)
+  (* 0 == L | R ==> 0 == L && 0 == R, splitting is better for the PC *)
+  | or_zero: 0 == l lor r ->
+      let z = bv_zero (size v1) in
+      l == z && r == z
+  (* for N == (M & X), if N has bits set that aren't in M, then it must be
+     false, since the mask would unset them *)
+  | and_mask: #n == #mask land _ when not (to_z false (n land lognot mask) = 0) ->
+      v_false
+  | concat_const: (#_ as z) == l ++ r ->
+      let size_r = size r in
+      let size_l = size l in
+      let z_r = bv_extract 0 (size_r - 1) z in
+      let z_l = bv_extract size_r (size_r + size_l - 1) z in
+      l == z_l && r == z_r
+  | zext_const: BvExtend (false, by, bv) == #z ->
+      let z = to_z false z in
+      let size_bv = size bv in
+      (* if any of the bits of z are set in [size_bv, size_bv+by), this cannot
+         be true since they're extended to 0 *)
+      let mask = ((1 lsl by) - 1) lsl size_bv in
+      if not (z land mask = 0) then v_false
+      else
+        let z_bv = mk_bv size_bv z in
+        bv == z_bv
+  (* ite(b, A::B, C::D) == l :: r <=>
+   * ite(b, A, C) == l && ite(b, B, D) == r *)
+  | ite_concat: Ite (b, (#_ as t), (#_ as e)) == l ++ r ->
+      let size_r = size r in
+      let size_l = size l in
+      let t_r = bv_extract 0 (size_r - 1) t in
+      let t_l = bv_extract size_r (size_r + size_l - 1) t in
+      let e_r = bv_extract 0 (size_r - 1) e in
+      let e_l = bv_extract size_r (size_r + size_l - 1) e in
+      b_ite b t_l e_l == l && b_ite b t_r e_r == r
+  | concat_concat: l1 ++ r1 == l2 ++ r2 when size l1 = size l2 ->
+      l1 == l2 && r1 == r2
+  (* BvOfBool and If-then-elses *)
+  | ite_const: Ite (b, l, t) == ((#_ | Bool _) as c) -> b_ite b (l == c) (t == c)
+
+extend rule sem_eq before nots =
+  | of_bools: BvOfBool (_, b) == BvOfBool (_, c) -> b == c
+
+extend rule sem_eq =
+  | of_bool_const: BvOfBool (_, b) == #z ->
+      let z = to_z false z in
+      if z = 1 then b else if z = 0 then not b else v_false
+  (* special case: for BVs, check if we can infer the most significant set bits
+     and extract *)
+  | msb: _
+    when is_bv (ty v1)
+         && is_bv (ty v2)
+         &&
+         let msb = zmax (msb_of v1) (msb_of v2) in
+         0 <= msb && msb < size v1 - 1 ->
+      let msb = zmax (msb_of v1) (msb_of v2) in
+      let v1' = bv_extract 0 msb v1 in
+      let v2' = bv_extract 0 msb v2 in
+      v1' == v2'

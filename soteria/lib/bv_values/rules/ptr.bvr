@@ -11,3 +11,8 @@ rule ptr_ofs (p : t) : GetPtrOfs p <| TBitVector (size p) =
   | default: _ ->
       let n = size p in
       GetPtrOfs p <| TBitVector n
+
+(* The rules of the bool module on pointers *)
+
+extend rule sem_eq before bvs =
+  | ptrs: Ptr (l1, o1) == Ptr (l2, o2) -> l1 == l2 && o1 == o2

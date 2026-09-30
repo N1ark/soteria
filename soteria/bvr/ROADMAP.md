@@ -13,7 +13,11 @@ with `main` for an arm without any), and A6 without `Oracle.Compat` (the
 generated code checks the types of the primitives, in OCaml with a signature
 constraint that leaves `Prims` itself unsealed), and D2 and D3 in OCaml only
 (tiny_values' smart constructors are generated from
-`soteria/lib/tiny_values/rules/`, with no Lean model and no shared prelude).
+`soteria/lib/tiny_values/rules/`, with no Lean model and no shared prelude),
+and the front end of modules (§4, question 5: modules declare `node`s that the
+language places in its types, and add rules to lower modules' functions with
+`extend rule`; Bv_values is split into `bool`, `bitvec`, `float` and `ptr`,
+with unchanged output, but still one prelude).
 §1 describes the state before them.
 
 ## 1. Where we are

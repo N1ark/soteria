@@ -45,6 +45,11 @@ jobs:
         run: |
           opam update || { rm -rf "$(opam var root)/repo/default"; opam update; }
 
+      # ppx_mixins's release tarball is on soteria-tools, which is not
+      # reachable; the fork has the same sources as its 0.2.0 release
+      - name: Pin ppx_mixins to its fork
+        run: opam pin add -n -y ppx_mixins.0.2.0 git+https://github.com/N1ark/ppx_mixins#431312ebef19c75563f25f7fb3b6ee28f56a2298
+
       - name: Export tracked files, as opam-repository would see them
         run: |
           mkdir -p pkg
@@ -59,6 +64,11 @@ jobs:
               exit 1
             fi
           done
+
+      # opam installs system dependencies (cargo) with apt, whose package
+      # index on the runner image may be stale
+      - name: Update the apt package index
+        run: sudo apt-get update
 
       # The command opam CI actually runs
       - name: Install soteria with tests and docs

@@ -15,12 +15,12 @@ on:
 env:
   # [versionsync: OCAML_VERSION=5.5.0]
   OCAML_VERSION: 5.5.0
-  # [versionsync: OBOL_REPO=soteria-tools/obol]
-  OBOL_REPO: soteria-tools/obol
+  # [versionsync: OBOL_REPO=N1ark/obol]
+  OBOL_REPO: N1ark/obol
   # [versionsync: OBOL_COMMIT_HASH=514e0fa36ecba85da8e3a764f869634488f4782f]
   OBOL_COMMIT_HASH: 514e0fa36ecba85da8e3a764f869634488f4782f
-  # [versionsync: CHARON_REPO=soteria-tools/charon]
-  CHARON_REPO: soteria-tools/charon
+  # [versionsync: CHARON_REPO=N1ark/charon]
+  CHARON_REPO: N1ark/charon
   # [versionsync: CHARON_COMMIT_HASH=26cee99d259d3c106394e2e1ab53f3feaa11f3c9]
   CHARON_COMMIT_HASH: 26cee99d259d3c106394e2e1ab53f3feaa11f3c9
 
@@ -84,7 +84,16 @@ jobs:
             echo "::error::opam update could not fetch a pinned source; aborting to avoid building stale deps"
             exit 1
           fi
+      # ppx_mixins's release tarball is on soteria-tools, which is not
+      # reachable; the fork has the same sources as its 0.2.0 release
+      - name: Pin ppx_mixins to its fork
+        run: opam pin add -n -y ppx_mixins.0.2.0 git+https://github.com/N1ark/ppx_mixins#431312ebef19c75563f25f7fb3b6ee28f56a2298
       # OCaml build
+      # opam installs system dependencies (cargo) with apt, whose package
+      # index on the runner image may be stale
+      - name: Update the apt package index
+        if: runner.os == 'Linux'
+        run: sudo apt-get update
       - name: setup dependencies
         run: make ocaml-deps
       - name: Build OCaml stuff
@@ -125,10 +134,17 @@ jobs:
       - name: Install gmake (macOS)
         run: brew install make
         if: ${{ (!steps.restore-charon-cache.outputs.cache-hit || !steps.restore-obol-cache.outputs.cache-hit) && runner.os == 'macOS' }}
+      # Obol's Cargo.toml fetches Charon from soteria-tools, which is not
+      # reachable: fetch it from the N1ark fork instead
       - name: Install Obol if not cached
         run: |
           $GITHUB_WORKSPACE/scripts/versionsync.py pull obol --init
           cp -r ../obol/bin obol-bin
+        env:
+          CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+          GIT_CONFIG_COUNT: "1"
+          GIT_CONFIG_KEY_0: url.https://github.com/N1ark/.insteadOf
+          GIT_CONFIG_VALUE_0: https://github.com/soteria-tools/
         if: ${{ !steps.restore-obol-cache.outputs.cache-hit }}
       - name: Add Obol to path
         run: echo "$PWD/obol-bin/" >> $GITHUB_PATH

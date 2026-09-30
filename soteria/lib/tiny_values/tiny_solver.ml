@@ -75,7 +75,10 @@ struct
     | Int _ | Bool _ -> v
     | _ -> (
         match
-          Solver_state.trivial_truthiness_of solver.state (Typed.type_ v)
+          match v.node.ty with
+          | TBool ->
+              Solver_state.trivial_truthiness_of solver.state (Typed.type_ v)
+          | _ -> None
         with
         | Some true -> Svalue.v_true
         | Some false -> Svalue.v_false
@@ -334,7 +337,10 @@ struct
     | Int _ | Bool _ -> v
     | _ -> (
         match
-          Solver_state.trivial_truthiness_of solver.state (Typed.type_ v)
+          match v.node.ty with
+          | TBool ->
+              Solver_state.trivial_truthiness_of solver.state (Typed.type_ v)
+          | _ -> None
         with
         | Some true -> Svalue.v_true
         | Some false -> Svalue.v_false

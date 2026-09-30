@@ -205,6 +205,8 @@ module Prims = struct
   let tdiv = Z.div
   let trem = Z.rem
   let divisible = Z.divisible
+  let ediv = Z.ediv
+  let erem = Z.erem
 end
 
 module R = struct

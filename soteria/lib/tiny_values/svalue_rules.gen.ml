@@ -19,6 +19,8 @@ module _ : sig
   val tdiv : Z.t -> Z.t -> Z.t
   val trem : Z.t -> Z.t -> Z.t
   val divisible : Z.t -> Z.t -> bool
+  val ediv : Z.t -> Z.t -> Z.t
+  val erem : Z.t -> Z.t -> Z.t
 end = P
 
 let[@inline] of_bool (b : bool) : t = (if b then P.v_true else P.v_false)
@@ -433,17 +435,11 @@ let div (v1 : t) (v2 : t) : t =
       when (((P.zequal kanon__2 Z.one))) ->
       v1
     | ({ Hc.node = { kind = Int (a); _ }; _ }, { Hc.node = { kind = Int (b); _ }; _ }) ->
-      (P.int_z (P.tdiv a b))
+      (P.int_z (P.ediv a b))
     | ({ Hc.node = { kind = Binop ((Binop.Times), x, { Hc.node = { kind = Int (a); _ }; _ }); _ }; _ }, { Hc.node = { kind = Int (b); _ }; _ })
       when (((P.zequal a b))) ->
       x
     | ({ Hc.node = { kind = Binop ((Binop.Times), { Hc.node = { kind = Int (a); _ }; _ }, x); _ }; _ }, { Hc.node = { kind = Int (b); _ }; _ })
-      when (((P.zequal a b))) ->
-      x
-    | ({ Hc.node = { kind = Int (b); _ }; _ }, { Hc.node = { kind = Binop ((Binop.Times), x, { Hc.node = { kind = Int (a); _ }; _ }); _ }; _ })
-      when (((P.zequal a b))) ->
-      x
-    | ({ Hc.node = { kind = Int (b); _ }; _ }, { Hc.node = { kind = Binop ((Binop.Times), { Hc.node = { kind = Int (a); _ }; _ }, x); _ }; _ })
       when (((P.zequal a b))) ->
       x
     | _ -> (P.node (Binop (Binop.Div, v1, v2)) TInt)
@@ -458,19 +454,21 @@ let rec rem (v1 : t) (v2 : t) : t =
       when ((is_mod v1 n)) ->
       P.zero
     | ({ Hc.node = { kind = Int (a); _ }; _ }, { Hc.node = { kind = Int (b); _ }; _ }) ->
-      (P.int_z (P.trem a b))
-    | ({ Hc.node = { kind = Binop ((Binop.Times), x, n); _ }; _ }, { Hc.node = { kind = Binop ((Binop.Times), y, kanon__8); _ }; _ })
-      when ((Int.equal n.Hc.tag kanon__8.Hc.tag)) ->
-      (mul n (rem x y))
-    | ({ Hc.node = { kind = Binop ((Binop.Times), x, n); _ }; _ }, { Hc.node = { kind = Binop ((Binop.Times), kanon__8, y); _ }; _ })
-      when ((Int.equal n.Hc.tag kanon__8.Hc.tag)) ->
-      (mul n (rem x y))
-    | ({ Hc.node = { kind = Binop ((Binop.Times), n, x); _ }; _ }, { Hc.node = { kind = Binop ((Binop.Times), y, kanon__8); _ }; _ })
-      when ((Int.equal n.Hc.tag kanon__8.Hc.tag)) ->
-      (mul n (rem x y))
-    | ({ Hc.node = { kind = Binop ((Binop.Times), n, x); _ }; _ }, { Hc.node = { kind = Binop ((Binop.Times), kanon__8, y); _ }; _ })
-      when ((Int.equal n.Hc.tag kanon__8.Hc.tag)) ->
-      (mul n (rem x y))
+      (if (P.zcompare b Z.zero < 0)
+      then (P.int_z (Z.neg (P.erem a b)))
+      else (P.int_z (P.erem a b)))
+    | ({ Hc.node = { kind = Binop ((Binop.Times), x, { Hc.node = { kind = Int (n); _ }; _ }); _ }; _ }, { Hc.node = { kind = Binop ((Binop.Times), y, { Hc.node = { kind = Int (m); _ }; _ }); _ }; _ })
+      when ((((P.zequal n m)) && (P.zcompare Z.zero n < 0))) ->
+      (mul (P.int_z n) (rem x y))
+    | ({ Hc.node = { kind = Binop ((Binop.Times), x, { Hc.node = { kind = Int (n); _ }; _ }); _ }; _ }, { Hc.node = { kind = Binop ((Binop.Times), { Hc.node = { kind = Int (m); _ }; _ }, y); _ }; _ })
+      when ((((P.zequal n m)) && (P.zcompare Z.zero n < 0))) ->
+      (mul (P.int_z n) (rem x y))
+    | ({ Hc.node = { kind = Binop ((Binop.Times), { Hc.node = { kind = Int (n); _ }; _ }, x); _ }; _ }, { Hc.node = { kind = Binop ((Binop.Times), y, { Hc.node = { kind = Int (m); _ }; _ }); _ }; _ })
+      when ((((P.zequal n m)) && (P.zcompare Z.zero n < 0))) ->
+      (mul (P.int_z n) (rem x y))
+    | ({ Hc.node = { kind = Binop ((Binop.Times), { Hc.node = { kind = Int (n); _ }; _ }, x); _ }; _ }, { Hc.node = { kind = Binop ((Binop.Times), { Hc.node = { kind = Int (m); _ }; _ }, y); _ }; _ })
+      when ((((P.zequal n m)) && (P.zcompare Z.zero n < 0))) ->
+      (mul (P.int_z n) (rem x y))
     | _ -> (P.node (Binop (Binop.Rem, v1, v2)) v1.Hc.node.ty)
     )
 
@@ -483,10 +481,7 @@ let rec mod_ (v1 : t) (v2 : t) : t =
       when ((is_mod v1 n)) ->
       P.zero
     | ({ Hc.node = { kind = Int (a); _ }; _ }, { Hc.node = { kind = Int (b); _ }; _ }) ->
-      (let r = (P.trem a b) in
-      (if (P.zcompare r Z.zero < 0)
-      then (P.int_z (Z.add r b))
-      else (P.int_z r)))
+      (P.int_z (P.erem a b))
     | ({ Hc.node = { kind = Binop ((Binop.Mod), x, { Hc.node = { kind = Int (a); _ }; _ }); _ }; _ }, { Hc.node = { kind = Int (b); _ }; _ })
       when (((P.zcompare a b >= 0) && (P.divisible a b))) ->
       (mod_ x v2)
@@ -591,10 +586,10 @@ let rec lt (v1 : t) (v2 : t) : t =
                 then (leq v (P.int_z (P.tdiv b a)))
                 else (leq (P.int_z (P.tdiv b a)) v))))
     | ({ Hc.node = { kind = Binop ((Binop.Mod), _, { Hc.node = { kind = Int (a); _ }; _ }); _ }; _ }, { Hc.node = { kind = Int (b); _ }; _ })
-      when ((P.zcompare a b <= 0)) ->
+      when ((P.zcompare (abs a) b <= 0)) ->
       P.v_true
     | ({ Hc.node = { kind = Binop ((Binop.Rem), _, { Hc.node = { kind = Int (a); _ }; _ }); _ }; _ }, { Hc.node = { kind = Int (b); _ }; _ })
-      when ((P.zcompare a b <= 0)) ->
+      when ((P.zcompare (abs a) b <= 0)) ->
       P.v_true
     | ({ Hc.node = { kind = Int (b); _ }; _ }, { Hc.node = { kind = Binop ((Binop.Mod), _, { Hc.node = { kind = Int (a); _ }; _ }); _ }; _ })
       when ((P.zcompare b (Z.neg (abs a)) < 0)) ->
@@ -650,7 +645,7 @@ and leq (v1 : t) (v2 : t) : t =
       (leq v (P.int_z (Z.sub a b)))
     | ({ Hc.node = { kind = Int (b); _ }; _ }, { Hc.node = { kind = Binop ((Binop.Times), { Hc.node = { kind = Int (a); _ }; _ }, v); _ }; _ }) ->
       (if ((P.zequal a Z.zero))
-      then (of_bool (P.zcompare b Z.zero < 0))
+      then (of_bool (P.zcompare b Z.zero <= 0))
       else (if ((P.divisible b a) || (P.zcompare b Z.zero < 0))
            then (if (P.zcompare Z.zero a < 0)
                 then (leq (P.int_z (P.tdiv b a)) v)
@@ -660,7 +655,7 @@ and leq (v1 : t) (v2 : t) : t =
                 else (lt v (P.int_z (P.tdiv b a))))))
     | ({ Hc.node = { kind = Int (b); _ }; _ }, { Hc.node = { kind = Binop ((Binop.Times), v, { Hc.node = { kind = Int (a); _ }; _ }); _ }; _ }) ->
       (if ((P.zequal a Z.zero))
-      then (of_bool (P.zcompare b Z.zero < 0))
+      then (of_bool (P.zcompare b Z.zero <= 0))
       else (if ((P.divisible b a) || (P.zcompare b Z.zero < 0))
            then (if (P.zcompare Z.zero a < 0)
                 then (leq (P.int_z (P.tdiv b a)) v)
@@ -670,7 +665,7 @@ and leq (v1 : t) (v2 : t) : t =
                 else (lt v (P.int_z (P.tdiv b a))))))
     | ({ Hc.node = { kind = Binop ((Binop.Times), v, { Hc.node = { kind = Int (a); _ }; _ }); _ }; _ }, { Hc.node = { kind = Int (b); _ }; _ }) ->
       (if ((P.zequal a Z.zero))
-      then (of_bool (P.zcompare b Z.zero < 0))
+      then (of_bool (P.zcompare Z.zero b <= 0))
       else (if ((P.divisible b a) || (P.zcompare b Z.zero > 0))
            then (if (P.zcompare Z.zero a < 0)
                 then (leq v (P.int_z (P.tdiv b a)))
@@ -680,7 +675,7 @@ and leq (v1 : t) (v2 : t) : t =
                 else (lt (P.int_z (P.tdiv b a)) v))))
     | ({ Hc.node = { kind = Binop ((Binop.Times), { Hc.node = { kind = Int (a); _ }; _ }, v); _ }; _ }, { Hc.node = { kind = Int (b); _ }; _ }) ->
       (if ((P.zequal a Z.zero))
-      then (of_bool (P.zcompare b Z.zero < 0))
+      then (of_bool (P.zcompare Z.zero b <= 0))
       else (if ((P.divisible b a) || (P.zcompare b Z.zero > 0))
            then (if (P.zcompare Z.zero a < 0)
                 then (leq v (P.int_z (P.tdiv b a)))
@@ -689,10 +684,10 @@ and leq (v1 : t) (v2 : t) : t =
                 then (lt v (P.int_z (P.tdiv b a)))
                 else (lt (P.int_z (P.tdiv b a)) v))))
     | ({ Hc.node = { kind = Binop ((Binop.Mod), _, { Hc.node = { kind = Int (a); _ }; _ }); _ }; _ }, { Hc.node = { kind = Int (b); _ }; _ })
-      when ((P.zcompare a b <= 0)) ->
+      when ((P.zcompare (abs a) b <= 0)) ->
       P.v_true
     | ({ Hc.node = { kind = Binop ((Binop.Rem), _, { Hc.node = { kind = Int (a); _ }; _ }); _ }; _ }, { Hc.node = { kind = Int (b); _ }; _ })
-      when ((P.zcompare a b <= 0)) ->
+      when ((P.zcompare (abs a) b <= 0)) ->
       P.v_true
     | ({ Hc.node = { kind = Int (b); _ }; _ }, { Hc.node = { kind = Binop ((Binop.Rem), _, { Hc.node = { kind = Int (a); _ }; _ }); _ }; _ })
       when ((P.zcompare b (Z.neg (abs a)) <= 0)) ->

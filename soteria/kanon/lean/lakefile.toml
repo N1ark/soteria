@@ -1,14 +1,18 @@
 name = "kanon_bv_values"
-defaultTargets = ["Kanon"]
+defaultTargets = ["Kanon", "Tiny"]
 
-# The generic Lean core of Kanon, which the trial in Kanon/Core builds on
+# The Lean library of Kanon, which the generated proofs build on
 # (run `lake update kanon` after changing the revision)
-# [versionsync: KANON_COMMIT_HASH=9368aaf15e677dfba118c0830585c3717e72a8dd]
+# [versionsync: KANON_COMMIT_HASH=95e7342ab3a9dc7d856bfc41d9c39fb25005e725]
 [[require]]
 name = "kanon"
 git = "https://github.com/N1ark/kanon"
-rev = "9368aaf15e677dfba118c0830585c3717e72a8dd"
+rev = "95e7342ab3a9dc7d856bfc41d9c39fb25005e725"
 subDir = "lean"
 
 [[lean_lib]]
 name = "Kanon"
+
+# The Lean model of Tiny_values (namespace `Tiny`)
+[[lean_lib]]
+name = "Tiny"

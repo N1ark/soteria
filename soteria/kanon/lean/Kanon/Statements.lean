@@ -8,7 +8,7 @@ noncomputable section
 
 namespace Kanon
 
-open Classical
+open Classical Kanon
 
 /-- Every rule function refines its spec. -/
   structure Ops.Sound (FS : FloatSem) (O : Ops) : Prop where

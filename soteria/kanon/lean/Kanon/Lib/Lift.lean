@@ -77,7 +77,6 @@ elab "kanon_ty_refines" : tactic => liftMetaTactic fun g => return [← tyRefine
 
 /-- Proves `Refines FS s s'`, where `s'` is `s` with some of its subterms
 replaced by terms that refine them (hypotheses of the context). -/
-syntax "kanon_congr" : tactic
 macro_rules
   | `(tactic| kanon_congr) => `(tactic| first
       | exact Refines.refl

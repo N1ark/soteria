@@ -1,9 +1,13 @@
 (* The language of Tiny_values, in which the rules of this directory are
    written: booleans and mathematical integers. It is made of the modules
-   [bool], shared with other languages in [soteria/kanon/modules], and [int].
+   [bool], built into kanon and shared with other languages, and [int].
    This file declares its types, as the OCaml types of [Svalue] have them, and
    places the nodes of its modules in them; see
-   the README of Kanon for the syntax and attributes. *)
+   the README of Kanon for the syntax and attributes.
+
+   The Lean model lives in the namespace [Tiny], in [soteria/kanon/lean/Tiny]. *)
+
+[@@@lean_root "Tiny"]
 
 type var [@ocaml "Symex.Var.t"] [@lean "Int"] [@noeq]
 

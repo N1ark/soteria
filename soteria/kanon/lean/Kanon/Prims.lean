@@ -1,4 +1,4 @@
-import Kanon.Attr
+import KanonCore
 import Kanon.Float
 
 /-!
@@ -174,17 +174,5 @@ def f_lt : Float → Float → Bool := Float.cmp FBits.lt
 def f_le : Float → Float → Bool := Float.cmp FBits.le
 def f_abs (f : Float) : Float := ⟨f.prec, (FBits.abs f.val).toNat⟩
 def f_neg (f : Float) : Float := ⟨f.prec, (FBits.neg f.val).toNat⟩
-
-end Kanon
-
-namespace Kanon
-
-/-- A guarded result, as the alternatives of `[@cases]` rules are written. -/
-def whenSome {α : Type} (c : Bool) (a : α) : Option α := if c then some a else none
-
-/-- The first of a list of options that is [some]. -/
-def firstSome {α : Type} : List (Option α) → Option α
-  | [] => none
-  | o :: os => o <|> firstSome os
 
 end Kanon

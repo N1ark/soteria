@@ -37,6 +37,6 @@ jobs:
         run: |
           lake env lean check_axioms.lean | tee axioms.txt
           if grep -q sorryAx axioms.txt; then
-            echo "::error::Some rules of soteria/lib/bv_values/rules are not proved"
+            echo "::error::Some rules of soteria/lib/bv_values/rules or soteria/lib/tiny_values/rules are not proved"
             exit 1
           fi

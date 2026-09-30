@@ -24,12 +24,12 @@
    %{bin:kanon}
    lean-all
    %{project_root}/soteria/lib/bv_values/rules/lang.knl
-   %{project_root}/soteria/kanon/modules/bool.knl
+   +bool.knl
    %{project_root}/soteria/kanon/modules/exists.knl
    %{project_root}/soteria/lib/bv_values/rules/bitvec.knl
    %{project_root}/soteria/lib/bv_values/rules/float.knl
    %{project_root}/soteria/lib/bv_values/rules/ptr.knl
-   %{project_root}/soteria/kanon/modules/bool.kn
+   +bool.kn
    %{project_root}/soteria/kanon/modules/exists.kn
    %{project_root}/soteria/lib/bv_values/rules/bitvec.kn
    %{project_root}/soteria/lib/bv_values/rules/float.kn

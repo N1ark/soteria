@@ -16,12 +16,12 @@
     %{bin:kanon}
     ocaml
     rules/lang.knl
-    ../../kanon/modules/bool.knl
+    +bool.knl
     ../../kanon/modules/exists.knl
     rules/bitvec.knl
     rules/float.knl
     rules/ptr.knl
-    ../../kanon/modules/bool.kn
+    +bool.kn
     ../../kanon/modules/exists.kn
     rules/bitvec.kn
     rules/float.kn
@@ -42,7 +42,7 @@
     %{bin:kanon}
     ocaml-check
     rules/lang.knl
-    ../../kanon/modules/bool.knl
+    +bool.knl
     ../../kanon/modules/exists.knl
     rules/bitvec.knl
     rules/float.knl

@@ -8,7 +8,7 @@ noncomputable section
 
 namespace Kanon
 
-open Classical
+open Classical Kanon
 
 def Unop.WT : Unop → Ty → Ty → Prop
   | .Not, a, t =>

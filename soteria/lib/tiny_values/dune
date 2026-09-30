@@ -5,8 +5,6 @@
  (targets svalue_rules.gen.ml)
  (mode promote)
  (deps
-  (glob_files ../../kanon/modules/*.knl)
-  (glob_files ../../kanon/modules/*.kn)
   (glob_files rules/*.knl)
   (glob_files rules/*.kn))
  (action
@@ -16,9 +14,9 @@
     %{bin:kanon}
     ocaml
     rules/lang.knl
-    ../../kanon/modules/bool.knl
+    +bool.knl
     rules/int.knl
-    ../../kanon/modules/bool.kn
+    +bool.kn
     rules/int.kn))))
 
 ; The check that the OCaml types of the language agree with its declaration.
@@ -27,14 +25,8 @@
  (targets lang_check.gen.ml)
  (mode promote)
  (deps
-  (glob_files ../../kanon/modules/*.knl)
   (glob_files rules/*.knl))
  (action
   (with-stdout-to
    %{targets}
-   (run
-    %{bin:kanon}
-    ocaml-check
-    rules/lang.knl
-    ../../kanon/modules/bool.knl
-    rules/int.knl))))
+   (run %{bin:kanon} ocaml-check rules/lang.knl +bool.knl rules/int.knl))))

@@ -9,7 +9,7 @@ import Kanon.Lib.Bitwise
 namespace Kanon.Lib
 
 /-- The rule tactics of the libraries, in turn. -/
-macro "kanon_auto" : tactic => `(tactic| first
+macro_rules | `(tactic| kanon_auto) => `(tactic| first
   | (kanon_rule; done)
   | (kanon_rule_b; done)
   | (kanon_rule_typed; done)
@@ -32,22 +32,5 @@ macro "kanon_msb" : tactic => `(tactic| (
        · exact h))))
 
 attribute [kanon_tactic "kanon_msb"] bv_lt_zero.spec
-
-open Lean Elab Term in
-/-- `kanon_proof% X`: the proof of the statement `X.Stmt` of an arm, by its
-hand-written proof (`kanon_arm`) if there is one, and otherwise by the tactic of
-its function (`kanon_tactic`), or `kanon_auto`. -/
-elab "kanon_proof% " x:ident : term => do
-  let n := `Kanon ++ x.getId
-  let env ← getEnv
-  if let some p := (kanonArmExt.getState env).find? n then return mkConst p
-  let f := x.getId.components.head!
-  let tac ← match (kanonTacticExt.getState env).find? (`Kanon ++ f ++ `spec) with
-    | some t => do
-      let t ← ofExcept (Parser.runParserCategory env `tactic t)
-      `(tactic| first | ($(⟨t⟩):tactic; done) | kanon_auto)
-    | none => `(tactic| kanon_auto)
-  let seq ← `(Lean.Parser.Tactic.tacticSeq| $tac:tactic)
-  elabTermEnsuringType (← `(by $seq)) (some (mkConst (n ++ `Stmt)))
 
 end Kanon.Lib

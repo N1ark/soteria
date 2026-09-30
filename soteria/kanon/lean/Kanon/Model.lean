@@ -8,7 +8,7 @@ noncomputable section
 
 namespace Kanon
 
-open Classical
+open Classical Kanon
 
 /-- The primitives that the model is parameterised by. -/
   structure Oracle where

@@ -45,6 +45,8 @@ theorem Refines.trans {FS : FloatSem} {a b c : Term} (h1 : Refines FS a b)
   obtain ⟨wc, sc⟩ := h2.1 wb
   exact ⟨wc, sc.trans sb⟩
 
+instance {FS : FloatSem} : Kanon.Refinement (Refines FS) := ⟨Refines.refl, Refines.trans⟩
+
 theorem Refines.syn {FS : FloatSem} {a b : Term} (h : Refines FS a b) (w : a.WT) :
     b.WT ∧ b.ty.sort = a.ty.sort := h.1 w
 

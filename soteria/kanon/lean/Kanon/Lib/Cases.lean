@@ -3,38 +3,14 @@ import Kanon.Lemmas
 /-!
 # Glue for `[@cases]` functions
 
-The generated proof of a rule from the proofs of its alternatives (`kanon_arm`),
-and the proof of an alternative that only swaps operands of commutative
-operators from the unswapped one (`kanon_comm`).
+The proof of an alternative that only swaps operands of commutative operators
+from the unswapped one (`kanon_comm`, declared by Kanon's library, which also
+gives `kanon_arm`, the proof of a rule from the proofs of its alternatives).
 -/
 
 namespace Kanon.Lib
 
 open Classical
-
-theorem orElse_some {α} {a b : Option α} {r : α} (h : (a <|> b) = some r) :
-    a = some r ∨ b = some r := by
-  cases a <;> simp_all
-
-theorem whenSome_eq_some {α} {c : Bool} {a r : α} (h : whenSome c a = some r) :
-    c = true ∧ a = r := by
-  cases c <;> simp_all [whenSome]
-
-/-- Closes `Refines FS spec res` from `h : <one alternative> = some res`, with
-`p` the proof of that alternative: splits its match (unless its pattern always
-matches, so that the conditionals of its body are not split instead), takes its
-guard (`whenSome`, also for unguarded alternatives), and applies `p`, whose
-conclusion must then match the goal. -/
-macro "kanon_arm " h:ident p:term : tactic => `(tactic| first
-  | (obtain ⟨hg, heq⟩ := Lib.whenSome_eq_some $h:ident
-     subst heq
-     apply $p <;> assumption)
-  | ((try split at $h:ident)
-     all_goals first
-       | (simp at $h:ident; done)
-       | (obtain ⟨hg, heq⟩ := Lib.whenSome_eq_some $h:ident
-          subst heq
-          apply $p <;> assumption)))
 
 /-! ## Commutativity
 
@@ -138,7 +114,6 @@ theorem ty_of_WT_binop {op : Binop} {a b : Term} {t : Ty} (hc : op.Comm) (hne : 
 
 /-- Proves `Refines FS s s'` for terms that only differ by the order of the
 operands of commutative operators. -/
-syntax "kanon_comm" : tactic
 syntax "kanon_comm_side" : tactic
 macro_rules
   | `(tactic| kanon_comm) => `(tactic| first

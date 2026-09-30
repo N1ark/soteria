@@ -10,12 +10,12 @@
     %{bin:kanon}
     ocaml-tests
     %{dep:../../lib/bv_values/rules/lang.knl}
-    %{dep:../../kanon/modules/bool.knl}
+    +bool.knl
     %{dep:../../kanon/modules/exists.knl}
     %{dep:../../lib/bv_values/rules/bitvec.knl}
     %{dep:../../lib/bv_values/rules/float.knl}
     %{dep:../../lib/bv_values/rules/ptr.knl}
-    %{dep:../../kanon/modules/bool.kn}
+    +bool.kn
     %{dep:../../kanon/modules/exists.kn}
     %{dep:../../lib/bv_values/rules/bitvec.kn}
     %{dep:../../lib/bv_values/rules/float.kn}

@@ -2,10 +2,10 @@
    written: its types, the constructors of its terms and the operators on
    them, for Kanon (see its README for the syntax and attributes).
 
-   It is made of the modules [bool] and [exists], which are shared with other
-   languages and live in [soteria/kanon/modules], then [bitvec], [float] and
-   [ptr], in this order, each declared by its [.knl] file with its rules in its
-   [.kn] file.
+   It is made of the modules [bool], built into kanon, and [exists], in
+   [soteria/kanon/modules], which are shared with other languages, then
+   [bitvec], [float] and [ptr], in this order, each declared by its [.knl]
+   file with its rules in its [.kn] file.
    A module declares its nodes ([node C ...], with the syntax and attributes
    of the constructors below) and its operators on terms; this file declares
    the types, as the OCaml AST has them, and places each node in one of them,

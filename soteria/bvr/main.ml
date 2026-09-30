@@ -1,6 +1,8 @@
 (** [bvr BACKEND LANG FILE...]: generates, from the BVR rules in [FILE...],
     written in the language declared in [LANG]:
     - [ocaml]: their OCaml implementation;
+    - [ocaml-check]: the OCaml check that the OCaml types of the language agree
+      with its declaration (which does not need [FILE...]);
     - [lean-types], [lean-syntax]: the Lean definitions of the types of the
       language (which do not need [FILE...]);
     - [lean-signatures]: the Lean check of the types of their primitives;
@@ -42,9 +44,9 @@ let lean_files ~lang ~sources prog =
 
 let usage () =
   prerr_endline
-    "usage: bvr (ocaml | lean-types | lean-syntax | lean-signatures | \
-     lean-typing | lean-model | lean-statements | lean-lifts | lean-soundness \
-     | lean-all) LANG FILE...";
+    "usage: bvr (ocaml | ocaml-check | lean-types | lean-syntax | \
+     lean-signatures | lean-typing | lean-model | lean-statements | lean-lifts \
+     | lean-soundness | lean-all) LANG FILE...";
   exit 2
 
 let () =
@@ -62,6 +64,10 @@ let () =
         match backend with
         | "ocaml" ->
             Gen_ocaml.program ~sources Format.std_formatter (Lazy.force prog)
+        | "ocaml-check" ->
+            Gen_ocaml.lang_check
+              ~sources:[ Filename.basename lang ]
+              Format.std_formatter
         | "lean-all" ->
             List.iter
               (fun (name, _, gen) ->

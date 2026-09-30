@@ -17,3 +17,14 @@
     rules/prelude.bvr
     rules/bool.bvr
     rules/int.bvr))))
+
+; The check that the OCaml types of the language agree with its declaration.
+
+(rule
+ (targets lang_check.gen.ml)
+ (mode promote)
+ (deps rules/lang.bvl)
+ (action
+  (with-stdout-to
+   %{targets}
+   (run %{exe:../../bvr/main.exe} ocaml-check rules/lang.bvl))))

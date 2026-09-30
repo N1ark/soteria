@@ -35,7 +35,10 @@ with the same constructor names, and with type names CamelCased (`ext_ty` is
 `ExtTy`). The abstract types, declared without a definition, are defined by
 hand in `Abstract.lean`. In OCaml, the types are those of `Svalue_ast`, which
 bvr does not generate: `[@ocaml "..."]` gives the OCaml type when it is not
-the bvr one.
+the bvr one. `bvr ocaml-check` generates `lang_check.gen.ml`, included next to
+`svalue_rules.gen.ml`, which fails to compile unless the OCaml types have
+exactly the declared constructors and record fields, with the declared
+arguments.
 
 The typing of the operators is declared with their constructors, as sorts
 (`BvExtract of nat * nat (i, j) : TBitVector n -> TBitVector (j - i + 1) when

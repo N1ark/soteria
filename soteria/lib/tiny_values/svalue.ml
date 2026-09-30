@@ -210,6 +210,7 @@ module R = struct
   module P = Prims
 
   [%%include_file "svalue_rules.gen.ml"]
+  [%%include_file "lang_check.gen.ml"]
 end
 
 let sure_neq = R.sure_neq

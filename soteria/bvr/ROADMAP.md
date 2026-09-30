@@ -76,6 +76,13 @@ Consequences:
 4. **Easier to write and review.** Fast feedback while writing, stable proof
    names, local error messages, and a small, explicit trusted base.
 
+**`.bvr` files stay short and proof-free.** A rule's label (`same:`) is the
+only name an author writes. Everything about proofs lives on the Lean side:
+which tactic proves a function, the hand-written arm proofs, and the names of
+arms, which are derived from the patterns. The same goes for tests (A5),
+which live in their own files. The features added to the language (F) must
+make rule files shorter, not longer.
+
 Invariant for every step: `svalue_rules.gen.ml` stays byte-identical unless
 the step says otherwise, and `lake build` plus the axiom check stay green. A
 reviewer can then check a refactor of the framework by checking that the
@@ -94,30 +101,30 @@ B.
   `lean/Bvr/dune` (a `%{deps}` glob or a single variable), in the fixed
   prelude-first order. `main.ml` gains `--all` to emit every Lean file in one
   run.
-- **A2. Explicit proof selection.**
-  - Replace the name-string dispatch in `bvr_proof%` with annotations in the
-    `.bvr` source: `rule bv_lt ... [@@proof bvr_cmp]` for a function,
-    `| lt_lt: ... [@proof bvr_cmp]` for one rule.
-  - The generator emits the tactic into `Soundness.lean`, so `Rule.lean`
-    stops knowing function names.
-  - The default stays `bvr_auto`.
+- **A2. Proof selection without function names in strings.**
+  - Replace the name-string dispatch in `bvr_proof%` with a Lean attribute on
+    the generated constants: `attribute [bvr_tactic bvr_cmp] bv_lt bv_leq`,
+    in the `Lib/` file that defines `bvr_cmp`.
+  - A renamed or deleted function is then a Lean error, not a silent fall
+    back to `bvr_auto`, which stays the default.
 - **A3. Checked hand-written proofs.**
   - Tag hand-written arm proofs with an attribute
     (`@[bvr_arm b_and.upper_bounds.lt_leq]`) instead of a naming convention.
   - The generator emits a list of every arm, and a Lean check fails on an
-    attribute that names no arm, or on an arm that has both a hand-written
-    proof and a `[@proof]` override.
-- **A4. Stable arm names.** Name an alternative by the choices that produced
-  it rather than by its index:
-  - the branch of each or-pattern, named `l`/`r` by default or by an optional
-    label `(Lt ... [@as lt] | Leq ... [@as leq])`;
+    attribute that names no arm.
+- **A4. Stable arm names, derived automatically.** Name an alternative by
+  the choices that produced it rather than by its index:
+  - the branch of each or-pattern, named after its head constructor
+    (`Lt ... | Leq ...` gives `lt` and `leq`), with an index only when both
+    branches have the same head;
   - whether it is a swap (`.swap`).
 
-  Reordering then cannot re-target a proof. This is a one-off rename of the
-  47 proofs.
+  The `.bvr` source needs no labels. Reordering then cannot re-target a
+  proof. This is a one-off rename of the 47 proofs.
 - **A5. Examples and differential testing in OCaml.**
-  - `example` blocks in `.bvr`, for instance
-    `example b_and (x && true) = x`, compile to an Alcotest suite.
+  - Examples in a separate `rules/examples.bvr`, for instance
+    `b_and (x && true) = x`, compile to an Alcotest suite. The rule files
+    themselves do not change.
   - A random-term tester runs next to them. For each rule function it
     generates small well-typed terms (with literals of widths 1–8), builds
     them with the smart constructor and raw, and checks
@@ -415,7 +422,7 @@ per-arm statements as today, and keeps the arm proofs working.
 
 | # | PR | Changes generated OCaml? |
 |---|---|---|
-| 1 | A1 + A2 + A3 + A4: rule-file list, proof annotations, checked proof names, stable arm names | no |
+| 1 | A1 + A2 + A3 + A4: rule-file list, tactic attributes, checked proof names, derived arm names | no |
 | 2 | A5: examples and random differential tests | no |
 | 3 | A6 + A7: primitive signatures, `bvr doc` | no |
 | 4 | B1: language declaration, pure move | no |

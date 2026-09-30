@@ -23,7 +23,6 @@ rule bv_not_bool (v : t) :
 rule bv_add (checked : checked) (v1 v2 : t) : Add (checked, v1, v2) <| ty v1 =
   assert (ty v1 = ty v2);
   match v1 + v2 with
-  | lits: #l + #r -> l + r
   | neg: x + -y -> x - y
   | zero: x + 0 -> x
   (* ~v + 1 = -v *)
@@ -75,7 +74,6 @@ fn no_wrap (c : checked) (v1 v2 : t) : checked =
 
 rule bv_sub (checked : checked) (v1 v2 : t) : Sub (checked, v1, v2) <| ty v1 =
   match v1 - v2 with
-  | lits: #l - #r -> l - r
   | zero_r: _ - 0 -> v1
   | zero_l: 0 - _ ->
       (* 0 - x = -x; the subtraction overflows (signed) iff x = INT_MIN, so a
@@ -125,9 +123,6 @@ rule bv_neg (checked : bool) (v : t) : Neg (checked, v) <| ty v =
   (* fails early if [v] is not a bit-vector *)
   assert (size v > 0);
   match v with
-  | lit: #bv -> -bv
-  | neg: -x -> x
-  | ite: Ite (b, l, r) -> b_ite b (bv_neg checked l) (bv_neg checked r)
   | of_bool: BvOfBool (n, b) -> b_ite b (-bv_one n) (bv_zero n)
   | default: _ -> Neg (checked, v) <| ty v
 
@@ -135,7 +130,6 @@ rule bv_neg (checked : bool) (v : t) : Neg (checked, v) <| ty v =
    [v2] *)
 rule bv_mod (v1 v2 : t) : Mod (v1, v2) <| ty v1 =
   match (v1, v2) with
-  | lits: #l, #r -> lit_smod l r
   (* by zero, the result is the dividend (as in SMT-LIB) *)
   | zero_r: _, 0 -> v1
   | default: _ -> Mod (v1, v2) <| ty v1
@@ -171,15 +165,11 @@ rule bv_rem (signed : bool) (v1 v2 : t) : Rem (signed, v1, v2) <| ty v1 =
 
 rule bv_not (v : t) : BvNot v <| ty v =
   match v with
-  | lit: #bv -> ~bv
-  | ite: Ite (b, l, r) -> b_ite b (~l) (~r)
   | default: _ -> BvNot v <| ty v
 
 rule bv_and (v1 v2 : t) : BitAnd (v1, v2) <| TBitVector (size v1) =
   assert (size v1 = size v2);
   match v1 land v2 with
-  | lits: #l land #r -> l land r
-  | zero: _ land 0 -> bv_zero (size v1)
   | ones: #mask land x when is_ones mask -> x
   (* For (x >> s) & m, the mask is irrelevant if it entirely covers [bitsize -
      s] *)
@@ -215,9 +205,6 @@ rule bv_and (v1 v2 : t) : BitAnd (v1, v2) <| TBitVector (size v1) =
 rule bv_or (v1 v2 : t) : BitOr (v1, v2) <| ty v1 =
   assert (is_bv (ty v1) && is_bv (ty v2));
   match v1 lor v2 with
-  | lits: #l lor #r -> l lor r
-  | zero: x lor 0 -> x
-  | same: v lor v -> v
   (* m1 | (x & m2) where m2 is a subset of m1's bits means the & is
      redundant *)
   | mask_and: #m1 lor (_ land #m2) when bits_in m2 m1 -> m1
@@ -239,8 +226,6 @@ rule bv_or (v1 v2 : t) : BitOr (v1, v2) <| ty v1 =
 
 rule bv_xor (v1 v2 : t) : BitXor (v1, v2) <| ty v1 =
   match v1 lxor v2 with
-  | lits: #l lxor #r -> l lxor r
-  | zero: x lxor 0 -> x
   | of_bools: BvOfBool (n, b1) lxor BvOfBool (_, b2) ->
       bv_of_bool n (not (b1 == b2))
   | default: _ -> mk_commut_binop BitXor v1 v2 <| ty v1
@@ -251,7 +236,6 @@ rule bv_extract (from_ to_ : int) (v : t) :
     BvExtract (from_, to_, v) <| TBitVector (to_ - from_ + 1) =
   assert (0 <= from_ && from_ <= to_ && to_ < size v);
   match v with
-  | lit: #bv -> lit_extract from_ to_ bv
   | full: _ when from_ = 0 && to_ = size v - 1 -> v
   | and_: v1 land v2 -> bv_extract from_ to_ v1 land bv_extract from_ to_ v2
   | or_: v1 lor v2 -> bv_extract from_ to_ v1 lor bv_extract from_ to_ v2
@@ -364,7 +348,6 @@ rule bv_extend (signed : bool) (extend_by : int) (v : t) :
 rule bv_concat (v1 v2 : t) :
     BvConcat (v1, v2) <| TBitVector (size v1 + size v2) =
   match v1 ++ v2 with
-  | lits: #l ++ #r -> lit_concat l r
   | extracts: BvExtract (from1, to1, v) ++ BvExtract (from2, to2, v)
     when to2 + 1 = from1 ->
       bv_extract from2 to1 v
@@ -385,8 +368,6 @@ rule bv_concat (v1 v2 : t) :
 
 rule bv_shl (v1 v2 : t) : Shl (v1, v2) <| ty v1 =
   match v1 lsl v2 with
-  | lits: #l lsl #r -> l lsl r
-  | zero: _ lsl 0 -> v1
   | big: _ lsl #s when to_z false s >= size v1 -> bv_zero (size v1)
   | shl: (v lsl #s1) lsl #s2 ->
       let n = size v1 in
@@ -409,8 +390,6 @@ rule bv_shl (v1 v2 : t) : Shl (v1, v2) <| ty v1 =
 
 rule bv_lshr (v1 v2 : t) : LShr (v1, v2) <| ty v1 =
   match v1 lsr v2 with
-  | lits: #l lsr #r -> l lsr r
-  | zero: _ lsr 0 -> v1
   | big: _ lsr #s when to_z false s >= size v1 -> bv_zero (size v1)
   | lshr: (v lsr #s1) lsr #s2 ->
       let n = size v1 in
@@ -425,8 +404,6 @@ rule bv_ashr (v1 v2 : t) : AShr (v1, v2) <| ty v1 =
   (* fails early if [v1] is not a bit-vector *)
   assert (size v1 > 0);
   match v1 asr v2 with
-  | lits: #l asr #r -> l asr r
-  | zero: _ asr 0 -> v1
   | big: _ asr #s when to_z false s >= size v1 ->
       let sz = size v1 in
       v1 asr of_z sz (sz - 1)
@@ -438,9 +415,6 @@ rule bv_ashr (v1 v2 : t) : AShr (v1, v2) <| ty v1 =
 rule bv_mul (checked : checked) (v1 v2 : t) : Mul (checked, v1, v2) <| ty v1 =
   assert (ty v1 = ty v2);
   match v1 * v2 with
-  | lits: #l * #r -> l * r
-  | one: x * 1 -> x
-  | zero: _ * 0 -> bv_zero (size v1)
   (* c * (-x) = (-c) * x (holds mod 2^n); with a checked negation (x <>
      INT_MIN) and c <> INT_MIN, the signed no-overflow guarantee carries over
      to the rebuilt product. *)
@@ -824,7 +798,6 @@ fn signed_to_unsigned_cmp (is_leq c_on_left : bool) (c : bv) (v1 v2 : t) : t =
 rule bv_add_overflows (signed : bool) (v1 v2 : t) :
     AddOvf (signed, v1, v2) <| TBool =
   match (v1, v2) with
-  | lits: #l, #r -> of_bool (add_overflows signed l r)
   | zero: 0, _ -> v_false
   | size1: _ when size v1 = 1 ->
       let one = bv_one 1 in
@@ -856,7 +829,6 @@ rule bv_add_overflows (signed : bool) (v1 v2 : t) :
 rule bv_mul_overflows (signed : bool) (v1 v2 : t) :
     MulOvf (signed, v1, v2) <| TBool =
   match (v1, v2) with
-  | lits: #l, #r -> of_bool (mul_overflows signed l r)
   | size1: _ when signed && size v1 = 1 ->
       (* We need to special-case size one because the other simplifications will
          mess with that case, and it's pretty easy to simplify. *)
@@ -902,7 +874,6 @@ rule bv_neg_overflows (v : t) :
 rule bv_sub_overflows (signed : bool) (v1 v2 : t) :
     SubOvf (signed, v1, v2) <| TBool =
   match (v1, v2) with
-  | lits: #l, #r -> of_bool (sub_overflows signed l r)
   | same: v, v -> v_false
   | unsigned: _ when not signed -> bv_lt signed v1 v2
   | default: _ -> SubOvf (signed, v1, v2) <| TBool

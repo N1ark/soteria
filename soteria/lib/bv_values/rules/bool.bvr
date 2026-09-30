@@ -2,7 +2,6 @@
 
 rule b_and (v1 v2 : t) : And (v1, v2) <| TBool =
   match v1 && v2 with
-  | same: v && v -> v
   | false_: false && _ -> v_false
   | true_: true && x -> x
   (* p && !p <=> false *)
@@ -34,7 +33,6 @@ rule b_and (v1 v2 : t) : And (v1, v2) <| TBool =
 
 rule b_or (v1 v2 : t) : Or (v1, v2) <| TBool =
   match v1 || v2 with
-  | same: v || v -> v
   | true_: true || _ -> v_true
   | false_: false || x -> x
   (* p || !p <=> true *)

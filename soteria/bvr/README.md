@@ -25,8 +25,8 @@ commutative operators and the kind constructors that operators stand for, and
 `infix` and `prefix` declare what the operators on terms build and match (see
 [Operators on terms](#operators-on-terms)).
 
-Names flow from bvr to Lean: `bvr lean-types` and `bvr lean-syntax` generate
-the Lean definitions of the declared types (`Types.lean` and `Syntax.lean`),
+Names flow from bvr to Lean: bvr generates the Lean definitions of the
+declared types (`Types.lean` and `Syntax.lean`),
 with the same constructor names, and with type names CamelCased (`ext_ty` is
 `ExtTy`). The abstract types, declared without a definition, are defined by
 hand in `Abstract.lean`. In OCaml, the types are those of `Svalue_ast`, which
@@ -131,11 +131,13 @@ expected stands for its literal: `| lits: #l, #r -> l + r`.
 
 ## Proofs
 
-`lean/` is a Lean project. Its generated files are checked to be up to date by
-`dune test` (run `dune promote` after changing the rules):
+`lean/` is a Lean project. `bvr lean-all` generates its generated files, which
+`dune test` checks to be up to date (run `dune promote` after changing the
+rules):
 
 - `Types.lean` and `Syntax.lean` define the types of the language, around
-  `Abstract.lean` (written by hand).
+  `Abstract.lean` (written by hand), and which operators commute
+  (`Binop.Comm`, from `[@comm]`; `Lib/Cases.lean` proves that they do).
 - `Model.lean` is a Lean model of the rule functions, over the primitives of
   `Prims.lean`, and `Semantics.lean` gives terms their meaning (written by
   hand).

@@ -1,46 +1,72 @@
-(** [bvr (lean-types | lean-syntax) LANG]: generates the Lean definitions of the
-    types of the language declared in [LANG].
+(** [bvr BACKEND LANG FILE...]: generates, from the BVR rules in [FILE...],
+    written in the language declared in [LANG]:
+    - [ocaml]: their OCaml implementation;
+    - [lean-types], [lean-syntax]: the Lean definitions of the types of the
+      language (which do not need [FILE...]);
+    - [lean-model], [lean-statements], [lean-lifts], [lean-soundness]: their
+      Lean model, the statements of their soundness, and its proof.
 
-    [bvr (ocaml | lean-model | lean-statements | lean-lifts | lean-soundness)
-     LANG FILE...]: generates the OCaml implementation or the Lean model of the
-    BVR rules in [FILE...], written in that language.
+    The output is written on standard output, except for [lean-all], which
+    writes every Lean file [F.lean] of the above to [F.lean.gen], in the current
+    directory. *)
 
-    The output is written on standard output. *)
+(** The generated Lean files, with the backend of each. *)
+let lean_files ~lang ~sources prog =
+  let lang = [ Filename.basename lang ] in
+  [
+    ("Types", "lean-types", fun ft -> Gen_lean.types ~sources:lang ft);
+    ("Syntax", "lean-syntax", fun ft -> Gen_lean.syntax ~sources:lang ft);
+    ( "Model",
+      "lean-model",
+      fun ft -> Gen_lean.model ~sources ft (Lazy.force prog) );
+    ( "Statements",
+      "lean-statements",
+      fun ft -> Gen_lean.statements ~sources ft (Lazy.force prog) );
+    ( "Lifts",
+      "lean-lifts",
+      fun ft -> Gen_lean.lifts ~sources ft (Lazy.force prog) );
+    ( "Soundness",
+      "lean-soundness",
+      fun ft ->
+        Gen_lean.soundness ~sources ~proofs:[ "Bvr.Proofs" ] ft
+          (Lazy.force prog) );
+  ]
+
+let usage () =
+  prerr_endline
+    "usage: bvr (ocaml | lean-types | lean-syntax | lean-model | \
+     lean-statements | lean-lifts | lean-soundness | lean-all) LANG FILE...";
+  exit 2
 
 let () =
   match Array.to_list Sys.argv with
   | _ :: backend :: lang :: files -> (
       try
         Check.language (Check.parse_file lang);
-        let ft = Format.std_formatter in
-        match (backend, files) with
-        | "lean-types", [] ->
-            Gen_lean.types ~sources:[ Filename.basename lang ] ft
-        | "lean-syntax", [] ->
-            Gen_lean.syntax ~sources:[ Filename.basename lang ] ft
-        | _, _ :: _ -> (
-            let str = List.concat_map Check.parse_file files in
-            let prog = Check.program str in
-            let sources = List.map Filename.basename files in
-            match backend with
-            | "ocaml" -> Gen_ocaml.program ~sources ft prog
-            | "lean-model" -> Gen_lean.model ~sources ft prog
-            | "lean-statements" -> Gen_lean.statements ~sources ft prog
-            | "lean-lifts" -> Gen_lean.lifts ~sources ft prog
-            | "lean-soundness" ->
-                Gen_lean.soundness ~sources ~proofs:[ "Bvr.Proofs" ] ft prog
-            | _ ->
-                prerr_endline "unknown backend";
-                exit 2)
-        | _ ->
-            prerr_endline "unknown backend, or wrong number of files";
-            exit 2
+        let prog =
+          lazy
+            (if files = [] then usage ();
+             Check.program (List.concat_map Check.parse_file files))
+        in
+        let sources = List.map Filename.basename files in
+        let lean = lean_files ~lang ~sources prog in
+        match backend with
+        | "ocaml" ->
+            Gen_ocaml.program ~sources Format.std_formatter (Lazy.force prog)
+        | "lean-all" ->
+            List.iter
+              (fun (name, _, gen) ->
+                let oc = open_out_bin (name ^ ".lean.gen") in
+                let ft = Format.formatter_of_out_channel oc in
+                gen ft;
+                Format.pp_print_flush ft ();
+                close_out oc)
+              lean
+        | _ -> (
+            match List.find_opt (fun (_, b, _) -> b = backend) lean with
+            | Some (_, _, gen) -> gen Format.std_formatter
+            | None -> usage ())
       with Check.Error (loc, msg) ->
         Format.eprintf "%a: %s@." Check.pp_loc loc msg;
         exit 1)
-  | _ ->
-      prerr_endline
-        "usage: bvr (lean-types | lean-syntax) LANG\n\
-        \       bvr (ocaml | lean-model | lean-statements | lean-lifts | \
-         lean-soundness) LANG FILE...";
-      exit 2
+  | _ -> usage ()

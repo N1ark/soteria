@@ -148,16 +148,35 @@ type_kind:
   | BAR? cs = separated_nonempty_list(BAR, constr_decl) { Ptype_variant cs }
   | LBRACE fs = separated_nonempty_list(SEMI, label_decl) RBRACE { Ptype_record fs }
 
+(* [C of a * b (x, y) : s1 -> s2 when e]: the names of the arguments, the
+   sorts of the operands and result, and a side condition, as [[@params]],
+   [[@sorts]] and [[@when]] attributes *)
 constr_decl:
-  | c = UID args = loption(preceded(OF, separated_nonempty_list(STAR, typ_app))) attrs = list(decl_attr)
-    { {
+  | c = UID args = loption(preceded(OF, separated_nonempty_list(STAR, typ_app)))
+    ps = option(constr_params) sorts = option(preceded(COLON, separated_nonempty_list(ARROW, app_expr)))
+    g = option(preceded(WHEN, expr)) attrs = list(decl_attr)
+    { let loc = mkloc $loc in
+      let tuple l = tuple_or_one (fun l -> exp loc (Pexp_tuple l)) l in
+      let typing =
+        Option.to_list (Option.map (fun ps -> attr loc "params" [ eval_item loc (tuple ps) ]) ps)
+        @ Option.to_list (Option.map (fun ss -> attr loc "sorts" [ eval_item loc (tuple ss) ]) sorts)
+        @ Option.to_list (Option.map (fun g -> attr loc "when" [ eval_item loc g ]) g)
+      in
+      {
         pcd_name = { txt = c; loc = mkloc $loc(c) };
         pcd_vars = [];
         pcd_args = Pcstr_tuple args;
         pcd_res = None;
-        pcd_loc = mkloc $loc;
-        pcd_attributes = attrs;
+        pcd_loc = loc;
+        pcd_attributes = typing @ attrs;
       } }
+
+constr_params:
+  | LPAREN ps = separated_nonempty_list(COMMA, constr_param) RPAREN { ps }
+
+constr_param:
+  | x = LID { ident (mkloc $loc) x }
+  | UNDERSCORE { ident (mkloc $loc) "_" }
 
 label_decl:
   | f = LID COLON t = typ

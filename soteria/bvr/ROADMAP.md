@@ -3,8 +3,9 @@
 Status: proposal, on top of the stack that ends with #16. Implemented so far:
 B1 (the language is declared in `soteria/lib/bv_values/rules/lang.bvl`, with
 OCaml-style `type` declarations and `infix`/`prefix` items rather than the
-syntax sketched below), the part of B2 that generates the Lean types
-(`Types.lean` and `Syntax.lean`, with the bvr names), B3 (`Binop.Comm` is
+syntax sketched below), B2 (the Lean types, `Types.lean` and `Syntax.lean`,
+with the bvr names, and the typing of the operators, `Typing.lean`, from sort
+annotations on their constructors; `Term.WT` remains hand-written), B3 (`Binop.Comm` is
 generated from `[@comm]`; `evBinop_comm` remains the hand-written obligation),
 A1 for the Lean files (`bvr lean-all` generates them in one run), and A2–A4
 (`bvr_tactic` and `bvr_arm` attributes, and arms named after their choices,

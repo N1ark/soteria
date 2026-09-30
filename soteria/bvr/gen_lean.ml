@@ -1264,3 +1264,198 @@ let signatures ~sources ft (p : program) =
         pf ft "%a := %s@ " lean_ty q.pret q.pname))
     p.prims;
   pf ft "@ end@ @ end Bvr@]@."
+
+(* ---------------------------------------------------------------- *)
+(* [Typing.lean]: the typing of the operators *)
+
+let rec expr_vars (e : expr) =
+  match e.e with
+  | EVar x -> [ x ]
+  | EConstr (_, l) | ECall (_, l) -> List.concat_map expr_vars l
+  | EBinop (_, a, b) -> expr_vars a @ expr_vars b
+  | EUnop (_, a) -> expr_vars a
+  | _ -> []
+
+(** The variables that are the width of a type (its [nat] arguments), which are
+    positive. *)
+let rec widths (e : expr) =
+  match e.e with
+  | EConstr (c, args) ->
+      List.concat
+        (List.map2
+           (fun a (x : expr) ->
+             match (a, x.e) with Small, EVar v -> [ v ] | _ -> widths x)
+           c.c_args args)
+  | _ -> []
+
+let rec conjuncts (e : expr) =
+  match e.e with
+  | EBinop (Arith And, a, b) -> conjuncts a @ conjuncts b
+  | _ -> [ e ]
+
+let prop ctx (e : expr) =
+  let op = function
+    | Lt -> Some "<"
+    | Le -> Some "≤"
+    | Gt -> Some ">"
+    | Ge -> Some "≥"
+    | Eq -> Some "="
+    | Ne -> Some "≠"
+    | _ -> None
+  in
+  match e.e with
+  | EBinop (Arith o, a, b) when Option.is_some (op o) ->
+      Fmt.str "%a %s %a" (expr ctx) a (Option.get (op o)) (expr ctx) b
+  | _ -> Fmt.str "%a = true" (expr ctx) e
+
+let uniq l =
+  List.fold_left (fun acc x -> if List.mem x acc then acc else acc @ [ x ]) [] l
+
+(** The conditions under which the operands [names] and result [t] of an
+    operator have the sorts of [ty]. A variable that stands for a whole sort is
+    the first operand (or result) of that sort; operands of a same sort with
+    variables are equal; the other variables are existentially quantified, only
+    around the one equation that uses them if they are not used elsewhere, and
+    positive when they are widths that the condition does not constrain. *)
+let typing_rhs ctx (ty : typing) =
+  let n = List.length ty.t_sorts - 1 in
+  let names =
+    List.init n (fun i -> String.make 1 (Char.chr (Char.code 'a' + i)))
+    @ [ "t" ]
+  in
+  let params = List.filter (( <> ) "_") ty.t_params in
+  (* a width is positive, unless the condition constrains it *)
+  let widths =
+    let cond = Option.fold ~none:[] ~some:expr_vars ty.t_when in
+    List.filter
+      (fun v -> not (List.mem v cond))
+      (uniq (List.concat_map widths ty.t_sorts))
+  in
+  let reps = ref [] and bound = ref [] and conjs = ref [] and seen = ref [] in
+  let str e =
+    let saved = !subst in
+    subst := !reps;
+    Fun.protect
+      ~finally:(fun () -> subst := saved)
+      (fun () -> Fmt.str "%a" (expr ctx) e)
+  in
+  let exists_vars e =
+    List.filter
+      (fun v -> (not (List.mem_assoc v !reps)) && not (List.mem v params))
+      (uniq (expr_vars e))
+  in
+  let add text vars = conjs := !conjs @ [ (text, vars) ] in
+  let prop e =
+    let saved = !subst in
+    subst := !reps;
+    Fun.protect ~finally:(fun () -> subst := saved) (fun () -> prop ctx e)
+  in
+  let cond () =
+    Option.iter
+      (fun w -> List.iter (fun c -> add (prop c) (exists_vars c)) (conjuncts w))
+      ty.t_when
+  in
+  List.iter2
+    (fun name (s : expr) ->
+      (* the condition, between the operands and the result *)
+      if name = "t" then cond ();
+      match s.e with
+      | EVar x when List.mem_assoc x !reps ->
+          add (name ^ " = " ^ List.assoc x !reps) []
+      | EVar x when not (List.mem_assoc x !bound) -> reps := (x, name) :: !reps
+      | _ -> (
+          let vs = exists_vars s and r = str s in
+          match List.find_opt (fun (_, r') -> r' = r) !seen with
+          | Some (name', _) when vs <> [] -> add (name ^ " = " ^ name') []
+          | _ ->
+              List.iter
+                (fun v ->
+                  if not (List.mem_assoc v !bound) then
+                    bound := !bound @ [ (v, List.length !conjs) ])
+                vs;
+              add (name ^ " = " ^ r) vs;
+              seen := !seen @ [ (name, r) ]))
+    names ty.t_sorts;
+  let conjs = !conjs in
+  let last v =
+    List.fold_left max 0
+      (List.mapi (fun i (_, vs) -> if List.mem v vs then i else 0) conjs)
+  in
+  let tight (v, k) = last v = k in
+  let pos v = "0 < " ^ v in
+  let binders vs =
+    let tys = List.map (fun v -> ty_str (List.assoc v ty.t_vars)) vs in
+    match uniq tys with
+    | [ t ] -> String.concat " " vs ^ " : " ^ t
+    | _ ->
+        String.concat " "
+          (List.map2 (fun v t -> Printf.sprintf "(%s : %s)" v t) vs tys)
+  in
+  let long = List.filter (fun b -> not (tight b)) !bound |> List.map fst in
+  let body =
+    List.map pos (List.filter (fun p -> List.mem p widths) params)
+    @ List.map pos (List.filter (fun v -> List.mem v widths) long)
+    @ List.mapi
+        (fun i (text, _) ->
+          match List.filter (fun b -> tight b && snd b = i) !bound with
+          | [] -> text
+          | bs ->
+              let vs = List.map fst bs in
+              Printf.sprintf "(∃ %s, %s)" (binders vs)
+                (String.concat " ∧ "
+                   (List.map pos (List.filter (fun v -> List.mem v widths) vs)
+                   @ [ text ])))
+        conjs
+  in
+  let body = if body = [] then "True" else String.concat " ∧ " body in
+  if long = [] then body else Printf.sprintf "∃ %s, %s" (binders long) body
+
+(** [Typing.lean]: the typing predicates [T.WT] of the operator types. *)
+let typing_file ~sources ft (p : program) =
+  let ctx = classify p in
+  header ~sources ft [ "Bvr.Prims" ];
+  let types = uniq (List.map (fun t -> t.t_constr.c_res) p.typing) in
+  List.iter
+    (fun res ->
+      let tys = List.filter (fun t -> t.t_constr.c_res = res) p.typing in
+      let arity = List.length (List.hd tys).t_sorts - 1 in
+      let names =
+        List.init arity (fun i -> String.make 1 (Char.chr (Char.code 'a' + i)))
+        @ [ "t" ]
+      in
+      pf ft "@[<v 2>def %a.WT : %a → %sProp" lean_ty res lean_ty res
+        (String.concat "" (List.map (fun _ -> "Ty → ") names));
+      let alts =
+        List.map
+          (fun ty ->
+            let rhs = typing_rhs ctx ty in
+            let used =
+              uniq
+                (List.concat_map expr_vars ty.t_sorts
+                @ Option.fold ~none:[] ~some:expr_vars ty.t_when)
+            in
+            let pat =
+              String.concat ""
+                (List.map
+                   (fun x -> if List.mem x used then " " ^ id x else " _")
+                   ty.t_params)
+            in
+            ( Printf.sprintf ".%s%s, %s" ty.t_constr.c_name pat
+                (String.concat ", " names),
+              rhs ))
+          tys
+      in
+      (* consecutive operators with the same typing share it *)
+      let rec groups = function
+        | [] -> []
+        | (p, r) :: rest -> (
+            match groups rest with
+            | (ps, r') :: g when r' = r -> (p :: ps, r) :: g
+            | g -> ([ p ], r) :: g)
+      in
+      List.iter
+        (fun (ps, r) -> pf ft "@ | %s =>@;<1 4>%s" (String.concat " | " ps) r)
+        (groups alts);
+      pf ft "@]@ @ ")
+    types;
+  pf ft "end Bvr@]@."

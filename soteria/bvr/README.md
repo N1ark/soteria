@@ -33,6 +33,11 @@ hand in `Abstract.lean`. In OCaml, the types are those of `Svalue_ast`, which
 bvr does not generate: `[@ocaml "..."]` gives the OCaml type when it is not
 the bvr one.
 
+The typing of the operators is declared with their constructors, as sorts
+(`BvExtract of nat * nat (i, j) : TBitVector n -> TBitVector (j - i + 1) when
+0 <= i && i <= j && j < n`), from which bvr generates the Lean typing
+predicates (`Typing.lean`).
+
 `t` (terms), `bv` and `var` are built into bvr, as are `int`, `bool` and
 `unit`; `type`, `of`, `infix` and `prefix` are keywords.
 
@@ -139,7 +144,8 @@ rules):
 
 - `Types.lean` and `Syntax.lean` define the types of the language, around
   `Abstract.lean` (written by hand), and which operators commute
-  (`Binop.Comm`, from `[@comm]`; `Lib/Cases.lean` proves that they do).
+  (`Binop.Comm`, from `[@comm]`; `Lib/Cases.lean` proves that they do), and
+  `Typing.lean` the typing of the operators.
 - `Model.lean` is a Lean model of the rule functions, over the primitives of
   `Prims.lean`, and `Semantics.lean` gives terms their meaning (written by
   hand).

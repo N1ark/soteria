@@ -4,6 +4,7 @@
     - [lean-types], [lean-syntax]: the Lean definitions of the types of the
       language (which do not need [FILE...]);
     - [lean-signatures]: the Lean check of the types of their primitives;
+    - [lean-typing]: the Lean typing predicates of the operators;
     - [lean-model], [lean-statements], [lean-lifts], [lean-soundness]: their
       Lean model, the statements of their soundness, and its proof.
 
@@ -20,6 +21,9 @@ let lean_files ~lang ~sources prog =
     ( "Signatures",
       "lean-signatures",
       fun ft -> Gen_lean.signatures ~sources ft (Lazy.force prog) );
+    ( "Typing",
+      "lean-typing",
+      fun ft -> Gen_lean.typing_file ~sources ft (Lazy.force prog) );
     ( "Model",
       "lean-model",
       fun ft -> Gen_lean.model ~sources ft (Lazy.force prog) );
@@ -39,8 +43,8 @@ let lean_files ~lang ~sources prog =
 let usage () =
   prerr_endline
     "usage: bvr (ocaml | lean-types | lean-syntax | lean-signatures | \
-     lean-model | lean-statements | lean-lifts | lean-soundness | lean-all) \
-     LANG FILE...";
+     lean-typing | lean-model | lean-statements | lean-lifts | lean-soundness \
+     | lean-all) LANG FILE...";
   exit 2
 
 let () =

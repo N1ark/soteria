@@ -231,7 +231,7 @@ theorem evalBV_neg {FS ρ n c a t} (w : (Term.mk (.Unop (.Neg c) a) t).WT) :
     evalBV FS ρ n (.mk (.Unop (.Neg c) a) t) = negOp c (evalBV FS ρ n a) := by
   have ⟨w1, wa⟩ := WT_unop.1 w
   simp only [Unop.WT, Ty.sort_eq] at w1
-  obtain ⟨k, hk, ha, rfl⟩ := w1
+  obtain ⟨⟨k, hk, ha⟩, rfl⟩ := w1
   obtain ⟨k, rfl⟩ : ∃ k' : Nat, k = k' := ⟨k.toNat, by omega⟩
   have e : eval FS ρ (.mk (.Unop (.Neg c) a) a.ty) =
       (negOp c (evalBV FS ρ k a)).map (Val.bv k) := by
@@ -266,7 +266,7 @@ theorem evalBV_bvNot {FS ρ n a t} (w : (Term.mk (.Unop .BvNot a) t).WT) :
     evalBV FS ρ n (.mk (.Unop .BvNot a) t) = (evalBV FS ρ n a).map (~~~·) := by
   have ⟨w1, wa⟩ := WT_unop.1 w
   simp only [Unop.WT, Ty.sort_eq] at w1
-  obtain ⟨k, hk, ha, rfl⟩ := w1
+  obtain ⟨⟨k, hk, ha⟩, rfl⟩ := w1
   obtain ⟨k, rfl⟩ : ∃ k' : Nat, k = k' := ⟨k.toNat, by omega⟩
   have e : eval FS ρ (.mk (.Unop .BvNot a) a.ty) = ((evalBV FS ρ k a).map (~~~·)).map (Val.bv k) := by
     rw [eval_unop w, eval_bv ha]

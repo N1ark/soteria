@@ -1,4 +1,5 @@
 import Bvr.Model
+import Bvr.Typing
 
 /-!
 # Semantics of svalues, and soundness of simplifications
@@ -93,43 +94,8 @@ structure FloatSem where
 
 /-! ## Well-typed terms -/
 
-def Unop.WT : Unop → Ty → Ty → Prop
-  | .Not, a, t => a = .TBool ∧ t = .TBool
-  | .GetPtrLoc, a, t => ∃ n : Int, 0 < n ∧ a = .TPointer n ∧ t = .TLoc n
-  | .GetPtrOfs, a, t => ∃ n : Int, 0 < n ∧ a = .TPointer n ∧ t = .TBitVector n
-  | .BvOfBool n, a, t => 0 < n ∧ a = .TBool ∧ t = .TBitVector n
-  | .BvOfFloat _ _ n, a, t => 0 < n ∧ (∃ p, a = .TFloat p) ∧ t = .TBitVector n
-  | .FloatOfBv _ _ p, a, t =>
-      (∃ n : Int, 0 < n ∧ a = .TBitVector n) ∧ t = .TFloat p
-  | .FloatOfBvRaw p, a, t => a = .TBitVector p.size ∧ t = .TFloat p
-  | .FloatOfFloat _ p, a, t => (∃ q, a = .TFloat q) ∧ t = .TFloat p
-  | .BvExtract i j, a, t =>
-      ∃ n : Int, a = .TBitVector n ∧ 0 ≤ i ∧ i ≤ j ∧ j < n ∧ t = .TBitVector (j - i + 1)
-  | .BvExtend _ k, a, t => ∃ n : Int, 0 < n ∧ a = .TBitVector n ∧ 0 ≤ k ∧ t = .TBitVector (n + k)
-  | .BvNot, a, t | .Neg _, a, t => ∃ n : Int, 0 < n ∧ a = .TBitVector n ∧ t = a
-  | .FAbs, a, t | .FNeg, a, t | .FSqrt, a, t | .FRound _, a, t =>
-      (∃ p, a = .TFloat p) ∧ t = a
-  | .FIs _, a, t | .FIsNeg, a, t | .FIsPos, a, t => (∃ p, a = .TFloat p) ∧ t = .TBool
-
-def Binop.WT : Binop → Ty → Ty → Ty → Prop
-  | .And, a, b, t | .Or, a, b, t => a = .TBool ∧ b = .TBool ∧ t = .TBool
-  | .Eq, a, b, t => a = b ∧ t = .TBool
-  | .FEq, a, b, t | .FLeq, a, b, t | .FLt, a, b, t =>
-      (∃ p, a = .TFloat p) ∧ b = a ∧ t = .TBool
-  | .FAdd, a, b, t | .FSub, a, b, t | .FMul, a, b, t | .FDiv, a, b, t
-  | .FRem, a, b, t | .FMin, a, b, t | .FMax, a, b, t =>
-      (∃ p, a = .TFloat p) ∧ b = a ∧ t = a
-  | .AddOvf _, a, b, t | .SubOvf _, a, b, t | .MulOvf _, a, b, t
-  | .Lt _, a, b, t | .Leq _, a, b, t =>
-      (∃ n : Int, 0 < n ∧ a = .TBitVector n) ∧ b = a ∧ t = .TBool
-  | .BvConcat, a, b, t =>
-      ∃ n m : Int, 0 < n ∧ 0 < m ∧ a = .TBitVector n ∧ b = .TBitVector m ∧
-        t = .TBitVector (n + m)
-  | _, a, b, t => (∃ n : Int, 0 < n ∧ a = .TBitVector n) ∧ b = a ∧ t = a
-
-def Triop.WT : Triop → Ty → Ty → Ty → Ty → Prop
-  | .Fma, a, b, c, t => (∃ p, a = .TFloat p) ∧ b = a ∧ c = a ∧ t = a
-  | .Ite, a, b, c, t => a = .TBool ∧ c = b ∧ t = b
+/-! The typing of the operators, `Unop.WT`, `Binop.WT` and `Triop.WT`, is
+generated from `lang.bvl` in `Typing.lean`. -/
 
 mutual
 /-- Syntactic well-typedness. -/

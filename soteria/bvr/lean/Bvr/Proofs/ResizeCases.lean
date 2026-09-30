@@ -140,7 +140,7 @@ open Classical Lib
   generalize fp_of_size (size_of_ty T) = p
   refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
   all_goals have ⟨w1, w2⟩ := WT_unop.1 w
-  all_goals simp only [Unop.WT, Ty.sort_eq, Term.ty_mk] at w1
+  all_goals simp only [Unop.WT, Ty.sort_eq, Term.ty_mk, fp_size] at w1
   all_goals rw [to_z_bv_of_lit w2] at *
   all_goals have := emod_two_pow_lt z p.size
   all_goals have := emod_two_pow_nonneg z p.size

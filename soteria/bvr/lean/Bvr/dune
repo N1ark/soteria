@@ -11,6 +11,7 @@
   Types.lean.gen
   Syntax.lean.gen
   Signatures.lean.gen
+  Typing.lean.gen
   Model.lean.gen
   Statements.lean.gen
   Lifts.lean.gen
@@ -33,6 +34,7 @@
    (diff Types.lean Types.lean.gen)
    (diff Syntax.lean Syntax.lean.gen)
    (diff Signatures.lean Signatures.lean.gen)
+   (diff Typing.lean Typing.lean.gen)
    (diff Model.lean Model.lean.gen)
    (diff Statements.lean Statements.lean.gen)
    (diff Lifts.lean Lifts.lean.gen)

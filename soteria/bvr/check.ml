@@ -1323,14 +1323,50 @@ let language (str : structure) =
        [] tds);
   List.iter2
     (fun d (td : type_declaration) ->
-      match td.ptype_kind with
+      (match td.ptype_kind with
       | Ptype_variant cds ->
           let res = Option.get (ty_of_name d.d_name) in
           List.iter
             (fun (cd : constructor_declaration) ->
               let name = cd.pcd_name.txt and loc = cd.pcd_loc in
               let attrs = cd.pcd_attributes in
-              check_attrs [ "comm"; "literal"; "operators" ] attrs;
+              check_attrs
+                [ "comm"; "literal"; "operators"; "params"; "sorts"; "when" ]
+                attrs;
+              let payload n =
+                Option.map
+                  (fun (a : attribute) ->
+                    match a.attr_payload with
+                    | PStr [ { pstr_desc = Pstr_eval (e, _); _ } ] -> e
+                    | _ -> error a.attr_loc "unexpected [@%s]" n)
+                  (find_attr n attrs)
+              in
+              let items (e : expression option) =
+                match e with
+                | Some { pexp_desc = Pexp_tuple l; _ } -> l
+                | Some e -> [ e ]
+                | None -> []
+              in
+              if Option.is_some (payload "sorts") then
+                lang :=
+                  {
+                    !lang with
+                    raw_typing =
+                      !lang.raw_typing
+                      @ [
+                          ( name,
+                            {
+                              rt_params = items (payload "params");
+                              rt_sorts = items (payload "sorts");
+                              rt_when = payload "when";
+                              rt_loc = loc;
+                            } );
+                        ];
+                  }
+              else if
+                Option.is_some (payload "params")
+                || Option.is_some (payload "when")
+              then error loc "%s: argument names and conditions need sorts" name;
               if Option.is_some (find_constr name) then
                 error loc "constructor %s is declared twice" name;
               let args =
@@ -1378,7 +1414,22 @@ let language (str : structure) =
               lang := l)
             cds
       | Ptype_abstract | Ptype_record _ -> ()
-      | Ptype_open -> error td.ptype_loc "unsupported type")
+      | Ptype_open -> error td.ptype_loc "unsupported type");
+      (* the typings of a type's constructors are all given, or none *)
+      match td.ptype_kind with
+      | Ptype_variant cds ->
+          let typed (cd : constructor_declaration) =
+            List.mem_assoc cd.pcd_name.txt !lang.raw_typing
+          in
+          if List.exists typed cds then
+            List.iter
+              (fun (cd : constructor_declaration) ->
+                if not (typed cd) then
+                  error cd.pcd_loc
+                    "%s has no typing, unlike the other constructors of %s"
+                    cd.pcd_name.txt d.d_name)
+              cds
+      | _ -> ())
     decls tds;
   (* then the operators on terms *)
   List.iter
@@ -1551,6 +1602,104 @@ let raw_fn (vb : value_binding) =
           }
       | _ -> error loc "%s: constants must be annotated with their type" rname)
 
+(* ---------------------------------------------------------------- *)
+(* The typing of operators *)
+
+(** The names of the operands and of the result in the Lean typing predicates,
+    which the arguments and variables of typings may not use. *)
+let typing_names = [ "a"; "b"; "c"; "t" ]
+
+(** Checks the typing [rt] of the operator [c], in the environment of the rules.
+    A variable is free when it is neither an argument of [c] nor global: where a
+    sort is expected it stands for any sort, and as the argument of a
+    constructor of [ty] for any value of the argument's type. *)
+let typing env0 (c : constr) (rt : raw_typing) : typing =
+  let loc = rt.rt_loc in
+  let params =
+    List.map
+      (fun (e : expression) ->
+        match e.pexp_desc with
+        | Pexp_ident { txt = Lident x; _ } -> x
+        | _ -> error e.pexp_loc "expected a name")
+      rt.rt_params
+  in
+  let params =
+    if params = [] then List.map (fun _ -> "_") c.c_args else params
+  in
+  if List.length params <> List.length c.c_args then
+    error loc "%s has %d arguments" c.c_name (List.length c.c_args);
+  let penv =
+    List.concat
+      (List.map2
+         (fun x a -> if x = "_" then [] else [ (x, arg_ty a) ])
+         params c.c_args)
+  in
+  List.iter
+    (fun (x, _) ->
+      if List.mem x typing_names then
+        error loc "%s: reserved name %s" c.c_name x)
+    penv;
+  let vars = ref [] in
+  let is_free x =
+    (not (List.mem_assoc x penv)) && not (List.mem_assoc x env0.globals)
+  in
+  let var loc x t =
+    (match List.assoc_opt x !vars with
+    | Some t' -> expect loc ~expected:t' t
+    | None -> vars := !vars @ [ (x, t) ]);
+    { e = EVar x; ety = t; eloc = loc }
+  in
+  let env () = { env0 with vars = penv @ !vars } in
+  let rec sort (e : expression) : Syntax.expr =
+    match e.pexp_desc with
+    | Pexp_ident { txt = Lident x; _ } when is_free x -> var e.pexp_loc x TSty
+    | Pexp_construct ({ txt = Lident n; _ }, arg) -> (
+        match find_constr n with
+        | Some ({ c_res = TSty; _ } as tc) ->
+            let args = constr_args e.pexp_loc tc arg split_pexp in
+            let args =
+              List.map2
+                (fun a (e : expression) ->
+                  match (e.pexp_desc, arg_ty a) with
+                  | Pexp_ident { txt = Lident x; _ }, t when is_free x ->
+                      if List.mem x typing_names then
+                        error e.pexp_loc "%s: reserved name %s" c.c_name x;
+                      var e.pexp_loc x t
+                  | _, TSty -> sort e
+                  | _, t -> expr (env ()) ~expected:t e)
+                tc.c_args args
+            in
+            { e = EConstr (tc, args); ety = TSty; eloc = e.pexp_loc }
+        | _ -> error e.pexp_loc "%s is not a constructor of ty" n)
+    | _ -> error e.pexp_loc "expected a sort"
+  in
+  let sorts = List.map sort rt.rt_sorts in
+  let cond = Option.map (expr (env ()) ~expected:TBool) rt.rt_when in
+  {
+    t_constr = c;
+    t_params = params;
+    t_vars = !vars;
+    t_sorts = sorts;
+    t_when = cond;
+  }
+
+(** The typings of the operators, which are only for the operators of nodes
+    whose operands are terms. *)
+let typings env0 =
+  let typed = !lang.raw_typing in
+  List.iter
+    (fun (n, (rt : raw_typing)) ->
+      let c = Option.get (find_constr n) in
+      match node_of_op c with
+      | Some (_, operands) when List.for_all (( = ) TTerm) operands ->
+          if List.length rt.rt_sorts <> List.length operands + 1 then
+            error rt.rt_loc
+              "%s: expected the sorts of %d operands and the result" n
+              (List.length operands)
+      | _ -> error rt.rt_loc "%s: only operators on terms have a typing" n)
+    typed;
+  List.map (fun (n, rt) -> typing env0 (Option.get (find_constr n)) rt) typed
+
 let program (str : structure) : program =
   let str = desugar_ops#structure str in
   let prims, raws =
@@ -1621,7 +1770,7 @@ let program (str : structure) : program =
         })
       raws
   in
-  { prims; fns }
+  { prims; fns; typing = typings env0 }
 
 let parse_file file : structure =
   let ic = open_in_bin file in

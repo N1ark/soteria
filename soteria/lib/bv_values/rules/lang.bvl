@@ -17,6 +17,13 @@
    - [[@comm]] on a binary operator: its operands commute.
    - [[@literal]] on a kind constructor: its literals, [true] and [false] for a
      boolean, integers and [#x] for a bit-vector.
+   - [C of a * b (x, y) : s1 -> s2 when e] on an operator: its typing, from
+     which bvr generates [T.WT] in [Bvr/Typing.lean]. Its operands, then its
+     result, have the sorts [s1], [s2], which are terms of [ty] over the
+     arguments [x], [y] of [C] and over free variables, under the condition
+     [e]. A free variable stands for any sort where a sort is expected, and
+     otherwise for any value of its type; a width ([nat] argument of a type) is
+     positive, unless the condition constrains it.
 
    The types [t] (terms), [bv] (bit-vector values) and [var] (variables) are
    built into bvr. *)
@@ -43,62 +50,64 @@ type kind [@ocaml "(ghost, ext, ext_ty) Svalue_ast.t_kind"] [@noeq] =
   | Extension of ext
 
 type unop [@ocaml "Svalue_ast.Unop.t"] =
-  | Not
-  | GetPtrLoc
-  | GetPtrOfs
-  | BvOfBool of nat
-  | BvOfFloat of rm * bool * nat
-  | FloatOfBv of rm * bool * fp
-  | FloatOfBvRaw of fp
-  | FloatOfFloat of rm * fp
-  | BvExtract of nat * nat
-  | BvExtend of bool * nat
-  | BvNot
-  | Neg of bool
-  | FAbs
-  | FNeg
-  | FSqrt
-  | FIs of fc
-  | FIsNeg
-  | FIsPos
-  | FRound of rm
+  | Not : TBool -> TBool
+  | GetPtrLoc : TPointer n -> TLoc n
+  | GetPtrOfs : TPointer n -> TBitVector n
+  | BvOfBool of nat (n) : TBool -> TBitVector n
+  | BvOfFloat of rm * bool * nat (_, _, n) : TFloat p -> TBitVector n
+  | FloatOfBv of rm * bool * fp (_, _, p) : TBitVector n -> TFloat p
+  | FloatOfBvRaw of fp (p) : TBitVector (fp_size p) -> TFloat p
+  | FloatOfFloat of rm * fp (_, p) : TFloat q -> TFloat p
+  | BvExtract of nat * nat (i, j) : TBitVector n -> TBitVector (j - i + 1)
+      when 0 <= i && i <= j && j < n
+  | BvExtend of bool * nat (_, k) : TBitVector n -> TBitVector (n + k)
+      when 0 <= k
+  | BvNot : TBitVector n -> TBitVector n
+  | Neg of bool : TBitVector n -> TBitVector n
+  | FAbs : TFloat p -> TFloat p
+  | FNeg : TFloat p -> TFloat p
+  | FSqrt : TFloat p -> TFloat p
+  | FIs of fc : TFloat p -> TBool
+  | FIsNeg : TFloat p -> TBool
+  | FIsPos : TFloat p -> TBool
+  | FRound of rm : TFloat p -> TFloat p
 
 type binop [@ocaml "Svalue_ast.Binop.t"] =
-  | And [@comm]
-  | Or [@comm]
-  | Eq [@comm]
-  | FEq [@comm]
-  | FLeq
-  | FLt
-  | FAdd
-  | FSub
-  | FMul
-  | FDiv
-  | FRem
-  | FMin
-  | FMax
-  | Add of checked [@comm]
-  | Sub of checked
-  | Mul of checked [@comm]
-  | Div of bool
-  | Rem of bool
-  | Mod
-  | AddOvf of bool [@comm]
-  | SubOvf of bool
-  | MulOvf of bool [@comm]
-  | Lt of bool
-  | Leq of bool
-  | BvConcat
-  | BitAnd [@comm]
-  | BitOr [@comm]
-  | BitXor [@comm]
-  | Shl
-  | LShr
-  | AShr
+  | And : TBool -> TBool -> TBool [@comm]
+  | Or : TBool -> TBool -> TBool [@comm]
+  | Eq : a -> b -> TBool when a = b [@comm]
+  | FEq : TFloat p -> TFloat p -> TBool [@comm]
+  | FLeq : TFloat p -> TFloat p -> TBool
+  | FLt : TFloat p -> TFloat p -> TBool
+  | FAdd : TFloat p -> TFloat p -> TFloat p
+  | FSub : TFloat p -> TFloat p -> TFloat p
+  | FMul : TFloat p -> TFloat p -> TFloat p
+  | FDiv : TFloat p -> TFloat p -> TFloat p
+  | FRem : TFloat p -> TFloat p -> TFloat p
+  | FMin : TFloat p -> TFloat p -> TFloat p
+  | FMax : TFloat p -> TFloat p -> TFloat p
+  | Add of checked : TBitVector n -> TBitVector n -> TBitVector n [@comm]
+  | Sub of checked : TBitVector n -> TBitVector n -> TBitVector n
+  | Mul of checked : TBitVector n -> TBitVector n -> TBitVector n [@comm]
+  | Div of bool : TBitVector n -> TBitVector n -> TBitVector n
+  | Rem of bool : TBitVector n -> TBitVector n -> TBitVector n
+  | Mod : TBitVector n -> TBitVector n -> TBitVector n
+  | AddOvf of bool : TBitVector n -> TBitVector n -> TBool [@comm]
+  | SubOvf of bool : TBitVector n -> TBitVector n -> TBool
+  | MulOvf of bool : TBitVector n -> TBitVector n -> TBool [@comm]
+  | Lt of bool : TBitVector n -> TBitVector n -> TBool
+  | Leq of bool : TBitVector n -> TBitVector n -> TBool
+  | BvConcat : TBitVector n -> TBitVector m -> TBitVector (n + m)
+  | BitAnd : TBitVector n -> TBitVector n -> TBitVector n [@comm]
+  | BitOr : TBitVector n -> TBitVector n -> TBitVector n [@comm]
+  | BitXor : TBitVector n -> TBitVector n -> TBitVector n [@comm]
+  | Shl : TBitVector n -> TBitVector n -> TBitVector n
+  | LShr : TBitVector n -> TBitVector n -> TBitVector n
+  | AShr : TBitVector n -> TBitVector n -> TBitVector n
 
 type triop [@ocaml "Svalue_ast.Triop.t"] =
-  | Fma
-  | Ite
+  | Fma : TFloat p -> TFloat p -> TFloat p -> TFloat p
+  | Ite : TBool -> a -> a -> a
 
 type nop [@ocaml "Svalue_ast.Nop.t"] =
   | Distinct

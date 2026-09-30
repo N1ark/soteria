@@ -67,6 +67,15 @@ type operator = {
   on_bv : string option;
 }
 
+(** The typing of an operator [C], as declared ([C (x, y) : s1 -> s2 when e]),
+    before it is checked with the rules (see {!typing}). *)
+type raw_typing = {
+  rt_params : Ppxlib.expression list;
+  rt_sorts : Ppxlib.expression list;
+  rt_when : Ppxlib.expression option;
+  rt_loc : Location.t;
+}
+
 (** The language that the rules are written in: its types, constructors and
     operators, as declared in its [.bvl] file. *)
 type lang = {
@@ -83,6 +92,7 @@ type lang = {
   lit_bool : string option;  (** the kind constructor of boolean literals *)
   lit_bv : string option;  (** the kind constructor of bit-vector literals *)
   operators : operator list;
+  raw_typing : (string * raw_typing) list;
 }
 
 let lang =
@@ -95,6 +105,7 @@ let lang =
       lit_bool = None;
       lit_bv = None;
       operators = [];
+      raw_typing = [];
     }
 
 let find_constr name = List.find_opt (fun c -> c.c_name = name) !lang.constrs
@@ -207,4 +218,17 @@ type fn = {
 }
 
 type prim = { pname : string; pargs : ty list; pret : ty; oracle : bool }
-type program = { prims : prim list; fns : fn list }
+
+(** The typing of an operator: its operands, then its result, have the sorts
+    [t_sorts] (terms of type [ty] over [t_vars], which are existentially
+    quantified, and the arguments [t_params] of the operator), under the
+    condition [t_when]. *)
+type typing = {
+  t_constr : constr;
+  t_params : string list;  (** one per argument, [_] if it is unnamed *)
+  t_vars : (string * ty) list;
+  t_sorts : expr list;
+  t_when : expr option;
+}
+
+type program = { prims : prim list; fns : fn list; typing : typing list }

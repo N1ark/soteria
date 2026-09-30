@@ -1742,8 +1742,8 @@ and bv_extend (signed : bool) (extend_by : Z.t) (v : t) : t =
               true
             | _ -> false
             );
-    (assert (P.zcompare extend_by Z.zero > 0);
     (match v with
+    | _ when (((P.zequal extend_by Z.zero))) -> v
     | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec _; _ }; _ } as bv) ->
       let bv = P.bv_of_lit bv in
       (if signed
@@ -1761,7 +1761,7 @@ and bv_extend (signed : bool) (extend_by : Z.t) (v : t) : t =
       (bv_of_bool (Z.add (size v) extend_by) b)
     | _ ->
       (P.node (Svalue_ast.Unop ((Svalue_ast.Unop.BvExtend (signed, (Z.to_int extend_by))), v)) (Svalue_ast.TBitVector ((Z.to_int (Z.add (size v) extend_by)))))
-    )))
+    ))
 
 and bv_concat (v1 : t) (v2 : t) : t =
     (assert (match v1.Hc.node.Svalue_ast.ty, v2.Hc.node.Svalue_ast.ty with

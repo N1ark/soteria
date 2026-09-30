@@ -486,8 +486,7 @@ rule bv_extract : BvExtract (from_, to_, (v : TBitVector sz)) =
       bv_extract from_ to_ l urem lit_extract from_ to_ n
 
 rule bv_extend : BvExtend (signed, extend_by, v) =
-  assert (extend_by > 0);
-  match v with
+  | zero: _ when extend_by = 0 -> v
   | lit: #bv -> if signed then lit_sext extend_by bv else lit_zext extend_by bv
   | extend: BvExtend (s, prev_by, v) when s = signed ->
       bv_extend signed (prev_by + extend_by) v

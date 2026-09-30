@@ -1,0 +1,25 @@
+; Differential tests of the rule functions of Bv_values, generated from the
+; rules by bvr.
+
+(rule
+ (targets rules_diff.gen.ml)
+ (action
+  (with-stdout-to
+   %{targets}
+   (run
+    %{exe:../../bvr/main.exe}
+    ocaml-tests
+    %{dep:../../lib/bv_values/rules/lang.bvl}
+    %{dep:../../lib/bv_values/rules/prelude.bvr}
+    %{dep:../../lib/bv_values/rules/bool.bvr}
+    %{dep:../../lib/bv_values/rules/bitvec.bvr}
+    %{dep:../../lib/bv_values/rules/float.bvr}
+    %{dep:../../lib/bv_values/rules/ptr.bvr}))))
+
+(test
+ (name rules_diff)
+ (libraries soteria floatml hc zarith fmt)
+ (preprocess
+  (pps ppx_include_file))
+ (preprocessor_deps
+  (file rules_diff.gen.ml)))

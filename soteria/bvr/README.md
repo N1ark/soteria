@@ -215,3 +215,12 @@ body do not depend on the swap.
 
 `lake build` checks every proof, and CI checks that the soundness theorem
 depends on no `sorry` (`check_axioms.lean`).
+
+## Tests
+
+`bvr ocaml-tests` generates, for every rule function, its spec, a call to it
+and the name of the rule that fires, from random arguments. The test in
+`soteria/tests/bv_rules/`, which runs with `dune test`, draws small well-typed
+arguments, and checks with `Eval` that the result of each rule function refines
+its spec under random assignments of the variables. `BVR_RULE_STATS=1` prints
+how often each rule fired.

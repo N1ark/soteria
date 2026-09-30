@@ -41,7 +41,7 @@ checks to be up to date (run `dune promote` after changing the rules):
   `Prims.lean`, and `Semantics.lean` gives terms their meaning (written by
   hand); that of Bv_values is parameterised by a semantics of floats `FS`, and
   that of Tiny_values follows the SMT-LIB encoding of its integers (Euclidean
-  `div` and `mod`, Z3's `rem`, and a zero divisor is poison).
+  `div` and `mod`, Z3's `rem`, and dividing by zero is undefined behaviour).
 - `Statements.lean` states that every alternative of every rule is sound: its
   result *refines* its spec (the raw term it simplifies): it has the same sort,
   and the same value wherever the raw term has one.

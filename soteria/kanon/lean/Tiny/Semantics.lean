@@ -15,12 +15,11 @@ with `none` standing for *poison*:
   `0 ≤ a mod b < |b|` and `a = b * (a div b) + a mod b`;
 - `rem` is Z3's (it is not in SMT-LIB): `a mod b`, negated when `b < 0`, so it
   has the sign of `b` (unlike OCaml's `Z.rem`, which has the sign of `a`);
-- division, `mod` and `rem` by zero are poison: SMT-LIB leaves their value
-  unspecified, and the typed interface of Tiny_values (`Typed.div`, ...)
-  requires a non-zero divisor. This is weaker than SMT-LIB, where `x div 0` is
-  some value, the same for the same `x` in a model: some rules rely on the
-  divisor not being zero (e.g. `leq.const_mod`, `0 ≤ x mod y`, or `rem.mul`),
-  as the typed interface ensures;
+- division, `mod` and `rem` by zero are undefined behaviour, which is poison
+  here: `Typed.div`, `Typed.rem` and `Typed.mod_` take a non-zero divisor, which
+  the interpreters check before dividing (e.g. `check_nonzero` in
+  soteria-linear), so the rules may assume that the divisor is not zero (e.g.
+  `leq.const_mod`, `0 ≤ x mod y`, or `rem.mul`);
 - `=` compares values (booleans or integers) and `distinct` holds when its
   operands (all of the same type) are pairwise different values; both are
   poison when one of their operands is;
@@ -32,9 +31,9 @@ with `none` standing for *poison*:
 The evaluator `soteria/lib/tiny_values/eval.ml` evaluates terms with the smart
 constructors, on literals, so its arithmetic is that of the rules on literals
 (`lits`), which compute with `Z.ediv` and `Z.erem` to agree with the encoding.
-It differs from this semantics on poison: it returns `None` on any division by
-zero, even in an operand of `&&` or `||` whose other operand is `false` (resp.
-`true`), where the solver, and this semantics, give a value.
+It returns `None` on any division by zero, even in an operand of `&&` or `||`
+whose other operand is `false` (resp. `true`), where this semantics gives a
+value.
 
 A smart constructor is sound when its result *refines* the raw node it
 simplifies (`Refines`): the result is well-typed, of the same type, and

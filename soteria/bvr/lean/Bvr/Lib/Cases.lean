@@ -36,13 +36,10 @@ macro "bvr_arm " h:ident p:term : tactic => `(tactic| first
           subst heq
           apply $p <;> assumption)))
 
-/-! ## Commutativity -/
+/-! ## Commutativity
 
-/-- The binary operators whose operands commute. -/
-def _root_.Bvr.Binop.Comm : Binop → Prop
-  | .And | .Or | .Eq | .FEq | .AddOvf _ | .MulOvf _ | .Add _ | .Mul _
-  | .BitAnd | .BitOr | .BitXor => True
-  | _ => False
+`Binop.Comm` is generated from the `[@comm]` operators of `lang.bvl`, and
+`evBinop_comm` proves that each of them commutes. -/
 
 theorem Binop.WT_comm {op : Binop} (hc : op.Comm) {a b t : Ty} (h : op.WT a b t) :
     op.WT b a t ∧ (op ≠ .Eq → a = b) := by

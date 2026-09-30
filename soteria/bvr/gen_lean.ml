@@ -1118,6 +1118,29 @@ let lean_header ~sources ft imports =
 
 let deriving ft () = pf ft "  deriving DecidableEq, Repr, Inhabited@ @ "
 
+(** [T.Comm]: the constructors of [T] that are commutative operators. *)
+let comm_def ft (d : decl) =
+  let cs = constrs_of d in
+  let comm = List.filter (fun c -> is_commutative c.c_name) cs in
+  if comm <> [] then (
+    let name = lean_name d.d_name in
+    pf ft
+      "/-- The operators whose operands commute (`[@@comm]`). -/@ @[<v 2>def \
+       %s.Comm : %s → Prop@ | %a => True"
+      name name
+      (list ~sep:" | " (fun ft c ->
+           pf ft ".%s%s" c.c_name
+             (String.concat "" (List.map (fun _ -> " _") c.c_args))))
+      comm;
+    if List.length comm < List.length cs then pf ft "@ | _ => False";
+    pf ft "@]@ @ ")
+
+(** A type of the language, and its facts. *)
+let lean_decl_full ft (d : decl) =
+  lean_decl ft d;
+  deriving ft ();
+  comm_def ft d
+
 (** [Types.lean]. *)
 let types ~sources ft =
   lean_header ~sources ft [];
@@ -1129,9 +1152,7 @@ let types ~sources ft =
              (reaches
                 (fun e -> is_abstract e || List.exists uses_term (components e))
                 d)
-      then (
-        lean_decl ft d;
-        deriving ft ()))
+      then lean_decl_full ft d)
     (sorted_decls ());
   pf ft "end Bvr@]@."
 
@@ -1152,11 +1173,7 @@ let syntax ~sources ft =
       (reaches (fun e -> List.exists uses_term (components e)))
       others
   in
-  List.iter
-    (fun d ->
-      lean_decl ft d;
-      deriving ft ())
-    plain;
+  List.iter (lean_decl_full ft) plain;
   pf ft "mutual@ ";
   List.iter (lean_decl ft) mutual;
   pf ft "@[<v 2>inductive Term where@ | mk (kind : %a) (ty : %a)@]@ end@ @ "

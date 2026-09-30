@@ -86,6 +86,11 @@ inductive Binop where
   | AShr
   deriving DecidableEq, Repr, Inhabited
 
+/-- The operators whose operands commute (`[@comm]`). -/
+def Binop.Comm : Binop → Prop
+  | .And | .Or | .Eq | .FEq | .Add _ | .Mul _ | .AddOvf _ | .MulOvf _ | .BitAnd | .BitOr | .BitXor => True
+  | _ => False
+
 inductive Triop where
   | Fma
   | Ite

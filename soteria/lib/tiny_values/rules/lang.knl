@@ -3,7 +3,11 @@
    uses, [bool], built into kanon and shared with other languages, and [int].
    This file declares its types, as the OCaml types of [Svalue] have them, in
    which Kanon places the nodes of its modules; see the README of Kanon for the
-   syntax and attributes. *)
+   syntax and attributes.
+
+   The Lean model lives in the namespace [Tiny], in [../lean/Tiny]. *)
+
+[@@@lean_root "Tiny"]
 
 use +bool
 use "int"

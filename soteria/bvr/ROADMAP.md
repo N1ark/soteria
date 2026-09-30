@@ -453,6 +453,11 @@ per-arm statements as today, and keeps the arm proofs working.
      language that has both; the order of the modules fixes the order of the
      rules. This is inside a language's stack of modules: downstream clients
      still do not extend base rules (question 4).
+   - The OCaml of a stack is monolithic: all the rules of its modules are
+     merged and generated together, so that soteria-rust gets one value
+     instantiation with Bool, BitVec and its own nodes side by side, instead
+     of the `Value_ext` functors. Proofs stay modular: a stack that uses a
+     module does not re-prove its rules.
 
 ## 5. Suggested order of PRs
 

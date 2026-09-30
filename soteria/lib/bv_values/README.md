@@ -57,6 +57,10 @@ one; otherwise the tactic given to its function by
 `kanon_arm` rejects a theorem that proves no arm, or an arm that already has a
 proof.
 
+`Kanon/Core/` is a trial of modules proved once for any language
+(`Bool.lean`, `Int.lean`, `Example.lean`), over the generic core of Kanon
+(`KanonCore.Lang`, in Kanon's repository), which `lake build` also checks.
+
 Both libraries build on the Lean library of Kanon (`KanonCore`, required by
 the `lakefile.toml`s at `KANON_COMMIT_HASH`), which gives `kanon_arm`,
 `kanon_proof%` and the tactics `kanon_auto`, `kanon_comm` and `kanon_congr`

@@ -10,5 +10,8 @@ git = "https://github.com/N1ark/kanon"
 rev = "f3e5c1aa6edf26f771029b76fe8e6ff585a7f69b"
 subDir = "lean"
 
+# The Bv_values proofs, and the trial of modules proved once for any
+# language (Kanon/Core)
 [[lean_lib]]
 name = "Kanon"
+roots = ["Kanon", "Kanon.Core.Example"]

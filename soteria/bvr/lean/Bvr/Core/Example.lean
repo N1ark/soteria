@@ -36,14 +36,37 @@ def wt : Op → List Ty → Ty → Prop
 def den : Op → List (Option Val) → Option Val
   | .tt, [] => some (.b true)
   | .ff, [] => some (.b false)
-  | .not, [v] => (v.bind Val.toBool).map (fun b => .b (!b))
+  | .not, [v] => (pnot (v.bind Val.toBool)).map .b
   | .and, [v, w] => (pand (v.bind Val.toBool) (w.bind Val.toBool)).map .b
+  | .or, [v, w] => (por (v.bind Val.toBool) (w.bind Val.toBool)).map .b
   | .int z, [] => some (.i z)
   | .add, [v, w] => (do let a ← v.bind Val.toInt; let b ← w.bind Val.toInt; pure (a + b)).map .i
   | _, _ => none
 
+/-- An operand that is not poison is kept; a poison one may become any value. -/
+theorem mono_arg {a b : Option Val} (h : ∀ x, a = some x → b = some x) :
+    (a = none ∨ (∃ x, a = some (.b x)) ∨ ∃ z, a = some (.i z)) ∧ b = a ∨
+      a = none ∧ (b = none ∨ (∃ x, b = some (.b x)) ∨ ∃ z, b = some (.i z)) := by
+  rcases a with _ | (x | z)
+  · rcases b with _ | (x | z) <;> simp
+  · exact .inl ⟨by simp, h _ rfl⟩
+  · exact .inl ⟨by simp, h _ rfl⟩
+
+theorem den_mono {o vs ws v} (h : Pointwise (fun a b => ∀ x, a = some x → b = some x) vs ws)
+    (e : den o vs = some v) : den o ws = some v := by
+  rcases h with _ | ⟨h1, _ | ⟨h2, _ | ⟨_, _⟩⟩⟩
+  · exact e
+  · rcases mono_arg h1 with ⟨rfl | ⟨_, rfl⟩ | ⟨_, rfl⟩, rfl⟩ | ⟨rfl, rfl | ⟨_, rfl⟩ | ⟨_, rfl⟩⟩ <;>
+      cases o <;> simp_all [den, pnot]
+  · rcases mono_arg h1 with ⟨rfl | ⟨x, rfl⟩ | ⟨_, rfl⟩, rfl⟩ | ⟨rfl, rfl | ⟨x, rfl⟩ | ⟨_, rfl⟩⟩ <;>
+    rcases mono_arg h2 with ⟨rfl | ⟨y, rfl⟩ | ⟨_, rfl⟩, rfl⟩ | ⟨rfl, rfl | ⟨y, rfl⟩ | ⟨_, rfl⟩⟩ <;>
+      cases o <;> (try cases x) <;> (try cases y) <;>
+      simp only [den, pand, por, Val.toBool, Val.toInt, Option.bind, Option.map] at e ⊢ <;>
+      simp_all
+  · cases o <;> simp [den] at e
+
 def lang : Lang :=
-  { Op, Ty, Val, wt, den, hasTy := fun v t => match v, t with
+  { Op, Ty, Val, wt, den, den_mono, hasTy := fun v t => match v, t with
       | .b _, .tbool | .i _, .tint => True
       | _, _ => False }
 
@@ -58,15 +81,16 @@ instance : HasBool lang where
   toBool := Val.toBool
   toBool_ofBool _ := rfl
   ofBool_of_toBool {v b} h := by cases v <;> simp_all [Val.toBool] <;> rfl
-  wt_lit {b as t} hb h := by rcases hb with rfl | rfl <;> exact h
+  wt_tt := Iff.rfl
+  wt_ff := Iff.rfl
   wt_not := Iff.rfl
   wt_and := Iff.rfl
-  wt_tt := ⟨rfl, rfl⟩
-  wt_ff := ⟨rfl, rfl⟩
+  wt_or := Iff.rfl
   den_tt := rfl
   den_ff := rfl
   den_not _ := rfl
   den_and _ _ := rfl
+  den_or _ _ := rfl
 
 instance : HasInt lang where
   op | .lit z => Op.int z | .add => .add
@@ -84,9 +108,14 @@ instance : HasInt lang where
   den_add _ _ := rfl
 
 /-- The rules of both modules are sound in this language, by their generic
-proofs. -/
-example (v1 v2 r : Term lang) (h : b_and.r_true v1 v2 = some r) : Refines (mkAnd v1 v2) r :=
-  b_and.r_true.sound h
+proofs, given sound smart constructors `O` for the rules to call. -/
+example (O : BoolOps lang) (hO : O.Sound) (v1 v2 r : Term lang)
+    (h : b_and.r_true v1 v2 = some r) : Refines (mkAnd v1 v2) r :=
+  b_and.r_true.sound O hO h
+
+example (O : BoolOps lang) (hO : O.Sound) (v r : Term lang)
+    (h : b_not.r_and O v = some r) : Refines (mkNot v) r :=
+  b_not.r_and.sound O hO h
 
 example (v1 v2 r : Term lang) (h : add.r_zero v1 v2 = some r) : Refines (mkAdd v1 v2) r :=
   add.r_zero.sound h

@@ -201,6 +201,7 @@ module Prims = struct
   let zero = zero
   let one = one
   let var_equal = Var.equal
+  let sort_by_tag l = List.sort compare l
   let tdiv = Z.div
   let trem = Z.rem
   let divisible = Z.divisible
@@ -218,13 +219,13 @@ let mk_commut_binop = R.mk_commut_binop
 
 (** {2 Boolean operations} *)
 
-let and_ = R.and_
-let or_ = R.or_
+let and_ = R.b_and
+let or_ = R.b_or
 let conj l = List.fold_left and_ v_true l
-let not = R.not_
-let distinct = R.distinct
+let not = R.b_not
+let distinct = R.b_distinct
 let distinct_seq s = distinct (List.of_seq s)
-let ite = R.ite
+let ite = R.b_ite
 
 (** {2 Integer operations} *)
 

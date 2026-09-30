@@ -1,0 +1,18 @@
+(* The int module of Tiny_values: mathematical integers. [[@literal "int"]]
+   marks integer literals: [0], [1], ... match them, and [#x] (or [Int x])
+   binds their value, an [int]. *)
+
+node Int of int [@literal "int"]
+node Leq : TInt -> TInt -> TBool
+node Lt : TInt -> TInt -> TBool
+node Plus : TInt -> TInt -> TInt [@comm]
+node Minus : TInt -> TInt -> TInt
+node Times : TInt -> TInt -> TInt [@comm]
+node Div : TInt -> TInt -> TInt
+node Rem : TInt -> TInt -> TInt
+node Mod : TInt -> TInt -> TInt
+node TInt
+
+infix "+" = Plus, add
+infix "-" = Minus, sub
+infix "*" = Times, mul

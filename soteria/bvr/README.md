@@ -12,8 +12,8 @@ It also generates a Lean model of the rules, with one soundness statement per
 rule, which are proved in `lean/` (see [Proofs](#proofs)).
 
 The smart constructors of `Tiny_values.Svalue` are generated in the same way,
-from `soteria/lib/tiny_values/rules/*.bvr`, into a plain module with its own
-primitives; they have no Lean model yet.
+from the shared `bool` module and `soteria/lib/tiny_values/rules/`, into a
+plain module with its own primitives; they have no Lean model yet.
 
 bvr is a small, pure, first-order language with its own typing. Its syntax is
 that of OCaml, apart from the declarations and rule names below; it is parsed
@@ -56,9 +56,10 @@ keywords.
 
 A language is made of modules, each with its declarations (`bool.bvl`) and
 its rules, primitives and helpers (`bool.bvr`): Bv_values of `bool`, `exists`,
-`bitvec`, `float` and `ptr`. The modules that several languages share are in
-`modules/`. The language itself (`lang.bvl`) only declares its types, as its
-OCaml AST has them, and implements the primitives of its modules.
+`bitvec`, `float` and `ptr`, and Tiny_values of `bool` and `int`. The modules
+that several languages share are in `modules/`. The language itself
+(`lang.bvl`) only declares its types, as its OCaml AST has them, and
+implements the primitives of its modules.
 
 - `node C ...`, in a module, declares the constructor `C` as a type would
   (`node And : TBool -> TBool -> TBool [@comm] [@idem]`), and the language
@@ -76,7 +77,7 @@ OCaml AST has them, and implements the primitives of its modules.
   e.g. the literals of each module to `sure_neq`. The cases go into the match
   that ends `f`, behind `let`s and the right operands of `||` and `&&`.
 - A node placed in `kind` itself, rather than in a type of operators, has its
-  operands as arguments (`Ite of t * t * t`) and no typing.
+  operands as arguments (`Ite of t * t * t` in Tiny_values) and no typing.
 
 ## Functions
 

@@ -1,30 +1,31 @@
 (* The language of Tiny_values, in which the rules of this directory are
-   written: booleans and mathematical integers. Its OCaml types are those of
-   [Svalue]; see [soteria/lib/bv_values/rules/lang.bvl] for the attributes.
-   [[@literal "int"]] marks integer literals: [0], [1], ... match them, and [#x]
-   (or [Int x]) binds their value, an [int]. *)
+   written: booleans and mathematical integers. It is made of the modules
+   [bool], shared with other languages in [soteria/bvr/modules], and [int].
+   This file declares its types, as the OCaml types of [Svalue] have them, and
+   places the nodes of its modules in them; see
+   [soteria/lib/bv_values/rules/lang.bvl] for the syntax and attributes. *)
 
 type kind [@ocaml "t_kind"] [@noeq] =
   | Var of var
-  | Bool of bool [@literal]
-  | Int of int [@literal "int"]
+  | Bool
+  | Int
   | Unop of unop * t [@operators]
   | Binop of binop * t * t [@operators]
   | Nop of nop * t list [@operators]
-  | Ite of t * t * t
+  | Ite
 
 type unop [@ocaml "Unop.t"] =
   | Not
 
 type binop [@ocaml "Binop.t"] =
-  | And [@comm]
-  | Or [@comm]
-  | Eq [@comm]
+  | And
+  | Or
+  | Eq
   | Leq
   | Lt
-  | Plus [@comm]
+  | Plus
   | Minus
-  | Times [@comm]
+  | Times
   | Div
   | Rem
   | Mod
@@ -35,11 +36,3 @@ type nop [@ocaml "Nop.t"] =
 type ty =
   | TBool
   | TInt
-
-infix "+" = Plus, add
-infix "-" = Minus, sub
-infix "*" = Times, mul
-infix "&&" = And, and_
-infix "||" = Or, or_
-infix "==" = Eq, sem_eq
-prefix "not" = Not, not_

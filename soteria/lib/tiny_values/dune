@@ -5,7 +5,9 @@
  (targets svalue_rules.gen.ml)
  (mode promote)
  (deps
-  rules/lang.bvl
+  (glob_files ../../bvr/modules/*.bvl)
+  (glob_files ../../bvr/modules/*.bvr)
+  (glob_files rules/*.bvl)
   (glob_files rules/*.bvr))
  (action
   (with-stdout-to
@@ -14,8 +16,9 @@
     %{exe:../../bvr/main.exe}
     ocaml
     rules/lang.bvl
-    rules/prelude.bvr
-    rules/bool.bvr
+    ../../bvr/modules/bool.bvl
+    rules/int.bvl
+    ../../bvr/modules/bool.bvr
     rules/int.bvr))))
 
 ; The check that the OCaml types of the language agree with its declaration.
@@ -23,8 +26,15 @@
 (rule
  (targets lang_check.gen.ml)
  (mode promote)
- (deps rules/lang.bvl)
+ (deps
+  (glob_files ../../bvr/modules/*.bvl)
+  (glob_files rules/*.bvl))
  (action
   (with-stdout-to
    %{targets}
-   (run %{exe:../../bvr/main.exe} ocaml-check rules/lang.bvl))))
+   (run
+    %{exe:../../bvr/main.exe}
+    ocaml-check
+    rules/lang.bvl
+    ../../bvr/modules/bool.bvl
+    rules/int.bvl))))

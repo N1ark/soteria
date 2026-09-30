@@ -765,7 +765,7 @@ let rule_fns ctx = List.filter (fun f -> fn_kind ctx f.name = Rule) ctx.fns
 
 let model ~sources ft (p : program) =
   let ctx = classify p in
-  header ~sources ft [ "Bvr.Prims" ];
+  header ~sources ft [ "Bvr.Signatures" ];
   (* oracles *)
   pf ft
     "@[<v 2>/-- The primitives that the model is parameterised by. -/@ \
@@ -1248,3 +1248,19 @@ let syntax ~sources ft =
       | None -> ())
     mutual;
   pf ft "instance : Inhabited Term := ⟨.mk default default⟩@ @ end Bvr@]@."
+
+(** [Signatures.lean]: checks that [Prims.lean] defines the primitives (other
+    than the oracles, which are fields of [Oracle]), with their types. *)
+let signatures ~sources ft (p : program) =
+  lean_header ~sources ft [ "Bvr.Prims" ];
+  pf ft
+    "/-! The primitives of the rules, with the types they are declared with. \
+     -/@ @ noncomputable section@ @ ";
+  List.iter
+    (fun (q : prim) ->
+      if not q.oracle then (
+        pf ft "example : ";
+        List.iter (fun t -> pf ft "%a → " lean_ty t) q.pargs;
+        pf ft "%a := %s@ " lean_ty q.pret q.pname))
+    p.prims;
+  pf ft "@ end@ @ end Bvr@]@."

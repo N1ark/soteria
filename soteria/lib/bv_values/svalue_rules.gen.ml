@@ -4,6 +4,88 @@
 
 open P
 
+module _ : sig
+  val node : (ghost, ext, ext_ty) Svalue_ast.t_kind -> ext_ty Svalue_ast.ty -> t
+  val zcompare : Z.t -> Z.t -> int
+  val zequal : Z.t -> Z.t -> bool
+  val equal_ty : ext_ty Svalue_ast.ty -> ext_ty Svalue_ast.ty -> bool
+  val bv_equal : bv -> bv -> bool
+  val lit_to_z : bool -> t -> Z.t
+  val lit_width : t -> Z.t
+  val sort_by_tag : (t list) -> (t list)
+  val used_binders : ((Symex.Var.t * ext_ty Svalue_ast.ty) list) -> t -> ((Symex.Var.t * ext_ty Svalue_ast.ty) list)
+  val size_of_ty : ext_ty Svalue_ast.ty -> Z.t
+  val fp_of_ty : ext_ty Svalue_ast.ty -> Svalue_ast.FloatPrecision.t
+  val mk_bv : Z.t -> Z.t -> t
+  val mk_masked : Z.t -> Z.t -> t
+  val bv_zero : Z.t -> t
+  val bv_one : Z.t -> t
+  val v_true : t
+  val v_false : t
+  val bv_of_lit : t -> bv
+  val lit : bv -> t
+  val width : bv -> Z.t
+  val to_z : bool -> bv -> Z.t
+  val of_z : Z.t -> Z.t -> bv
+  val lit_add : bv -> bv -> bv
+  val lit_sub : bv -> bv -> bv
+  val lit_mul : bv -> bv -> bv
+  val lit_neg : bv -> bv
+  val lit_udiv : bv -> bv -> bv
+  val lit_sdiv : bv -> bv -> bv
+  val lit_and : bv -> bv -> bv
+  val lit_or : bv -> bv -> bv
+  val lit_xor : bv -> bv -> bv
+  val lit_not : bv -> bv
+  val lit_shl : bv -> bv -> bv
+  val lit_lshr : bv -> bv -> bv
+  val lit_ashr : bv -> bv -> bv
+  val lit_urem : bv -> bv -> bv
+  val lit_srem : bv -> bv -> bv
+  val lit_smod : bv -> bv -> bv
+  val lit_extract : Z.t -> Z.t -> bv -> bv
+  val lit_zext : Z.t -> bv -> bv
+  val lit_sext : Z.t -> bv -> bv
+  val lit_concat : bv -> bv -> bv
+  val signed_extract : Z.t -> Z.t -> Z.t -> Z.t
+  val popcount : Z.t -> Z.t
+  val log2 : Z.t -> Z.t
+  val tdiv : Z.t -> Z.t -> Z.t
+  val trem : Z.t -> Z.t -> Z.t
+  val divisible : Z.t -> Z.t -> bool
+  val fp_size : Svalue_ast.FloatPrecision.t -> Z.t
+  val fp_of_size : Z.t -> Svalue_ast.FloatPrecision.t
+  val f_equal : Floatml.AnyFloat.t -> Floatml.AnyFloat.t -> bool
+  val f_bits_equal : Floatml.AnyFloat.t -> Floatml.AnyFloat.t -> bool
+  val f_to_bits : Floatml.AnyFloat.t -> Z.t
+  val f_of_bits : Svalue_ast.FloatPrecision.t -> Z.t -> Floatml.AnyFloat.t
+  val f_nan : Svalue_ast.FloatPrecision.t -> Floatml.AnyFloat.t
+  val f_is_class : Svalue_ast.FloatClass.t -> Floatml.AnyFloat.t -> bool
+  val f_is_nan : Floatml.AnyFloat.t -> bool
+  val f_is_zero : Floatml.AnyFloat.t -> bool
+  val f_is_negative : Floatml.AnyFloat.t -> bool
+  val f_is_positive : Floatml.AnyFloat.t -> bool
+  val f_eq : Floatml.AnyFloat.t -> Floatml.AnyFloat.t -> bool
+  val f_lt : Floatml.AnyFloat.t -> Floatml.AnyFloat.t -> bool
+  val f_le : Floatml.AnyFloat.t -> Floatml.AnyFloat.t -> bool
+  val f_add : Floatml.AnyFloat.t -> Floatml.AnyFloat.t -> Floatml.AnyFloat.t
+  val f_sub : Floatml.AnyFloat.t -> Floatml.AnyFloat.t -> Floatml.AnyFloat.t
+  val f_mul : Floatml.AnyFloat.t -> Floatml.AnyFloat.t -> Floatml.AnyFloat.t
+  val f_div : Floatml.AnyFloat.t -> Floatml.AnyFloat.t -> Floatml.AnyFloat.t
+  val f_rem : Floatml.AnyFloat.t -> Floatml.AnyFloat.t -> Floatml.AnyFloat.t
+  val f_fmod : Floatml.AnyFloat.t -> Floatml.AnyFloat.t -> Floatml.AnyFloat.t
+  val f_min : Floatml.AnyFloat.t -> Floatml.AnyFloat.t -> Floatml.AnyFloat.t
+  val f_max : Floatml.AnyFloat.t -> Floatml.AnyFloat.t -> Floatml.AnyFloat.t
+  val f_fma : Floatml.AnyFloat.t -> Floatml.AnyFloat.t -> Floatml.AnyFloat.t -> Floatml.AnyFloat.t
+  val f_abs : Floatml.AnyFloat.t -> Floatml.AnyFloat.t
+  val f_neg : Floatml.AnyFloat.t -> Floatml.AnyFloat.t
+  val f_sqrt : Floatml.AnyFloat.t -> Floatml.AnyFloat.t
+  val f_round : Svalue_ast.RoundingMode.t -> Floatml.AnyFloat.t -> Floatml.AnyFloat.t
+  val f_convert : Svalue_ast.RoundingMode.t -> Svalue_ast.FloatPrecision.t -> Floatml.AnyFloat.t -> Floatml.AnyFloat.t
+  val f_to_int : Svalue_ast.RoundingMode.t -> bool -> Z.t -> Floatml.AnyFloat.t -> (Z.t option)
+  val f_of_int : Svalue_ast.RoundingMode.t -> bool -> Svalue_ast.FloatPrecision.t -> Z.t -> Z.t -> (Floatml.AnyFloat.t option)
+end = P
+
 let[@inline] size (v : t) : Z.t = (P.size_of_ty v.Hc.node.Svalue_ast.ty)
 
 let[@inline] is_bv (t : ext_ty Svalue_ast.ty) : bool =

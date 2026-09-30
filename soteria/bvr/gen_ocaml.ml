@@ -357,6 +357,37 @@ let fn ctx ft (f : fn) =
   pf ft "%s%a : %a =@;<1 2>%a" f.name params f.params ocaml_ty f.ret (expr ctx)
     f.body
 
+(** The primitives that [expr] compiles inline, rather than calling them on [P].
+*)
+let inline_prims = [ "equal"; "ty"; "kind"; "tag_le" ]
+
+(** The functions of [P] that [expr] calls, other than the primitives, with
+    their types. *)
+let helpers () =
+  let ty t = Fmt.str "%a" ocaml_ty t in
+  [
+    ("node", Fmt.str "%s -> %s -> %s" (ty TKind) (ty TSty) (ty TTerm));
+    ("zcompare", "Z.t -> Z.t -> int");
+    ("zequal", "Z.t -> Z.t -> bool");
+    ("equal_ty", Fmt.str "%s -> %s -> bool" (ty TSty) (ty TSty));
+    ("bv_equal", Fmt.str "%s -> %s -> bool" (ty TBv) (ty TBv));
+    ("lit_to_z", Fmt.str "bool -> %s -> Z.t" (ty TTerm));
+    ("lit_width", Fmt.str "%s -> Z.t" (ty TTerm));
+  ]
+
+(** Checks that [P] defines the primitives and helpers, with their types. *)
+let prim_sigs ft (p : program) =
+  pf ft "@[<v 2>module _ : sig";
+  List.iter (fun (f, t) -> pf ft "@ val %s : %s" f t) (helpers ());
+  List.iter
+    (fun q ->
+      if not (List.mem q.pname inline_prims) then (
+        pf ft "@ val %s : " q.pname;
+        List.iter (fun t -> pf ft "%a -> " ocaml_ty t) q.pargs;
+        ocaml_ty ft q.pret))
+    p.prims;
+  pf ft "@]@ end = P@ @ "
+
 let program ~sources ft (p : program) =
   let groups = sccs p.fns in
   let consts =
@@ -372,6 +403,7 @@ let program ~sources ft (p : program) =
     sources;
   pf ft "[@@@@@@warning \"-a\"]@ @ ";
   pf ft "open P@ @ ";
+  prim_sigs ft p;
   List.iter
     (fun group ->
       let kw =

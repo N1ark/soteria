@@ -62,7 +62,9 @@ fn size (v : t) : int = size_of_ty (ty v)
 - `fn f params : ty = body` declares a helper. All functions can call each
   other.
 - `prim f : a -> b` declares a primitive, implemented by hand in
-  `Svalue.Make.Prims` and in `lean/Bvr/Prims.lean`; `oracle f : a -> b`
+  `Svalue.Make.Prims` and in `lean/Bvr/Prims.lean` (the generated
+  `svalue_rules.gen.ml` and `Signatures.lean` check that both define it, at
+  this type); `oracle f : a -> b`
   declares one that the Lean model takes as a parameter, so that the proofs
   may not rely on its behaviour (Floatml's arithmetic, the hash-consing order).
 

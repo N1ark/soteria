@@ -8,7 +8,10 @@ syntax sketched below), the part of B2 that generates the Lean types
 generated from `[@comm]`; `evBinop_comm` remains the hand-written obligation),
 A1 for the Lean files (`bvr lean-all` generates them in one run), and A2–A4
 (`bvr_tactic` and `bvr_arm` attributes, and arms named after their choices,
-with `main` for an arm without any). §1 describes the state before them.
+with `main` for an arm without any), and A6 without `Oracle.Compat` (the
+generated code checks the types of the primitives, in OCaml with a signature
+constraint that leaves `Prims` itself unsealed). §1 describes the state before
+them.
 
 ## 1. Where we are
 

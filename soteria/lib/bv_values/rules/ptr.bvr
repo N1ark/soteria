@@ -1,5 +1,12 @@
 (* Pointers *)
 
+(* {1 Helpers} *)
+
+extend fn sure_neq =
+  | Ptr (la, oa), Ptr (lb, ob) -> sure_neq la lb || sure_neq oa ob
+
+(* {1 Rules} *)
+
 rule ptr_loc (p : t) : GetPtrLoc p <| TLoc (size p) =
   match p with
   | ptr: Ptr (l, _) -> l

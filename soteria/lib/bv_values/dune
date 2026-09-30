@@ -5,6 +5,8 @@
  (targets svalue_rules.gen.ml)
  (mode promote)
  (deps
+  (glob_files ../../bvr/modules/*.bvl)
+  (glob_files ../../bvr/modules/*.bvr)
   (glob_files rules/*.bvl)
   (glob_files rules/*.bvr))
  (action
@@ -14,12 +16,13 @@
     %{exe:../../bvr/main.exe}
     ocaml
     rules/lang.bvl
-    rules/bool.bvl
+    ../../bvr/modules/bool.bvl
+    ../../bvr/modules/exists.bvl
     rules/bitvec.bvl
     rules/float.bvl
     rules/ptr.bvl
-    rules/prelude.bvr
-    rules/bool.bvr
+    ../../bvr/modules/bool.bvr
+    ../../bvr/modules/exists.bvr
     rules/bitvec.bvr
     rules/float.bvr
     rules/ptr.bvr))))
@@ -30,6 +33,7 @@
  (targets lang_check.gen.ml)
  (mode promote)
  (deps
+  (glob_files ../../bvr/modules/*.bvl)
   (glob_files rules/*.bvl))
  (action
   (with-stdout-to
@@ -38,7 +42,8 @@
     %{exe:../../bvr/main.exe}
     ocaml-check
     rules/lang.bvl
-    rules/bool.bvl
+    ../../bvr/modules/bool.bvl
+    ../../bvr/modules/exists.bvl
     rules/bitvec.bvl
     rules/float.bvl
     rules/ptr.bvl))))

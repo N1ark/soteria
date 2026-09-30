@@ -2,8 +2,10 @@
    written: its types, the constructors of its terms and the operators on
    them, which bvr no longer hard-codes.
 
-   It is made of the modules [bool], [bitvec], [float] and [ptr], in this
-   order, each declared by its [.bvl] file with its rules in its [.bvr] file.
+   It is made of the modules [bool] and [exists], which are shared with other
+   languages and live in [soteria/bvr/modules], then [bitvec], [float] and
+   [ptr], in this order, each declared by its [.bvl] file with its rules in its
+   [.bvr] file.
    A module declares its nodes ([node C ...], with the syntax and attributes
    of the constructors below) and its operators on terms; this file declares
    the types, as the OCaml AST has them, and places each node in one of them,

@@ -3,8 +3,9 @@
    attributes, and rule names [[@r]] attributes on their patterns. In the
    declaration of a language, types are OCaml type declarations, nodes are types
    [node] with a [[@node]] attribute, and operators [[@infix]] or [[@prefix]]
-   expressions; [extend rule f] items are [function]s of the rules they add to
-   [f], with [[@extend]] and [[@before]] attributes. *)
+   expressions; [extend rule f] and [extend fn f] items are [function]s of the
+   cases they add to [f], with [[@extend]], [[@before]] and [[@fn]] attributes.
+   *)
 
 %{
 open Ppxlib
@@ -130,11 +131,12 @@ item:
       let attrs = [ attr loc "spec" [ eval_item loc spec ]; attr loc "cases" [] ] in
       let t = typ loc (Ptyp_constr (lid loc "t", [])) in
       item loc (Pstr_value (Nonrecursive, [ binding loc ~attrs (pat loc (Ppat_var { txt = x; loc })) ps (Some t) body ])) }
-  | EXTEND RULE x = LID before = option(preceded(BEFORE, rule_name)) EQ BAR? cs = cases
+  | EXTEND fn = extended x = LID before = option(preceded(BEFORE, rule_name)) EQ BAR? cs = cases
     { let loc = mkloc $loc in
       let attrs =
         attr loc "extend" [ eval_item loc (string loc x) ]
         :: Option.to_list (Option.map (fun r -> attr loc "before" [ eval_item loc (string loc r) ]) before)
+        @ (if fn then [ attr loc "fn" [] ] else [])
       in
       item loc (Pstr_eval (exp loc (Pexp_function ([], None, Pfunction_cases (cs, loc, []))), attrs)) }
   | NODE c = constr_decl
@@ -275,6 +277,10 @@ case:
     { let loc = mkloc $loc(r) in
       let r = attr loc "r" [ eval_item loc (ident loc r) ] in
       { c with pc_lhs = { c.pc_lhs with ppat_attributes = c.pc_lhs.ppat_attributes @ [ r ] } } }
+
+extended:
+  | RULE { false }
+  | FN { true }
 
 rule_name:
   | r = LID { r }

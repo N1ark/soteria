@@ -6,6 +6,8 @@
 
 (rule
  (deps
+  (glob_files %{project_root}/soteria/bvr/modules/*.bvl)
+  (glob_files %{project_root}/soteria/bvr/modules/*.bvr)
   (glob_files %{project_root}/soteria/lib/bv_values/rules/*.bvl)
   (glob_files %{project_root}/soteria/lib/bv_values/rules/*.bvr))
  (targets
@@ -22,12 +24,13 @@
    %{exe:../../main.exe}
    lean-all
    %{project_root}/soteria/lib/bv_values/rules/lang.bvl
-   %{project_root}/soteria/lib/bv_values/rules/bool.bvl
+   %{project_root}/soteria/bvr/modules/bool.bvl
+   %{project_root}/soteria/bvr/modules/exists.bvl
    %{project_root}/soteria/lib/bv_values/rules/bitvec.bvl
    %{project_root}/soteria/lib/bv_values/rules/float.bvl
    %{project_root}/soteria/lib/bv_values/rules/ptr.bvl
-   %{project_root}/soteria/lib/bv_values/rules/prelude.bvr
-   %{project_root}/soteria/lib/bv_values/rules/bool.bvr
+   %{project_root}/soteria/bvr/modules/bool.bvr
+   %{project_root}/soteria/bvr/modules/exists.bvr
    %{project_root}/soteria/lib/bv_values/rules/bitvec.bvr
    %{project_root}/soteria/lib/bv_values/rules/float.bvr
    %{project_root}/soteria/lib/bv_values/rules/ptr.bvr)))

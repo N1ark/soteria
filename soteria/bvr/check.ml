@@ -1339,7 +1339,32 @@ let language (str : structure) =
       [] nodes
   in
   let placed = ref [] in
-  let place (cd : constructor_declaration) =
+  (* in [kind], rather than in a type of operators, a node has its operands as
+     arguments, and no typing *)
+  let in_kind (n : constructor_declaration) =
+    match (find_attr "sorts" n.pcd_attributes, n.pcd_args) with
+    | ( Some { attr_payload = PStr [ { pstr_desc = Pstr_eval (e, _); _ } ]; _ },
+        Pcstr_tuple args ) ->
+        let operands =
+          match e.pexp_desc with Pexp_tuple l -> List.length l - 1 | _ -> 0
+        in
+        let t =
+          Ast_builder.Default.ptyp_constr ~loc:n.pcd_loc
+            { txt = Lident "t"; loc = n.pcd_loc }
+            []
+        in
+        {
+          n with
+          pcd_args = Pcstr_tuple (args @ List.init operands (fun _ -> t));
+          pcd_attributes =
+            List.filter
+              (fun (a : attribute) ->
+                not (List.mem a.attr_name.txt [ "params"; "sorts"; "when" ]))
+              n.pcd_attributes;
+        }
+    | _ -> n
+  in
+  let place ty (cd : constructor_declaration) =
     match List.assoc_opt cd.pcd_name.txt nodes with
     | None -> cd
     | Some n ->
@@ -1350,14 +1375,18 @@ let language (str : structure) =
         if List.mem name !placed then
           error cd.pcd_loc "node %s is placed twice" name;
         placed := name :: !placed;
-        n
+        if ty = "kind" then in_kind n else n
   in
   let tds =
     List.map
       (fun (td : type_declaration) ->
         match td.ptype_kind with
         | Ptype_variant cds ->
-            { td with ptype_kind = Ptype_variant (List.map place cds) }
+            {
+              td with
+              ptype_kind =
+                Ptype_variant (List.map (place td.ptype_name.txt) cds);
+            }
         | _ -> td)
       tds
   in
@@ -2081,7 +2110,10 @@ let typings env0 =
 
 (** Adds the cases of each [extend rule f] item to the rule function [f], which
     an earlier item defines: before its rule [r] for [extend rule f before r],
-    and otherwise last, but before a final catch-all case [_]. *)
+    and otherwise last, but before a final catch-all case [_]. Likewise for
+    [extend fn f] and the function [f]. The cases go into the match in tail
+    position of [f]'s body, behind [let]s, sequences and the right operands of
+    [||] and [&&]. *)
 let extend_rules (str : structure) =
   let splice loc f before (ext : Ppxlib.case list) (cs : Ppxlib.case list) =
     ignore
@@ -2089,8 +2121,8 @@ let extend_rules (str : structure) =
          (fun names c ->
            match case_rule c with
            | Some r when List.mem r names ->
-               error c.pc_lhs.ppat_loc
-                 "extend rule %s: %s already has a rule %s" f f r
+               error c.pc_lhs.ppat_loc "extend %s: %s already has a rule %s" f f
+                 r
            | Some r -> r :: names
            | None -> names)
          (List.filter_map case_rule cs)
@@ -2104,7 +2136,7 @@ let extend_rules (str : structure) =
         in
         match go cs with
         | Some cs -> cs
-        | None -> error loc "extend rule %s: %s has no rule %s" f f r)
+        | None -> error loc "extend %s: %s has no rule %s" f f r)
     | None -> (
         match List.rev cs with
         | ({ pc_lhs = { ppat_desc = Ppat_any; _ }; pc_guard = None; _ } as last)
@@ -2118,9 +2150,16 @@ let extend_rules (str : structure) =
         { e with pexp_desc = Pexp_sequence (a, insert loc f before ext b) }
     | Pexp_let (r, vbs, b) ->
         { e with pexp_desc = Pexp_let (r, vbs, insert loc f before ext b) }
+    | Pexp_apply
+        ( ({ pexp_desc = Pexp_ident { txt = Lident ("||" | "&&"); _ }; _ } as op),
+          [ a; (l, b) ] ) ->
+        {
+          e with
+          pexp_desc = Pexp_apply (op, [ a; (l, insert loc f before ext b) ]);
+        }
     | Pexp_match (s, cs) ->
         { e with pexp_desc = Pexp_match (s, splice loc f before ext cs) }
-    | _ -> error loc "extend rule %s: %s does not end with a match" f f
+    | _ -> error loc "extend %s: %s does not end with a match" f f
   in
   let extend items (si : structure_item) =
     match si.pstr_desc with
@@ -2134,12 +2173,13 @@ let extend_rules (str : structure) =
         let loc = si.pstr_loc in
         let f = string_attr (Option.get (find_attr "extend" attrs)) in
         let before = Option.map string_attr (find_attr "before" attrs) in
+        let fn = has_attr "fn" attrs in
         let rec go = function
           | ({ pstr_desc = Pstr_value (r, [ vb ]); _ } as item) :: items
             when (match vb.pvb_pat.ppat_desc with
                    | Ppat_var { txt; _ } -> txt = f
                    | _ -> false)
-                 && Option.is_some (spec_of_attrs vb.pvb_attributes) -> (
+                 && Option.is_some (spec_of_attrs vb.pvb_attributes) <> fn -> (
               match vb.pvb_expr.pexp_desc with
               | Pexp_function (ps, ret, Pfunction_body body) ->
                   let body = insert loc f before ext body in
@@ -2154,9 +2194,12 @@ let extend_rules (str : structure) =
                     pstr_desc = Pstr_value (r, [ { vb with pvb_expr } ]);
                   }
                   :: items
-              | _ -> error loc "extend rule %s: %s is not a rule" f f)
+              | _ -> error loc "extend %s: %s has no parameters" f f)
           | item :: items -> item :: go items
-          | [] -> error loc "extend rule %s: no rule %s is defined before" f f
+          | [] ->
+              error loc "extend %s: no %s %s is defined before" f
+                (if fn then "fn" else "rule")
+                f
         in
         go items
     | _ -> si :: items

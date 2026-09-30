@@ -1,8 +1,8 @@
-(* The bool module, at the bottom of every language: booleans, equality,
-   [Ite], [Distinct] and [Exists]. See [lang.bvl] for the syntax. *)
+(* The bool module, at the bottom of every language: booleans, equality, [Ite]
+   and [Distinct]. See [soteria/lib/bv_values/rules/lang.bvl] for the syntax.
+   *)
 
 node Bool of bool [@literal]
-node Exists of (var * ty) list * t
 node Not : TBool -> TBool
 node And : TBool -> TBool -> TBool [@comm] [@idem]
 node Or : TBool -> TBool -> TBool [@comm] [@idem]

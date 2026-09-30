@@ -1,5 +1,50 @@
-(* Booleans: the rules of the bool module; the modules above it add theirs to
-   these rule functions with [extend rule] *)
+(* The bool module, at the bottom of every language: booleans, equality, [Ite]
+   and [Distinct]. The modules above it add their rules to its rule functions
+   with [extend rule], and their literals to [sure_neq] with [extend fn].
+
+   Primitives are implemented by hand by each language, in OCaml and in Lean.
+   Oracles have no Lean definition: the Lean model is parameterised by them,
+   and the properties that the proofs rely on are stated with the language.
+   Here, they are the hash-consing order. *)
+
+(* {1 Primitives} *)
+
+(* Terms *)
+prim equal : t -> t -> bool
+prim ty : t -> ty
+prim kind : t -> kind
+
+(* Whether [l] comes before [r] in the (arbitrary) hash-consing order. *)
+oracle tag_le : t -> t -> bool
+
+(* Sorts terms along the hash-consing order. *)
+oracle sort_by_tag : t list -> t list
+
+prim v_true : t
+prim v_false : t
+
+(* {1 Helpers} *)
+
+fn of_bool (b : bool) : t = if b then v_true else v_false
+
+(* [mk_commut_binop op l r] puts commutative binary operators in some normal
+   form where the element with the smallest tag is on the left. *)
+fn mk_commut_binop (op : binop) (l r : t) : kind =
+  if tag_le l r then Binop (op, l, r) else Binop (op, r, l)
+
+(* whether [a] and [b] surely have different values: the modules above add
+   their literals *)
+fn sure_neq (a b : t) : bool =
+  (not (ty a = ty b))
+  ||
+  match (a, b) with
+  | Bool a, Bool b -> not (a = b)
+  | _ -> false
+
+fn at_most_one (l : t list) : bool =
+  match l with [] | [ _ ] -> true | _ -> false
+
+(* {1 Rules} *)
 
 rule b_and (v1 v2 : t) : And (v1, v2) <| TBool =
   match v1 && v2 with
@@ -67,12 +112,6 @@ rule sem_eq (v1 v2 : t) : Eq (v1, v2) <| TBool =
   | true_: true == x -> x
   | nots: not b == not c -> b == c
   | default: _ -> mk_commut_binop Eq v1 v2 <| TBool
-
-rule b_mk_exists (binders : (var * ty) list) (body : t) :
-    Exists (binders, body) <| TBool =
-  match body with
-  | empty: _ when no_binders (used_binders binders body) -> body
-  | default: _ -> Exists (used_binders binders body, body) <| TBool
 
 rule sem_eq_untyped (v1 v2 : t) : Eq (v1, v2) <| TBool =
   match (v1, v2) with

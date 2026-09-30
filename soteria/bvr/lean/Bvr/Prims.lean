@@ -4,8 +4,8 @@ import Bvr.Float
 /-!
 # Primitives of the rule language
 
-The Lean counterparts of the primitives declared with `external` in
-`rules/prelude.bvr` (other than oracles), and of the integer operators. Where
+The Lean counterparts of the primitives declared with `prim` by the modules of
+Bv_values (other than oracles), and of the integer operators. Where
 the OCaml primitive raises (e.g. `Z.log2 0`), the Lean one returns an
 arbitrary value: the soundness theorem is about the results that the OCaml code
 does return, so this over-approximates it.

@@ -1,6 +1,57 @@
 (* Floating point *)
 
+(* {1 Primitives} *)
+
+(* The precision of a float type; fails otherwise. *)
+prim fp_of_ty : ty -> fp
+
+(* Floats, see [Floatml.AnyFloat] *)
+prim fp_size : fp -> int
+prim fp_of_size : int -> fp
+prim f_equal : float -> float -> bool
+prim f_bits_equal : float -> float -> bool
+prim f_to_bits : float -> int
+prim f_of_bits : fp -> int -> float
+prim f_nan : fp -> float
+prim f_is_class : fc -> float -> bool
+prim f_is_nan : float -> bool
+prim f_is_zero : float -> bool
+prim f_is_negative : float -> bool
+prim f_is_positive : float -> bool
+prim f_eq : float -> float -> bool
+prim f_lt : float -> float -> bool
+prim f_le : float -> float -> bool
+oracle f_add : float -> float -> float
+oracle f_sub : float -> float -> float
+oracle f_mul : float -> float -> float
+oracle f_div : float -> float -> float
+oracle f_rem : float -> float -> float
+oracle f_fmod : float -> float -> float
+oracle f_min : float -> float -> float
+oracle f_max : float -> float -> float
+oracle f_fma : float -> float -> float -> float
+prim f_abs : float -> float
+prim f_neg : float -> float
+oracle f_sqrt : float -> float
+oracle f_round : rm -> float -> float
+oracle f_convert : rm -> fp -> float -> float
+
+(* [f_to_int rm signed size f] converts [f] to an integer of [size] bits, if
+   that size is supported and the conversion is defined. *)
+oracle f_to_int : rm -> bool -> int -> float -> int option
+
+(* [f_of_int rm signed fp size z] converts the [size]-bit integer [z] to a
+   float, if that size is supported. *)
+oracle f_of_int : rm -> bool -> fp -> int -> int -> float option
+
+(* {1 Helpers} *)
+
+extend fn sure_neq =
+  | Float a, Float b -> not (f_equal a b)
+
 fn fp_of (v : t) : fp = fp_of_ty (ty v)
+
+(* {1 Rules} *)
 
 rule float_is_floatclass (fc : fc) (sv : t) : FIs (fc, sv) <| TBool =
   match sv with

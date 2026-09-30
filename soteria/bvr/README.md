@@ -25,7 +25,7 @@ bvr does not hard-code the language of Bv_values: the types of its terms,
 their constructors and the operators on them are declared in `.bvl` files,
 `soteria/lib/bv_values/rules/lang.bvl` and the declarations of its modules
 (see [Modules](#modules)), which `bvr` reads before the rules
-(`bvr BACKEND lang.bvl bool.bvl ... prelude.bvr bool.bvr ...`: the `.bvl`
+(`bvr BACKEND lang.bvl bool.bvl ... bool.bvr ...`: the `.bvl`
 files, then the `.bvr` files, each in order). Attributes mark the literals, the
 commutative operators and the kind constructors that operators stand for, and
 declare the laws of operators (see [Laws](#laws)); `infix` and `prefix` declare
@@ -55,9 +55,10 @@ keywords.
 ## Modules
 
 A language is made of modules, each with its declarations (`bool.bvl`) and
-its rules (`bool.bvr`): Bv_values of `bool`, then `bitvec`, `float` and `ptr`.
-The language itself (`lang.bvl`) only declares its types, as its OCaml AST has
-them.
+its rules, primitives and helpers (`bool.bvr`): Bv_values of `bool`, `exists`,
+`bitvec`, `float` and `ptr`. The modules that several languages share are in
+`modules/`. The language itself (`lang.bvl`) only declares its types, as its
+OCaml AST has them, and implements the primitives of its modules.
 
 - `node C ...`, in a module, declares the constructor `C` as a type would
   (`node And : TBool -> TBool -> TBool [@comm] [@idem]`), and the language
@@ -71,6 +72,11 @@ them.
   `bitvec.bvr`, for instance. A function's rules are tried in order, so this
   keeps the order of the rules independent of the modules they are written
   in.
+- `extend fn f = | p -> e ...` adds cases to the helper `f` in the same way,
+  e.g. the literals of each module to `sure_neq`. The cases go into the match
+  that ends `f`, behind `let`s and the right operands of `||` and `&&`.
+- A node placed in `kind` itself, rather than in a type of operators, has its
+  operands as arguments (`Ite of t * t * t`) and no typing.
 
 ## Functions
 
@@ -91,7 +97,7 @@ fn size (v : t) : int = size_of_ty (ty v)
   `option`, `list`.
 - `+`, `-`, `*` and unary `-` on `bv`s are modular, at the width of their
   first operand. `lit l` is the literal term of `l`, `to_z signed l` reads
-  `l` as an integer, `of_z n z` is `z mod 2^n` (see `prelude.bvr`).
+  `l` as an integer, `of_z n z` is `z mod 2^n` (see `bitvec.bvr`).
 - `rule f params : e = body` declares a *rule function*, which returns a term
   that must refine the raw term `e` (its spec). Every case of its top-level
   `match` is a rule, named by the label before its pattern (`lit:`).

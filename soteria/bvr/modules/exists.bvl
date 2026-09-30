@@ -1,0 +1,3 @@
+(* The exists module: existential quantification over terms. *)
+
+node Exists of (var * ty) list * t

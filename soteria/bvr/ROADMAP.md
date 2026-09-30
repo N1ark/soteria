@@ -15,9 +15,10 @@ constraint that leaves `Prims` itself unsealed), and D2 and D3 in OCaml only
 (tiny_values' smart constructors are generated from
 `soteria/lib/tiny_values/rules/`, with no Lean model and no shared prelude),
 and the front end of modules (§4, question 5: modules declare `node`s that the
-language places in its types, and add rules to lower modules' functions with
-`extend rule`; Bv_values is split into `bool`, `bitvec`, `float` and `ptr`,
-with unchanged output, but still one prelude).
+language places in its types, add rules to lower modules' functions with
+`extend rule` and cases to their helpers with `extend fn`, and declare their
+own primitives; Bv_values is made of `bool`, `exists`, `bitvec`, `float` and
+`ptr`, and the first two, in `soteria/bvr/modules/`, can be shared).
 §1 describes the state before them.
 
 ## 1. Where we are

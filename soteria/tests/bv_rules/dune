@@ -1,0 +1,19 @@
+; Differential tests of the rule functions of Bv_values, generated from the
+; rules by kanon.
+
+(rule
+ (targets rules_diff.gen.ml)
+ (deps
+  (glob_files ../../lib/bv_values/rules/*.{kn,knl}))
+ (action
+  (with-stdout-to
+   %{targets}
+   (run %{bin:kanon} ocaml-tests ../../lib/bv_values/rules/lang.knl))))
+
+(test
+ (name rules_diff)
+ (libraries soteria floatml hc zarith fmt)
+ (preprocess
+  (pps kanon.ppx_include_file))
+ (preprocessor_deps
+  (file rules_diff.gen.ml)))

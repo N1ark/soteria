@@ -18,3 +18,11 @@ and `lang_check.gen.ml` in the language's directory: dune regenerates them and
 promotes them to the source tree, where they are committed, and
 `[%%include_file "svalue_rules.gen.ml"]` (the ppx `kanon.ppx_include_file`)
 includes them where their primitives are in scope, in `Svalue.Make`.
+
+## Tests
+
+`soteria/tests/bv_rules/` runs the differential tests that `kanon ocaml-tests`
+generates: it draws small well-typed arguments for every rule function of
+Bv_values, and checks with `Eval` that its result refines its spec under random
+assignments of the variables. `KANON_RULE_STATS=1` prints how often each rule
+fired.

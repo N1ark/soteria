@@ -2549,6 +2549,14 @@ theorem bv_extract.r_default.proof : bv_extract.r_default.Stmt := by
   repeat' rcases Lib.orElse_some h with h | h
   · bvr_arm h (bv_extract.r_default.main.ok FS O hO)
 
+theorem bv_extend.r_zero.main.ok : bv_extend.r_zero.main.Stmt := bvr_proof% bv_extend.r_zero.main
+
+theorem bv_extend.r_zero.proof : bv_extend.r_zero.Stmt := by
+  intro FS O hO signed extend_by v res h
+  simp only [bv_extend.r_zero] at h
+  repeat' rcases Lib.orElse_some h with h | h
+  · bvr_arm h (bv_extend.r_zero.main.ok FS O hO)
+
 theorem bv_extend.r_lit.main.ok : bv_extend.r_lit.main.Stmt := bvr_proof% bv_extend.r_lit.main
 
 theorem bv_extend.r_lit.proof : bv_extend.r_lit.Stmt := by
@@ -4616,6 +4624,7 @@ theorem bv_extract.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (from_
 theorem bv_extend.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (signed : Bool) (extend_by : Int) (v : Term) :
   Refines FS (bv_extend.spec signed extend_by v) (bv_extend.step O signed extend_by v) := by
   unfold bv_extend.step
+  refine Refines.firstSome_cons (fun res h => bv_extend.r_zero.proof FS O hO signed extend_by v res h) ?_
   refine Refines.firstSome_cons (fun res h => bv_extend.r_lit.proof FS O hO signed extend_by v res h) ?_
   refine Refines.firstSome_cons (fun res h => bv_extend.r_extend.proof FS O hO signed extend_by v res h) ?_
   refine Refines.firstSome_cons (fun res h => bv_extend.r_ite.proof FS O hO signed extend_by v res h) ?_

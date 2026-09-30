@@ -3006,6 +3006,9 @@ def bv_extract.r_default (O : Ops) (from_ : Int) (to_ : Int) (v : Term) : Option
 def bv_extract.step (O : Ops) (from_ : Int) (to_ : Int) (v : Term) : Term :=
   (firstSome [bv_extract.r_lit O from_ to_ v, bv_extract.r_full O from_ to_ v, bv_extract.r_and_ O from_ to_ v, bv_extract.r_or_ O from_ to_ v, bv_extract.r_xor O from_ to_ v, bv_extract.r_shl O from_ to_ v, bv_extract.r_lshr O from_ to_ v, bv_extract.r_ite O from_ to_ v, bv_extract.r_zext_high O from_ to_ v, bv_extract.r_sext_bit O from_ to_ v, bv_extract.r_ext_low O from_ to_ v, bv_extract.r_ext_orig O from_ to_ v, bv_extract.r_extract O from_ to_ v, bv_extract.r_concat O from_ to_ v, bv_extract.r_add_low O from_ to_ v, bv_extract.r_add_const O from_ to_ v, bv_extract.r_mul_pow2 O from_ to_ v, bv_extract.r_mul_low O from_ to_ v, bv_extract.r_urem O from_ to_ v, bv_extract.r_default O from_ to_ v]).getD (bv_extract.spec from_ to_ v)
 
+def bv_extend.r_zero (O : Ops) (signed : Bool) (extend_by : Int) (v : Term) : Option Term :=
+  (match v with | _ => (whenSome (decide (extend_by = (0 : Int))) (v)))
+
 def bv_extend.r_lit (O : Ops) (signed : Bool) (extend_by : Int) (v : Term) : Option Term :=
   (match v with
     | bv@(Term.mk (Kind.BitVec _) _) =>
@@ -3044,7 +3047,7 @@ def bv_extend.r_default (O : Ops) (signed : Bool) (extend_by : Int) (v : Term) :
     ((Term.mk (Kind.Unop (Unop.BvExtend signed extend_by) v) (Ty.TBitVector ((size v) + extend_by))))))
 
 def bv_extend.step (O : Ops) (signed : Bool) (extend_by : Int) (v : Term) : Term :=
-  (firstSome [bv_extend.r_lit O signed extend_by v, bv_extend.r_extend O signed extend_by v, bv_extend.r_ite O signed extend_by v, bv_extend.r_of_bool O signed extend_by v, bv_extend.r_default O signed extend_by v]).getD (bv_extend.spec signed extend_by v)
+  (firstSome [bv_extend.r_zero O signed extend_by v, bv_extend.r_lit O signed extend_by v, bv_extend.r_extend O signed extend_by v, bv_extend.r_ite O signed extend_by v, bv_extend.r_of_bool O signed extend_by v, bv_extend.r_default O signed extend_by v]).getD (bv_extend.spec signed extend_by v)
 
 def bv_concat.r_lits (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with

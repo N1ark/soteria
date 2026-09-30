@@ -275,8 +275,8 @@ and fresh d ty depth =
             let k = int 4 in
             let i = int (k + 1) in
             unop (BvExtract (i, i + n - 1)) (sub (TBitVector (n + k)))
-        | 5 when n > 1 ->
-            let k = 1 + int (n - 1) in
+        | 5 ->
+            let k = int n in
             unop (BvExtend (chance 0.5, k)) (sub (TBitVector (n - k)))
         | 6 when n > 1 ->
             let k = 1 + int (n - 1) in

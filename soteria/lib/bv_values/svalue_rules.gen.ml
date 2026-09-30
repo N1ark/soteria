@@ -1705,8 +1705,9 @@ and bv_extract (from_ : Z.t) (to_ : Z.t) (v : t) : t =
 
 and bv_extend (signed : bool) (extend_by : Z.t) (v : t) : t =
     (assert (is_bv v.Hc.node.Svalue_ast.ty);
-    (assert (P.zcompare extend_by Z.zero > 0);
+    (assert (P.zcompare extend_by Z.zero >= 0);
     (match v with
+    | _ when (((P.zequal extend_by Z.zero))) -> v
     | ({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec _; _ }; _ } as bv) ->
       let bv = P.bv_of_lit bv in
       (if signed

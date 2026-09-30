@@ -3632,6 +3632,11 @@ def bv_extract.r_default.main.Stmt : Prop :=
   Refines FS (bv_extract.spec from_ to_ v)
   ((Term.mk (Kind.Unop (Unop.BvExtract from_ to_) v) (Ty.TBitVector ((to_ - from_) + (1 : Int)))))
 
+def bv_extend.r_zero.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (signed : Bool) (extend_by : Int) (v : Term) (res : Term), bv_extend.r_zero O signed extend_by v = some res →
+  Refines FS (bv_extend.spec signed extend_by v) res
+
 def bv_extend.r_lit.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
   ∀ (signed : Bool) (extend_by : Int) (v : Term) (res : Term), bv_extend.r_lit O signed extend_by v = some res →
@@ -3656,6 +3661,13 @@ def bv_extend.r_default.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
   ∀ (signed : Bool) (extend_by : Int) (v : Term) (res : Term), bv_extend.r_default O signed extend_by v = some res →
   Refines FS (bv_extend.spec signed extend_by v) res
+
+def bv_extend.r_zero.main.Stmt : Prop :=
+  ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
+  ∀ (signed : Bool) (extend_by : Int) (v : Term),
+  (decide (extend_by = (0 : Int))) = true →
+  Refines FS (bv_extend.spec signed extend_by v)
+  (v)
 
 def bv_extend.r_lit.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →

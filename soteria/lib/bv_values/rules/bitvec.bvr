@@ -324,8 +324,9 @@ rule bv_extract (from_ to_ : int) (v : t) :
 rule bv_extend (signed : bool) (extend_by : int) (v : t) :
     BvExtend (signed, extend_by, v) <| TBitVector (size v + extend_by) =
   assert (is_bv (ty v));
-  assert (extend_by > 0);
+  assert (extend_by >= 0);
   match v with
+  | zero: _ when extend_by = 0 -> v
   | lit: #bv ->
       if signed then (* Sign extend: replicate the MSB *)
         lit_sext extend_by bv

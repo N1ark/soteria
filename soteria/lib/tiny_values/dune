@@ -1,0 +1,24 @@
+; The smart constructors are generated from the rules, and promoted to the
+; source tree so that they are committed and reviewed with them.
+
+(rule
+ (targets svalue_rules.gen.ml)
+ (mode promote)
+ (deps
+  (glob_files rules/*.{kn,knl}))
+ (action
+  (with-stdout-to
+   %{targets}
+   (run %{bin:kanon} ocaml rules/lang.knl))))
+
+; The check that the OCaml types of the language agree with its declaration.
+
+(rule
+ (targets lang_check.gen.ml)
+ (mode promote)
+ (deps
+  (glob_files rules/*.{kn,knl}))
+ (action
+  (with-stdout-to
+   %{targets}
+   (run %{bin:kanon} ocaml-check rules/lang.knl))))

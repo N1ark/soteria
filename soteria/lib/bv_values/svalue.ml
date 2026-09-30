@@ -396,7 +396,7 @@ module Make (V : Value_ext) () = struct
   (** {2 Simplification rules}
 
       The simplifying smart constructors are generated from the rules in
-      [rules/*.bvr]; see [soteria/bvr]. *)
+      [rules/*.kn] by Kanon; see [soteria/kanon]. *)
 
   module Prims = struct
     type nonrec ghost = ghost

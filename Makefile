@@ -4,6 +4,11 @@ OCAML_VERSION=5.5.0
 OCAMLFORMAT_VERSION=0.29.0
 # [versionsync: DUNE_VERSION=3.23.1]
 DUNE_VERSION=3.23.1
+# Kanon, the rule language of the smart constructors of the value languages,
+# is not on opam
+# [versionsync: KANON_COMMIT_HASH=9368aaf15e677dfba118c0830585c3717e72a8dd]
+KANON_COMMIT_HASH=9368aaf15e677dfba118c0830585c3717e72a8dd
+KANON_PIN=$(OPAM) pin add -n -y kanon git+https://github.com/N1ark/kanon#$(KANON_COMMIT_HASH)
 
 OPAM=opam
 OPAMX=$(OPAM) exec --
@@ -136,6 +141,7 @@ packaging/soteria-rust/linux_dylibs.txt:
 switch:
 	$(OPAM) switch create --empty -y
 	$(OPAM) install ocaml-base-compile.$(OCAML_VERSION) dune.$(DUNE_VERSION) -y
+	$(KANON_PIN)
 	$(OPAM) install . --deps-only --with-test --with-doc -y
 	$(OPAM) install ocaml-lsp-server odig ocamlformat.$(OCAMLFORMAT_VERSION) -y
 
@@ -146,15 +152,18 @@ glob-switch:
 
 .PHONY: install
 install:
+	$(KANON_PIN)
 	$(OPAM) install . -y
 
 .PHONY: soteria-core-deps
 soteria-core-deps:
+	$(KANON_PIN)
 	$(OPAM) install ./soteria.opam --deps-only --with-test
 
 .PHONY: ocaml-deps
 ocaml-deps:
 	$(OPAM) install dune.$(DUNE_VERSION) ocamlformat.$(OCAMLFORMAT_VERSION) -y
+	$(KANON_PIN)
 	$(OPAM) install . --deps-only --with-test --with-doc -y
 	$(OPAM) install sherlodoc -y
 

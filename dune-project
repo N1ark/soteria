@@ -70,6 +70,7 @@
    (>= 3.23))
   (ppxlib
    (>= 0.38.0))
+  kanon
   (ppx_mixins
    (>= 0.2.0))
   (ppx_matches

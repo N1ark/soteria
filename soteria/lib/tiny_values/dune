@@ -5,21 +5,21 @@
  (targets svalue_rules.gen.ml)
  (mode promote)
  (deps
-  (glob_files ../../bvr/modules/*.bvl)
-  (glob_files ../../bvr/modules/*.bvr)
-  (glob_files rules/*.bvl)
-  (glob_files rules/*.bvr))
+  (glob_files ../../kanon/modules/*.knl)
+  (glob_files ../../kanon/modules/*.kn)
+  (glob_files rules/*.knl)
+  (glob_files rules/*.kn))
  (action
   (with-stdout-to
    %{targets}
    (run
-    %{exe:../../bvr/main.exe}
+    %{bin:kanon}
     ocaml
-    rules/lang.bvl
-    ../../bvr/modules/bool.bvl
-    rules/int.bvl
-    ../../bvr/modules/bool.bvr
-    rules/int.bvr))))
+    rules/lang.knl
+    ../../kanon/modules/bool.knl
+    rules/int.knl
+    ../../kanon/modules/bool.kn
+    rules/int.kn))))
 
 ; The check that the OCaml types of the language agree with its declaration.
 
@@ -27,14 +27,14 @@
  (targets lang_check.gen.ml)
  (mode promote)
  (deps
-  (glob_files ../../bvr/modules/*.bvl)
-  (glob_files rules/*.bvl))
+  (glob_files ../../kanon/modules/*.knl)
+  (glob_files rules/*.knl))
  (action
   (with-stdout-to
    %{targets}
    (run
-    %{exe:../../bvr/main.exe}
+    %{bin:kanon}
     ocaml-check
-    rules/lang.bvl
-    ../../bvr/modules/bool.bvl
-    rules/int.bvl))))
+    rules/lang.knl
+    ../../kanon/modules/bool.knl
+    rules/int.knl))))

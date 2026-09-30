@@ -31,7 +31,7 @@
    ppx_subliner
    ppx_mixins
    ppx_matches
-   ppx_include_file))
+   kanon.ppx_include_file))
  (preprocessor_deps
   (file "logs/assets/soteria_logs.js")
   (file "logs/assets/soteria_logs.css")

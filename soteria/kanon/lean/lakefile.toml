@@ -1,0 +1,14 @@
+name = "kanon_bv_values"
+defaultTargets = ["Kanon"]
+
+# The generic Lean core of Kanon, which the trial in Kanon/Core builds on
+# (run `lake update kanon` after changing the revision)
+# [versionsync: KANON_COMMIT_HASH=9368aaf15e677dfba118c0830585c3717e72a8dd]
+[[require]]
+name = "kanon"
+git = "https://github.com/N1ark/kanon"
+rev = "9368aaf15e677dfba118c0830585c3717e72a8dd"
+subDir = "lean"
+
+[[lean_lib]]
+name = "Kanon"

@@ -50,6 +50,12 @@ jobs:
       - name: Pin ppx_mixins to its fork
         run: opam pin add -n -y ppx_mixins.0.2.0 git+https://github.com/N1ark/ppx_mixins#431312ebef19c75563f25f7fb3b6ee28f56a2298
 
+      # Kanon, the rule language of the smart constructors of the value
+      # languages, is not on opam
+      # [versionsync: KANON_COMMIT_HASH=9368aaf15e677dfba118c0830585c3717e72a8dd]
+      - name: Pin kanon
+        run: opam pin add -n -y kanon git+https://github.com/N1ark/kanon#9368aaf15e677dfba118c0830585c3717e72a8dd
+
       - name: Export tracked files, as opam-repository would see them
         run: |
           mkdir -p pkg

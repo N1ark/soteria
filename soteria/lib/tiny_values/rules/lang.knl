@@ -1,0 +1,40 @@
+(* The language of Tiny_values, in which the rules of this directory are
+   written: booleans and mathematical integers. It is made of the modules
+   [bool], shared with other languages in [soteria/kanon/modules], and [int].
+   This file declares its types, as the OCaml types of [Svalue] have them, and
+   places the nodes of its modules in them; see
+   the README of Kanon for the syntax and attributes. *)
+
+type var [@ocaml "Symex.Var.t"] [@lean "Int"] [@noeq]
+
+type kind [@ocaml "t_kind"] [@noeq] =
+  | Var of var
+  | Bool
+  | Int
+  | Unop of unop * t [@operators]
+  | Binop of binop * t * t [@operators]
+  | Nop of nop * t list [@operators]
+  | Ite
+
+type unop [@ocaml "Unop.t"] =
+  | Not
+
+type binop [@ocaml "Binop.t"] =
+  | And
+  | Or
+  | Eq
+  | Leq
+  | Lt
+  | Plus
+  | Minus
+  | Times
+  | Div
+  | Rem
+  | Mod
+
+type nop [@ocaml "Nop.t"] =
+  | Distinct
+
+type ty =
+  | TBool
+  | TInt

@@ -1,5 +1,0 @@
-(library
- (name ppx_include_file)
- (public_name soteria.ppx_include_file)
- (kind ppx_rewriter)
- (libraries ppxlib))

@@ -1,0 +1,16 @@
+{"version": "1.2.0",
+ "packagesDir": ".lake/packages",
+ "packages":
+ [{"url": "https://github.com/N1ark/kanon",
+   "type": "git",
+   "subDir": "lean",
+   "scope": "",
+   "rev": "9368aaf15e677dfba118c0830585c3717e72a8dd",
+   "name": "kanon",
+   "manifestFile": "lake-manifest.json",
+   "inputRev": "9368aaf15e677dfba118c0830585c3717e72a8dd",
+   "inherited": false,
+   "configFile": "lakefile.toml"}],
+ "name": "kanon_bv_values",
+ "lakeDir": ".lake",
+ "fixedToolchain": false}

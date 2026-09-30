@@ -188,7 +188,7 @@ let one = int_z Z.one
 (** {2 Simplification rules}
 
     The simplifying smart constructors are generated from the rules in
-    [rules/*.bvr]; see [soteria/bvr]. *)
+    [rules/*.kn] by Kanon; see [soteria/kanon]. *)
 
 module Prims = struct
   let node = ( <| )

@@ -13,6 +13,11 @@ prim tdiv : int -> int -> int
 prim trem : int -> int -> int
 prim divisible : int -> int -> bool
 
+(* Euclidean division and remainder ([0 <= erem a b < |b|]), those of SMT-LIB's
+   [div] and [mod]; they fail on a zero divisor *)
+prim ediv : int -> int -> int
+prim erem : int -> int -> int
+
 (* {1 Helpers} *)
 
 fn abs (z : int) : int = if z < 0 then -z else z
@@ -73,22 +78,21 @@ rule mul : Times (v1, v2) =
 
 rule div : Div (v1, v2) =
   | one: _, 1 -> v1
-  | lits: Int a, Int b -> int_z (tdiv a b)
-  | mul: (x * Int a, Int b | Int b, x * Int a) when a = b -> x
+  | lits: Int a, Int b -> int_z (ediv a b)
+  | mul: x * Int a, Int b when a = b -> x
 
 rule rem : Rem (v1, v2) =
   | one: _, 1 -> zero
   | multiple: _, Int n when is_mod v1 n -> zero
-  | lits: Int a, Int b -> int_z (trem a b)
-  | mul: x * n, y * n ->
-      mul n (rem x y)
+  (* [rem] is Z3's: [mod], negated when the divisor is negative *)
+  | lits: Int a, Int b ->
+      if b < 0 then int_z (-erem a b) else int_z (erem a b)
+  | mul: x * Int n, y * Int m when n = m && 0 < n -> mul (int_z n) (rem x y)
 
 rule mod_ : Mod (v1, v2) =
   | one: _, 1 -> zero
   | multiple: _, Int n when is_mod v1 n -> zero
-  | lits: Int a, Int b ->
-      let r = trem a b in
-      if r < 0 then int_z (r + b) else int_z r
+  | lits: Int a, Int b -> int_z (erem a b)
   | mod_mod: Mod (x, Int a), Int b when a >= b && divisible a b -> mod_ x v2
   | add_mod: x + Mod (y, Int a), Int b
     when a >= b && divisible a b ->
@@ -124,7 +128,8 @@ rule lt : Lt (v1, v2) =
         if 0 < a then lt v (int_z (tdiv b a)) else lt (int_z (tdiv b a)) v)
       else if 0 < a then leq v (int_z (tdiv b a))
       else leq (int_z (tdiv b a)) v
-  | mod_const: (Mod (_, Int a) | Rem (_, Int a)), Int b when a <= b -> v_true
+  | mod_const: (Mod (_, Int a) | Rem (_, Int a)), Int b when abs a <= b ->
+      v_true
   | const_mod: Int b, (Mod (_, Int a) | Rem (_, Int a)) when b < -abs a ->
       v_true
   | const_ite: Int _, Ite (b, l, r) -> b_ite b (lt v1 l) (lt v1 r)
@@ -142,18 +147,19 @@ rule leq : Leq (v1, v2) =
   | const_sub: Int b, v - Int a -> leq (int_z (b + a)) v
   | const_rsub: Int b, Int a - v -> leq v (int_z (a - b))
   | const_mul: Int b, Int a * v ->
-      if a = 0 then of_bool (b < 0)
+      if a = 0 then of_bool (b <= 0)
       else if divisible b a || b < 0 then (
         if 0 < a then leq (int_z (tdiv b a)) v else leq v (int_z (tdiv b a)))
       else if 0 < a then lt (int_z (tdiv b a)) v
       else lt v (int_z (tdiv b a))
   | mul_const: v * Int a, Int b ->
-      if a = 0 then of_bool (b < 0)
+      if a = 0 then of_bool (0 <= b)
       else if divisible b a || b > 0 then (
         if 0 < a then leq v (int_z (tdiv b a)) else leq (int_z (tdiv b a)) v)
       else if 0 < a then lt v (int_z (tdiv b a))
       else lt (int_z (tdiv b a)) v
-  | mod_const: (Mod (_, Int a) | Rem (_, Int a)), Int b when a <= b -> v_true
+  | mod_const: (Mod (_, Int a) | Rem (_, Int a)), Int b when abs a <= b ->
+      v_true
   | const_rem: Int b, Rem (_, Int a) when b <= -abs a -> v_true
   | const_mod: Int b, Mod (_, _) when b <= 0 -> v_true
   | const_ite: Int _, Ite (b, l, r) -> b_ite b (leq v1 l) (leq v1 r)

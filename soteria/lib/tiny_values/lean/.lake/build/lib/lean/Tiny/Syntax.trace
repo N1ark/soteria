@@ -1,0 +1,33 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs":
+ {"o": ["7c405a0da5ebe735.olean"],
+  "m": false,
+  "i": "eae6c2e4d955e044.ilean",
+  "c": "61f82a7d148d382c.c"},
+ "log":
+ [{"message":
+   ".> LEAN_PATH=/home/user/stack/soteria/lib/tiny_values/lean/.lake/packages/kanon/lean/.lake/build/lib/lean:/home/user/stack/soteria/lib/tiny_values/lean/.lake/build/lib/lean /root/.elan/toolchains/leanprover--lean4---v4.34.1/bin/lean /home/user/stack/soteria/lib/tiny_values/lean/Tiny/Syntax.lean -o /home/user/stack/soteria/lib/tiny_values/lean/.lake/build/lib/lean/Tiny/Syntax.olean -i /home/user/stack/soteria/lib/tiny_values/lean/.lake/build/lib/lean/Tiny/Syntax.ilean -c /home/user/stack/soteria/lib/tiny_values/lean/.lake/build/ir/Tiny/Syntax.c --setup /home/user/stack/soteria/lib/tiny_values/lean/.lake/build/ir/Tiny/Syntax.setup.json --json",
+   "level": "trace"}],
+ "inputs":
+ [["deps",
+   [["kanon_tiny_values/Tiny:extraDep",
+     [["@kanon_tiny_values:extraDep", "00000000000006bb"]]],
+    ["imports",
+     [["Tiny.Abstract transitive imports (legacy)", "1344baf06cf869a6"],
+      ["Tiny.Abstract:importAllArts", "8526a235d2eadc07"]]]]],
+  ["libs",
+   [["import dynlibs", "00000000000006bb"],
+    ["package external libraries", "00000000000006bb"],
+    ["module dynlibs", "00000000000006bb"],
+    ["module plugins", "00000000000006bb"]]],
+  ["Lean 4.34.1, commit 5045d0056413266e57c625dcd7c365b10e377c52",
+   "e9f3658beb070375"],
+  ["/home/user/stack/soteria/lib/tiny_values/lean/Tiny/Syntax.lean",
+   "40cebbb57d860ff6"],
+  ["options", "00000000000006bb"],
+  ["isModule: false", "feefd2a0d3a1847e"],
+  ["Module.name: Tiny.Syntax", "79c2c83420e8b5ad"],
+  ["Package.id?: (some kanon_tiny_values)", "98fafb6e9813c7bb"],
+  ["Module.leanArgs: #[]", "00000000000006bb"]],
+ "depHash": "f3d78523bf109e59"}

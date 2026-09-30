@@ -1,0 +1,295 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs":
+ {"o": ["d491f87477f8b52d.olean"],
+  "m": false,
+  "i": "aeda3cea1da3c350.ilean",
+  "c": "7bdd34f6b82f6cea.c"},
+ "log":
+ [{"message":
+   ".> LEAN_PATH=/home/user/stack/soteria/lib/tiny_values/lean/.lake/packages/kanon/lean/.lake/build/lib/lean:/home/user/stack/soteria/lib/tiny_values/lean/.lake/build/lib/lean /root/.elan/toolchains/leanprover--lean4---v4.34.1/bin/lean /home/user/stack/soteria/lib/tiny_values/lean/Tiny/Soundness.lean -o /home/user/stack/soteria/lib/tiny_values/lean/.lake/build/lib/lean/Tiny/Soundness.olean -i /home/user/stack/soteria/lib/tiny_values/lean/.lake/build/lib/lean/Tiny/Soundness.ilean -c /home/user/stack/soteria/lib/tiny_values/lean/.lake/build/ir/Tiny/Soundness.c --setup /home/user/stack/soteria/lib/tiny_values/lean/.lake/build/ir/Tiny/Soundness.setup.json --json",
+   "level": "trace"},
+  {"message":
+   "Tiny/Soundness.lean:589:32: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [sem_eq.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:589:36: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [sem_eq.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:595:32: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [sem_eq.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:595:36: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [sem_eq.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:601:32: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [sem_eq.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:601:36: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [sem_eq.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:618:32: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [sem_eq.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:618:36: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [sem_eq.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:624:32: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [sem_eq.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:624:36: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [sem_eq.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:630:32: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [sem_eq.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:630:36: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [sem_eq.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:647:32: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [sem_eq.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:647:36: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [sem_eq.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:653:32: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [sem_eq.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:653:36: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [sem_eq.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:659:32: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [sem_eq.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:659:36: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [sem_eq.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:676:32: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [sem_eq.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:676:36: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [sem_eq.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:691:32: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [sem_eq.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:691:36: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [sem_eq.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:697:32: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [sem_eq.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:697:36: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [sem_eq.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:703:32: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [sem_eq.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:703:36: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [sem_eq.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:783:29: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [add.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:783:33: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [add.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:806:29: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [add.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:806:33: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [add.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:812:29: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [add.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:812:33: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [add.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:818:29: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [add.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:818:33: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [add.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:899:29: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [sub.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:899:33: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [sub.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:914:29: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [sub.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:914:33: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [sub.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:937:29: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [mul.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:937:33: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [mul.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:952:29: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [mul.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:952:33: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [mul.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:999:29: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [div.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:999:33: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [div.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1046:29: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [rem.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1046:33: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [rem.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1052:29: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [rem.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1052:33: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [rem.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1058:29: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [rem.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1058:33: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [rem.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1115:30: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [mod_.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1115:34: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [mod_.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1170:28: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [lt.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1170:32: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [lt.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1185:28: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [lt.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1185:32: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [lt.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1200:28: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [lt.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1200:32: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [lt.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1206:28: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [lt.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1206:32: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [lt.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1212:28: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [lt.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1212:32: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [lt.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1229:28: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [lt.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1229:32: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [lt.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1244:28: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [lt.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1244:32: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [lt.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1291:28: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [lt.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1291:32: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [lt.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1306:28: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [lt.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1306:32: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [lt.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1383:29: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [leq.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1383:33: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [leq.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1398:29: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [leq.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1398:33: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [leq.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1404:29: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [leq.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1404:33: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [leq.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1410:29: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [leq.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1410:33: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [leq.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1427:29: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [leq.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1427:33: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [leq.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1442:29: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [leq.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1442:33: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [leq.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1489:29: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [leq.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1489:33: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [leq.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1504:29: This simp argument is unused:\n  ty\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [leq.spec, Term.ty_mk]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"},
+  {"message":
+   "Tiny/Soundness.lean:1504:33: This simp argument is unused:\n  Term.ty_mk\n\nHint: Omit it from the simp argument list.\n  [apply] simp only [leq.spec, ty]\n\nNote: This linter can be disabled with `set_option linter.unusedSimpArgs false`",
+   "level": "warning"}],
+ "inputs":
+ [["deps",
+   [["kanon_tiny_values/Tiny:extraDep",
+     [["@kanon_tiny_values:extraDep", "00000000000006bb"]]],
+    ["imports",
+     [["Tiny.Statements transitive imports (legacy)", "dc678653d71ff6e1"],
+      ["Tiny.Statements:importAllArts", "9e4aca773bbb3c4d"],
+      ["Tiny.Lib.Rule transitive imports (legacy)", "c56c9e479ec8806d"],
+      ["Tiny.Lib.Rule:importAllArts", "d42482c39cc399ee"],
+      ["Tiny.Proofs transitive imports (legacy)", "7d1c981987567e15"],
+      ["Tiny.Proofs:importAllArts", "0ec3bef7bbb3c4a2"]]]]],
+  ["libs",
+   [["import dynlibs", "00000000000006bb"],
+    ["package external libraries", "00000000000006bb"],
+    ["module dynlibs", "00000000000006bb"],
+    ["module plugins", "00000000000006bb"]]],
+  ["Lean 4.34.1, commit 5045d0056413266e57c625dcd7c365b10e377c52",
+   "e9f3658beb070375"],
+  ["/home/user/stack/soteria/lib/tiny_values/lean/Tiny/Soundness.lean",
+   "b06c91e3a89565f5"],
+  ["options", "00000000000006bb"],
+  ["isModule: false", "feefd2a0d3a1847e"],
+  ["Module.name: Tiny.Soundness", "aceb786feeeda751"],
+  ["Package.id?: (some kanon_tiny_values)", "98fafb6e9813c7bb"],
+  ["Module.leanArgs: #[]", "00000000000006bb"]],
+ "depHash": "e26adac23bdebad3"}

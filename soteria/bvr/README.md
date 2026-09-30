@@ -123,7 +123,8 @@ expected stands for its literal: `| lits: #l, #r -> l + r`.
 
 - `0`, `1`, ... match bit-vector literals, `#_` any of them, and `#x` binds
   one (to its value in rules, to its unsigned integer in helpers); `true` and
-  `false` match boolean literals.
+  `false` match boolean literals. When the literals are integers
+  (`[@literal "int"]`), `#x` binds its integer in rules too.
 - A repeated variable matches equal terms: `| p, not p -> v_false`.
 - The operands of commutative operators (`+`, `*`, `land`, `lor`, `lxor`,
   `&&`, `||`, `==`, and `FEq`, `AddOvf`, `MulOvf`) match in either order:
@@ -131,7 +132,7 @@ expected stands for its literal: `| lits: #l, #r -> l + r`.
   wildcards or variables bound nowhere else, as it matches the same terms.
 - `p [@comm]` also matches the components of the pair `p` swapped (the
   arguments of the rule function): `(1, ~v) [@comm]` matches both `1, ~v` and
-  `~v, 1`.
+  `~v, 1`. Conversely, `(x + #k) [@nocomm]` only matches `x + #k`.
 - Or-patterns, `as`, `when` guards, `Some`/`None`, lists and partial records
   (`{ unsigned = true; _ }`) are supported. Each alternative of an or-pattern
   is tried in turn, together with the guard.

@@ -91,6 +91,10 @@ type lang = {
           stands for the node: [Add (c, l, r)] for [Binop (Add c, l, r)] *)
   lit_bool : string option;  (** the kind constructor of boolean literals *)
   lit_bv : string option;  (** the kind constructor of bit-vector literals *)
+  lit_int : bool;
+      (** [[@literal "int"]]: the literals of [lit_bv] are integers, and in
+          rules [#x] binds their argument, an [int], rather than their [bv]
+          value *)
   operators : operator list;
   raw_typing : (string * raw_typing) list;
 }
@@ -104,6 +108,7 @@ let lang =
       node_kinds = [];
       lit_bool = None;
       lit_bv = None;
+      lit_int = false;
       operators = [];
       raw_typing = [];
     }

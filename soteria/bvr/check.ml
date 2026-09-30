@@ -212,6 +212,9 @@ let rec pat (expected : Syntax.ty) (p : pattern) : Syntax.pat =
   if has_attr "comm" p.ppat_attributes then
     (* [p [@comm]]: the components of a pair in either order *)
     comm ~explicit:true (pat' expected (strip_attr "comm" p))
+  else if has_attr "nocomm" p.ppat_attributes then
+    (* [p [@nocomm]]: the operands of a commutative operator in this order *)
+    pat' expected (strip_attr "nocomm" p)
   else comm ~explicit:false (pat' expected p)
 
 and pat' (expected : Syntax.ty) (p : pattern) : Syntax.pat =
@@ -320,7 +323,10 @@ and pat' (expected : Syntax.ty) (p : pattern) : Syntax.pat =
       | _ -> error loc ":: at type %a" pp_ty expected)
   | Ppat_construct
       ({ txt = Lident name; _ }, Some (_, { ppat_desc = Ppat_var x; _ }))
-    when !cases_mode && expected = TTerm && Some name = !lang.lit_bv ->
+    when !cases_mode
+         && expected = TTerm
+         && Some name = !lang.lit_bv
+         && not !lang.lit_int ->
       mk (PLit x.txt)
   | Ppat_construct ({ txt = Lident name; _ }, arg) -> (
       match find_constr name with
@@ -1250,6 +1256,13 @@ let check_attrs allowed (attrs : attributes) =
 let find_attr name (attrs : attributes) =
   List.find_opt (fun (a : attribute) -> a.attr_name.txt = name) attrs
 
+(** [[@literal "int"]], rather than [[@literal]]: integer literals. *)
+let int_literal (attrs : attributes) =
+  match find_attr "literal" attrs with
+  | None | Some { attr_payload = PStr []; _ } -> false
+  | Some a when string_attr a = "int" -> true
+  | Some a -> error a.attr_loc "expected [@literal] or [@literal \"int\"]"
+
 (** Reads the declaration of a language, which the rules are then checked
     against. *)
 let language (str : structure) =
@@ -1404,7 +1417,7 @@ let language (str : structure) =
                   | TKind, [ Arg TBool ] when l.lit_bool = None ->
                       { l with lit_bool = Some name }
                   | TKind, [ Arg TInt ] when l.lit_bv = None ->
-                      { l with lit_bv = Some name }
+                      { l with lit_bv = Some name; lit_int = int_literal attrs }
                   | _ ->
                       error loc
                         "[@literal]: expected the only kind constructor of \

@@ -362,7 +362,8 @@ let fn ctx ft (f : fn) =
 let inline_prims = [ "equal"; "ty"; "kind"; "tag_le" ]
 
 (** The functions of [P] that [expr] calls, other than the primitives, with
-    their types. *)
+    their types; those on bit-vector values only if the language has bit-vector
+    literals. *)
 let helpers () =
   let ty t = Fmt.str "%a" ocaml_ty t in
   [
@@ -370,10 +371,15 @@ let helpers () =
     ("zcompare", "Z.t -> Z.t -> int");
     ("zequal", "Z.t -> Z.t -> bool");
     ("equal_ty", Fmt.str "%s -> %s -> bool" (ty TSty) (ty TSty));
-    ("bv_equal", Fmt.str "%s -> %s -> bool" (ty TBv) (ty TBv));
-    ("lit_to_z", Fmt.str "bool -> %s -> Z.t" (ty TTerm));
-    ("lit_width", Fmt.str "%s -> Z.t" (ty TTerm));
   ]
+  @
+  if Option.is_none !lang.lit_bv || !lang.lit_int then []
+  else
+    [
+      ("bv_equal", Fmt.str "%s -> %s -> bool" (ty TBv) (ty TBv));
+      ("lit_to_z", Fmt.str "bool -> %s -> Z.t" (ty TTerm));
+      ("lit_width", Fmt.str "%s -> Z.t" (ty TTerm));
+    ]
 
 (** Checks that [P] defines the primitives and helpers, with their types. *)
 let prim_sigs ft (p : program) =

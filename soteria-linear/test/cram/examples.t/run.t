@@ -229,15 +229,15 @@
   Specs for append:
     { args = [V|1|]; pre = [(V|1|, V|2|)];
       post = [(V|1|, V|3|); (V|3|, false)];
-      pc = [(false == V|2|); Distinct(V|3|, V|1|)]; ret = (Ok V|1|) }
+      pc = [!(V|2|); Distinct(V|1|, V|3|)]; ret = (Ok V|1|) }
     
-    { args = [V|1|]; pre = [(V|1|, V|2|)]; post = [(V|1|, V|2|)];
-      pc = [(false != V|2|)]; ret = (Error `Interp ("Type error")) }
+    { args = [V|1|]; pre = [(V|1|, V|2|)]; post = [(V|1|, V|2|)]; pc = [V|2|];
+      ret = (Error `Interp ("Type error")) }
     
-    { args = [V|1|]; pre = []; post = [(V|2|, false)]; pc = [(false == V|1|)];
+    { args = [V|1|]; pre = []; post = [(V|2|, false)]; pc = [!(V|1|)];
       ret = (Ok V|2|) }
     
-    { args = [V|1|]; pre = []; post = []; pc = [(false != V|1|)];
+    { args = [V|1|]; pre = []; post = []; pc = [V|1|];
       ret = (Error `Interp ("Type error")) }
   
   Specs for prepend:

@@ -1,0 +1,15 @@
+name = "kanon_tiny_values"
+defaultTargets = ["Tiny"]
+
+# The Lean library of Kanon, which the generated proofs build on
+# (run `lake update kanon` after changing the revision)
+# [versionsync: KANON_COMMIT_HASH=f3e5c1aa6edf26f771029b76fe8e6ff585a7f69b]
+[[require]]
+name = "kanon"
+git = "https://github.com/N1ark/kanon"
+rev = "f3e5c1aa6edf26f771029b76fe8e6ff585a7f69b"
+subDir = "lean"
+
+# The Lean model of Tiny_values
+[[lean_lib]]
+name = "Tiny"

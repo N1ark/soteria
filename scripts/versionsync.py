@@ -32,6 +32,7 @@ FILES_TO_SCAN = [
     "soteria-rust/lib/version.ml",
     ".github/workflows/build.yml",
     ".github/workflows/test-lib.yml",
+    "soteria/lib/bv_values/lean/lakefile.toml",
     ".github/workflows/test-packages.yml",
     ".github/workflows/benchmarks.yml",
     "soteria-rust.opam.template",

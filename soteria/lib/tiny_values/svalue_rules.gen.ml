@@ -306,11 +306,17 @@ let rec rem (v1 : t) (v2 : t) : t =
       P.zero
     | ({ Hc.node = { kind = Int (a); _ }; _ }, { Hc.node = { kind = Int (b); _ }; _ }) ->
       (P.int_z (P.trem a b))
-    | ({ Hc.node = { kind = Binop ((Binop.Times), x, n); _ }; _ }, { Hc.node = { kind = Binop ((Binop.Times), y, bvr__7); _ }; _ })
-      when ((Int.equal n.Hc.tag bvr__7.Hc.tag)) ->
+    | ({ Hc.node = { kind = Binop ((Binop.Times), x, n); _ }; _ }, { Hc.node = { kind = Binop ((Binop.Times), y, bvr__8); _ }; _ })
+      when ((Int.equal n.Hc.tag bvr__8.Hc.tag)) ->
       (mul n (rem x y))
-    | ({ Hc.node = { kind = Binop ((Binop.Times), n, x); _ }; _ }, { Hc.node = { kind = Binop ((Binop.Times), bvr__15, y); _ }; _ })
-      when ((Int.equal n.Hc.tag bvr__15.Hc.tag)) ->
+    | ({ Hc.node = { kind = Binop ((Binop.Times), x, n); _ }; _ }, { Hc.node = { kind = Binop ((Binop.Times), bvr__8, y); _ }; _ })
+      when ((Int.equal n.Hc.tag bvr__8.Hc.tag)) ->
+      (mul n (rem x y))
+    | ({ Hc.node = { kind = Binop ((Binop.Times), n, x); _ }; _ }, { Hc.node = { kind = Binop ((Binop.Times), y, bvr__8); _ }; _ })
+      when ((Int.equal n.Hc.tag bvr__8.Hc.tag)) ->
+      (mul n (rem x y))
+    | ({ Hc.node = { kind = Binop ((Binop.Times), n, x); _ }; _ }, { Hc.node = { kind = Binop ((Binop.Times), bvr__8, y); _ }; _ })
+      when ((Int.equal n.Hc.tag bvr__8.Hc.tag)) ->
       (mul n (rem x y))
     | _ -> (P.node (Binop (Binop.Rem, v1, v2)) v1.Hc.node.ty)
     )
@@ -332,6 +338,9 @@ let rec mod_ (v1 : t) (v2 : t) : t =
       when (((P.zcompare a b >= 0) && (P.divisible a b))) ->
       (mod_ x v2)
     | ({ Hc.node = { kind = Binop ((Binop.Plus), x, { Hc.node = { kind = Binop ((Binop.Mod), y, { Hc.node = { kind = Int (a); _ }; _ }); _ }; _ }); _ }; _ }, { Hc.node = { kind = Int (b); _ }; _ })
+      when (((P.zcompare a b >= 0) && (P.divisible a b))) ->
+      (mod_ (add x y) v2)
+    | ({ Hc.node = { kind = Binop ((Binop.Plus), { Hc.node = { kind = Binop ((Binop.Mod), y, { Hc.node = { kind = Int (a); _ }; _ }); _ }; _ }, x); _ }; _ }, { Hc.node = { kind = Int (b); _ }; _ })
       when (((P.zcompare a b >= 0) && (P.divisible a b))) ->
       (mod_ (add x y) v2)
     | _ -> (P.node (Binop (Binop.Mod, v1, v2)) TInt)

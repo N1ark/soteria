@@ -136,7 +136,7 @@ expected stands for its literal: `| lits: #l, #r -> l + r`.
   wildcards or variables bound nowhere else, as it matches the same terms.
 - `p [@comm]` also matches the components of the pair `p` swapped (the
   arguments of the rule function): `(1, ~v) [@comm]` matches both `1, ~v` and
-  `~v, 1`. Conversely, `(x + #k) [@nocomm]` only matches `x + #k`.
+  `~v, 1`.
 - Or-patterns, `as`, `when` guards, `Some`/`None`, lists and partial records
   (`{ unsigned = true; _ }`) are supported. Each alternative of an or-pattern
   is tried in turn, together with the guard.

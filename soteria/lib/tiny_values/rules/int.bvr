@@ -39,8 +39,7 @@ rule rem (v1 v2 : t) : Rem (v1, v2) <| ty v1 =
   | one: _, 1 -> zero
   | multiple: _, Int n when is_mod v1 n -> zero
   | lits: Int a, Int b -> int_z (trem a b)
-  | mul: ((x * n) [@nocomm], (y * n) [@nocomm]
-         | (n * x) [@nocomm], (n * y) [@nocomm]) ->
+  | mul: x * n, y * n ->
       mul n (rem x y)
   | default: _ -> Rem (v1, v2) <| ty v1
 
@@ -53,7 +52,7 @@ rule mod_ (v1 v2 : t) : Mod (v1, v2) <| TInt =
       if r < 0 then int_z (r + b) else int_z r
   | mod_mod: Mod (x, Int a), Int b when a >= b && divisible a b -> mod_ x v2
   (* (x + (y mod a)) mod b <=> (x + y) mod b, when b divides a *)
-  | add_mod: (x + Mod (y, Int a)) [@nocomm], Int b
+  | add_mod: x + Mod (y, Int a), Int b
     when a >= b && divisible a b ->
       mod_ (x + y) v2
   | default: _ -> Mod (v1, v2) <| TInt

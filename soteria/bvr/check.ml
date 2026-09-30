@@ -212,9 +212,6 @@ let rec pat (expected : Syntax.ty) (p : pattern) : Syntax.pat =
   if has_attr "comm" p.ppat_attributes then
     (* [p [@comm]]: the components of a pair in either order *)
     comm ~explicit:true (pat' expected (strip_attr "comm" p))
-  else if has_attr "nocomm" p.ppat_attributes then
-    (* [p [@nocomm]]: the operands of a commutative operator in this order *)
-    pat' expected (strip_attr "nocomm" p)
   else comm ~explicit:false (pat' expected p)
 
 and pat' (expected : Syntax.ty) (p : pattern) : Syntax.pat =

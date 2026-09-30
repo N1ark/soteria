@@ -48,13 +48,13 @@ theorem float_neg.r_neg.a1.proof : float_neg.r_neg.a1.Stmt := by
 theorem float_cast.r_lit.a1.proof : float_cast.r_lit.a1.Stmt := by
   intro FS O hO rm fp f T
   refine Refines.lit_of_unop (fun w => ?_) (fun hf => (hO.orc.convert rm fp f hf).2.2)
-  have := hO.orc.convert rm fp f (FloatLit.WF_of_WT (WT_unop.1 w).2)
+  have := hO.orc.convert rm fp f (Float.WF_of_WT (WT_unop.1 w).2)
   exact ⟨by rw [this.1], this.2.1⟩
 
 theorem float_fma.r_lits.a1.proof : float_fma.r_lits.a1.Stmt := by
   intro FS O hO fa Ta fb Tb fc Tc
-  have key : (float_fma.spec (.mk (.float fa) Ta) (.mk (.float fb) Tb) (.mk (.float fc) Tc)).WT →
-      Ta = .float fa.prec ∧ fa.WF ∧ fb.WF ∧ fc.WF ∧ fa.prec = fb.prec ∧ fa.prec = fc.prec := by
+  have key : (float_fma.spec (.mk (.Float fa) Ta) (.mk (.Float fb) Tb) (.mk (.Float fc) Tc)).WT →
+      Ta = .TFloat fa.prec ∧ fa.WF ∧ fb.WF ∧ fc.WF ∧ fa.prec = fb.prec ∧ fa.prec = fc.prec := by
     intro w
     obtain ⟨w0, w1, w2, w3⟩ := WT_triop.1 w
     obtain ⟨h1, h2⟩ := WT_float.1 w1
@@ -62,7 +62,7 @@ theorem float_fma.r_lits.a1.proof : float_fma.r_lits.a1.Stmt := by
     obtain ⟨h5, h6⟩ := WT_float.1 w3
     simp only [Triop.WT, Term.ty_mk, Ty.sort_eq] at w0
     subst h1 h3 h5
-    simp only [Ty.float.injEq] at w0
+    simp only [Ty.TFloat.injEq] at w0
     exact ⟨rfl, h2, h4, h6, w0.2.1.symm, w0.2.2.1.symm⟩
   refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
   · obtain ⟨hT, h1, h2, h3, hp, hp'⟩ := key w
@@ -76,8 +76,8 @@ theorem float_fma.r_lits.a1.proof : float_fma.r_lits.a1.Stmt := by
 
 theorem float_fmod.r_lits.a1.proof : float_fmod.r_lits.a1.Stmt := by
   intro FS O hO f1 T1 f2 T2
-  have key : (float_fmod.spec (.mk (.float f1) T1) (.mk (.float f2) T2)).WT →
-      T1 = .float f1.prec ∧ T2 = .float f2.prec ∧ f1.WF ∧ f2.WF ∧ f1.prec = f2.prec := by
+  have key : (float_fmod.spec (.mk (.Float f1) T1) (.mk (.Float f2) T2)).WT →
+      T1 = .TFloat f1.prec ∧ T2 = .TFloat f2.prec ∧ f1.WF ∧ f2.WF ∧ f1.prec = f2.prec := by
     intro w
     obtain ⟨_, _, wr, _⟩ := WT_triop.1 w
     obtain ⟨w0, w1, w2⟩ := WT_binop.1 wr
@@ -85,7 +85,7 @@ theorem float_fmod.r_lits.a1.proof : float_fmod.r_lits.a1.Stmt := by
     obtain ⟨h3, h4⟩ := WT_float.1 w2
     simp only [Binop.WT, Term.ty_mk, Ty.sort_eq] at w0
     subst h1 h3
-    simp only [Ty.float.injEq] at w0
+    simp only [Ty.TFloat.injEq] at w0
     exact ⟨rfl, rfl, h2, h4, w0.2.1.symm⟩
   refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
   · obtain ⟨hT, _, h1, h2, hp⟩ := key w
@@ -95,7 +95,7 @@ theorem float_fmod.r_lits.a1.proof : float_fmod.r_lits.a1.Stmt := by
     have := hO.orc.fmod f1 f2 ρ h1 h2 hp
     subst hT hT'
     rw [eval_float w']
-    simp only [float_fmod.spec, FloatLit.term, ty_eq, Term.ty_mk] at e this
+    simp only [float_fmod.spec, Float.term, ty_eq, Term.ty_mk] at e this
     rw [this.2.2] at e; exact e
 
 theorem bv_of_float.r_lit.a1.proof : bv_of_float.r_lit.a1.Stmt := by
@@ -109,20 +109,20 @@ theorem bv_of_float.r_lit.a1.proof : bv_of_float.r_lit.a1.Stmt := by
     · have ⟨w1, w2⟩ := WT_unop.1 w
       simp [Unop.WT] at w1
       rw [bv_of_float.spec, eval_unop w, eval_float w2] at e
-      rw [eval_mk_masked w1.1, ← hO.orc.to_int rm s n f z (FloatLit.WF_of_WT w2) w1.1 ez]
+      rw [eval_mk_masked w1.1, ← hO.orc.to_int rm s n f z (Float.WF_of_WT w2) w1.1 ez]
       exact e
 
 theorem bv_to_float.r_lit.a1.proof : bv_to_float.r_lit.a1.Stmt := by
   intro FS O hO rm s p z T
-  have key : (bv_to_float.spec rm s p (.mk (.bitVec z) T)).WT →
-      ∃ n : Int, 0 < n ∧ T = .bitVector n ∧ 0 ≤ z ∧ z < 2 ^ n.toNat := by
+  have key : (bv_to_float.spec rm s p (.mk (.BitVec z) T)).WT →
+      ∃ n : Int, 0 < n ∧ T = .TBitVector n ∧ 0 ≤ z ∧ z < 2 ^ n.toNat := by
     intro w
     have ⟨w1, w2⟩ := WT_unop.1 w
     simp [Unop.WT] at w1
     obtain ⟨n, hn, rfl⟩ := w1
     exact ⟨n, hn, rfl, (WT_bitVec_bv.1 w2).2⟩
-  rcases ez : O.orc.f_of_int rm s p (size (.mk (.bitVec z) T))
-    (to_z false (bv_of_lit (.mk (.bitVec z) T))) with _ | f
+  rcases ez : O.orc.f_of_int rm s p (size (.mk (.BitVec z) T))
+    (to_z false (bv_of_lit (.mk (.BitVec z) T))) with _ | f
   · simp [firstSome]; exact Refines.refl
   · simp [firstSome]
     refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
@@ -130,7 +130,7 @@ theorem bv_to_float.r_lit.a1.proof : bv_to_float.r_lit.a1.Stmt := by
     all_goals rw [to_z_bv_of_lit (WT_unop.1 w).2] at ez
     all_goals obtain ⟨hp, hf, he⟩ := hO.orc.of_int rm s p n z f hn h0 h1 ez
     · refine ⟨?_, by simp [bv_to_float.spec]⟩
-      simp only [Term.WT, hp]; exact ⟨trivial, by simpa [FloatLit.WF, hp] using hf⟩
+      simp only [Term.WT, hp]; exact ⟨trivial, by simpa [Float.WF, hp] using hf⟩
     · rw [bv_to_float.spec, eval_unop w, eval_bitVec' (WT_unop.1 w).2 (.inl rfl), he] at e
       rw [eval_eq_ev w']; simp only [ev]; exact e
 
@@ -150,14 +150,14 @@ theorem bv_to_float_raw.r_lit.a1.proof : bv_to_float_raw.r_lit.a1.Stmt := by
   · rw [eval_unop w, eval_bitVec' w2 (.inl w1.1)] at e
     simp [evUnop] at e
     rw [eval_eq_ev w']; simp only [ev]; rw [← e]
-    simp [FloatLit.sem, FloatLit.val, f_of_bits]
+    simp [Float.sem, Float.val, f_of_bits]
     apply BitVec.eq_of_toNat_eq
     rw [BitVec.toNat_ofNat, BitVec.toNat_ofInt, Nat.mod_eq_of_lt (by omega)]; simp
 
 theorem float_eq.r_same.a1.proof : float_eq.r_same.a1.Stmt := by
   intro FS O hO v1 v2 h
   simp only [equal, decide_eq_true_eq] at h; subst h
-  refine Refines.trans ?_ (Refines.b_not hO (hO.float_is_floatclass .nan v1))
+  refine Refines.trans ?_ (Refines.b_not hO (hO.float_is_floatclass .NaN v1))
   refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
   · obtain ⟨hp, _, _, w1, _⟩ := (WT_fcmp (Or.inl rfl)).1 w
     refine ⟨WT_unop.2 ⟨by simp [Unop.WT, float_is_floatclass.spec],

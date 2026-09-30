@@ -64,14 +64,14 @@ def signed_extract (z o l : Int) : Int :=
 mutual
 /-- The free variables of a term (see `iter_vars`). -/
 def Term.freeVars : Term → List Int
-  | .mk (.var v) _ => [v]
-  | .mk (.ptr a b) _ => a.freeVars ++ b.freeVars
-  | .mk (.seq l) _ => Term.freeVarsList l
-  | .mk (.unop _ a) _ => a.freeVars
-  | .mk (.binop _ a b) _ => a.freeVars ++ b.freeVars
-  | .mk (.triop _ a b c) _ => a.freeVars ++ b.freeVars ++ c.freeVars
-  | .mk (.nop _ l) _ => Term.freeVarsList l
-  | .mk (.exists_ bs body) _ =>
+  | .mk (.Var v) _ => [v]
+  | .mk (.Ptr a b) _ => a.freeVars ++ b.freeVars
+  | .mk (.Seq l) _ => Term.freeVarsList l
+  | .mk (.Unop _ a) _ => a.freeVars
+  | .mk (.Binop _ a b) _ => a.freeVars ++ b.freeVars
+  | .mk (.Triop _ a b c) _ => a.freeVars ++ b.freeVars ++ c.freeVars
+  | .mk (.Nop _ l) _ => Term.freeVarsList l
+  | .mk (.Exists bs body) _ =>
       body.freeVars.filter (fun v => !(bs.any (fun b => b.1 == v)))
   | .mk _ _ => []
 
@@ -88,23 +88,23 @@ def used_binders (bs : List (Int × Ty)) (body : Term) : List (Int × Ty) :=
   bs.filter (fun b => body.freeVars.contains b.1)
 
 def size_of_ty : Ty → Int
-  | .bitVector n | .loc n | .pointer n => n
+  | .TBitVector n | .TLoc n | .TPointer n => n
   | _ => 0
 
-def fp_of_ty : Ty → Prec
-  | .float p => p
-  | _ => .f32
+def fp_of_ty : Ty → Fp
+  | .TFloat p => p
+  | _ => .F32
 
-def mk_masked (n z : Int) : Term := .mk (.bitVec (z % 2 ^ n.toNat)) (.bitVector n)
+def mk_masked (n z : Int) : Term := .mk (.BitVec (z % 2 ^ n.toNat)) (.TBitVector n)
 
 /-- `BitVec.mk` asserts that its argument is in range; where it returns, it is
 `mk_masked`. -/
 def mk_bv (n z : Int) : Term := mk_masked n z
 
-def bv_zero (n : Int) : Term := .mk (.bitVec 0) (.bitVector n)
-def bv_one (n : Int) : Term := .mk (.bitVec 1) (.bitVector n)
-def v_true : Term := .mk (.bool true) .bool
-def v_false : Term := .mk (.bool false) .bool
+def bv_zero (n : Int) : Term := .mk (.BitVec 0) (.TBitVector n)
+def bv_one (n : Int) : Term := .mk (.BitVec 1) (.TBitVector n)
+def v_true : Term := .mk (.Bool true) .TBool
+def v_false : Term := .mk (.Bool false) .TBool
 
 /-! ## Bit-vector values -/
 
@@ -115,10 +115,10 @@ structure BvVal where
 deriving DecidableEq
 
 def bv_of_lit : Term → BvVal
-  | .mk (.bitVec z) t => ⟨(size_of_ty t).toNat, BitVec.ofInt _ z⟩
+  | .mk (.BitVec z) t => ⟨(size_of_ty t).toNat, BitVec.ofInt _ z⟩
   | _ => ⟨0, 0⟩
 
-def lit (l : BvVal) : Term := .mk (.bitVec l.x.toNat) (.bitVector l.w)
+def lit (l : BvVal) : Term := .mk (.BitVec l.x.toNat) (.TBitVector l.w)
 def width (l : BvVal) : Int := l.w
 def to_z (signed : Bool) (l : BvVal) : Int := if signed then l.x.toInt else l.x.toNat
 def of_z (n z : Int) : BvVal := ⟨n.toNat, BitVec.ofInt _ z⟩
@@ -150,30 +150,30 @@ def lit_concat (l r : BvVal) : BvVal := ⟨l.w + r.w, l.x ++ r.x⟩
 
 /-! ## Floats, as Floatml's `AnyFloat` -/
 
-def fp_size (p : Prec) : Int := p.size
+def fp_size (p : Fp) : Int := p.size
 
-def fp_of_size (n : Int) : Prec :=
-  if n = 16 then .f16 else if n = 64 then .f64 else if n = 128 then .f128 else .f32
+def fp_of_size (n : Int) : Fp :=
+  if n = 16 then .F16 else if n = 64 then .F64 else if n = 128 then .F128 else .F32
 
-def f_equal (a b : FloatLit) : Bool := decide (a = b)
-def f_bits_equal (a b : FloatLit) : Bool := decide (a = b)
-def f_to_bits (f : FloatLit) : Int := f.bits
-def f_of_bits (p : Prec) (z : Int) : FloatLit := ⟨p, (z % 2 ^ p.size).toNat⟩
-def f_nan (p : Prec) : FloatLit := ⟨p, (FBits.nan p).toNat⟩
-def f_is_class (fc : FClass) (f : FloatLit) : Bool := f.val.isClass fc
-def f_is_nan (f : FloatLit) : Bool := f.val.isNaN
-def f_is_zero (f : FloatLit) : Bool := f.val.isZero
-def f_is_negative (f : FloatLit) : Bool := f.val.isNeg
-def f_is_positive (f : FloatLit) : Bool := f.val.isPos
+def f_equal (a b : Float) : Bool := decide (a = b)
+def f_bits_equal (a b : Float) : Bool := decide (a = b)
+def f_to_bits (f : Float) : Int := f.bits
+def f_of_bits (p : Fp) (z : Int) : Float := ⟨p, (z % 2 ^ p.size).toNat⟩
+def f_nan (p : Fp) : Float := ⟨p, (FBits.nan p).toNat⟩
+def f_is_class (fc : Fc) (f : Float) : Bool := f.val.isClass fc
+def f_is_nan (f : Float) : Bool := f.val.isNaN
+def f_is_zero (f : Float) : Bool := f.val.isZero
+def f_is_negative (f : Float) : Bool := f.val.isNeg
+def f_is_positive (f : Float) : Bool := f.val.isPos
 
-def FloatLit.cmp (c : ∀ {p}, FBits p → FBits p → Bool) (a b : FloatLit) : Bool :=
+def Float.cmp (c : ∀ {p}, FBits p → FBits p → Bool) (a b : Float) : Bool :=
   if h : b.prec = a.prec then c a.val (h ▸ b.val) else false
 
-def f_eq : FloatLit → FloatLit → Bool := FloatLit.cmp FBits.eq
-def f_lt : FloatLit → FloatLit → Bool := FloatLit.cmp FBits.lt
-def f_le : FloatLit → FloatLit → Bool := FloatLit.cmp FBits.le
-def f_abs (f : FloatLit) : FloatLit := ⟨f.prec, (FBits.abs f.val).toNat⟩
-def f_neg (f : FloatLit) : FloatLit := ⟨f.prec, (FBits.neg f.val).toNat⟩
+def f_eq : Float → Float → Bool := Float.cmp FBits.eq
+def f_lt : Float → Float → Bool := Float.cmp FBits.lt
+def f_le : Float → Float → Bool := Float.cmp FBits.le
+def f_abs (f : Float) : Float := ⟨f.prec, (FBits.abs f.val).toNat⟩
+def f_neg (f : Float) : Float := ⟨f.prec, (FBits.neg f.val).toNat⟩
 
 end Bvr
 

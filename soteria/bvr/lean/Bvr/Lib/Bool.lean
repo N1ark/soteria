@@ -12,20 +12,20 @@ open Classical
 /-! ## Bounds -/
 
 @[simp] theorem upper_bound_lt {s a z T T'} :
-    upper_bound (.mk (.binop (.lt s) a (.mk (.bitVec z) T)) T') =
-      to_z s (bv_of_lit (.mk (.bitVec z) T)) - 1 := by
+    upper_bound (.mk (.Binop (.Lt s) a (.mk (.BitVec z) T)) T') =
+      to_z s (bv_of_lit (.mk (.BitVec z) T)) - 1 := by
   simp [upper_bound, firstSome]
 @[simp] theorem upper_bound_leq {s a z T T'} :
-    upper_bound (.mk (.binop (.leq s) a (.mk (.bitVec z) T)) T') =
-      to_z s (bv_of_lit (.mk (.bitVec z) T)) := by
+    upper_bound (.mk (.Binop (.Leq s) a (.mk (.BitVec z) T)) T') =
+      to_z s (bv_of_lit (.mk (.BitVec z) T)) := by
   simp [upper_bound, firstSome]
 @[simp] theorem lower_bound_lt {s a z T T'} :
-    lower_bound (.mk (.binop (.lt s) (.mk (.bitVec z) T) a) T') =
-      to_z s (bv_of_lit (.mk (.bitVec z) T)) + 1 := by
+    lower_bound (.mk (.Binop (.Lt s) (.mk (.BitVec z) T) a) T') =
+      to_z s (bv_of_lit (.mk (.BitVec z) T)) + 1 := by
   simp [lower_bound, firstSome]
 @[simp] theorem lower_bound_leq {s a z T T'} :
-    lower_bound (.mk (.binop (.leq s) (.mk (.bitVec z) T) a) T') =
-      to_z s (bv_of_lit (.mk (.bitVec z) T)) := by
+    lower_bound (.mk (.Binop (.Leq s) (.mk (.BitVec z) T) a) T') =
+      to_z s (bv_of_lit (.mk (.BitVec z) T)) := by
   simp [lower_bound, firstSome]
 
 /-- Closes the comparisons of bit-vectors, as integers. -/
@@ -102,10 +102,10 @@ theorem getD_firstSome_orElse {α} {o : Option α} {l : List (Option α)} {d : �
 
 theorem sure_neq_cases {a b : Term} (h : sure_neq a b = true) :
     a.ty ≠ b.ty ∨
-    (∃ za zb Ta Tb, a = .mk (.bitVec za) Ta ∧ b = .mk (.bitVec zb) Tb ∧ za ≠ zb) ∨
-    (∃ fa fb Ta Tb, a = .mk (.float fa) Ta ∧ b = .mk (.float fb) Tb ∧ fa ≠ fb) ∨
-    (∃ ba bb Ta Tb, a = .mk (.bool ba) Ta ∧ b = .mk (.bool bb) Tb ∧ ba ≠ bb) ∨
-    (∃ la oa lb ob Ta Tb, a = .mk (.ptr la oa) Ta ∧ b = .mk (.ptr lb ob) Tb ∧
+    (∃ za zb Ta Tb, a = .mk (.BitVec za) Ta ∧ b = .mk (.BitVec zb) Tb ∧ za ≠ zb) ∨
+    (∃ fa fb Ta Tb, a = .mk (.Float fa) Ta ∧ b = .mk (.Float fb) Tb ∧ fa ≠ fb) ∨
+    (∃ ba bb Ta Tb, a = .mk (.Bool ba) Ta ∧ b = .mk (.Bool bb) Tb ∧ ba ≠ bb) ∨
+    (∃ la oa lb ob Ta Tb, a = .mk (.Ptr la oa) Ta ∧ b = .mk (.Ptr lb ob) Tb ∧
       (sure_neq la lb = true ∨ sure_neq oa ob = true)) := by
   unfold sure_neq at h
   simp only [getD_firstSome_orElse, Bool.or_eq_true, Bool.not_eq_true', ty_eq] at h
@@ -145,7 +145,7 @@ theorem sure_neq_sound_aux {FS : FloatSem} (k : Nat) : ∀ {a b : Term} {ρ : En
       rw [eval_eq_ev wa, ev] at ea; rw [eval_eq_ev wb, ev, ← ea] at eb
       simp only [Term.WT] at wa wb
       rcases fa with ⟨p, x⟩; rcases fb with ⟨q, y⟩
-      simp only [FloatLit.sem, FloatLit.val, Option.some.injEq, Val.float.injEq] at eb
+      simp only [Float.sem, Float.val, Option.some.injEq, Val.float.injEq] at eb
       obtain ⟨rfl, eb⟩ := eb
       simp only [heq_eq_eq] at eb
       have := congrArg BitVec.toNat eb
@@ -160,7 +160,7 @@ theorem sure_neq_sound_aux {FS : FloatSem} (k : Nat) : ∀ {a b : Term} {ρ : En
       obtain ⟨rfl, rfl, rfl⟩ := he
       obtain ⟨m, -, hTa, hla', hoa', -, -⟩ := eval_WT ea
       obtain ⟨m', -, hTb, hlb', hob', -, -⟩ := eval_WT eb
-      simp only [Term.ty_mk] at ht; rw [hTa, hTb] at ht; simp only [Ty.pointer.injEq] at ht
+      simp only [Term.ty_mk] at ht; rw [hTa, hTb] at ht; simp only [Ty.TPointer.injEq] at ht
       subst ht
       simp only [Ty.sort_eq] at *
       rcases hp with hp | hp
@@ -174,7 +174,7 @@ theorem sure_neq_sound {FS : FloatSem} {a b : Term} {ρ : Env} {u : Val} (h : su
 theorem Refines.and_eq_neq {FS p1 q1 p2 q2 x y a T1 T2 T}
     (o1 : (p1 = a ∧ q1 = x) ∨ (p1 = x ∧ q1 = a)) (o2 : (p2 = a ∧ q2 = y) ∨ (p2 = y ∧ q2 = a))
     (hn : sure_neq x y = true) :
-    Refines FS (.mk (.binop .and_ (.mk (.binop .eq p1 q1) T1) (.mk (.binop .eq p2 q2) T2)) T)
+    Refines FS (.mk (.Binop .And (.mk (.Binop .Eq p1 q1) T1) (.mk (.Binop .Eq p2 q2) T2)) T)
       v_false := by
   refine Refines.intro (fun w => ?_) (fun ρ v w _ e => ?_)
   · have := (WT_binop.1 w).1; simp [Binop.WT] at this; simp [v_false, this, WT_bool]
@@ -314,7 +314,7 @@ theorem eval_distinct_eq_some {FS ρ l v} (e : eval FS ρ (b_distinct.spec l) = 
 /-! ## `exists` -/
 
 theorem mem_freeVars_exists {bs : List (Int × Ty)} {body : Term} {T : Ty} {v : Int} :
-    v ∈ (Term.mk (.exists_ bs body) T).freeVars ↔ v ∈ body.freeVars ∧ ∀ b ∈ bs, b.1 ≠ v := by
+    v ∈ (Term.mk (.Exists bs body) T).freeVars ↔ v ∈ body.freeVars ∧ ∀ b ∈ bs, b.1 ≠ v := by
   simp [Term.freeVars]
 
 /-- Moving an extension of [ρa] to one of [ρb], where they agree on the free variables. -/
@@ -337,35 +337,35 @@ mutual
 theorem ev_congr {FS : FloatSem} :
     ∀ (t : Term) (ρ1 ρ2 : Env), ρ1.ext = ρ2.ext → (∀ v ∈ t.freeVars, ρ1.var v = ρ2.var v) →
       ev FS ρ1 t = ev FS ρ2 t
-  | .mk (.var x) T, ρ1, ρ2, _, hv => by
+  | .mk (.Var x) T, ρ1, ρ2, _, hv => by
       simp only [ev]; rw [hv x (by simp [Term.freeVars])]
-  | .mk (.bool b) T, ρ1, ρ2, _, _ => by simp only [ev]
-  | .mk (.float f) T, ρ1, ρ2, _, _ => by simp only [ev]
-  | .mk (.bitVec z) T, ρ1, ρ2, _, _ => by simp only [ev]
-  | .mk (.ptr l o) T, ρ1, ρ2, he, hv => by
+  | .mk (.Bool b) T, ρ1, ρ2, _, _ => by simp only [ev]
+  | .mk (.Float f) T, ρ1, ρ2, _, _ => by simp only [ev]
+  | .mk (.BitVec z) T, ρ1, ρ2, _, _ => by simp only [ev]
+  | .mk (.Ptr l o) T, ρ1, ρ2, he, hv => by
       simp only [ev]
       rw [ev_congr l ρ1 ρ2 he (fun v h => hv v (by simp [Term.freeVars, h])),
         ev_congr o ρ1 ρ2 he (fun v h => hv v (by simp [Term.freeVars, h]))]
-  | .mk (.seq l) T, ρ1, ρ2, he, hv => by
+  | .mk (.Seq l) T, ρ1, ρ2, he, hv => by
       simp only [ev]
       rw [evList_congr l ρ1 ρ2 he (fun v h => hv v (by simpa [Term.freeVars] using h))]
-  | .mk (.unop op a) T, ρ1, ρ2, he, hv => by
+  | .mk (.Unop op a) T, ρ1, ρ2, he, hv => by
       simp only [ev]
       rw [ev_congr a ρ1 ρ2 he (fun v h => hv v (by simpa [Term.freeVars] using h))]
-  | .mk (.binop op a b) T, ρ1, ρ2, he, hv => by
+  | .mk (.Binop op a b) T, ρ1, ρ2, he, hv => by
       simp only [ev]
       rw [ev_congr a ρ1 ρ2 he (fun v h => hv v (by simp [Term.freeVars, h])),
         ev_congr b ρ1 ρ2 he (fun v h => hv v (by simp [Term.freeVars, h]))]
-  | .mk (.triop op g a b) T, ρ1, ρ2, he, hv => by
+  | .mk (.Triop op g a b) T, ρ1, ρ2, he, hv => by
       have hg := ev_congr (FS := FS) g ρ1 ρ2 he (fun v h => hv v (by simp [Term.freeVars, h]))
       have ha := ev_congr (FS := FS) a ρ1 ρ2 he (fun v h => hv v (by simp [Term.freeVars, h]))
       have hb := ev_congr (FS := FS) b ρ1 ρ2 he (fun v h => hv v (by simp [Term.freeVars, h]))
       cases op <;> simp only [ev] <;> rw [hg, ha, hb]
-  | .mk (.nop op l) T, ρ1, ρ2, he, hv => by
+  | .mk (.Nop op l) T, ρ1, ρ2, he, hv => by
       cases op
       simp only [ev]
       rw [evList_congr l ρ1 ρ2 he (fun v h => hv v (by simpa [Term.freeVars] using h))]
-  | .mk (.exists_ bs body) T, ρ1, ρ2, he, hv => by
+  | .mk (.Exists bs body) T, ρ1, ρ2, he, hv => by
       have key : ∀ ρa ρb : Env, ρa.ext = ρb.ext →
           (∀ v, v ∈ body.freeVars → (∀ b ∈ bs, b.1 ≠ v) → ρa.var v = ρb.var v) →
           ∀ ρ' : Env, ρ'.Extends ρa bs →
@@ -389,7 +389,7 @@ theorem ev_congr {FS : FloatSem} :
         · rintro ⟨ρ', hx, e⟩; obtain ⟨ρ'', h1, h2⟩ := k21 ρ' hx; exact ⟨ρ'', h1, h2.trans e⟩
       simp only [ev]
       simp only [hC, hE]
-  | .mk (.extension x) T, ρ1, ρ2, he, _ => by simp only [ev]; rw [he]
+  | .mk (.Extension x) T, ρ1, ρ2, he, _ => by simp only [ev]; rw [he]
 
 theorem evList_congr {FS : FloatSem} :
     ∀ (l : List Term) (ρ1 ρ2 : Env), ρ1.ext = ρ2.ext →
@@ -402,13 +402,13 @@ theorem evList_congr {FS : FloatSem} :
 end
 
 theorem Ty.WF.inhabited : ∀ {t : Ty}, t.WF → ∃ x : Val, x.hasTy t
-  | .bool, _ => ⟨.bool false, by simp [Val.hasTy, Val.hasSort]⟩
-  | .float p, _ => ⟨.float p 0, by simp [Val.hasTy, Val.hasSort]⟩
-  | .loc n, h => ⟨.bv n.toNat 0, by simp [Val.hasTy, Val.hasSort, Ty.WF] at h ⊢; omega⟩
-  | .pointer n, h => ⟨.ptr n.toNat 0 0, by simp [Val.hasTy, Val.hasSort, Ty.WF] at h ⊢; omega⟩
-  | .seq t, _ => ⟨.seq [], by simp [Val.hasTy, Val.hasSort, Val.hasSortList]⟩
-  | .bitVector n, h => ⟨.bv n.toNat 0, by simp [Val.hasTy, Val.hasSort, Ty.WF] at h ⊢; omega⟩
-  | .extension e, _ => ⟨.ext 0, by simp [Val.hasTy, Val.hasSort]⟩
+  | .TBool, _ => ⟨.bool false, by simp [Val.hasTy, Val.hasSort]⟩
+  | .TFloat p, _ => ⟨.float p 0, by simp [Val.hasTy, Val.hasSort]⟩
+  | .TLoc n, h => ⟨.bv n.toNat 0, by simp [Val.hasTy, Val.hasSort, Ty.WF] at h ⊢; omega⟩
+  | .TPointer n, h => ⟨.ptr n.toNat 0 0, by simp [Val.hasTy, Val.hasSort, Ty.WF] at h ⊢; omega⟩
+  | .TSeq t, _ => ⟨.seq [], by simp [Val.hasTy, Val.hasSort, Val.hasSortList]⟩
+  | .TBitVector n, h => ⟨.bv n.toNat 0, by simp [Val.hasTy, Val.hasSort, Ty.WF] at h ⊢; omega⟩
+  | .TExtension e, _ => ⟨.ext 0, by simp [Val.hasTy, Val.hasSort]⟩
 
 theorem binders_fst_inj : ∀ {bs : List (Int × Ty)}, (bs.map Prod.fst).Nodup →
     ∀ {b b' : Int × Ty}, b ∈ bs → b' ∈ bs → b.1 = b'.1 → b = b'
@@ -442,7 +442,7 @@ theorem mem_used_binders {bs : List (Int × Ty)} {body : Term} {b : Int × Ty} :
 
 theorem ev_exists_used {FS : FloatSem} {ρ : Env} {bs : List (Int × Ty)} {body : Term} {T T' : Ty}
     (hn : (bs.map Prod.fst).Nodup) (hw : ∀ b ∈ bs, b.2.WF) :
-    ev FS ρ (.mk (.exists_ bs body) T) = ev FS ρ (.mk (.exists_ (used_binders bs body) body) T') := by
+    ev FS ρ (.mk (.Exists bs body) T) = ev FS ρ (.mk (.Exists (used_binders bs body) body) T') := by
   have kA : ∀ ρ' : Env, ρ'.Extends ρ bs →
       ∃ ρ'' : Env, ρ''.Extends ρ (used_binders bs body) ∧ ev FS ρ'' body = ev FS ρ' body := by
     intro ρ' h
@@ -501,13 +501,13 @@ theorem extends_nil {ρ ρ' : Env} : ρ'.Extends ρ [] ↔ ρ' = ρ := by
     exact ⟨funext fun a => hv a (by simp), he⟩
   · rintro rfl; exact ⟨rfl, fun _ _ => rfl, by simp⟩
 
-theorem WT_exists {bs body T} : (Term.mk (.exists_ bs body) T).WT ↔
-    T = .bool ∧ (bs.map Prod.fst).Nodup ∧ (∀ b ∈ bs, b.2.WF) ∧ body.ty = .bool ∧ body.WT := by
+theorem WT_exists {bs body T} : (Term.mk (.Exists bs body) T).WT ↔
+    T = .TBool ∧ (bs.map Prod.fst).Nodup ∧ (∀ b ∈ bs, b.2.WF) ∧ body.ty = .TBool ∧ body.WT := by
   simp [Term.WT]
 
 /-! ## Rules that hold at any type, by evaluation -/
 
-theorem evUnop_not_eq_bool {FS a b} : evUnop FS .not_ a = some (.bool b) ↔ a = some (.bool !b) := by
+theorem evUnop_not_eq_bool {FS a b} : evUnop FS .Not a = some (.bool b) ↔ a = some (.bool !b) := by
   rcases a with _ | ⟨_ | _ | _ | _ | _ | _⟩ <;> simp [evUnop] <;> grind
 theorem pand_eq_true {a b} : pand a b = some (.bool true) ↔
     a = some (.bool true) ∧ b = some (.bool true) := by

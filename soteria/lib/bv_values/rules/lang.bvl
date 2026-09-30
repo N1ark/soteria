@@ -1,11 +1,14 @@
 (* The language of Bv_values, in which the rules of this directory are
-   written: its types, with their OCaml and Lean names, the constructors of its
-   terms and the operators on them, which bvr no longer hard-codes.
+   written: its types, the constructors of its terms and the operators on
+   them, which bvr no longer hard-codes.
 
-   - [[@ocaml "..."]] and [[@lean "..."]] give the OCaml and Lean types. The
-     constructors of an OCaml type (and the fields of a record) are in the
-     module of the type, and a Lean constructor is [[@lean]] of its type, dot,
-     [[@lean]] of the constructor.
+   bvr generates the Lean definitions of these types, with the same names
+   (CamelCased for types: [ext_ty] is [ExtTy]), except for the abstract types,
+   which are defined by hand in [Bvr/Abstract.lean]. In OCaml, the types are
+   defined elsewhere, in [Svalue_ast] and in soteria:
+
+   - [[@ocaml "..."]] gives the OCaml type, if it is not the bvr type. The
+     constructors of a type (and the fields of a record) are in its module.
    - A [nat] argument is an OCaml [int], which is an [int] in bvr.
    - [[@noeq]]: [=] and [<>] are not allowed at this type.
    - [[@operators]] on a kind constructor: the constructors of its first
@@ -13,121 +16,121 @@
      [Binop (Add c, l, r)].
    - [[@comm]] on a binary operator: its operands commute.
    - [[@literal]] on a kind constructor: its literals, [true] and [false] for a
-     boolean, integers and [#x] for a bit-vector. *)
+     boolean, integers and [#x] for a bit-vector.
 
-type t [@ocaml "t"] [@lean "Term"] [@noeq]
-type bv [@ocaml "bv"] [@lean "BvVal"]
-type var [@ocaml "Symex.Var.t"] [@lean "Int"] [@noeq]
-type float [@ocaml "Floatml.AnyFloat.t"] [@lean "FloatLit"] [@noeq]
-type ext [@ocaml "ext"] [@lean "Ext"]
-type ext_ty [@ocaml "ext_ty"] [@lean "ExtTy"]
+   The types [t] (terms), [bv] (bit-vector values) and [var] (variables) are
+   built into bvr. *)
 
-type checked [@ocaml "Svalue_ast.checked"] [@lean "Checked"] =
+type float [@ocaml "Floatml.AnyFloat.t"] [@noeq]
+type ext
+type ext_ty
+
+type checked [@ocaml "Svalue_ast.checked"] =
   { signed : bool; unsigned : bool }
 
-type kind [@ocaml "(ghost, ext, ext_ty) Svalue_ast.t_kind"] [@lean "Kind"] [@noeq] =
-  | Var of var [@lean "var"]
-  | Bool of bool [@lean "bool"] [@literal]
-  | Float of float [@lean "float"]
-  | Ptr of t * t [@lean "ptr"]
-  | BitVec of int [@lean "bitVec"] [@literal]
-  | Seq of t list [@lean "seq"]
-  | Unop of unop * t [@lean "unop"] [@operators]
-  | Binop of binop * t * t [@lean "binop"] [@operators]
-  | Triop of triop * t * t * t [@lean "triop"] [@operators]
-  | Nop of nop * t list [@lean "nop"] [@operators]
-  | Exists of (var * ty) list * t [@lean "exists_"]
-  | Extension of ext [@lean "extension"]
+type kind [@ocaml "(ghost, ext, ext_ty) Svalue_ast.t_kind"] [@noeq] =
+  | Var of var
+  | Bool of bool [@literal]
+  | Float of float
+  | Ptr of t * t
+  | BitVec of int [@literal]
+  | Seq of t list
+  | Unop of unop * t [@operators]
+  | Binop of binop * t * t [@operators]
+  | Triop of triop * t * t * t [@operators]
+  | Nop of nop * t list [@operators]
+  | Exists of (var * ty) list * t
+  | Extension of ext
 
-type unop [@ocaml "Svalue_ast.Unop.t"] [@lean "Unop"] =
-  | Not [@lean "not_"]
-  | GetPtrLoc [@lean "getPtrLoc"]
-  | GetPtrOfs [@lean "getPtrOfs"]
-  | BvOfBool of nat [@lean "bvOfBool"]
-  | BvOfFloat of rm * bool * nat [@lean "bvOfFloat"]
-  | FloatOfBv of rm * bool * fp [@lean "floatOfBv"]
-  | FloatOfBvRaw of fp [@lean "floatOfBvRaw"]
-  | FloatOfFloat of rm * fp [@lean "floatOfFloat"]
-  | BvExtract of nat * nat [@lean "bvExtract"]
-  | BvExtend of bool * nat [@lean "bvExtend"]
-  | BvNot [@lean "bvNot"]
-  | Neg of bool [@lean "neg"]
-  | FAbs [@lean "fAbs"]
-  | FNeg [@lean "fNeg"]
-  | FSqrt [@lean "fSqrt"]
-  | FIs of fc [@lean "fIs"]
-  | FIsNeg [@lean "fIsNeg"]
-  | FIsPos [@lean "fIsPos"]
-  | FRound of rm [@lean "fRound"]
+type unop [@ocaml "Svalue_ast.Unop.t"] =
+  | Not
+  | GetPtrLoc
+  | GetPtrOfs
+  | BvOfBool of nat
+  | BvOfFloat of rm * bool * nat
+  | FloatOfBv of rm * bool * fp
+  | FloatOfBvRaw of fp
+  | FloatOfFloat of rm * fp
+  | BvExtract of nat * nat
+  | BvExtend of bool * nat
+  | BvNot
+  | Neg of bool
+  | FAbs
+  | FNeg
+  | FSqrt
+  | FIs of fc
+  | FIsNeg
+  | FIsPos
+  | FRound of rm
 
-type binop [@ocaml "Svalue_ast.Binop.t"] [@lean "Binop"] =
-  | And [@lean "and_"] [@comm]
-  | Or [@lean "or_"] [@comm]
-  | Eq [@lean "eq"] [@comm]
-  | FEq [@lean "fEq"] [@comm]
-  | FLeq [@lean "fLeq"]
-  | FLt [@lean "fLt"]
-  | FAdd [@lean "fAdd"]
-  | FSub [@lean "fSub"]
-  | FMul [@lean "fMul"]
-  | FDiv [@lean "fDiv"]
-  | FRem [@lean "fRem"]
-  | FMin [@lean "fMin"]
-  | FMax [@lean "fMax"]
-  | Add of checked [@lean "add"] [@comm]
-  | Sub of checked [@lean "sub"]
-  | Mul of checked [@lean "mul"] [@comm]
-  | Div of bool [@lean "div"]
-  | Rem of bool [@lean "rem"]
-  | Mod [@lean "mod_"]
-  | AddOvf of bool [@lean "addOvf"] [@comm]
-  | SubOvf of bool [@lean "subOvf"]
-  | MulOvf of bool [@lean "mulOvf"] [@comm]
-  | Lt of bool [@lean "lt"]
-  | Leq of bool [@lean "leq"]
-  | BvConcat [@lean "bvConcat"]
-  | BitAnd [@lean "bitAnd"] [@comm]
-  | BitOr [@lean "bitOr"] [@comm]
-  | BitXor [@lean "bitXor"] [@comm]
-  | Shl [@lean "shl"]
-  | LShr [@lean "lShr"]
-  | AShr [@lean "aShr"]
+type binop [@ocaml "Svalue_ast.Binop.t"] =
+  | And [@comm]
+  | Or [@comm]
+  | Eq [@comm]
+  | FEq [@comm]
+  | FLeq
+  | FLt
+  | FAdd
+  | FSub
+  | FMul
+  | FDiv
+  | FRem
+  | FMin
+  | FMax
+  | Add of checked [@comm]
+  | Sub of checked
+  | Mul of checked [@comm]
+  | Div of bool
+  | Rem of bool
+  | Mod
+  | AddOvf of bool [@comm]
+  | SubOvf of bool
+  | MulOvf of bool [@comm]
+  | Lt of bool
+  | Leq of bool
+  | BvConcat
+  | BitAnd [@comm]
+  | BitOr [@comm]
+  | BitXor [@comm]
+  | Shl
+  | LShr
+  | AShr
 
-type triop [@ocaml "Svalue_ast.Triop.t"] [@lean "Triop"] =
-  | Fma [@lean "fma"]
-  | Ite [@lean "ite"]
+type triop [@ocaml "Svalue_ast.Triop.t"] =
+  | Fma
+  | Ite
 
-type nop [@ocaml "Svalue_ast.Nop.t"] [@lean "Nop"] =
-  | Distinct [@lean "distinct"]
+type nop [@ocaml "Svalue_ast.Nop.t"] =
+  | Distinct
 
-type ty [@ocaml "ext_ty Svalue_ast.ty"] [@lean "Ty"] =
-  | TBool [@lean "bool"]
-  | TFloat of fp [@lean "float"]
-  | TLoc of nat [@lean "loc"]
-  | TPointer of nat [@lean "pointer"]
-  | TSeq of ty [@lean "seq"]
-  | TBitVector of nat [@lean "bitVector"]
-  | TExtension of ext_ty [@lean "extension"]
+type ty [@ocaml "ext_ty Svalue_ast.ty"] =
+  | TBool
+  | TFloat of fp
+  | TLoc of nat
+  | TPointer of nat
+  | TSeq of ty
+  | TBitVector of nat
+  | TExtension of ext_ty
 
-type fp [@ocaml "Svalue_ast.FloatPrecision.t"] [@lean "Prec"] =
-  | F16 [@lean "f16"]
-  | F32 [@lean "f32"]
-  | F64 [@lean "f64"]
-  | F128 [@lean "f128"]
+type fp [@ocaml "Svalue_ast.FloatPrecision.t"] =
+  | F16
+  | F32
+  | F64
+  | F128
 
-type rm [@ocaml "Svalue_ast.RoundingMode.t"] [@lean "RM"] =
-  | NearestTiesToEven [@lean "nearestTiesToEven"]
-  | Truncate [@lean "truncate"]
-  | Ceil [@lean "ceil"]
-  | Floor [@lean "floor"]
-  | NearestTiesToAway [@lean "nearestTiesToAway"]
+type rm [@ocaml "Svalue_ast.RoundingMode.t"] =
+  | NearestTiesToEven
+  | Truncate
+  | Ceil
+  | Floor
+  | NearestTiesToAway
 
-type fc [@ocaml "Svalue_ast.FloatClass.t"] [@lean "FClass"] =
-  | Normal [@lean "normal"]
-  | Subnormal [@lean "subnormal"]
-  | Zero [@lean "zero"]
-  | Infinite [@lean "infinite"]
-  | NaN [@lean "nan"]
+type fc [@ocaml "Svalue_ast.FloatClass.t"] =
+  | Normal
+  | Subnormal
+  | Zero
+  | Infinite
+  | NaN
 
 (* Operators on terms: [a + b] is [bv_add unchecked a b] in expressions and
    matches [Add (_, a, b)] in patterns, whatever its overflow check; on

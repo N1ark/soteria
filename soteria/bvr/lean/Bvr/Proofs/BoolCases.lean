@@ -37,7 +37,7 @@ theorem b_mk_exists.r_empty.a1.proof : b_mk_exists.r_empty.a1.Stmt := by
     obtain ⟨-, hn, hw, hb, wb⟩ := WT_exists.1 w
   · exact ⟨wb, by simp [hb, b_mk_exists.spec]⟩
   · simp only [b_mk_exists.spec] at w e
-    rw [eval_eq_ev w, ev_exists_used (T' := Ty.bool) hn hw, hu] at e
+    rw [eval_eq_ev w, ev_exists_used (T' := Ty.TBool) hn hw, hu] at e
     rw [eval_eq_ev wb]
     simp only [ev, extends_nil, forall_eq, exists_eq_left] at e
     split at e

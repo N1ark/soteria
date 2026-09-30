@@ -26,7 +26,7 @@ theorem Refines.of_WT {s r : Term} (h : s.WT → Refines FS s r) : Refines FS s 
   · exact ⟨fun h => absurd h w, fun ρ v e => absurd (eval_WT e) w⟩
 
 theorem Refines.exists_ {bs body body' t} (h : Refines FS body body') :
-    Refines FS (.mk (.exists_ bs body) t) (.mk (.exists_ bs body') t) := by
+    Refines FS (.mk (.Exists bs body) t) (.mk (.Exists bs body') t) := by
   refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
   · simp only [Term.WT] at w ⊢
     obtain ⟨ht, hn, hwf, hb, wb⟩ := w

@@ -52,7 +52,7 @@ theorem lt_pow_of_lt {m : Nat} {z K : Int} (hz : 1 < z) (hm : (m : Int) < z)
 
 /-- [msb_of] bounds the value of a bit-vector. -/
 theorem den_msb_aux {ρ} (s : Nat) : ∀ v : Term, sizeOf v < s → v.WT → ∀ {n : Nat},
-    v.ty = .bitVector n → ∀ (x : BitVec n), den FS ρ n v = some x → ∀ k : Int, msb_of v ≤ k →
+    v.ty = .TBitVector n → ∀ (x : BitVec n), den FS ρ n v = some x → ∀ k : Int, msb_of v ≤ k →
     x.toNat < 2 ^ (k + 1).toNat := by
   induction s with
   | zero => intro v h; omega
@@ -70,7 +70,7 @@ theorem den_msb_aux {ρ} (s : Nat) : ∀ v : Term, sizeOf v < s → v.WT → ∀
       Nat.lt_of_lt_of_le x.isLt
         (by have := pow_le_of_le (a := n) (b := k + 1) (by omega); simpa using this)
     cases kd
-    case bitVec z =>
+    case BitVec z =>
       obtain ⟨_, h1, h2⟩ := WT_bitVec_bv.1 w
       simp only [den, Option.some.injEq] at e; subst e
       rw [toNat_ofInt_of_lt h1 (by simpa using h2)]
@@ -81,9 +81,9 @@ theorem den_msb_aux {ρ} (s : Nat) : ∀ v : Term, sizeOf v < s → v.WT → ∀
         exact_mod_cast h'
       · obtain rfl : z = 0 := by omega
         exact Nat.two_pow_pos _
-    case binop op a b =>
+    case Binop op a b =>
       cases op
-      case bitAnd =>
+      case BitAnd =>
         simp [firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse, zmin] at hk
         have ⟨w1, wa, wb⟩ := WT_binop.1 w
         simp only [Binop.WT, Ty.sort_eq] at w1
@@ -96,7 +96,7 @@ theorem den_msb_aux {ρ} (s : Nat) : ∀ v : Term, sizeOf v < s → v.WT → ∀
             (ih a (by simp at hs; omega) wa (by simp_all) _ ea k hk)
         · exact Nat.lt_of_le_of_lt Nat.and_le_right
             (ih b (by simp at hs; omega) wb (by simp_all) _ eb k hk)
-      case rem sg =>
+      case Rem sg =>
         have ⟨w1, wa, wb⟩ := WT_binop.1 w
         simp only [Binop.WT, Ty.sort_eq] at w1
         obtain ⟨⟨_, _, ha⟩, hb, ht⟩ := w1
@@ -111,7 +111,7 @@ theorem den_msb_aux {ρ} (s : Nat) : ∀ v : Term, sizeOf v < s → v.WT → ∀
         subst ht; subst hb
         cases sg
         · cases kb
-          case bitVec z =>
+          case BitVec z =>
             by_cases hz : 1 < z
             · simp [firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse, hz] at hk
               obtain ⟨_, h1, h2⟩ := WT_bitVec_bv.1 wb
@@ -128,7 +128,7 @@ theorem den_msb_aux {ρ} (s : Nat) : ∀ v : Term, sizeOf v < s → v.WT → ∀
             simp [firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse] at hk
             exact dflt' hk
         · cases ka
-          case bitVec z =>
+          case BitVec z =>
             by_cases hz : 0 < z ∧ z < (2 : Int) ^ (n - 1)
             · simp [firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse, zshiftl, hz] at hk
               obtain ⟨_, h1, h2⟩ := WT_bitVec_bv.1 wa
@@ -148,7 +148,7 @@ theorem den_msb_aux {ρ} (s : Nat) : ∀ v : Term, sizeOf v < s → v.WT → ∀
           all_goals
             simp [firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse] at hk
             exact dflt' hk
-      case mod_ =>
+      case Mod =>
         have ⟨w1, wa, wb⟩ := WT_binop.1 w
         simp only [Binop.WT, Ty.sort_eq] at w1
         obtain ⟨⟨_, _, ha⟩, hb, ht⟩ := w1
@@ -161,7 +161,7 @@ theorem den_msb_aux {ρ} (s : Nat) : ∀ v : Term, sizeOf v < s → v.WT → ∀
         simp only [Term.ty_mk] at hb
         rw [← ht] at hb; subst hb
         cases kb
-        case bitVec z =>
+        case BitVec z =>
           by_cases hz : 1 < z ∧ z < (2 : Int) ^ (n - 1)
           · simp [firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse, zshiftl, hz] at hk
             obtain ⟨_, h1, h2⟩ := WT_bitVec_bv.1 wb
@@ -180,9 +180,9 @@ theorem den_msb_aux {ρ} (s : Nat) : ∀ v : Term, sizeOf v < s → v.WT → ∀
       all_goals
         simp [firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse] at hk
         exact dflt hk
-    case triop op g l r =>
+    case Triop op g l r =>
       cases op
-      case ite =>
+      case Ite =>
         simp [firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse, zmax] at hk
         obtain ⟨_, h1, h2, wg, wl, wr⟩ := WT_ite.1 w
         simp only [den] at e
@@ -193,9 +193,9 @@ theorem den_msb_aux {ρ} (s : Nat) : ∀ v : Term, sizeOf v < s → v.WT → ∀
       all_goals
         simp [firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse] at hk
         exact dflt hk
-    case unop op u =>
+    case Unop op u =>
       cases op
-      case bvExtend sg k' =>
+      case BvExtend sg k' =>
         cases sg
         · simp [firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse] at hk
           have ⟨w1, wu⟩ := WT_unop.1 w
@@ -215,7 +215,7 @@ theorem den_msb_aux {ρ} (s : Nat) : ∀ v : Term, sizeOf v < s → v.WT → ∀
       simp [firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse] at hk
       exact dflt hk
 
-theorem den_msb {ρ v n x} (w : v.WT) (hT : v.ty = .bitVector (n : Int))
+theorem den_msb {ρ v n x} (w : v.WT) (hT : v.ty = .TBitVector (n : Int))
     (e : den FS ρ n v = some x) : x.toNat < 2 ^ (msb_of v + 1).toNat :=
   den_msb_aux _ v (Nat.lt_succ_self _) w hT x e _ (Int.le_refl _)
 

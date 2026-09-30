@@ -37,7 +37,7 @@ def _root_.Bvr.BvVal.at (n : Nat) (l : BvVal) : BitVec n := l.x.setWidth n
 @[simp] theorem lit_w_sext (k : Int) (a : BvVal) : (lit_sext k a).w = a.w + k.toNat := rfl
 @[simp] theorem lit_w_concat (a b : BvVal) : (lit_concat a b).w = a.w + b.w := rfl
 @[simp] theorem bv_of_lit_w (z : Int) (t : Ty) :
-    (bv_of_lit (.mk (.bitVec z) t)).w = (size_of_ty t).toNat := rfl
+    (bv_of_lit (.mk (.BitVec z) t)).w = (size_of_ty t).toNat := rfl
 @[simp] theorem of_z_w (n z : Int) : (of_z n z).w = n.toNat := rfl
 
 @[simp] theorem WT_lit (l : BvVal) : (lit l).WT ↔ 0 < l.w := by
@@ -48,7 +48,7 @@ def _root_.Bvr.BvVal.at (n : Nat) (l : BvVal) : BitVec n := l.x.setWidth n
   · intro h
     exact ⟨l.w, h, .inl rfl, by omega, by exact_mod_cast l.x.isLt⟩
 
-@[simp] theorem ty_lit (l : BvVal) : (lit l).ty = .bitVector l.w := rfl
+@[simp] theorem ty_lit (l : BvVal) : (lit l).ty = .TBitVector l.w := rfl
 
 @[simp] theorem den_lit {FS ρ n} (l : BvVal) : den FS ρ n (lit l) = some (l.at n) := by
   simp [lit, den, BvVal.at]
@@ -125,7 +125,7 @@ theorem setWidth_ofInt_of_le {n w : Nat} (z : Int) (h : n ≤ w) : (BitVec.ofInt
   rw [← e, Int.toNat_emod h1 (by omega), Int.toNat_natCast]
 
 @[simp] theorem at_bv_of_lit {n z t} (h : n ≤ (size_of_ty t).toNat) :
-    (bv_of_lit (.mk (.bitVec z) t)).at n = BitVec.ofInt n z :=
+    (bv_of_lit (.mk (.BitVec z) t)).at n = BitVec.ofInt n z :=
   setWidth_ofInt_of_le z h
 
 @[simp] theorem at_of_z {n m z} (h : n ≤ m.toNat) : (of_z m z).at n = BitVec.ofInt n z :=
@@ -137,11 +137,11 @@ Once the widths are those of well-typed terms, the values are normalized to
 `⟨n, x⟩`, on which the operations compute without side conditions. -/
 
 @[simp] theorem bv_of_lit_bv (n : Nat) (z : Int) :
-    bv_of_lit (.mk (.bitVec z) (.bitVector (n : Int))) = ⟨n, BitVec.ofInt n z⟩ := rfl
+    bv_of_lit (.mk (.BitVec z) (.TBitVector (n : Int))) = ⟨n, BitVec.ofInt n z⟩ := rfl
 
 /-- `bv_of_lit_bv`, at any width (e.g. a numeral). -/
 @[simp] theorem bv_of_lit_bv' (m z : Int) :
-    bv_of_lit (.mk (.bitVec z) (.bitVector m)) = ⟨m.toNat, BitVec.ofInt m.toNat z⟩ := rfl
+    bv_of_lit (.mk (.BitVec z) (.TBitVector m)) = ⟨m.toNat, BitVec.ofInt m.toNat z⟩ := rfl
 
 @[simp] theorem of_z_nat (n : Nat) (z : Int) : of_z (n : Int) z = ⟨n, BitVec.ofInt n z⟩ := rfl
 
@@ -211,7 +211,7 @@ theorem smtUDiv_toNat {n : Nat} {a b : BitVec n} (hb : b.toNat ≠ 0) :
     BitVec.toNat_udiv]
 
 theorem msb_of_lit (z : Int) (T : Ty) :
-    msb_of (.mk (.bitVec z) T) = if 0 < z then log2 z else size_of_ty T - 1 := by
+    msb_of (.mk (.BitVec z) T) = if 0 < z then log2 z else size_of_ty T - 1 := by
   rw [msb_of]
   by_cases h : 0 < z
   · simp [firstSome, h, HOrElse.hOrElse, OrElse.orElse, Option.orElse]
@@ -261,7 +261,7 @@ theorem lt_two_pow_log2 {z w : Int} (hz : 0 < z) (h : log2 z < w) : z < 2 ^ w.to
   have : ((z.toNat : Nat) : Int) < ((2 ^ w.toNat : Nat) : Int) := by exact_mod_cast (by omega)
   push_cast at this; omega
 
-theorem is_bv_iff {t : Ty} : is_bv t = true ↔ ∃ n, t = .bitVector n := by
+theorem is_bv_iff {t : Ty} : is_bv t = true ↔ ∃ n, t = .TBitVector n := by
   cases t <;> simp [is_bv, firstSome]
 
 theorem WT_mk_masked {n z : Int} : (mk_masked n z).WT ↔ 0 < n := by
@@ -272,7 +272,7 @@ theorem WT_mk_masked {n z : Int} : (mk_masked n z).WT ↔ 0 < n := by
 /-! ## Boolean literals -/
 
 @[simp] theorem of_bool_WT (b : Bool) : (of_bool b).WT := by cases b <;> simp [of_bool]
-@[simp] theorem of_bool_ty (b : Bool) : (of_bool b).ty = .bool := by cases b <;> rfl
+@[simp] theorem of_bool_ty (b : Bool) : (of_bool b).ty = .TBool := by cases b <;> rfl
 @[simp] theorem denB_of_bool {FS ρ} (b : Bool) : denB FS ρ (of_bool b) = some b := by
   cases b <;> rfl
 @[simp] theorem eval_of_bool {FS ρ} (b : Bool) : eval FS ρ (of_bool b) = some (.bool b) := by

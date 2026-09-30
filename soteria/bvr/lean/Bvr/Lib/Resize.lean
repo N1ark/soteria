@@ -12,10 +12,10 @@ open Classical
 /-- The type of a literal whose width is its own size, as in `bv_zero (size v)`
 compared to `v`. -/
 @[simp] theorem eq_bitVector_size_self {T : Ty} :
-    T = .bitVector (size_of_ty T) ↔ ∃ m, T = .bitVector m :=
+    T = .TBitVector (size_of_ty T) ↔ ∃ m, T = .TBitVector m :=
   ⟨fun h => ⟨_, h⟩, fun ⟨m, h⟩ => by subst h; rfl⟩
 
-@[simp] theorem of_bool_eq (b : Bool) : of_bool b = .mk (.bool b) .bool := by
+@[simp] theorem of_bool_eq (b : Bool) : of_bool b = .mk (.Bool b) .TBool := by
   cases b <;> rfl
 
 attribute [simp] WT_bool
@@ -31,8 +31,8 @@ attribute [simp] WT_bool
     fun ⟨h1, h2, h3⟩ => ⟨_, h1, _, h2, rfl, rfl, h3⟩⟩
 
 /-- A literal in range, read as an unsigned integer. -/
-theorem to_z_bv_of_lit {z : Int} {T : Ty} (w : (Term.mk (.bitVec z) T).WT) :
-    to_z false (bv_of_lit (.mk (.bitVec z) T)) = z := by
+theorem to_z_bv_of_lit {z : Int} {T : Ty} (w : (Term.mk (.BitVec z) T).WT) :
+    to_z false (bv_of_lit (.mk (.BitVec z) T)) = z := by
   obtain ⟨k, hk, hT, h0, h1⟩ := WT_bitVec.1 w
   rcases hT with rfl | rfl <;> simp [bv_of_lit, to_z, size_of_ty, toNat_ofInt_of_lt h0 h1] <;> omega
 
@@ -152,10 +152,10 @@ section
 variable {FS : FloatSem}
 
 /-- A comparison of float literals. -/
-theorem Refines.fcmp_lits {op : Binop} (hop : op = .fEq ∨ op = .fLt ∨ op = .fLeq)
-    {f1 f2 : FloatLit} {T1 T2 T : Ty} {b : Bool}
+theorem Refines.fcmp_lits {op : Binop} (hop : op = .FEq ∨ op = .FLt ∨ op = .FLeq)
+    {f1 f2 : Float} {T1 T2 T : Ty} {b : Bool}
     (hsem : f2.prec = f1.prec → evBinop FS op (some f1.sem) (some f2.sem) = some (.bool b)) :
-    Refines FS (.mk (.binop op (.mk (.float f1) T1) (.mk (.float f2) T2)) T) (of_bool b) := by
+    Refines FS (.mk (.Binop op (.mk (.Float f1) T1) (.mk (.Float f2) T2)) T) (of_bool b) := by
   refine Refines.intro (fun w => ⟨by simp, by simp [((WT_fcmp hop).1 w).2.2.1]⟩)
     (fun ρ v w w' e => ?_)
   obtain ⟨_, h2, _, w1, w2⟩ := (WT_fcmp hop).1 w
@@ -164,35 +164,35 @@ theorem Refines.fcmp_lits {op : Binop} (hop : op = .fEq ∨ op = .fLt ∨ op = .
   rw [eval_of_bool]; exact e
 
 /-- A unary operation on a float literal, of the precision of the literal. -/
-theorem Refines.funop_lit {op : Unop} (hop : op = .fAbs ∨ op = .fNeg ∨ op = .fSqrt ∨ ∃ rm, op = .fRound rm)
-    {f g : FloatLit} {T : Ty}
+theorem Refines.funop_lit {op : Unop} (hop : op = .FAbs ∨ op = .FNeg ∨ op = .FSqrt ∨ ∃ rm, op = .FRound rm)
+    {f g : Float} {T : Ty}
     (hg : f.WF → g.prec = f.prec ∧ g.WF ∧ evUnop FS op (some f.sem) = some g.sem) :
-    Refines FS (.mk (.unop op (.mk (.float f) T)) T) (.mk (.float g) T) :=
+    Refines FS (.mk (.Unop op (.mk (.Float f) T)) T) (.mk (.Float g) T) :=
   Refines.lit_of_unop (fun w => by
       obtain ⟨_, -, w1⟩ := (WT_funop hop).1 w
-      have hf := FloatLit.WF_of_WT w1
+      have hf := Float.WF_of_WT w1
       exact ⟨by rw [(WT_float.1 w1).1, (hg hf).1], (hg hf).2.1⟩)
     (fun hf => (hg hf).2.2)
 
 /-- A unary operation on floats that only reads the bits of its operand. -/
-theorem Refines.funop_bits {op : Unop} (hop : op = .fAbs ∨ op = .fNeg)
+theorem Refines.funop_bits {op : Unop} (hop : op = .FAbs ∨ op = .FNeg)
     {F : ∀ {p}, FBits p → FBits p} (hF : ∀ p (x : FBits p), evUnop FS op (some (.float p x)) = some (.float p (F x)))
-    {f : FloatLit} {T : Ty} :
-    Refines FS (.mk (.unop op (.mk (.float f) T)) T) (.mk (.float ⟨f.prec, (F f.val).toNat⟩) T) :=
+    {f : Float} {T : Ty} :
+    Refines FS (.mk (.Unop op (.mk (.Float f) T)) T) (.mk (.Float ⟨f.prec, (F f.val).toNat⟩) T) :=
   Refines.funop_lit (by rcases hop with h | h <;> simp [h]) fun _ =>
-    ⟨rfl, BitVec.isLt _, by simp [FloatLit.sem, hF, FloatLit.val_ofNat_toNat]⟩
+    ⟨rfl, BitVec.isLt _, by simp [Float.sem, hF, Float.val_ofNat_toNat]⟩
 
 /-- An idempotent operation on floats. -/
 theorem Refines.funop_idem {op : Unop}
     (hidem : ∀ v, evUnop FS op (evUnop FS op v) = evUnop FS op v) {a : Term} {T : Ty} :
-    Refines FS (.mk (.unop op (.mk (.unop op a) T)) T) (.mk (.unop op a) T) := by
+    Refines FS (.mk (.Unop op (.mk (.Unop op a) T)) T) (.mk (.Unop op a) T) := by
   refine Refines.intro (fun w => ⟨(WT_unop.1 w).2, rfl⟩) (fun ρ v w w' e => ?_)
   rw [eval_unop w, eval_unop w'] at e; rw [eval_unop w', ← e, hidem]
 
 /-- An involutive operation on floats. -/
-theorem Refines.funop_invol {op : Unop} (hop : op = .fAbs ∨ op = .fNeg ∨ op = .fSqrt ∨ ∃ rm, op = .fRound rm)
+theorem Refines.funop_invol {op : Unop} (hop : op = .FAbs ∨ op = .FNeg ∨ op = .FSqrt ∨ ∃ rm, op = .FRound rm)
     (hinv : ∀ v r, evUnop FS op (evUnop FS op v) = some r → v = some r) {a : Term} {T T' : Ty} :
-    Refines FS (.mk (.unop op (.mk (.unop op a) T)) T') a := by
+    Refines FS (.mk (.Unop op (.mk (.Unop op a) T)) T') a := by
   refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
   · have ⟨_, hT, w1⟩ := (WT_funop hop).1 w
     have ⟨_, hT', w2⟩ := (WT_funop hop).1 w1
@@ -200,18 +200,18 @@ theorem Refines.funop_invol {op : Unop} (hop : op = .fAbs ∨ op = .fNeg ∨ op 
   · rw [eval_unop w, eval_unop (WT_unop.1 w).2] at e; exact hinv _ _ e
 
 /-- `fp.eq` against a float literal, given how the general case is decided. -/
-theorem Refines.feq_lit {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {f : FloatLit} {T : Ty}
-    {v2 E : Term} (hE : Refines FS (sem_eq.spec (.mk (.float f) T) v2) E) :
-    Refines FS (float_eq.spec (.mk (.float f) T) v2)
+theorem Refines.feq_lit {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {f : Float} {T : Ty}
+    {v2 E : Term} (hE : Refines FS (sem_eq.spec (.mk (.Float f) T) v2) E) :
+    Refines FS (float_eq.spec (.mk (.Float f) T) v2)
       (if f_is_nan f then v_false
-       else if f_is_zero f then O.float_is_floatclass .zero v2 else E) := by
-  have ev1 : ∀ ρ v, eval FS ρ (float_eq.spec (.mk (.float f) T) v2) = some v →
+       else if f_is_zero f then O.float_is_floatclass .Zero v2 else E) := by
+  have ev1 : ∀ ρ v, eval FS ρ (float_eq.spec (.mk (.Float f) T) v2) = some v →
       ∃ y, eval FS ρ v2 = some (.float f.prec y) ∧ v = .bool (f.val.eq y) := by
     intro ρ v e
     have w := eval_WT e
     have ⟨_, w1, _⟩ := WT_binop.1 w
     rw [float_eq.spec, eval_binop w, eval_float w1] at e
-    simp only [evBinop, fBin_eq_some, FloatLit.sem] at e
+    simp only [evBinop, fBin_eq_some, Float.sem] at e
     obtain ⟨p, x, y, h1, h2, h3⟩ := e
     simp at h1; obtain ⟨rfl, h1⟩ := h1; subst h1
     simp at h3
@@ -224,7 +224,7 @@ theorem Refines.feq_lit {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {f : FloatLi
   · rename_i hn
     split
     · rename_i hz
-      refine Refines.trans ?_ (hO.float_is_floatclass .zero v2)
+      refine Refines.trans ?_ (hO.float_is_floatclass .Zero v2)
       refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
       · obtain ⟨hp, h2, _, w1, w2⟩ := (WT_fcmp (Or.inl rfl)).1 w
         refine ⟨WT_unop.2 ⟨by simpa [Unop.WT, h2] using hp, w2⟩, rfl⟩
@@ -240,7 +240,7 @@ theorem Refines.feq_lit {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {f : FloatLi
         have ⟨_, w1, _⟩ := WT_binop.1 w'
         rw [sem_eq.spec, eval_eq_of w' (eval_float w1) hy]
         simp only [f_is_nan, f_is_zero, Bool.not_eq_true] at hn hz
-        simp [FloatLit.sem, FBits.eq_of_ne_left y hn hz]
+        simp [Float.sem, FBits.eq_of_ne_left y hn hz]
 
 end
 
@@ -257,9 +257,9 @@ macro "bvr_float" : tactic => `(tactic| (
     | exact Refines.funop_lit (by simp) (hO.orc.sqrt _)
     | exact Refines.funop_lit (by simp) (hO.orc.round _ _)
     | exact Refines.test_of_unop (fun w => ((WT_ftest (by simp)).1 w).2.1)
-        (by simp [evUnop, FloatLit.sem, f_is_class, f_is_negative, f_is_positive])
+        (by simp [evUnop, Float.sem, f_is_class, f_is_negative, f_is_positive])
     | exact Refines.fcmp_lits (by simp) fun hp => by
-        simp [evBinop, fBin, FloatLit.sem, f_eq, f_lt, f_le, FloatLit.cmp, hp]))
+        simp [evBinop, fBin, Float.sem, f_eq, f_lt, f_le, Float.cmp, hp]))
 
 /-- Proves the alternative on a pointer literal of `ptr_loc` (resp. `ptr_ofs`),
 whose spec is `spec`. -/
@@ -270,7 +270,7 @@ macro "bvr_ptr " spec:ident : tactic => `(tactic| (
     subst hT
     simp [$spec:ident, hl, ho, wl, wo, size_of_ty]
   · rw [$spec:ident, eval_unop w] at e
-    cases hp : eval FS ρ (Term.mk (Kind.ptr l o) T) with
+    cases hp : eval FS ρ (Term.mk (Kind.Ptr l o) T) with
     | none => simp [hp] at e
     | some pv =>
       obtain ⟨n, x, y, h1, h2, hv⟩ := (eval_ptr_eq_some (WT_unop.1 w).2).1 hp

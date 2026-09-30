@@ -1,7 +1,11 @@
 # bvr roadmap: from a Bv_values rule language to a value-language framework
 
-Status: proposal, on top of the stack that ends with #16. Nothing here is
-implemented yet.
+Status: proposal, on top of the stack that ends with #16. Implemented so far:
+B1 (the language is declared in `soteria/lib/bv_values/rules/lang.bvl`, with
+OCaml-style `type` declarations and `infix`/`prefix` items rather than the
+syntax sketched below), and the part of B2 that generates the Lean types
+(`Types.lean` and `Syntax.lean`, with the bvr names). §1 describes the state
+before them.
 
 ## 1. Where we are
 

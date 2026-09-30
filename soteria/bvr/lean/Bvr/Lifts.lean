@@ -212,12 +212,12 @@ theorem lift_bv_sub_overflows (hO : O.Sound FS) {signed : Bool} {v1 v1' : Term} 
   Refines FS (bv_sub_overflows.spec signed v1 v2) (O.bv_sub_overflows signed v1' v2') :=
   Refines.trans (by simp only [bvr_spec]; bvr_congr) (hO.bv_sub_overflows signed v1' v2')
 
-theorem lift_bv_of_float (hO : O.Sound FS) {rounding : RM} {signed : Bool} {sz : Int} {v v' : Term}
+theorem lift_bv_of_float (hO : O.Sound FS) {rounding : Rm} {signed : Bool} {sz : Int} {v v' : Term}
   (h_v : Refines FS v v') :
   Refines FS (bv_of_float.spec rounding signed sz v) (O.bv_of_float rounding signed sz v') :=
   Refines.trans (by simp only [bvr_spec]; bvr_congr) (hO.bv_of_float rounding signed sz v')
 
-theorem lift_bv_to_float (hO : O.Sound FS) {rounding : RM} {signed : Bool} {fp : Prec} {v v' : Term}
+theorem lift_bv_to_float (hO : O.Sound FS) {rounding : Rm} {signed : Bool} {fp : Fp} {v v' : Term}
   (h_v : Refines FS v v') :
   Refines FS (bv_to_float.spec rounding signed fp v) (O.bv_to_float rounding signed fp v') :=
   Refines.trans (by simp only [bvr_spec]; bvr_congr) (hO.bv_to_float rounding signed fp v')
@@ -227,7 +227,7 @@ theorem lift_bv_to_float_raw (hO : O.Sound FS) {v v' : Term}
   Refines FS (bv_to_float_raw.spec v) (O.bv_to_float_raw v') :=
   Refines.trans (by simp only [bvr_spec, size]; bvr_congr) (hO.bv_to_float_raw v')
 
-theorem lift_float_is_floatclass (hO : O.Sound FS) {fc : FClass} {sv sv' : Term}
+theorem lift_float_is_floatclass (hO : O.Sound FS) {fc : Fc} {sv sv' : Term}
   (h_sv : Refines FS sv sv') :
   Refines FS (float_is_floatclass.spec fc sv) (O.float_is_floatclass fc sv') :=
   Refines.trans (by simp only [bvr_spec]; bvr_congr) (hO.float_is_floatclass fc sv')
@@ -242,7 +242,7 @@ theorem lift_float_is_positive (hO : O.Sound FS) {v v' : Term}
   Refines FS (float_is_positive.spec v) (O.float_is_positive v') :=
   Refines.trans (by simp only [bvr_spec]; bvr_congr) (hO.float_is_positive v')
 
-theorem lift_float_cast (hO : O.Sound FS) {rounding : RM} {fp : Prec} {v v' : Term}
+theorem lift_float_cast (hO : O.Sound FS) {rounding : Rm} {fp : Fp} {v v' : Term}
   (h_v : Refines FS v v') :
   Refines FS (float_cast.spec rounding fp v) (O.float_cast rounding fp v') :=
   Refines.trans (by simp only [bvr_spec]; bvr_congr) (hO.float_cast rounding fp v')
@@ -342,7 +342,7 @@ theorem lift_float_sqrt (hO : O.Sound FS) {v v' : Term}
   Refines FS (float_sqrt.spec v) (O.float_sqrt v') :=
   Refines.trans (by simp only [bvr_spec]; bvr_congr) (hO.float_sqrt v')
 
-theorem lift_float_round (hO : O.Sound FS) {rm : RM} {sv sv' : Term}
+theorem lift_float_round (hO : O.Sound FS) {rm : Rm} {sv sv' : Term}
   (h_sv : Refines FS sv sv') :
   Refines FS (float_round.spec rm sv) (O.float_round rm sv') :=
   Refines.trans (by simp only [bvr_spec]; bvr_congr) (hO.float_round rm sv')

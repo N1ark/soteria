@@ -126,21 +126,30 @@ let classify (p : program) =
 (* ---------------------------------------------------------------- *)
 (* Types *)
 
+(** The Lean name of a type of the language: its BVR name, CamelCased. *)
+let lean_name s =
+  String.concat ""
+    (List.map String.capitalize_ascii (String.split_on_char '_' s))
+
 let rec lean_ty ft = function
-  | TInt -> pf ft "Int"
+  | TInt | TVar -> pf ft "Int"
   | TBool -> pf ft "Bool"
   | TUnit -> pf ft "Unit"
-  | (TBv | TTerm | TKind | TSty | TVar | TData _) as t ->
-      pf ft "%s" (decl_of_ty t).d_lean
+  | TBv -> pf ft "BvVal"
+  | TTerm -> pf ft "Term"
+  | (TKind | TSty | TData _) as t ->
+      pf ft "%s" (lean_name (decl_of_ty t).d_name)
   | TTuple l -> pf ft "(%a)" (list ~sep:" × " lean_ty) l
   | TOption t -> pf ft "(Option %a)" lean_ty t
   | TList t -> pf ft "(List %a)" lean_ty t
+
+let lean_constr (c : constr) = Fmt.str "%a.%s" lean_ty c.c_res c.c_name
 
 (* ---------------------------------------------------------------- *)
 (* Patterns *)
 
 (** The Lean constructor of bit-vector literals. *)
-let lit_bv () = (Option.get (find_constr (Option.get !lang.lit_bv))).c_lean
+let lit_bv () = lean_constr (Option.get (find_constr (Option.get !lang.lit_bv)))
 
 let rec pat ft (p : pat) =
   match p.p with
@@ -168,8 +177,8 @@ let rec pat ft (p : pat) =
   | PConstr (c, args) ->
       let inner ft () =
         match args with
-        | [] -> pf ft "%s" c.c_lean
-        | _ -> pf ft "(%s %a)" c.c_lean (list ~sep:" " pat) args
+        | [] -> pf ft "%s" (lean_constr c)
+        | _ -> pf ft "(%s %a)" (lean_constr c) (list ~sep:" " pat) args
       in
       if p.pty = TTerm then pf ft "(Term.mk %a _)" inner () else inner ft ()
 
@@ -199,8 +208,9 @@ let rec expr ctx ft (e : expr) =
   | EInt z -> pf ft "(%s : Int)" (Z.to_string z)
   | EBool b -> pf ft "%b" b
   | EUnit -> pf ft "()"
-  | EConstr (c, []) -> pf ft "%s" c.c_lean
-  | EConstr (c, args) -> pf ft "(%s %a)" c.c_lean (list ~sep:" " expr) args
+  | EConstr (c, []) -> pf ft "%s" (lean_constr c)
+  | EConstr (c, args) ->
+      pf ft "(%s %a)" (lean_constr c) (list ~sep:" " expr) args
   | ENode (k, t) -> pf ft "(Term.mk %a %a)" expr k expr t
   | ECall (f, args) ->
       let f =
@@ -272,7 +282,7 @@ let rec expr ctx ft (e : expr) =
       let d = decl_of_ty e.ety in
       pf ft "({ %a } : %s)"
         (list (fun ft (f, _) -> pf ft "%s := %a" f expr (List.assoc f fs)))
-        d.d_fields d.d_lean
+        d.d_fields (lean_name d.d_name)
   | EField (e, f) -> pf ft "%a.%s" expr e f
   | EAssert (_, body) -> expr ft body
 
@@ -524,8 +534,8 @@ let pat_term (p : pat) =
     | PConstr (c, args) ->
         let args = List.map go args in
         let inner =
-          if args = [] then c.c_lean
-          else "(" ^ String.concat " " (c.c_lean :: args) ^ ")"
+          if args = [] then lean_constr c
+          else "(" ^ String.concat " " (lean_constr c :: args) ^ ")"
         in
         if p.pty = TTerm then (
           let t = Printf.sprintf "t__%d" p.pid in
@@ -1026,3 +1036,152 @@ let soundness ~sources ~proofs ft (p : program) =
     (fun f -> pf ft ",\n      %s := %s.step_sound FS _ hO" f.name f.name)
     (rule_fns ctx);
   pf ft " }@]@ @ end Bvr@]@."
+
+(* ---------------------------------------------------------------- *)
+(* The types of the language
+
+   Two files define them: [Types.lean], the types that neither use terms nor
+   abstract types, and [Syntax.lean], the others, the types that use terms being
+   mutually inductive with [Term]. The abstract types are defined by hand in
+   between, in [Abstract.lean]. *)
+
+let constrs_of (d : decl) =
+  List.filter (fun c -> decl_name c.c_res = Some d.d_name) !lang.constrs
+
+let is_abstract (d : decl) = d.d_fields = [] && constrs_of d = []
+
+(** The types that [d] is defined with. *)
+let components (d : decl) =
+  List.map snd d.d_fields
+  @ List.concat_map (fun c -> List.map arg_ty c.c_args) (constrs_of d)
+
+let rec decls_of_ty = function
+  | (TKind | TSty | TData _) as t -> [ decl_of_ty t ]
+  | TTuple l -> List.concat_map decls_of_ty l
+  | TOption t | TList t -> decls_of_ty t
+  | TInt | TBv | TBool | TUnit | TTerm | TVar -> []
+
+let rec uses_term = function
+  | TTerm -> true
+  | TTuple l -> List.exists uses_term l
+  | TOption t | TList t -> uses_term t
+  | _ -> false
+
+(** The declared types, callees first, and otherwise in declaration order. *)
+let sorted_decls () =
+  let seen = Hashtbl.create 17 and out = ref [] in
+  let rec visit (d : decl) =
+    if not (Hashtbl.mem seen d.d_name) then (
+      Hashtbl.add seen d.d_name ();
+      List.iter visit (List.concat_map decls_of_ty (components d));
+      out := d :: !out)
+  in
+  List.iter visit !lang.decls;
+  List.rev !out
+
+(** Whether [d] is defined, directly or not, with [p] types. *)
+let reaches p (d : decl) =
+  let rec go seen (d : decl) =
+    p d
+    || List.exists
+         (fun (e : decl) ->
+           (not (List.mem e.d_name seen)) && go (d.d_name :: seen) e)
+         (List.concat_map decls_of_ty (components d))
+  in
+  go [] d
+
+let lean_decl ft (d : decl) =
+  let name = lean_name d.d_name in
+  (match d.d_fields with
+  | [] ->
+      pf ft "@[<v 2>inductive %s where" name;
+      List.iter
+        (fun c ->
+          pf ft "@ | %s" c.c_name;
+          if c.c_args <> [] then
+            pf ft " : %a%s"
+              (list ~sep:"" (fun ft a -> pf ft "%a → " lean_ty (arg_ty a)))
+              c.c_args name)
+        (constrs_of d)
+  | fields ->
+      pf ft "@[<v 2>structure %s where" name;
+      List.iter (fun (f, t) -> pf ft "@ %s : %a" f lean_ty t) fields);
+  pf ft "@]@ "
+
+let lean_header ~sources ft imports =
+  pf ft "@[<v>-- Generated by bvr from %a. Do not edit.@ @ "
+    (list Format.pp_print_string)
+    sources;
+  List.iter (fun i -> pf ft "import %s@ " i) imports;
+  if imports <> [] then pf ft "@ ";
+  pf ft "namespace Bvr@ @ "
+
+let deriving ft () = pf ft "  deriving DecidableEq, Repr, Inhabited@ @ "
+
+(** [Types.lean]. *)
+let types ~sources ft =
+  lean_header ~sources ft [];
+  List.iter
+    (fun d ->
+      if
+        (not (is_abstract d))
+        && not
+             (reaches
+                (fun e -> is_abstract e || List.exists uses_term (components e))
+                d)
+      then (
+        lean_decl ft d;
+        deriving ft ()))
+    (sorted_decls ());
+  pf ft "end Bvr@]@."
+
+(** [Syntax.lean]: the other types, and the terms. *)
+let syntax ~sources ft =
+  lean_header ~sources ft [ "Bvr.Abstract" ];
+  let others =
+    List.filter
+      (fun d ->
+        (not (is_abstract d))
+        && reaches
+             (fun e -> is_abstract e || List.exists uses_term (components e))
+             d)
+      (sorted_decls ())
+  in
+  let mutual, plain =
+    List.partition
+      (reaches (fun e -> List.exists uses_term (components e)))
+      others
+  in
+  List.iter
+    (fun d ->
+      lean_decl ft d;
+      deriving ft ())
+    plain;
+  pf ft "mutual@ ";
+  List.iter (lean_decl ft) mutual;
+  pf ft "@[<v 2>inductive Term where@ | mk (kind : %a) (ty : %a)@]@ end@ @ "
+    lean_ty TKind lean_ty TSty;
+  pf ft
+    "def Term.kind : Term → %a@   | .mk k _ => k@ @ def Term.ty : Term → %a@   \
+     | .mk _ t => t@ @ "
+    lean_ty TKind lean_ty TSty;
+  pf ft
+    "@@[simp] theorem Term.kind_mk (k : %a) (t : %a) : (Term.mk k t).kind = k \
+     := rfl@ @@[simp] theorem Term.ty_mk (k : %a) (t : %a) : (Term.mk k t).ty \
+     = t := rfl@ @ "
+    lean_ty TKind lean_ty TSty lean_ty TKind lean_ty TSty;
+  (* the default of a type is its first constructor that does not use terms *)
+  List.iter
+    (fun d ->
+      match
+        List.find_opt
+          (fun c -> not (List.exists (fun a -> uses_term (arg_ty a)) c.c_args))
+          (constrs_of d)
+      with
+      | Some c ->
+          pf ft "instance : Inhabited %s := ⟨.%s%s⟩@ " (lean_name d.d_name)
+            c.c_name
+            (String.concat "" (List.map (fun _ -> " default") c.c_args))
+      | None -> ())
+    mutual;
+  pf ft "instance : Inhabited Term := ⟨.mk default default⟩@ @ end Bvr@]@."

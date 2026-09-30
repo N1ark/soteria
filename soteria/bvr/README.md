@@ -20,11 +20,21 @@ by `bvr_parser.mly`.
 bvr does not hard-code the language of Bv_values: the types of its terms,
 their constructors and the operators on them are declared in
 `soteria/lib/bv_values/rules/lang.bvl`, which `bvr` reads before the rules
-(`bvr BACKEND lang.bvl FILE...`). For each type, it gives its OCaml and Lean
-names and, for a variant, the Lean names of its constructors; attributes mark
-the literals, the commutative operators and the kind constructors that
-operators stand for. `infix` and `prefix` declare what the operators on terms
-build and match (see [Operators on terms](#operators-on-terms)).
+(`bvr BACKEND lang.bvl FILE...`). Attributes mark the literals, the
+commutative operators and the kind constructors that operators stand for, and
+`infix` and `prefix` declare what the operators on terms build and match (see
+[Operators on terms](#operators-on-terms)).
+
+Names flow from bvr to Lean: `bvr lean-types` and `bvr lean-syntax` generate
+the Lean definitions of the declared types (`Types.lean` and `Syntax.lean`),
+with the same constructor names, and with type names CamelCased (`ext_ty` is
+`ExtTy`). The abstract types, declared without a definition, are defined by
+hand in `Abstract.lean`. In OCaml, the types are those of `Svalue_ast`, which
+bvr does not generate: `[@ocaml "..."]` gives the OCaml type when it is not
+the bvr one.
+
+`t` (terms), `bv` and `var` are built into bvr, as are `int`, `bool` and
+`unit`; `type`, `of`, `infix` and `prefix` are keywords.
 
 ## Functions
 
@@ -124,6 +134,8 @@ expected stands for its literal: `| lits: #l, #r -> l + r`.
 `lean/` is a Lean project. Its generated files are checked to be up to date by
 `dune test` (run `dune promote` after changing the rules):
 
+- `Types.lean` and `Syntax.lean` define the types of the language, around
+  `Abstract.lean` (written by hand).
 - `Model.lean` is a Lean model of the rule functions, over the primitives of
   `Prims.lean`, and `Semantics.lean` gives terms their meaning (written by
   hand).

@@ -38,7 +38,7 @@ theorem bvBin_eq_some {f : ∀ {n : Nat}, BitVec n → BitVec n → Option Val} 
     · simp at h
   · rintro ⟨n, x, y, rfl, rfl, h⟩; simpa [bvBin] using h
 
-theorem fBin_eq_some {f : (p : Prec) → FBits p → FBits p → Option Val} {a b v} :
+theorem fBin_eq_some {f : (p : Fp) → FBits p → FBits p → Option Val} {a b v} :
     fBin f a b = some v ↔
       ∃ p x y, a = some (.float p x) ∧ b = some (.float p y) ∧ f p x y = some v := by
   constructor
@@ -78,21 +78,21 @@ theorem binop_hasSort {FS op a b t v va vb} (w : op.WT a b t)
 mutual
 theorem ev_hasSort {FS : FloatSem} {ρ : Env} :
     ∀ (t : Term), t.WT → ∀ v, ev FS ρ t = some v → v.hasSort t.ty
-  | .mk (.var x) T, _, v, h => by
+  | .mk (.Var x) T, _, v, h => by
       simp only [ev] at h; split at h
       · split at h
         · simp at h; subst h; simpa [Val.hasTy] using ‹_›
         · simp at h
       · simp at h
-  | .mk (.bool b) T, w, v, h => by
+  | .mk (.Bool b) T, w, v, h => by
       simp [Term.WT] at w; simp [ev] at h; subst h w; simp [Val.hasSort]
-  | .mk (.float f) T, w, v, h => by
-      simp [Term.WT] at w; simp [ev] at h; subst h; rw [w.1]; simp [FloatLit.sem, Val.hasSort]
-  | .mk (.bitVec z) T, w, v, h => by
+  | .mk (.Float f) T, w, v, h => by
+      simp [Term.WT] at w; simp [ev] at h; subst h; rw [w.1]; simp [Float.sem, Val.hasSort]
+  | .mk (.BitVec z) T, w, v, h => by
       obtain ⟨n, hn, hT, _⟩ := WT_bitVec.1 w
       simp [ev] at h; subst h
       rcases hT with rfl | rfl <;> simpa [Val.hasSort, Ty.width, size_of_ty] using hn
-  | .mk (.ptr l o) T, w, v, h => by
+  | .mk (.Ptr l o) T, w, v, h => by
       simp only [Term.WT, Ty.sort_eq] at w
       obtain ⟨n, hn, rfl, hl, ho, wl, wo⟩ := w
       simp only [ev] at h; split at h
@@ -103,22 +103,22 @@ theorem ev_hasSort {FS : FloatSem} {ρ : Env} :
           simpa [Val.hasSort] using this
         · simp at h
       · simp at h
-  | .mk (.seq l) T, w, v, h => by
+  | .mk (.Seq l) T, w, v, h => by
       simp only [Term.WT] at w
       obtain ⟨e, rfl, wl⟩ := w
       simp only [ev, Option.map_eq_some_iff] at h
       obtain ⟨vs, hvs, rfl⟩ := h
       simpa [Val.hasSort] using evList_hasSort e l wl vs hvs
-  | .mk (.unop op a) T, w, v, h => by
+  | .mk (.Unop op a) T, w, v, h => by
       simp only [ev] at h
       have w1 := (WT_unop.1 w).1; simp only [Ty.sort_eq] at w1
       exact unop_hasSort w1 (ev_hasSort a (WT_unop.1 w).2) h
-  | .mk (.binop op a b) T, w, v, h => by
+  | .mk (.Binop op a b) T, w, v, h => by
       simp only [ev] at h
       have ⟨w1, wa, wb⟩ := WT_binop.1 w
       simp only [Ty.sort_eq] at w1
       exact binop_hasSort w1 (ev_hasSort a wa) (ev_hasSort b wb) h
-  | .mk (.triop .ite g a b) T, w, v, h => by
+  | .mk (.Triop .Ite g a b) T, w, v, h => by
       have ⟨w1, wg, wa, wb⟩ := WT_triop.1 w
       simp only [Triop.WT, Ty.sort_eq] at w1
       obtain ⟨_, hb, rfl⟩ := w1
@@ -127,7 +127,7 @@ theorem ev_hasSort {FS : FloatSem} {ρ : Env} :
       · exact ev_hasSort a wa _ h
       · have := ev_hasSort b wb _ h; rwa [hb] at this
       · simp at h
-  | .mk (.triop .fma a b c) T, w, v, h => by
+  | .mk (.Triop .Fma a b c) T, w, v, h => by
       have ⟨w1, wa, wb, wc⟩ := WT_triop.1 w
       simp only [Triop.WT, Ty.sort_eq] at w1
       obtain ⟨⟨p, hp⟩, _, _, rfl⟩ := w1
@@ -140,16 +140,16 @@ theorem ev_hasSort {FS : FloatSem} {ρ : Env} :
           have := ev_hasSort a wa _ ha; rw [hp] at this ⊢; simpa [Val.hasSort] using this
         · simp at h
       · simp at h
-  | .mk (.nop .distinct l) T, w, v, h => by
+  | .mk (.Nop .Distinct l) T, w, v, h => by
       simp only [Term.WT] at w; obtain ⟨rfl, _⟩ := w
       simp only [ev, Option.map_eq_some_iff] at h
       obtain ⟨vs, _, rfl⟩ := h; simp [Val.hasSort]
-  | .mk (.exists_ bs body) T, w, v, h => by
+  | .mk (.Exists bs body) T, w, v, h => by
       simp only [Term.WT] at w; obtain ⟨rfl, _⟩ := w
       simp only [ev] at h; split at h
       · simp at h; subst h; simp [Val.hasSort]
       · simp at h
-  | .mk (.extension e) T, _, v, h => by
+  | .mk (.Extension e) T, _, v, h => by
       simp only [ev] at h; split at h
       · split at h
         · simp at h; subst h; simpa [Val.hasTy] using ‹_›

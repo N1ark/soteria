@@ -40,12 +40,12 @@ macro "bvr_arm " h:ident p:term : tactic => `(tactic| first
 
 /-- The binary operators whose operands commute. -/
 def _root_.Bvr.Binop.Comm : Binop → Prop
-  | .and_ | .or_ | .eq | .fEq | .addOvf _ | .mulOvf _ | .add _ | .mul _
-  | .bitAnd | .bitOr | .bitXor => True
+  | .And | .Or | .Eq | .FEq | .AddOvf _ | .MulOvf _ | .Add _ | .Mul _
+  | .BitAnd | .BitOr | .BitXor => True
   | _ => False
 
 theorem Binop.WT_comm {op : Binop} (hc : op.Comm) {a b t : Ty} (h : op.WT a b t) :
-    op.WT b a t ∧ (op ≠ .eq → a = b) := by
+    op.WT b a t ∧ (op ≠ .Eq → a = b) := by
   cases op <;> simp_all [Binop.Comm, Binop.WT]
 
 theorem bvBin_comm {f g : ∀ {n : Nat}, BitVec n → BitVec n → Option Val}
@@ -57,7 +57,7 @@ theorem bvBin_comm {f g : ∀ {n : Nat}, BitVec n → BitVec n → Option Val}
   · subst h; simp [hfg]
   · simp [h, Ne.symm h]
 
-theorem fBin_comm {f g : (p : Prec) → FBits p → FBits p → Option Val}
+theorem fBin_comm {f g : (p : Fp) → FBits p → FBits p → Option Val}
     (hfg : ∀ p (x y : FBits p), f p x y = g p y x) (a b : Option Val) :
     fBin f a b = fBin g b a := by
   rcases a with _ | ⟨_ | _ | _ | ⟨p, x⟩ | _ | _⟩ <;>
@@ -83,38 +83,38 @@ theorem ovf_comm {n : Nat} (x y : BitVec n) : (x.saddOverflow y = y.saddOverflow
 theorem evBinop_comm {FS : FloatSem} {op : Binop} (hc : op.Comm) (a b : Option Val) :
     evBinop FS op a b = evBinop FS op b a := by
   cases op <;> simp only [Binop.Comm] at hc
-  case and_ => exact pand_comm a b
-  case or_ => exact por_comm a b
-  case eq => rcases a <;> rcases b <;> simp [evBinop, eq_comm]
-  case fEq =>
+  case And => exact pand_comm a b
+  case Or => exact por_comm a b
+  case Eq => rcases a <;> rcases b <;> simp [evBinop, eq_comm]
+  case FEq =>
     simp only [evBinop]
     exact fBin_comm (fun p x y => by simp only [FBits.eq]; grind) a b
-  case add c =>
+  case Add c =>
     simp only [evBinop, checkedOp]
     exact bvBin_comm (fun x y => by
       simp [(ovf_comm x y).1, (ovf_comm x y).2.1, BitVec.add_comm x]) a b
-  case mul c =>
+  case Mul c =>
     simp only [evBinop, checkedOp]
     exact bvBin_comm (fun x y => by
       simp [(ovf_comm x y).2.2.1, (ovf_comm x y).2.2.2, BitVec.mul_comm x]) a b
-  case addOvf s =>
+  case AddOvf s =>
     simp only [evBinop]
     exact bvBin_comm (fun x y => by simp [(ovf_comm x y).1, (ovf_comm x y).2.1]) a b
-  case mulOvf s =>
+  case MulOvf s =>
     simp only [evBinop]
     exact bvBin_comm (fun x y => by simp [(ovf_comm x y).2.2.1, (ovf_comm x y).2.2.2]) a b
-  case bitAnd =>
+  case BitAnd =>
     simp only [evBinop]; exact bvBin_comm (fun x y => by simp [BitVec.and_comm]) a b
-  case bitOr =>
+  case BitOr =>
     simp only [evBinop]; exact bvBin_comm (fun x y => by simp [BitVec.or_comm]) a b
-  case bitXor =>
+  case BitXor =>
     simp only [evBinop]; exact bvBin_comm (fun x y => by simp [BitVec.xor_comm]) a b
 
 /-- Swapping the operands of a commutative operator (whose type may be given by
 either operand). -/
 theorem Refines.comm {FS : FloatSem} {op : Binop} (hc : op.Comm) {a b : Term} {t t' : Ty}
-    (ht : (Term.mk (.binop op a b) t).WT → t' = t) :
-    Refines FS (.mk (.binop op a b) t) (.mk (.binop op b a) t') := by
+    (ht : (Term.mk (.Binop op a b) t).WT → t' = t) :
+    Refines FS (.mk (.Binop op a b) t) (.mk (.Binop op b a) t') := by
   refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
   · have ⟨w1, wa, wb⟩ := WT_binop.1 w
     have e := ht w; subst e
@@ -124,8 +124,8 @@ theorem Refines.comm {FS : FloatSem} {op : Binop} (hc : op.Comm) {a b : Term} {t
 /-- Swapping the operands of a commutative operator, and refining them. -/
 theorem Refines.comm_congr {FS : FloatSem} {op : Binop} (hc : op.Comm) {a b a' b' : Term}
     {t t' : Ty} (ha : Refines FS a b') (hb : Refines FS b a')
-    (ht : (Term.mk (.binop op a b) t).WT → t' = t) :
-    Refines FS (.mk (.binop op a b) t) (.mk (.binop op a' b') t') :=
+    (ht : (Term.mk (.Binop op a b) t).WT → t' = t) :
+    Refines FS (.mk (.Binop op a b) t) (.mk (.Binop op a' b') t') :=
   Refines.trans (Refines.comm (t' := t) hc (fun _ => rfl))
     (Refines.binop hb ha (fun w => by
       have := ht (by
@@ -135,8 +135,8 @@ theorem Refines.comm_congr {FS : FloatSem} {op : Binop} (hc : op.Comm) {a b a' b
 
 /-- The type of a node, given by one of its operands, is that of the other one
 when the operator requires them to be equal. -/
-theorem ty_of_WT_binop {op : Binop} {a b : Term} {t : Ty} (hc : op.Comm) (hne : op ≠ .eq)
-    (w : (Term.mk (.binop op a b) t).WT) : b.ty = a.ty :=
+theorem ty_of_WT_binop {op : Binop} {a b : Term} {t : Ty} (hc : op.Comm) (hne : op ≠ .Eq)
+    (w : (Term.mk (.Binop op a b) t).WT) : b.ty = a.ty :=
   ((Binop.WT_comm hc (WT_binop.1 w).1).2 hne).symm
 
 /-- Proves `Refines FS s s'` for terms that only differ by the order of the

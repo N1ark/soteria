@@ -38,10 +38,9 @@ type arg = Arg of ty | Small
 let arg_ty = function Arg t -> t | Small -> TInt
 
 type constr = {
-  c_name : string;  (** the BVR (and OCaml) name *)
+  c_name : string;  (** the BVR (and OCaml and Lean) name *)
   c_res : ty;
   c_args : arg list;
-  c_lean : string;  (** fully qualified Lean name *)
 }
 
 (** A type declared by the language: [kind], [ty], operators, enums, records and
@@ -49,7 +48,6 @@ type constr = {
 type decl = {
   d_name : string;
   d_ocaml : string;  (** the OCaml type *)
-  d_lean : string;  (** the Lean type *)
   d_eq : bool;  (** whether [=] and [<>] are allowed at this type *)
   d_fields : (string * ty) list;  (** the fields of a record type, in order *)
 }
@@ -104,11 +102,8 @@ let find_decl name = List.find_opt (fun d -> d.d_name = name) !lang.decls
 
 (** The name of the declaration of a type of the language. *)
 let decl_name = function
-  | TTerm -> Some "t"
   | TKind -> Some "kind"
   | TSty -> Some "ty"
-  | TBv -> Some "bv"
-  | TVar -> Some "var"
   | TData s -> Some s
   | _ -> None
 

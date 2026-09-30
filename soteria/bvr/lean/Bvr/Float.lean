@@ -10,24 +10,24 @@ arithmetic is abstract (see `FloatSem`).
 
 namespace Bvr
 
-def Prec.size : Prec → Nat
-  | .f16 => 16 | .f32 => 32 | .f64 => 64 | .f128 => 128
+def Fp.size : Fp → Nat
+  | .F16 => 16 | .F32 => 32 | .F64 => 64 | .F128 => 128
 
 /-- Exponent bits. -/
-def Prec.eb : Prec → Nat
-  | .f16 => 5 | .f32 => 8 | .f64 => 11 | .f128 => 15
+def Fp.eb : Fp → Nat
+  | .F16 => 5 | .F32 => 8 | .F64 => 11 | .F128 => 15
 
 /-- Stored mantissa bits (without the hidden bit). -/
-def Prec.mb : Prec → Nat
-  | .f16 => 10 | .f32 => 23 | .f64 => 52 | .f128 => 112
+def Fp.mb : Fp → Nat
+  | .F16 => 10 | .F32 => 23 | .F64 => 52 | .F128 => 112
 
-theorem Prec.size_eq (p : Prec) : p.size = 1 + p.eb + p.mb := by cases p <;> rfl
+theorem Fp.size_eq (p : Fp) : p.size = 1 + p.eb + p.mb := by cases p <;> rfl
 
-abbrev FBits (p : Prec) := BitVec p.size
+abbrev FBits (p : Fp) := BitVec p.size
 
 namespace FBits
 
-variable {p : Prec}
+variable {p : Fp}
 
 def mant (x : FBits p) : Nat := x.toNat % 2 ^ p.mb
 def expo (x : FBits p) : Nat := x.toNat / 2 ^ p.mb % 2 ^ p.eb
@@ -43,20 +43,20 @@ def isNormal (x : FBits p) : Bool := x.expo != 0 && x.expo != 2 ^ p.eb - 1
 def isNeg (x : FBits p) : Bool := !x.isNaN && x.sign
 def isPos (x : FBits p) : Bool := !x.isNaN && !x.sign
 
-def isClass : FClass → FBits p → Bool
-  | .normal => isNormal
-  | .subnormal => isSubnormal
-  | .zero => isZero
-  | .infinite => isInf
-  | .nan => isNaN
+def isClass : Fc → FBits p → Bool
+  | .Normal => isNormal
+  | .Subnormal => isSubnormal
+  | .Zero => isZero
+  | .Infinite => isInf
+  | .NaN => isNaN
 
 /-- The NaN that represents all NaNs. -/
-def nan (p : Prec) : FBits p :=
+def nan (p : Fp) : FBits p :=
   BitVec.ofNat _ ((2 ^ p.eb - 1) * 2 ^ p.mb + 2 ^ (p.mb - 1))
 
 def canon (x : FBits p) : FBits p := if x.isNaN then nan p else x
 
-def signMask (p : Prec) : FBits p := BitVec.ofNat _ (2 ^ (p.size - 1))
+def signMask (p : Fp) : FBits p := BitVec.ofNat _ (2 ^ (p.size - 1))
 
 /-- The magnitude of a float, with a sign: IEEE floats are ordered like this
 key, NaNs aside, and with both zeros at 0. -/
@@ -76,6 +76,6 @@ def neg (x : FBits p) : FBits p := x ^^^ signMask p
 end FBits
 
 /-- The bit pattern of a concrete float. -/
-def FloatLit.val (f : FloatLit) : FBits f.prec := BitVec.ofNat _ f.bits
+def Float.val (f : Float) : FBits f.prec := BitVec.ofNat _ f.bits
 
 end Bvr

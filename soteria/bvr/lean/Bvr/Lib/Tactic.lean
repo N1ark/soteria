@@ -59,7 +59,7 @@ theorem ssubOverflow_zero_left {n : Nat} (hn : 0 < n) (x : BitVec n) :
       split <;> simp_all [BitVec.neg_neg]
 
 @[simp] theorem WT_bitVec_bv {z m : Int} :
-    (Term.mk (.bitVec z) (.bitVector m)).WT ↔ 0 < m ∧ 0 ≤ z ∧ z < 2 ^ m.toNat := by
+    (Term.mk (.BitVec z) (.TBitVector m)).WT ↔ 0 < m ∧ 0 ≤ z ∧ z < 2 ^ m.toNat := by
   rw [WT_bitVec]
   constructor
   · rintro ⟨k, hk, h, h1, h2⟩
@@ -81,7 +81,7 @@ macro "bvr_facts" : tactic => `(tactic| (
   (try bvr_destruct_tys)
   (try simp only [Term.ty_mk] at *)
   (try subst_vars)
-  (try simp only [Ty.bitVector.injEq, Ty.loc.injEq] at *)
+  (try simp only [Ty.TBitVector.injEq, Ty.TLoc.injEq] at *)
   (try subst_vars)
   (try bvr_wt_simp)
   (try bvr_split)

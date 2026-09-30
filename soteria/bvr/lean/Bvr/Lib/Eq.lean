@@ -532,10 +532,10 @@ variable {FS : FloatSem}
 
 /-- The operands of a predicate on bit-vectors, of a natural width. -/
 theorem WT_pred_nat {op : Binop} {a b : Term} {t : Ty}
-    (hop : ∀ a b t, op.WT a b t ↔ (∃ n : Int, 0 < n ∧ a = .bitVector n) ∧ b = a ∧ t = .bool)
-    (w : (Term.mk (.binop op a b) t).WT) :
-    ∃ n : Nat, 0 < n ∧ a.WT ∧ b.WT ∧ a.ty = .bitVector (n : Int) ∧
-      b.ty = .bitVector (n : Int) := by
+    (hop : ∀ a b t, op.WT a b t ↔ (∃ n : Int, 0 < n ∧ a = .TBitVector n) ∧ b = a ∧ t = .TBool)
+    (w : (Term.mk (.Binop op a b) t).WT) :
+    ∃ n : Nat, 0 < n ∧ a.WT ∧ b.WT ∧ a.ty = .TBitVector (n : Int) ∧
+      b.ty = .TBitVector (n : Int) := by
   obtain ⟨wa, wb, hb, m, hm, ha⟩ := WT_pred hop w
   obtain ⟨n, rfl⟩ := Int.eq_ofNat_of_zero_le (Int.le_of_lt hm)
   exact ⟨n, by omega, wa, wb, ha, by rw [hb, ha]⟩
@@ -544,7 +544,7 @@ theorem WT_pred_nat {op : Binop} {a b : Term} {t : Ty}
 theorem Refines.mulOvf_msb {s : Bool} {v1 v2 : Term} {t : Ty}
     (h : (s && decide (msb_of v1 + msb_of v2 < size v1 - 2) ||
       !s && decide (msb_of v1 + msb_of v2 < size v1 - 1)) = true) :
-    Refines FS (.mk (.binop (.mulOvf s) v1 v2) t) v_false := by
+    Refines FS (.mk (.Binop (.MulOvf s) v1 v2) t) v_false := by
   replace h : if s then msb_of v1 + msb_of v2 < size v1 - 2
       else msb_of v1 + msb_of v2 < size v1 - 1 := by
     cases s <;> simp only [Bool.true_and, Bool.false_and, Bool.not_true, Bool.not_false,
@@ -692,10 +692,10 @@ theorem extract_low_inj {n m : Nat} {x y : BitVec n} (hx : x.toNat < 2 ^ m) (hy 
 /-- An equality of bit-vectors with no significant bits above [M]. -/
 theorem Refines.eq_low {a b : Term} {M : Int} {t : Ty} (hbv : is_bv a.ty = true) (hM0 : 0 ≤ M)
     (ha : msb_of a ≤ M) (hb : msb_of b ≤ M) (hM : M < size a - 1) :
-    Refines FS (.mk (.binop .eq a b) t)
-      (.mk (.binop .eq (.mk (.unop (.bvExtract 0 M) a) (.bitVector (M - 0 + 1)))
-        (.mk (.unop (.bvExtract 0 M) b) (.bitVector (M - 0 + 1)))) .bool) := by
-  have hty : ∃ n : Int, a.ty = .bitVector n := by
+    Refines FS (.mk (.Binop .Eq a b) t)
+      (.mk (.Binop .Eq (.mk (.Unop (.BvExtract 0 M) a) (.TBitVector (M - 0 + 1)))
+        (.mk (.Unop (.BvExtract 0 M) b) (.TBitVector (M - 0 + 1)))) .TBool) := by
+  have hty : ∃ n : Int, a.ty = .TBitVector n := by
     revert hbv; cases a.ty <;> simp [is_bv, firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse]
   obtain ⟨n, hn⟩ := hty
   simp only [size_eq, hn, size_of_ty_bitVector] at hM
@@ -704,7 +704,7 @@ theorem Refines.eq_low {a b : Term} {M : Int} {t : Ty} (hbv : is_bv a.ty = true)
     simp [WT_eq, WT_unop, Unop.WT, wa, wb, ← hab, hn, ht]; omega
   · obtain ⟨hab, -, wa, wb⟩ := WT_eq.1 w
     obtain ⟨N, rfl⟩ := Int.eq_ofNat_of_zero_le (show 0 ≤ n by omega)
-    have hb' : b.ty = .bitVector (N : Int) := by rw [← hab, hn]
+    have hb' : b.ty = .TBitVector (N : Int) := by rw [← hab, hn]
     simp only [denB, hn, Term.ty_mk, den, hb', Int.toNat_natCast] at e ⊢
     have hp : 0 < (N : Int) := by omega
     simp only [hp, ite_true] at e
@@ -722,27 +722,27 @@ theorem Refines.eq_low {a b : Term} {M : Int} {t : Ty} (hbv : is_bv a.ty = true)
 
 /-- The remainder by a power of two keeps the low bits. -/
 theorem Refines.rem_pow2 {v : Term} {r : Int} {T t : Ty}
-    (hp : is_pow2 (to_z false (bv_of_lit (.mk (.bitVec r) T))) = true)
-    (h1 : to_z false (bv_of_lit (.mk (.bitVec r) T)) > 1) :
-    Refines FS (.mk (.binop (.rem false) v (.mk (.bitVec r) T)) t)
-      (.mk (.unop (.bvExtend false (size v - log2 (to_z false (bv_of_lit (.mk (.bitVec r) T)))))
-        (.mk (.unop (.bvExtract 0 (log2 (to_z false (bv_of_lit (.mk (.bitVec r) T))) - 1)) v)
-          (.bitVector (log2 (to_z false (bv_of_lit (.mk (.bitVec r) T))) - 1 - 0 + 1))))
-        (.bitVector (size (.mk (.unop (.bvExtract 0 (log2 (to_z false (bv_of_lit (.mk (.bitVec r) T))) - 1)) v)
-          (.bitVector (log2 (to_z false (bv_of_lit (.mk (.bitVec r) T))) - 1 - 0 + 1))) +
-          (size v - log2 (to_z false (bv_of_lit (.mk (.bitVec r) T))))))) := by
-  generalize hz : to_z false (bv_of_lit (.mk (.bitVec r) T)) = z at *
+    (hp : is_pow2 (to_z false (bv_of_lit (.mk (.BitVec r) T))) = true)
+    (h1 : to_z false (bv_of_lit (.mk (.BitVec r) T)) > 1) :
+    Refines FS (.mk (.Binop (.Rem false) v (.mk (.BitVec r) T)) t)
+      (.mk (.Unop (.BvExtend false (size v - log2 (to_z false (bv_of_lit (.mk (.BitVec r) T)))))
+        (.mk (.Unop (.BvExtract 0 (log2 (to_z false (bv_of_lit (.mk (.BitVec r) T))) - 1)) v)
+          (.TBitVector (log2 (to_z false (bv_of_lit (.mk (.BitVec r) T))) - 1 - 0 + 1))))
+        (.TBitVector (size (.mk (.Unop (.BvExtract 0 (log2 (to_z false (bv_of_lit (.mk (.BitVec r) T))) - 1)) v)
+          (.TBitVector (log2 (to_z false (bv_of_lit (.mk (.BitVec r) T))) - 1 - 0 + 1))) +
+          (size v - log2 (to_z false (bv_of_lit (.mk (.BitVec r) T))))))) := by
+  generalize hz : to_z false (bv_of_lit (.mk (.BitVec r) T)) = z at *
   obtain ⟨hz2, hk0⟩ := is_pow2_eq hp
   generalize hk : log2 z = k at *
-  have key : (Term.mk (.binop (.rem false) v (.mk (.bitVec r) T)) t).WT →
-      ∃ n : Nat, 0 < n ∧ v.WT ∧ v.ty = .bitVector n ∧ T = .bitVector n ∧ t = .bitVector n ∧
+  have key : (Term.mk (.Binop (.Rem false) v (.mk (.BitVec r) T)) t).WT →
+      ∃ n : Nat, 0 < n ∧ v.WT ∧ v.ty = .TBitVector n ∧ T = .TBitVector n ∧ t = .TBitVector n ∧
         z = r ∧ 0 ≤ r ∧ r < 2 ^ n ∧ 1 ≤ k ∧ k < n := by
     intro w
     obtain ⟨w1, wv, wl⟩ := WT_binop.1 w
     simp only [Binop.WT, Ty.sort_eq, Term.ty_mk] at w1
     obtain ⟨⟨m, hm, hv⟩, hT, ht⟩ := w1
     obtain ⟨n, rfl⟩ := Int.eq_ofNat_of_zero_le (Int.le_of_lt hm)
-    have hT' : T = .bitVector (n : Int) := by rw [hT, hv]
+    have hT' : T = .TBitVector (n : Int) := by rw [hT, hv]
     rw [hT'] at wl hz; rw [hv] at ht
     obtain ⟨-, r0, r1⟩ := WT_bitVec_bv.1 wl
     simp only [Int.toNat_natCast] at r1
@@ -760,12 +760,12 @@ theorem Refines.rem_pow2 {v : Term} {r : Int} {T t : Ty}
   · obtain ⟨n, -, -, -, -, ht, -⟩ := key w; exact ⟨n, ht⟩
   · obtain ⟨n, hn, wv, hv, -, ht, -, -, -, hk1, hkn⟩ := key w
     simp only [WT_unop, Unop.WT, Ty.sort_eq, Term.ty_mk, size_eq, size_of_ty_bitVector, hv, ht,
-      wv, Ty.bitVector.injEq]
+      wv, Ty.TBitVector.injEq]
     exact ⟨⟨⟨_, by omega, rfl, by omega, rfl⟩, ⟨_, rfl, Int.le_refl _, by omega, by omega, trivial⟩,
       trivial⟩, by omega⟩
   · obtain ⟨N, hn, wv, hv, hT, ht', hzr, r0, r1, hk1, hkn⟩ := key w
     subst hzr hT
-    rw [ht'] at ht; simp only [Term.ty_mk, Ty.bitVector.injEq, Int.natCast_inj] at ht
+    rw [ht'] at ht; simp only [Term.ty_mk, Ty.TBitVector.injEq, Int.natCast_inj] at ht
     obtain rfl : n = N := ht.symm
     simp only [den, hv, Term.ty_mk, Int.toNat_natCast, Bool.false_eq_true, ite_false] at e ⊢
     cases ev : den FS ρ n v <;> rw [ev] at e <;> simp at e
@@ -810,9 +810,9 @@ theorem iv_ofInt {s : Bool} {w : Nat} (hw : 0 < w) {q : Int}
   · rw [toNat_ofInt_of_lt h.1 h.2]; omega
   · exact BitVec.toInt_ofInt_eq_self hw h.1 h.2
 
-theorem denB_eq_lit {ρ x} {W : Nat} {z : Int} {X : BitVec W} (hW : 0 < W) (hx : x.ty = .bitVector W)
+theorem denB_eq_lit {ρ x} {W : Nat} {z : Int} {X : BitVec W} (hW : 0 < W) (hx : x.ty = .TBitVector W)
     (ex : den FS ρ W x = some X) :
-    denB FS ρ (.mk (.binop .eq x (.mk (.bitVec z) (.bitVector W))) .bool) =
+    denB FS ρ (.mk (.Binop .Eq x (.mk (.BitVec z) (.TBitVector W))) .TBool) =
       some (decide (X = BitVec.ofInt W z)) := by
   simp [denB, den, hx, hW, ex]
 
@@ -855,18 +855,18 @@ end
 /-- A constant equal to a checked product of a constant: the values of the rule in integers. -/
 theorem Refines.eq_mul_const {n m : Int} {Tn Tm T t : Ty} {ck : Checked} {x r : Term}
     (hck : is_checked ck = true)
-    (hsyn : ∀ W : Nat, 0 < W → x.ty = .bitVector W → x.WT → size x = W → r.WT ∧ r.ty = .bool)
-    (hsem : ∀ (W : Nat) (N M X : BitVec W) ρ, 0 < W → x.ty = .bitVector W → size x = W →
-      to_z (!ck.unsigned) (bv_of_lit (.mk (.bitVec n) Tn)) = iv (!ck.unsigned) N →
-      to_z (!ck.unsigned) (bv_of_lit (.mk (.bitVec m) Tm)) = iv (!ck.unsigned) M →
+    (hsyn : ∀ W : Nat, 0 < W → x.ty = .TBitVector W → x.WT → size x = W → r.WT ∧ r.ty = .TBool)
+    (hsem : ∀ (W : Nat) (N M X : BitVec W) ρ, 0 < W → x.ty = .TBitVector W → size x = W →
+      to_z (!ck.unsigned) (bv_of_lit (.mk (.BitVec n) Tn)) = iv (!ck.unsigned) N →
+      to_z (!ck.unsigned) (bv_of_lit (.mk (.BitVec m) Tm)) = iv (!ck.unsigned) M →
       den FS ρ W x = some X →
       denB FS ρ r = some (decide (iv (!ck.unsigned) N = iv (!ck.unsigned) M * iv (!ck.unsigned) X))) :
     Refines FS
-      (.mk (.binop .eq (.mk (.bitVec n) Tn) (.mk (.binop (.mul ck) (.mk (.bitVec m) Tm) x) T)) t) r := by
-  have key : (Term.mk (.binop .eq (.mk (.bitVec n) Tn)
-      (.mk (.binop (.mul ck) (.mk (.bitVec m) Tm) x) T)) t).WT →
-      ∃ W : Nat, 0 < W ∧ x.ty = .bitVector W ∧ x.WT ∧ Tn = .bitVector W ∧ Tm = .bitVector W ∧
-        T = .bitVector W ∧ t = .bool := by
+      (.mk (.Binop .Eq (.mk (.BitVec n) Tn) (.mk (.Binop (.Mul ck) (.mk (.BitVec m) Tm) x) T)) t) r := by
+  have key : (Term.mk (.Binop .Eq (.mk (.BitVec n) Tn)
+      (.mk (.Binop (.Mul ck) (.mk (.BitVec m) Tm) x) T)) t).WT →
+      ∃ W : Nat, 0 < W ∧ x.ty = .TBitVector W ∧ x.WT ∧ Tn = .TBitVector W ∧ Tm = .TBitVector W ∧
+        T = .TBitVector W ∧ t = .TBool := by
     intro w
     obtain ⟨h1, ht, -, wm⟩ := WT_eq.1 w
     obtain ⟨w2, -, wx⟩ := WT_binop.1 wm

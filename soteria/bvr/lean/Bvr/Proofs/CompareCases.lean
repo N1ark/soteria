@@ -10,7 +10,7 @@ theorem bv_leq.r_udiv_big.a1.proof : bv_leq.r_udiv_big.a1.Stmt := by
   bvr_cmp_using [smtUDiv_ule_of_umulOverflow]
 
 /-- `ite g p p` is `p`. -/
-theorem refines_ite_same {FS g p} : Refines FS (.mk (.triop .ite g p p) .bool) p := by
+theorem refines_ite_same {FS g p} : Refines FS (.mk (.Triop .Ite g p p) .TBool) p := by
   refine Refines.denB (fun _ => rfl) (fun w => ?_) (fun w ρ b h => ?_)
   · obtain ⟨⟨-, -, e⟩, -, wp, -⟩ := WT_triop.1 w
     simp at e; exact ⟨wp, e.symm⟩

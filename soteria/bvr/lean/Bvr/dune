@@ -1,4 +1,5 @@
-; The Lean model, statements and assembly proof are generated from the rules;
+; The Lean types of the language, and the model, statements and assembly proof
+; of the rules, are generated from lang.bvl and the rules;
 ; `dune test` checks that the committed files are up to date (run `dune
 ; promote` after changing the rules), and CI checks them with `lake build`.
 
@@ -7,12 +8,26 @@
   %{project_root}/soteria/lib/bv_values/rules/lang.bvl
   (glob_files %{project_root}/soteria/lib/bv_values/rules/*.bvr))
  (targets
+  Types.lean.gen
+  Syntax.lean.gen
   Model.lean.gen
   Statements.lean.gen
   Lifts.lean.gen
   Soundness.lean.gen)
  (action
   (progn
+   (with-stdout-to
+    Types.lean.gen
+    (run
+     %{exe:../../main.exe}
+     lean-types
+     %{project_root}/soteria/lib/bv_values/rules/lang.bvl))
+   (with-stdout-to
+    Syntax.lean.gen
+    (run
+     %{exe:../../main.exe}
+     lean-syntax
+     %{project_root}/soteria/lib/bv_values/rules/lang.bvl))
    (with-stdout-to
     Model.lean.gen
     (run
@@ -62,6 +77,8 @@
  (alias runtest)
  (action
   (progn
+   (diff Types.lean Types.lean.gen)
+   (diff Syntax.lean Syntax.lean.gen)
    (diff Model.lean Model.lean.gen)
    (diff Statements.lean Statements.lean.gen)
    (diff Lifts.lean Lifts.lean.gen)

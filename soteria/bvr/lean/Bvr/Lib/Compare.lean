@@ -87,14 +87,14 @@ theorem eq_intMin_iff {n : Nat} (hn : 0 < n) (x : BitVec n) :
 
 /-- The values of a bit-vector term are below `2 ^ (msb_of v + 1)`. -/
 theorem msb_of_bound {FS : FloatSem} {ρ : Env} {v : Term} {n : Nat} {x : BitVec n}
-    (w : v.WT) (ht : v.ty = .bitVector n) (h : den FS ρ n v = some x) :
+    (w : v.WT) (ht : v.ty = .TBitVector n) (h : den FS ρ n v = some x) :
     (x.toNat : Int) < 2 ^ (msb_of v + 1).toNat := by
   exact_mod_cast den_msb w ht h
 
 theorem den_le_unsigned_ub {FS : FloatSem} {ρ : Env} {k : Kind} {n : Nat}
-    (w : (Term.mk k (.bitVector n)).WT) :
-    ∀ x, den FS ρ n (Term.mk k (.bitVector n)) = some x →
-      (x.toNat : Int) ≤ unsigned_ub (Term.mk k (.bitVector n)) := by
+    (w : (Term.mk k (.TBitVector n)).WT) :
+    ∀ x, den FS ρ n (Term.mk k (.TBitVector n)) = some x →
+      (x.toNat : Int) ≤ unsigned_ub (Term.mk k (.TBitVector n)) := by
   intro x h
   have := msb_of_bound w rfl h
   simp only [unsigned_ub, zshiftl, Int.one_mul]; omega
@@ -131,12 +131,12 @@ elab "bvr_ub_facts" : tactic => liftMetaTactic fun g => g.withContext do
 
 /-- The cancellable factors are positive (as signed integers when `s`). -/
 theorem cancellable_den {FS : FloatSem} {ρ : Env} {s : Bool} {k : Kind} {n : Nat}
-    (w : (Term.mk k (.bitVector n)).WT) (h : cancellable s (Term.mk k (.bitVector n)) = true) :
-    ∀ A, den FS ρ n (Term.mk k (.bitVector n)) = some A →
+    (w : (Term.mk k (.TBitVector n)).WT) (h : cancellable s (Term.mk k (.TBitVector n)) = true) :
+    ∀ A, den FS ρ n (Term.mk k (.TBitVector n)) = some A →
       if s then 0 < A.toInt else 0 < A.toNat := by
   intro A hA
   cases k
-  case bitVec z =>
+  case BitVec z =>
     obtain ⟨-, h0, h1⟩ := WT_bitVec_bv.1 w
     simp only [den, Option.some.injEq] at hA; subst hA
     cases s
@@ -176,7 +176,7 @@ elab "bvr_cancel_facts" : tactic => liftMetaTactic fun g => g.withContext do
 /-- An addition that cannot wrap around, by the bounds on its operands, may be
 checked unsigned. -/
 theorem Refines.add_no_wrap {FS : FloatSem} {c : Checked} {a b : Term} {t : Ty} :
-    Refines FS (.mk (.binop (.add c) a b) t) (.mk (.binop (.add (no_wrap c a b)) a b) t) := by
+    Refines FS (.mk (.Binop (.Add c) a b) t) (.mk (.Binop (.Add (no_wrap c a b)) a b) t) := by
   unfold no_wrap
   split
   · rename_i h
@@ -199,8 +199,8 @@ theorem Refines.add_no_wrap {FS : FloatSem} {c : Checked} {a b : Term} {t : Ty} 
       subst ht
       simp only [Ty.sort_eq] at *
       simp only [Lib.den] at e ⊢
-      cases ea : Lib.den FS ρ n (Term.mk ka (.bitVector n)) <;>
-        cases eb : Lib.den FS ρ n (Term.mk kb (.bitVector n)) <;> rw [ea, eb] at e <;>
+      cases ea : Lib.den FS ρ n (Term.mk ka (.TBitVector n)) <;>
+        cases eb : Lib.den FS ρ n (Term.mk kb (.TBitVector n)) <;> rw [ea, eb] at e <;>
         simp only [ckOp, reduceCtorEq] at e ⊢
       rename_i xa xb
       have la := den_le_unsigned_ub wa xa ea
@@ -560,7 +560,7 @@ macro "bvr_cmp_facts" : tactic => `(tactic| (
   (try bvr_destruct_tys)
   (try simp only [Term.ty_mk] at *)
   (try subst_vars)
-  (try simp only [Ty.bitVector.injEq, Ty.loc.injEq] at *)
+  (try simp only [Ty.TBitVector.injEq, Ty.TLoc.injEq] at *)
   (try subst_vars)
   (try simp [WT_binop, WT_unop, WT_triop, Binop.WT, Unop.WT, Triop.WT, bv_zero, bv_one,
     mk_masked, mk_bv, -bv_of_lit_bv, -bv_of_lit_bv', -to_z_mk] at *)

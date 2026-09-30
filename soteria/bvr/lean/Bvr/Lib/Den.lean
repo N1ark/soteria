@@ -28,7 +28,7 @@ theorem evalB_of_eval {FS ρ t} {o : Option Bool} (h : eval FS ρ t = o.map Val.
   | some x => exact (evalB_eq_some).2 (by simpa using h)
 
 /-- `eval_bv`, at an integer width. -/
-theorem eval_bv_int {FS ρ t} {m : Int} (hty : t.ty = .bitVector m) :
+theorem eval_bv_int {FS ρ t} {m : Int} (hty : t.ty = .TBitVector m) :
     eval FS ρ t = (evalBV FS ρ m.toNat t).map (Val.bv m.toNat) := by
   by_cases hm : 0 ≤ m
   · exact eval_bv (by rw [hty]; congr 1; omega)
@@ -41,7 +41,7 @@ theorem eval_bv_int {FS ρ t} {m : Int} (hty : t.ty = .bitVector m) :
       omega
 
 /-- A term of a non-positive width has no value. -/
-theorem evalBV_nonpos {FS ρ t} {m : Int} (hty : t.ty = .bitVector m) (hm : ¬ 0 < m) (k : Nat) :
+theorem evalBV_nonpos {FS ρ t} {m : Int} (hty : t.ty = .TBitVector m) (hm : ¬ 0 < m) (k : Nat) :
     evalBV FS ρ k t = none := by
   cases h : eval FS ρ t with
   | none => simp [evalBV, h]
@@ -56,61 +56,61 @@ theorem evalBV_nonpos {FS ρ t} {m : Int} (hty : t.ty = .bitVector m) (hm : ¬ 0
 section
 variable {FS : FloatSem} {ρ : Env} {n : Nat} {a b : Term} {t : Ty}
 
-@[simp] theorem evalBV_bitAnd (w : (Term.mk (.binop .bitAnd a b) t).WT) :
-    evalBV FS ρ n (.mk (.binop .bitAnd a b) t) =
+@[simp] theorem evalBV_bitAnd (w : (Term.mk (.Binop .BitAnd a b) t).WT) :
+    evalBV FS ρ n (.mk (.Binop .BitAnd a b) t) =
       binOp (· &&& ·) (evalBV FS ρ n a) (evalBV FS ρ n b) := by
-  refine evalBV_binop (op := .bitAnd) (fun _ _ _ => by simp [Binop.WT])
+  refine evalBV_binop (op := .BitAnd) (fun _ _ _ => by simp [Binop.WT])
     (fun x y => binOp (· &&& ·) x y) ?_ (fun _ => rfl) w
   intro m x y; cases x <;> cases y <;> simp [evBinop, bvBin]
-@[simp] theorem evalBV_bitOr (w : (Term.mk (.binop .bitOr a b) t).WT) :
-    evalBV FS ρ n (.mk (.binop .bitOr a b) t) =
+@[simp] theorem evalBV_bitOr (w : (Term.mk (.Binop .BitOr a b) t).WT) :
+    evalBV FS ρ n (.mk (.Binop .BitOr a b) t) =
       binOp (· ||| ·) (evalBV FS ρ n a) (evalBV FS ρ n b) := by
-  refine evalBV_binop (op := .bitOr) (fun _ _ _ => by simp [Binop.WT])
+  refine evalBV_binop (op := .BitOr) (fun _ _ _ => by simp [Binop.WT])
     (fun x y => binOp (· ||| ·) x y) ?_ (fun _ => rfl) w
   intro m x y; cases x <;> cases y <;> simp [evBinop, bvBin]
-@[simp] theorem evalBV_bitXor (w : (Term.mk (.binop .bitXor a b) t).WT) :
-    evalBV FS ρ n (.mk (.binop .bitXor a b) t) =
+@[simp] theorem evalBV_bitXor (w : (Term.mk (.Binop .BitXor a b) t).WT) :
+    evalBV FS ρ n (.mk (.Binop .BitXor a b) t) =
       binOp (· ^^^ ·) (evalBV FS ρ n a) (evalBV FS ρ n b) := by
-  refine evalBV_binop (op := .bitXor) (fun _ _ _ => by simp [Binop.WT])
+  refine evalBV_binop (op := .BitXor) (fun _ _ _ => by simp [Binop.WT])
     (fun x y => binOp (· ^^^ ·) x y) ?_ (fun _ => rfl) w
   intro m x y; cases x <;> cases y <;> simp [evBinop, bvBin]
-@[simp] theorem evalBV_shl (w : (Term.mk (.binop .shl a b) t).WT) :
-    evalBV FS ρ n (.mk (.binop .shl a b) t) =
+@[simp] theorem evalBV_shl (w : (Term.mk (.Binop .Shl a b) t).WT) :
+    evalBV FS ρ n (.mk (.Binop .Shl a b) t) =
       binOp (· <<< ·) (evalBV FS ρ n a) (evalBV FS ρ n b) := by
-  refine evalBV_binop (op := .shl) (fun _ _ _ => by simp [Binop.WT])
+  refine evalBV_binop (op := .Shl) (fun _ _ _ => by simp [Binop.WT])
     (fun x y => binOp (· <<< ·) x y) ?_ (fun _ => rfl) w
   intro m x y; cases x <;> cases y <;> simp [evBinop, bvBin]
-@[simp] theorem evalBV_lShr (w : (Term.mk (.binop .lShr a b) t).WT) :
-    evalBV FS ρ n (.mk (.binop .lShr a b) t) =
+@[simp] theorem evalBV_lShr (w : (Term.mk (.Binop .LShr a b) t).WT) :
+    evalBV FS ρ n (.mk (.Binop .LShr a b) t) =
       binOp (· >>> ·) (evalBV FS ρ n a) (evalBV FS ρ n b) := by
-  refine evalBV_binop (op := .lShr) (fun _ _ _ => by simp [Binop.WT])
+  refine evalBV_binop (op := .LShr) (fun _ _ _ => by simp [Binop.WT])
     (fun x y => binOp (· >>> ·) x y) ?_ (fun _ => rfl) w
   intro m x y; cases x <;> cases y <;> simp [evBinop, bvBin]
-@[simp] theorem evalBV_aShr (w : (Term.mk (.binop .aShr a b) t).WT) :
-    evalBV FS ρ n (.mk (.binop .aShr a b) t) =
+@[simp] theorem evalBV_aShr (w : (Term.mk (.Binop .AShr a b) t).WT) :
+    evalBV FS ρ n (.mk (.Binop .AShr a b) t) =
       binOp (·.sshiftRight' ·) (evalBV FS ρ n a) (evalBV FS ρ n b) := by
-  refine evalBV_binop (op := .aShr) (fun _ _ _ => by simp [Binop.WT])
+  refine evalBV_binop (op := .AShr) (fun _ _ _ => by simp [Binop.WT])
     (fun x y => binOp (·.sshiftRight' ·) x y) ?_ (fun _ => rfl) w
   intro m x y; cases x <;> cases y <;> simp [evBinop, bvBin]
-@[simp] theorem evalBV_rem {s} (w : (Term.mk (.binop (.rem s) a b) t).WT) :
-    evalBV FS ρ n (.mk (.binop (.rem s) a b) t) =
+@[simp] theorem evalBV_rem {s} (w : (Term.mk (.Binop (.Rem s) a b) t).WT) :
+    evalBV FS ρ n (.mk (.Binop (.Rem s) a b) t) =
       binOp (fun x y => if s then x.srem y else x.umod y) (evalBV FS ρ n a) (evalBV FS ρ n b) := by
-  refine evalBV_binop (op := (.rem s)) (fun _ _ _ => by simp [Binop.WT])
+  refine evalBV_binop (op := (.Rem s)) (fun _ _ _ => by simp [Binop.WT])
     (fun x y => binOp (fun x y => if s then x.srem y else x.umod y) x y) ?_ (fun _ => rfl) w
   intro m x y; cases x <;> cases y <;> simp [evBinop, bvBin]
-@[simp] theorem evalBV_mod (w : (Term.mk (.binop .mod_ a b) t).WT) :
-    evalBV FS ρ n (.mk (.binop .mod_ a b) t) =
+@[simp] theorem evalBV_mod (w : (Term.mk (.Binop .Mod a b) t).WT) :
+    evalBV FS ρ n (.mk (.Binop .Mod a b) t) =
       binOp (·.smod ·) (evalBV FS ρ n a) (evalBV FS ρ n b) := by
-  refine evalBV_binop (op := .mod_) (fun _ _ _ => by simp [Binop.WT])
+  refine evalBV_binop (op := .Mod) (fun _ _ _ => by simp [Binop.WT])
     (fun x y => binOp (·.smod ·) x y) ?_ (fun _ => rfl) w
   intro m x y; cases x <;> cases y <;> simp [evBinop, bvBin]
 
 end
 
 theorem evalBV_extract {FS ρ} {n m : Nat} {i j a t}
-    (w : (Term.mk (.unop (.bvExtract i j) a) t).WT) (ht : t = .bitVector (n : Int))
-    (ha : a.ty = .bitVector (m : Int)) :
-    evalBV FS ρ n (.mk (.unop (.bvExtract i j) a) t) =
+    (w : (Term.mk (.Unop (.BvExtract i j) a) t).WT) (ht : t = .TBitVector (n : Int))
+    (ha : a.ty = .TBitVector (m : Int)) :
+    evalBV FS ρ n (.mk (.Unop (.BvExtract i j) a) t) =
       (evalBV FS ρ m a).map (fun x => x.extractLsb' i.toNat n) := by
   have ⟨w1, wa⟩ := WT_unop.1 w
   simp only [Unop.WT, Ty.sort_eq] at w1
@@ -124,9 +124,9 @@ theorem evalBV_extract {FS ρ} {n m : Nat} {i j a t}
   rw [e]; simp
 
 theorem evalBV_concat {FS ρ} {n m1 m2 : Nat} {a b t}
-    (w : (Term.mk (.binop .bvConcat a b) t).WT) (ht : t = .bitVector (n : Int))
-    (ha : a.ty = .bitVector (m1 : Int)) (hb : b.ty = .bitVector (m2 : Int)) :
-    evalBV FS ρ n (.mk (.binop .bvConcat a b) t) =
+    (w : (Term.mk (.Binop .BvConcat a b) t).WT) (ht : t = .TBitVector (n : Int))
+    (ha : a.ty = .TBitVector (m1 : Int)) (hb : b.ty = .TBitVector (m2 : Int)) :
+    evalBV FS ρ n (.mk (.Binop .BvConcat a b) t) =
       (match evalBV FS ρ m1 a, evalBV FS ρ m2 b with
        | some x, some y => some ((x ++ y).setWidth n)
        | _, _ => none) := by
@@ -189,20 +189,20 @@ def binB {α : Type} (f : α → α → Bool) : Option α → Option α → Opti
 section
 variable {FS : FloatSem} {ρ : Env} {a b g : Term} {t : Ty}
 
-@[simp] theorem evalB_bool {c : Bool} (w : (Term.mk (.bool c) t).WT) :
-    evalB FS ρ (.mk (.bool c) t) = some c :=
+@[simp] theorem evalB_bool {c : Bool} (w : (Term.mk (.Bool c) t).WT) :
+    evalB FS ρ (.mk (.Bool c) t) = some c :=
   evalB_of_eval (by rw [eval_bool (WT_bool.1 w)]; rfl)
 
-theorem evalB_not (w : (Term.mk (.unop .not_ a) t).WT) :
-    evalB FS ρ (.mk (.unop .not_ a) t) = (evalB FS ρ a).map (!·) := by
+theorem evalB_not (w : (Term.mk (.Unop .Not a) t).WT) :
+    evalB FS ρ (.mk (.Unop .Not a) t) = (evalB FS ρ a).map (!·) := by
   have ⟨w1, wa⟩ := WT_unop.1 w
   simp only [Unop.WT, Ty.sort_eq] at w1
   apply evalB_of_eval
   rw [eval_unop w, eval_bool' w1.1]
   cases evalB FS ρ a <;> simp [evUnop]
 
-theorem evalB_and (w : (Term.mk (.binop .and_ a b) t).WT) :
-    evalB FS ρ (.mk (.binop .and_ a b) t) = andB (evalB FS ρ a) (evalB FS ρ b) := by
+theorem evalB_and (w : (Term.mk (.Binop .And a b) t).WT) :
+    evalB FS ρ (.mk (.Binop .And a b) t) = andB (evalB FS ρ a) (evalB FS ρ b) := by
   have ⟨w1, wa, wb⟩ := WT_binop.1 w
   simp only [Binop.WT, Ty.sort_eq] at w1
   apply evalB_of_eval
@@ -210,8 +210,8 @@ theorem evalB_and (w : (Term.mk (.binop .and_ a b) t).WT) :
   rcases evalB FS ρ a with _ | _ | _ <;> rcases evalB FS ρ b with _ | _ | _ <;>
     simp [evBinop, pand, andB]
 
-theorem evalB_or (w : (Term.mk (.binop .or_ a b) t).WT) :
-    evalB FS ρ (.mk (.binop .or_ a b) t) = orB (evalB FS ρ a) (evalB FS ρ b) := by
+theorem evalB_or (w : (Term.mk (.Binop .Or a b) t).WT) :
+    evalB FS ρ (.mk (.Binop .Or a b) t) = orB (evalB FS ρ a) (evalB FS ρ b) := by
   have ⟨w1, wa, wb⟩ := WT_binop.1 w
   simp only [Binop.WT, Ty.sort_eq] at w1
   apply evalB_of_eval
@@ -219,8 +219,8 @@ theorem evalB_or (w : (Term.mk (.binop .or_ a b) t).WT) :
   rcases evalB FS ρ a with _ | _ | _ <;> rcases evalB FS ρ b with _ | _ | _ <;>
     simp [evBinop, por, orB]
 
-theorem evalB_ite (w : (Term.mk (.triop .ite g a b) t).WT) (ht : t = .bool) :
-    evalB FS ρ (.mk (.triop .ite g a b) t) =
+theorem evalB_ite (w : (Term.mk (.Triop .Ite g a b) t).WT) (ht : t = .TBool) :
+    evalB FS ρ (.mk (.Triop .Ite g a b) t) =
       match evalB FS ρ g with
       | some true => evalB FS ρ a
       | some false => evalB FS ρ b
@@ -234,16 +234,16 @@ theorem evalB_ite (w : (Term.mk (.triop .ite g a b) t).WT) (ht : t = .bool) :
   | none => simp
   | some v => cases v <;> simp
 
-theorem evalB_eq_bool (w : (Term.mk (.binop .eq a b) t).WT) (ha : a.ty = .bool) :
-    evalB FS ρ (.mk (.binop .eq a b) t) = binB (fun x y => decide (x = y)) (evalB FS ρ a) (evalB FS ρ b) := by
+theorem evalB_eq_bool (w : (Term.mk (.Binop .Eq a b) t).WT) (ha : a.ty = .TBool) :
+    evalB FS ρ (.mk (.Binop .Eq a b) t) = binB (fun x y => decide (x = y)) (evalB FS ρ a) (evalB FS ρ b) := by
   have ⟨w1, wa, wb⟩ := WT_binop.1 w
   simp only [Binop.WT, Ty.sort_eq] at w1
   apply evalB_of_eval
   rw [eval_binop w, eval_bool' ha, eval_bool' (by rw [← w1.1, ha])]
   cases evalB FS ρ a <;> cases evalB FS ρ b <;> simp [evBinop]
 
-theorem evalB_eq_bv {m : Int} (w : (Term.mk (.binop .eq a b) t).WT) (ha : a.ty = .bitVector m) :
-    evalB FS ρ (.mk (.binop .eq a b) t) =
+theorem evalB_eq_bv {m : Int} (w : (Term.mk (.Binop .Eq a b) t).WT) (ha : a.ty = .TBitVector m) :
+    evalB FS ρ (.mk (.Binop .Eq a b) t) =
       binB (fun x y => decide (x = y)) (evalBV FS ρ m.toNat a) (evalBV FS ρ m.toNat b) := by
   have ⟨w1, wa, wb⟩ := WT_binop.1 w
   simp only [Binop.WT, Ty.sort_eq] at w1
@@ -253,16 +253,16 @@ theorem evalB_eq_bv {m : Int} (w : (Term.mk (.binop .eq a b) t).WT) (ha : a.ty =
 
 /-- The predicates on bit-vectors. -/
 def bvPred : Binop → Option (∀ {n : Nat}, BitVec n → BitVec n → Bool)
-  | .lt s => some fun x y => if s then x.slt y else x.ult y
-  | .leq s => some fun x y => if s then x.sle y else x.ule y
-  | .addOvf s => some fun x y => if s then x.saddOverflow y else x.uaddOverflow y
-  | .subOvf s => some fun x y => if s then x.ssubOverflow y else x.usubOverflow y
-  | .mulOvf s => some fun x y => if s then x.smulOverflow y else x.umulOverflow y
+  | .Lt s => some fun x y => if s then x.slt y else x.ult y
+  | .Leq s => some fun x y => if s then x.sle y else x.ule y
+  | .AddOvf s => some fun x y => if s then x.saddOverflow y else x.uaddOverflow y
+  | .SubOvf s => some fun x y => if s then x.ssubOverflow y else x.usubOverflow y
+  | .MulOvf s => some fun x y => if s then x.smulOverflow y else x.umulOverflow y
   | _ => none
 
 theorem evalB_pred {op f} (hop : bvPred op = some f) {m : Int}
-    (w : (Term.mk (.binop op a b) t).WT) (ha : a.ty = .bitVector m) :
-    evalB FS ρ (.mk (.binop op a b) t) =
+    (w : (Term.mk (.Binop op a b) t).WT) (ha : a.ty = .TBitVector m) :
+    evalB FS ρ (.mk (.Binop op a b) t) =
       binB f (evalBV FS ρ m.toNat a) (evalBV FS ρ m.toNat b) := by
   have ⟨w1, wa, wb⟩ := WT_binop.1 w
   have hb : b.ty = a.ty := by
@@ -279,137 +279,137 @@ end
 mutual
 /-- The value of a bit-vector term at width `n`. -/
 noncomputable def den (FS : FloatSem) (ρ : Env) (n : Nat) : Term → Option (BitVec n)
-  | .mk (.bitVec z) _ => some (BitVec.ofInt n z)
-  | .mk (.binop op a b) t =>
+  | .mk (.BitVec z) _ => some (BitVec.ofInt n z)
+  | .mk (.Binop op a b) t =>
       match op with
-      | .add c =>
+      | .Add c =>
           ckOp c BitVec.saddOverflow BitVec.uaddOverflow (· + ·) (den FS ρ n a) (den FS ρ n b)
-      | .sub c =>
+      | .Sub c =>
           ckOp c BitVec.ssubOverflow BitVec.usubOverflow (· - ·) (den FS ρ n a) (den FS ρ n b)
-      | .mul c =>
+      | .Mul c =>
           ckOp c BitVec.smulOverflow BitVec.umulOverflow (· * ·) (den FS ρ n a) (den FS ρ n b)
-      | .div s =>
+      | .Div s =>
           binOp (fun x y => if s then x.smtSDiv y else x.smtUDiv y) (den FS ρ n a) (den FS ρ n b)
-      | .rem s =>
+      | .Rem s =>
           binOp (fun x y => if s then x.srem y else x.umod y) (den FS ρ n a) (den FS ρ n b)
-      | .mod_ => binOp (·.smod ·) (den FS ρ n a) (den FS ρ n b)
-      | .bitAnd => binOp (· &&& ·) (den FS ρ n a) (den FS ρ n b)
-      | .bitOr => binOp (· ||| ·) (den FS ρ n a) (den FS ρ n b)
-      | .bitXor => binOp (· ^^^ ·) (den FS ρ n a) (den FS ρ n b)
-      | .shl => binOp (· <<< ·) (den FS ρ n a) (den FS ρ n b)
-      | .lShr => binOp (· >>> ·) (den FS ρ n a) (den FS ρ n b)
-      | .aShr => binOp (·.sshiftRight' ·) (den FS ρ n a) (den FS ρ n b)
-      | .bvConcat =>
+      | .Mod => binOp (·.smod ·) (den FS ρ n a) (den FS ρ n b)
+      | .BitAnd => binOp (· &&& ·) (den FS ρ n a) (den FS ρ n b)
+      | .BitOr => binOp (· ||| ·) (den FS ρ n a) (den FS ρ n b)
+      | .BitXor => binOp (· ^^^ ·) (den FS ρ n a) (den FS ρ n b)
+      | .Shl => binOp (· <<< ·) (den FS ρ n a) (den FS ρ n b)
+      | .LShr => binOp (· >>> ·) (den FS ρ n a) (den FS ρ n b)
+      | .AShr => binOp (·.sshiftRight' ·) (den FS ρ n a) (den FS ρ n b)
+      | .BvConcat =>
           match a.ty, b.ty with
-          | .bitVector m1, .bitVector m2 =>
+          | .TBitVector m1, .TBitVector m2 =>
               match den FS ρ m1.toNat a, den FS ρ m2.toNat b with
               | some x, some y => some ((x ++ y).setWidth n)
               | _, _ => none
           | _, _ => none
-      | op => evalBV FS ρ n (.mk (.binop op a b) t)
-  | .mk (.unop op a) t =>
+      | op => evalBV FS ρ n (.mk (.Binop op a b) t)
+  | .mk (.Unop op a) t =>
       match op with
-      | .neg c => negOp c (den FS ρ n a)
-      | .bvNot => (den FS ρ n a).map (~~~·)
-      | .bvOfBool _ => (denB FS ρ a).map (fun b => if b then 1 else 0)
-      | .bvExtend s _ =>
+      | .Neg c => negOp c (den FS ρ n a)
+      | .BvNot => (den FS ρ n a).map (~~~·)
+      | .BvOfBool _ => (denB FS ρ a).map (fun b => if b then 1 else 0)
+      | .BvExtend s _ =>
           match a.ty with
-          | .bitVector m =>
+          | .TBitVector m =>
               (den FS ρ m.toNat a).map (fun x => if s then x.signExtend n else x.setWidth n)
           | _ => none
-      | .bvExtract i _ =>
+      | .BvExtract i _ =>
           match a.ty with
-          | .bitVector m => (den FS ρ m.toNat a).map (fun x => x.extractLsb' i.toNat n)
+          | .TBitVector m => (den FS ρ m.toNat a).map (fun x => x.extractLsb' i.toNat n)
           | _ => none
-      | op => evalBV FS ρ n (.mk (.unop op a) t)
-  | .mk (.triop op g a b) t =>
+      | op => evalBV FS ρ n (.mk (.Unop op a) t)
+  | .mk (.Triop op g a b) t =>
       match op with
-      | .ite =>
+      | .Ite =>
           match denB FS ρ g with
           | some true => den FS ρ n a
           | some false => den FS ρ n b
           | none => none
-      | op => evalBV FS ρ n (.mk (.triop op g a b) t)
+      | op => evalBV FS ρ n (.mk (.Triop op g a b) t)
   | t => evalBV FS ρ n t
 
 /-- The value of a boolean term. -/
 noncomputable def denB (FS : FloatSem) (ρ : Env) : Term → Option Bool
-  | .mk (.bool b) _ => some b
-  | .mk (.unop op a) t =>
+  | .mk (.Bool b) _ => some b
+  | .mk (.Unop op a) t =>
       match op with
-      | .not_ => (denB FS ρ a).map (!·)
-      | op => evalB FS ρ (.mk (.unop op a) t)
-  | .mk (.binop op a b) t =>
+      | .Not => (denB FS ρ a).map (!·)
+      | op => evalB FS ρ (.mk (.Unop op a) t)
+  | .mk (.Binop op a b) t =>
       match op with
-      | .and_ => andB (denB FS ρ a) (denB FS ρ b)
-      | .or_ => orB (denB FS ρ a) (denB FS ρ b)
-      | .eq =>
+      | .And => andB (denB FS ρ a) (denB FS ρ b)
+      | .Or => orB (denB FS ρ a) (denB FS ρ b)
+      | .Eq =>
           match a.ty with
-          | .bitVector m =>
+          | .TBitVector m =>
               if 0 < m then binB (fun x y => decide (x = y)) (den FS ρ m.toNat a) (den FS ρ m.toNat b)
               else none
-          | .bool => binB (fun x y => decide (x = y)) (denB FS ρ a) (denB FS ρ b)
-          | _ => evalB FS ρ (.mk (.binop .eq a b) t)
-      | .lt s =>
+          | .TBool => binB (fun x y => decide (x = y)) (denB FS ρ a) (denB FS ρ b)
+          | _ => evalB FS ρ (.mk (.Binop .Eq a b) t)
+      | .Lt s =>
           match a.ty with
-          | .bitVector m =>
+          | .TBitVector m =>
               if 0 < m then binB (fun x y => if s then x.slt y else x.ult y) (den FS ρ m.toNat a) (den FS ρ m.toNat b)
               else none
-          | _ => evalB FS ρ (.mk (.binop (.lt s) a b) t)
-      | .leq s =>
+          | _ => evalB FS ρ (.mk (.Binop (.Lt s) a b) t)
+      | .Leq s =>
           match a.ty with
-          | .bitVector m =>
+          | .TBitVector m =>
               if 0 < m then binB (fun x y => if s then x.sle y else x.ule y) (den FS ρ m.toNat a) (den FS ρ m.toNat b)
               else none
-          | _ => evalB FS ρ (.mk (.binop (.leq s) a b) t)
-      | .addOvf s =>
+          | _ => evalB FS ρ (.mk (.Binop (.Leq s) a b) t)
+      | .AddOvf s =>
           match a.ty with
-          | .bitVector m =>
+          | .TBitVector m =>
               if 0 < m then
                 binB (fun x y => if s then x.saddOverflow y else x.uaddOverflow y)
                   (den FS ρ m.toNat a) (den FS ρ m.toNat b)
               else none
-          | _ => evalB FS ρ (.mk (.binop (.addOvf s) a b) t)
-      | .subOvf s =>
+          | _ => evalB FS ρ (.mk (.Binop (.AddOvf s) a b) t)
+      | .SubOvf s =>
           match a.ty with
-          | .bitVector m =>
+          | .TBitVector m =>
               if 0 < m then
                 binB (fun x y => if s then x.ssubOverflow y else x.usubOverflow y)
                   (den FS ρ m.toNat a) (den FS ρ m.toNat b)
               else none
-          | _ => evalB FS ρ (.mk (.binop (.subOvf s) a b) t)
-      | .mulOvf s =>
+          | _ => evalB FS ρ (.mk (.Binop (.SubOvf s) a b) t)
+      | .MulOvf s =>
           match a.ty with
-          | .bitVector m =>
+          | .TBitVector m =>
               if 0 < m then
                 binB (fun x y => if s then x.smulOverflow y else x.umulOverflow y)
                   (den FS ρ m.toNat a) (den FS ρ m.toNat b)
               else none
-          | _ => evalB FS ρ (.mk (.binop (.mulOvf s) a b) t)
-      | op => evalB FS ρ (.mk (.binop op a b) t)
-  | .mk (.triop op g a b) t =>
+          | _ => evalB FS ρ (.mk (.Binop (.MulOvf s) a b) t)
+      | op => evalB FS ρ (.mk (.Binop op a b) t)
+  | .mk (.Triop op g a b) t =>
       match op with
-      | .ite =>
+      | .Ite =>
           match denB FS ρ g with
           | some true => denB FS ρ a
           | some false => denB FS ρ b
           | none => none
-      | op => evalB FS ρ (.mk (.triop op g a b) t)
+      | op => evalB FS ρ (.mk (.Triop op g a b) t)
   | t => evalB FS ρ t
 end
 
 theorem WT_bv_of_arith {op : Binop} {a b : Term} {t : Ty} {n : Nat}
-    (hop : ∀ a b t, op.WT a b t ↔ (∃ n : Int, 0 < n ∧ a = .bitVector n) ∧ b = a ∧ t = a)
-    (w : (Term.mk (.binop op a b) t).WT) (ht : t = .bitVector (n : Int)) :
-    a.WT ∧ b.WT ∧ a.ty = .bitVector (n : Int) ∧ b.ty = .bitVector (n : Int) := by
+    (hop : ∀ a b t, op.WT a b t ↔ (∃ n : Int, 0 < n ∧ a = .TBitVector n) ∧ b = a ∧ t = a)
+    (w : (Term.mk (.Binop op a b) t).WT) (ht : t = .TBitVector (n : Int)) :
+    a.WT ∧ b.WT ∧ a.ty = .TBitVector (n : Int) ∧ b.ty = .TBitVector (n : Int) := by
   obtain ⟨wa, wb, ha, hb, -⟩ := WT_arith hop w
   exact ⟨wa, wb, ha.trans ht, hb.trans ht⟩
 
 /-- The operands of a predicate on bit-vectors. -/
 theorem WT_pred {op : Binop} {a b : Term} {t : Ty}
-    (hop : ∀ a b t, op.WT a b t ↔ (∃ n : Int, 0 < n ∧ a = .bitVector n) ∧ b = a ∧ t = .bool)
-    (w : (Term.mk (.binop op a b) t).WT) :
-    a.WT ∧ b.WT ∧ b.ty = a.ty ∧ ∃ m : Int, 0 < m ∧ a.ty = .bitVector m := by
+    (hop : ∀ a b t, op.WT a b t ↔ (∃ n : Int, 0 < n ∧ a = .TBitVector n) ∧ b = a ∧ t = .TBool)
+    (w : (Term.mk (.Binop op a b) t).WT) :
+    a.WT ∧ b.WT ∧ b.ty = a.ty ∧ ∃ m : Int, 0 < m ∧ a.ty = .TBitVector m := by
   have ⟨w1, wa, wb⟩ := WT_binop.1 w
   simp only [Ty.sort_eq, hop] at w1
   obtain ⟨⟨m, hm, ha⟩, hb, -⟩ := w1
@@ -418,13 +418,13 @@ theorem WT_pred {op : Binop} {a b : Term} {t : Ty}
 theorem natCast_toNat_of_pos {m : Int} (h : 0 < m) : ((m.toNat : Nat) : Int) = m := by omega
 
 mutual
-theorem evalBV_den {FS ρ} : ∀ {n : Nat} (t : Term), t.WT → t.ty = .bitVector n →
+theorem evalBV_den {FS ρ} : ∀ {n : Nat} (t : Term), t.WT → t.ty = .TBitVector n →
     evalBV FS ρ n t = den FS ρ n t
-  | n, .mk (.bitVec z) t, w, ht => by
+  | n, .mk (.BitVec z) t, w, ht => by
       simp at ht; subst ht; rw [evalBV_bitVec w]; simp [den]
-  | n, .mk (.binop op a b) t, w, ht => by
+  | n, .mk (.Binop op a b) t, w, ht => by
       have arith := fun (h : ∀ a b t, op.WT a b t ↔
-          (∃ n : Int, 0 < n ∧ a = .bitVector n) ∧ b = a ∧ t = a) =>
+          (∃ n : Int, 0 < n ∧ a = .TBitVector n) ∧ b = a ∧ t = a) =>
         WT_bv_of_arith h w (by simpa using ht)
       cases op <;> simp only [den]
       all_goals first
@@ -446,12 +446,12 @@ theorem evalBV_den {FS ρ} : ∀ {n : Nat} (t : Term), t.WT → t.ty = .bitVecto
         | (have ⟨w1, wa, wb⟩ := WT_binop.1 w
            simp only [Binop.WT, Ty.sort_eq] at w1
            obtain ⟨m1, m2, h1, h2, ha, hb, rfl⟩ := w1
-           have ha' : a.ty = .bitVector ((m1.toNat : Nat) : Int) := by rw [ha, natCast_toNat_of_pos h1]
-           have hb' : b.ty = .bitVector ((m2.toNat : Nat) : Int) := by rw [hb, natCast_toNat_of_pos h2]
+           have ha' : a.ty = .TBitVector ((m1.toNat : Nat) : Int) := by rw [ha, natCast_toNat_of_pos h1]
+           have hb' : b.ty = .TBitVector ((m2.toNat : Nat) : Int) := by rw [hb, natCast_toNat_of_pos h2]
            simp only [ha, hb]
            rw [evalBV_concat w (by simpa using ht) ha' hb', evalBV_den a wa ha', evalBV_den b wb hb']
            cases den FS ρ m1.toNat a <;> cases den FS ρ m2.toNat b <;> simp)
-  | n, .mk (.unop op a) t, w, ht => by
+  | n, .mk (.Unop op a) t, w, ht => by
       cases op <;> simp only [den]
       all_goals first
         | rfl
@@ -468,16 +468,16 @@ theorem evalBV_den {FS ρ} : ∀ {n : Nat} (t : Term), t.WT → t.ty = .bitVecto
         | (have ⟨w1, wa⟩ := WT_unop.1 w
            simp only [Unop.WT, Ty.sort_eq] at w1
            obtain ⟨m, hm, ha, -, rfl⟩ := w1
-           have ha' : a.ty = .bitVector ((m.toNat : Nat) : Int) := by rw [ha, natCast_toNat_of_pos hm]
+           have ha' : a.ty = .TBitVector ((m.toNat : Nat) : Int) := by rw [ha, natCast_toNat_of_pos hm]
            simp only [ha]
            rw [evalBV_extend w (by simpa using ht) ha', evalBV_den a wa ha'])
         | (have ⟨w1, wa⟩ := WT_unop.1 w
            simp only [Unop.WT, Ty.sort_eq] at w1
            obtain ⟨m, ha, hi, hij, hj, rfl⟩ := w1
-           have ha' : a.ty = .bitVector ((m.toNat : Nat) : Int) := by rw [ha]; congr 1; omega
+           have ha' : a.ty = .TBitVector ((m.toNat : Nat) : Int) := by rw [ha]; congr 1; omega
            simp only [ha]
            rw [evalBV_extract w (by simpa using ht) ha', evalBV_den a wa ha'])
-  | n, .mk (.triop op g a b) t, w, ht => by
+  | n, .mk (.Triop op g a b) t, w, ht => by
       cases op <;> simp only [den]
       all_goals first
         | rfl
@@ -486,22 +486,22 @@ theorem evalBV_den {FS ρ} : ∀ {n : Nat} (t : Term), t.WT → t.ty = .bitVecto
            obtain ⟨hg, hb, rfl⟩ := w1
            simp at ht
            rw [evalBV_ite w, evalB_denB g wg hg, evalBV_den a wa ht, evalBV_den b wb (by rw [hb, ht])]; rfl)
-  | _, .mk (.var _) _, _, _ | _, .mk (.bool _) _, _, _ | _, .mk (.float _) _, _, _
-  | _, .mk (.ptr _ _) _, _, _ | _, .mk (.seq _) _, _, _ | _, .mk (.nop _ _) _, _, _
-  | _, .mk (.exists_ _ _) _, _, _ | _, .mk (.extension _) _, _, _ => by simp [den]
+  | _, .mk (.Var _) _, _, _ | _, .mk (.Bool _) _, _, _ | _, .mk (.Float _) _, _, _
+  | _, .mk (.Ptr _ _) _, _, _ | _, .mk (.Seq _) _, _, _ | _, .mk (.Nop _ _) _, _, _
+  | _, .mk (.Exists _ _) _, _, _ | _, .mk (.Extension _) _, _, _ => by simp [den]
 
-theorem evalB_denB {FS ρ} : ∀ (t : Term), t.WT → t.ty = .bool → evalB FS ρ t = denB FS ρ t
-  | .mk (.bool c) t, w, ht => by simp [denB, evalB_bool w]
-  | .mk (.unop op a) t, w, ht => by
+theorem evalB_denB {FS ρ} : ∀ (t : Term), t.WT → t.ty = .TBool → evalB FS ρ t = denB FS ρ t
+  | .mk (.Bool c) t, w, ht => by simp [denB, evalB_bool w]
+  | .mk (.Unop op a) t, w, ht => by
       cases op <;> simp only [denB]
       all_goals first
         | rfl
         | (have ⟨w1, wa⟩ := WT_unop.1 w
            simp only [Unop.WT, Ty.sort_eq] at w1
            rw [evalB_not w, evalB_denB a wa w1.1])
-  | .mk (.binop op a b) t, w, ht => by
+  | .mk (.Binop op a b) t, w, ht => by
       have pred := fun (h : ∀ a b t, op.WT a b t ↔
-          (∃ n : Int, 0 < n ∧ a = .bitVector n) ∧ b = a ∧ t = .bool) => WT_pred h w
+          (∃ n : Int, 0 < n ∧ a = .TBitVector n) ∧ b = a ∧ t = .TBool) => WT_pred h w
       cases op <;> simp only [denB]
       all_goals first
         | rfl
@@ -511,29 +511,29 @@ theorem evalB_denB {FS ρ} : ∀ (t : Term), t.WT → t.ty = .bool → evalB FS 
              | rw [evalB_and w, evalB_denB a wa w1.1, evalB_denB b wb w1.2.1]
              | rw [evalB_or w, evalB_denB a wa w1.1, evalB_denB b wb w1.2.1])
         | (obtain ⟨wa, wb, hb, m, hm, ha⟩ := pred (fun _ _ _ => by simp [Binop.WT])
-           have ha' : a.ty = .bitVector ((m.toNat : Nat) : Int) := by rw [ha, natCast_toNat_of_pos hm]
-           have hb' : b.ty = .bitVector ((m.toNat : Nat) : Int) := by rw [hb, ha']
+           have ha' : a.ty = .TBitVector ((m.toNat : Nat) : Int) := by rw [ha, natCast_toNat_of_pos hm]
+           have hb' : b.ty = .TBitVector ((m.toNat : Nat) : Int) := by rw [hb, ha']
            simp only [ha, hm, ite_true]
            rw [evalB_pred rfl w ha, evalBV_den a wa ha', evalBV_den b wb hb'])
         | (have ⟨w1, wa, wb⟩ := WT_binop.1 w
            simp only [Binop.WT, Ty.sort_eq] at w1
            obtain ⟨hab, -⟩ := w1
            cases hty : a.ty with
-           | bitVector m =>
+           | TBitVector m =>
              simp only
              by_cases hm : 0 < m
-             · have ha' : a.ty = .bitVector ((m.toNat : Nat) : Int) := by
+             · have ha' : a.ty = .TBitVector ((m.toNat : Nat) : Int) := by
                  rw [hty, natCast_toNat_of_pos hm]
-               have hb' : b.ty = .bitVector ((m.toNat : Nat) : Int) := by rw [← hab, ha']
+               have hb' : b.ty = .TBitVector ((m.toNat : Nat) : Int) := by rw [← hab, ha']
                simp only [hm, ite_true]
                rw [evalB_eq_bv w hty, evalBV_den a wa ha', evalBV_den b wb hb']
              · simp only [hm, ite_false]
                rw [evalB_eq_bv w hty, evalBV_nonpos hty hm]; rfl
-           | bool =>
+           | TBool =>
              simp only
              rw [evalB_eq_bool w hty, evalB_denB a wa hty, evalB_denB b wb (by rw [← hab, hty])]
            | _ => rfl)
-  | .mk (.triop op g a b) t, w, ht => by
+  | .mk (.Triop op g a b) t, w, ht => by
       cases op <;> simp only [denB]
       all_goals first
         | rfl
@@ -543,16 +543,16 @@ theorem evalB_denB {FS ρ} : ∀ (t : Term), t.WT → t.ty = .bool → evalB FS 
            simp at ht
            rw [evalB_ite w ht, evalB_denB g wg hg, evalB_denB a wa ht,
              evalB_denB b wb (by rw [hb, ht])])
-  | .mk (.var _) _, _, _ | .mk (.bitVec _) _, _, _ | .mk (.float _) _, _, _
-  | .mk (.ptr _ _) _, _, _ | .mk (.seq _) _, _, _ | .mk (.nop _ _) _, _, _
-  | .mk (.exists_ _ _) _, _, _ | .mk (.extension _) _, _, _ => by simp [denB]
+  | .mk (.Var _) _, _, _ | .mk (.BitVec _) _, _, _ | .mk (.Float _) _, _, _
+  | .mk (.Ptr _ _) _, _, _ | .mk (.Seq _) _, _, _ | .mk (.Nop _ _) _, _, _
+  | .mk (.Exists _ _) _, _, _ | .mk (.Extension _) _, _, _ => by simp [denB]
 end
 
 /-- Refinement of bit-vector terms, by their structural values. -/
 theorem Refines.den {FS : FloatSem} {s r : Term}
-    (hty : s.WT → ∃ n : Int, s.ty = .bitVector n)
+    (hty : s.WT → ∃ n : Int, s.ty = .TBitVector n)
     (syn : s.WT → r.WT ∧ r.ty = s.ty)
-    (sem : ∀ n : Nat, s.WT → s.ty = .bitVector n →
+    (sem : ∀ n : Nat, s.WT → s.ty = .TBitVector n →
       ∀ ρ x, den FS ρ n s = some x → den FS ρ n r = some x) :
     Refines FS s r :=
   Refines.bv hty syn (fun n w ht ρ x h => by
@@ -562,14 +562,14 @@ theorem Refines.den {FS : FloatSem} {s r : Term}
 
 /-- Refinement of boolean terms, by their structural values. -/
 theorem Refines.denB {FS : FloatSem} {s r : Term}
-    (hty : s.WT → s.ty = .bool)
+    (hty : s.WT → s.ty = .TBool)
     (syn : s.WT → r.WT ∧ r.ty = s.ty)
     (sem : s.WT → ∀ ρ b, denB FS ρ s = some b → denB FS ρ r = some b) :
     Refines FS s r := by
   refine ⟨fun w => by simpa using syn w, fun ρ v e => ?_⟩
   have w := eval_WT e
   have hs := hty w
-  have hr : r.ty = .bool := by rw [(syn w).2, hs]
+  have hr : r.ty = .TBool := by rw [(syn w).2, hs]
   rw [eval_bool' hs] at e
   cases h : evalB FS ρ s <;> rw [h] at e <;> simp at e
   subst e

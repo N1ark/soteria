@@ -24,8 +24,10 @@ let rec ocaml_ty ft = function
   | TInt -> pf ft "Z.t"
   | TBool -> pf ft "bool"
   | TUnit -> pf ft "unit"
-  | (TBv | TTerm | TKind | TSty | TVar | TData _) as t ->
-      pf ft "%s" (decl_of_ty t).d_ocaml
+  | TBv -> pf ft "bv"
+  | TTerm -> pf ft "t"
+  | TVar -> pf ft "Symex.Var.t"
+  | (TKind | TSty | TData _) as t -> pf ft "%s" (decl_of_ty t).d_ocaml
   | TTuple l ->
       pf ft "(%a)"
         (Format.pp_print_list ~pp_sep:(fun ft () -> pf ft " * ") ocaml_ty)

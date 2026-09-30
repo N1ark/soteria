@@ -418,11 +418,11 @@ let add_binders env p =
 (** Types on which [=] and [<>] are allowed: structural equality coincides in
     OCaml and Lean. *)
 let rec eq_ty = function
-  | TInt | TBool | TUnit -> true
-  | (TBv | TTerm | TKind | TSty | TVar | TData _) as t -> (decl_of_ty t).d_eq
+  | TInt | TBv | TBool | TUnit -> true
+  | (TKind | TSty | TData _) as t -> (decl_of_ty t).d_eq
   | TTuple l -> List.for_all eq_ty l
   | TOption t -> eq_ty t
-  | TList _ -> false
+  | TTerm | TVar | TList _ -> false
 
 (* ---------------------------------------------------------------- *)
 (* Desugaring of patterns
@@ -596,10 +596,19 @@ let op_name op =
   | Some (p, _) -> "prefix " ^ p
   | None -> op
 
+(** The operators that have a meaning on bit-vector values. *)
+let bv_ops =
+  [ "+"; "-"; "*"; "land"; "lor"; "lxor"; "lsl"; "lsr"; "asr"; "~-"; "lognot" ]
+
 (** The operator [op] on bit-vector values: its primitive. *)
-let bv_op loc op ~arity =
+let bv_op env loc op ~arity =
   match find_operator ~arity op with
-  | Some { on_bv = Some f; _ } -> f
+  | Some { on_bv = Some f; _ } ->
+      let s = find_global env loc f in
+      if s.args <> List.init arity (fun _ -> TBv) || s.ret <> TBv then
+        error loc "%s: %s is not an operation on bit-vector values" (op_name op)
+          f;
+      f
   | _ -> error loc "%s is not defined on bit-vector values" (op_name op)
 
 (** A bit-vector value where a term is expected is its literal. *)
@@ -625,13 +634,21 @@ let rec expr env ?expected (e : expression) : Syntax.expr =
       | None -> error loc "%s is not an operator on terms" (op_name op)
     in
     let f = o.smart in
-    ignore (find_global env loc f);
+    let s = find_global env loc f in
     (* the leading arguments, in the global scope *)
     let pre = List.map (expr { env with vars = []; locals = [] }) o.pre in
     let args = List.map lift args in
     List.iter
       (fun (a : Syntax.expr) -> expect a.eloc ~expected:TTerm a.ety)
       args;
+    let tys = List.map (fun (a : Syntax.expr) -> a.ety) (pre @ args) in
+    if
+      List.length s.args <> List.length tys
+      || (not (List.for_all2 ty_equal s.args tys))
+      || s.ret <> TTerm
+    then
+      error loc "%s: %s is not a smart constructor for these arguments"
+        (op_name op) f;
     mk TTerm (ECall (f, pre @ args))
   in
   let is_term (a : Syntax.expr) = a.ety = TTerm in
@@ -733,8 +750,7 @@ let rec expr env ?expected (e : expression) : Syntax.expr =
           | TBv ->
               (* modular arithmetic on bit-vector values *)
               expect b.eloc ~expected:TBv b.ety;
-              let f = bv_op loc op ~arity:2 in
-              ignore (find_global env loc f);
+              let f = bv_op env loc op ~arity:2 in
               mk TBv (ECall (f, [ a; b ]))
           | _ ->
               expect a.eloc ~expected:TInt a.ety;
@@ -767,8 +783,7 @@ let rec expr env ?expected (e : expression) : Syntax.expr =
           | TBv, _ ->
               (* bitwise operations on bit-vector values *)
               expect b.eloc ~expected:TBv b.ety;
-              let f = bv_op loc op ~arity:2 in
-              ignore (find_global env loc f);
+              let f = bv_op env loc op ~arity:2 in
               mk TBv (ECall (f, [ a; b ]))
           | _ ->
               expect a.eloc ~expected:TInt a.ety;
@@ -786,8 +801,7 @@ let rec expr env ?expected (e : expression) : Syntax.expr =
           match a.ety with
           | TTerm -> term_op "~-" [ a ]
           | TBv ->
-              let f = bv_op loc "~-" ~arity:1 in
-              ignore (find_global env loc f);
+              let f = bv_op env loc "~-" ~arity:1 in
               mk TBv (ECall (f, [ a ]))
           | _ ->
               expect a.eloc ~expected:TInt a.ety;
@@ -797,8 +811,7 @@ let rec expr env ?expected (e : expression) : Syntax.expr =
           match a.ety with
           | TTerm -> term_op op [ a ]
           | TBv ->
-              let f = bv_op loc op ~arity:1 in
-              ignore (find_global env loc f);
+              let f = bv_op env loc op ~arity:1 in
               mk TBv (ECall (f, [ a ]))
           | _ ->
               expect a.eloc ~expected:TInt a.ety;
@@ -1208,10 +1221,8 @@ let check_attrs allowed (attrs : attributes) =
         error a.attr_loc "unknown attribute [@%s]" a.attr_name.txt)
     attrs
 
-let required_attr loc name (attrs : attributes) =
-  match List.find_opt (fun a -> a.attr_name.txt = name) attrs with
-  | Some a -> string_attr a
-  | None -> error loc "missing [@%s \"...\"]" name
+let find_attr name (attrs : attributes) =
+  List.find_opt (fun (a : attribute) -> a.attr_name.txt = name) attrs
 
 (** Reads the declaration of a language, which the rules are then checked
     against. *)
@@ -1232,17 +1243,19 @@ let language (str : structure) =
     List.map
       (fun (td : type_declaration) ->
         let name = td.ptype_name.txt and loc = td.ptype_loc in
-        check_attrs [ "ocaml"; "lean"; "noeq" ] td.ptype_attributes;
+        check_attrs [ "ocaml"; "noeq" ] td.ptype_attributes;
         (match ty_of_name name with
-        | Some (TInt | TBool | TUnit) -> error loc "%s is a built-in type" name
+        | Some (TInt | TBool | TUnit | TTerm | TBv | TVar) ->
+            error loc "%s is a built-in type" name
         | _ -> ());
         if Option.is_some (find_decl name) then
           error loc "type %s is declared twice" name;
         let d =
           {
             d_name = name;
-            d_ocaml = required_attr loc "ocaml" td.ptype_attributes;
-            d_lean = required_attr loc "lean" td.ptype_attributes;
+            d_ocaml =
+              Option.fold ~none:name ~some:string_attr
+                (find_attr "ocaml" td.ptype_attributes);
             d_eq = not (has_attr "noeq" td.ptype_attributes);
             d_fields = [];
           }
@@ -1268,6 +1281,20 @@ let language (str : structure) =
       decls tds
   in
   lang := { !lang with decls };
+  (* a field determines its record type *)
+  ignore
+    (List.fold_left
+       (fun seen (td : type_declaration) ->
+         match td.ptype_kind with
+         | Ptype_record ls ->
+             List.fold_left
+               (fun seen (l : label_declaration) ->
+                 if List.mem l.pld_name.txt seen then
+                   error l.pld_loc "field %s is declared twice" l.pld_name.txt;
+                 l.pld_name.txt :: seen)
+               seen ls
+         | _ -> seen)
+       [] tds);
   List.iter2
     (fun d (td : type_declaration) ->
       match td.ptype_kind with
@@ -1277,7 +1304,7 @@ let language (str : structure) =
             (fun (cd : constructor_declaration) ->
               let name = cd.pcd_name.txt and loc = cd.pcd_loc in
               let attrs = cd.pcd_attributes in
-              check_attrs [ "lean"; "comm"; "literal"; "operators" ] attrs;
+              check_attrs [ "comm"; "literal"; "operators" ] attrs;
               if Option.is_some (find_constr name) then
                 error loc "constructor %s is declared twice" name;
               let args =
@@ -1291,14 +1318,7 @@ let language (str : structure) =
                       l
                 | Pcstr_record _ -> error loc "unsupported constructor"
               in
-              let c =
-                {
-                  c_name = name;
-                  c_res = res;
-                  c_args = args;
-                  c_lean = d.d_lean ^ "." ^ required_attr loc "lean" attrs;
-                }
-              in
+              let c = { c_name = name; c_res = res; c_args = args } in
               let l = !lang in
               let l = { l with constrs = l.constrs @ [ c ] } in
               let l =
@@ -1350,7 +1370,7 @@ let language (str : structure) =
           | None -> error a.attr_loc "%s is not a prefix operator" sym
       in
       if Option.is_some (find_operator ~arity sym) then
-        error loc "operator %s is declared twice" sym;
+        error loc "operator %s is declared twice" (op_name sym);
       let ident (e : expression) =
         match e.pexp_desc with
         | Pexp_ident { txt = Lident f; _ } -> f
@@ -1372,6 +1392,8 @@ let language (str : structure) =
             | _ -> error node.pexp_loc "%s is not a node of arity %d" n arity)
         | _ -> error node.pexp_loc "expected a node constructor"
       in
+      if Option.is_some on_bv && not (List.mem sym bv_ops) then
+        error loc "%s is not defined on bit-vector values" (op_name sym);
       let smart, pre =
         match smart.pexp_desc with
         | Pexp_apply (f, args) -> (ident f, List.map snd args)
@@ -1388,7 +1410,7 @@ let language (str : structure) =
   List.iter
     (fun t ->
       if Option.is_none (find_decl t) then error loc "type %s is not declared" t)
-    [ "t"; "kind"; "ty"; "bv"; "var" ];
+    [ "kind"; "ty" ];
   List.iter
     (fun c ->
       match Option.bind (find_constr c) node_of_op with

@@ -15,11 +15,11 @@ theorem eval_eq_ev {FS ρ t} (h : t.WT) : eval FS ρ t = ev FS ρ t := by
 /-- Types are matched exactly: [Ty.sort] is the identity. -/
 @[simp] theorem Ty.sort_eq (t : Ty) : t.sort = t := rfl
 
-theorem size_of_ty_of_bits {t : Ty} {n : Int} (h : t = .bitVector n ∨ t = .loc n) :
+theorem size_of_ty_of_bits {t : Ty} {n : Int} (h : t = .TBitVector n ∨ t = .TLoc n) :
     size_of_ty t = n := by
   rcases h with rfl | rfl <;> rfl
 
-@[simp] theorem size_of_ty_bitVector (n : Int) : size_of_ty (.bitVector n) = n := rfl
+@[simp] theorem size_of_ty_bitVector (n : Int) : size_of_ty (.TBitVector n) = n := rfl
 @[simp] theorem ty_eq (v : Term) : ty v = v.ty := rfl
 @[simp] theorem kind_eq (v : Term) : kind v = v.kind := rfl
 @[simp] theorem size_eq (v : Term) : size v = size_of_ty v.ty := rfl
@@ -53,29 +53,29 @@ theorem Refines.sem {FS : FloatSem} {a b : Term} (h : Refines FS a b) (ρ : Env)
 
 /-! ## Evaluation of well-typed nodes -/
 
-theorem WT_unop {op a t} : (Term.mk (.unop op a) t).WT ↔ op.WT a.ty.sort t.sort ∧ a.WT := by
+theorem WT_unop {op a t} : (Term.mk (.Unop op a) t).WT ↔ op.WT a.ty.sort t.sort ∧ a.WT := by
   simp [Term.WT]
 
 theorem WT_binop {op a b t} :
-    (Term.mk (.binop op a b) t).WT ↔ op.WT a.ty.sort b.ty.sort t.sort ∧ a.WT ∧ b.WT := by
+    (Term.mk (.Binop op a b) t).WT ↔ op.WT a.ty.sort b.ty.sort t.sort ∧ a.WT ∧ b.WT := by
   simp [Term.WT]
 
 theorem WT_triop {op a b c t} :
-    (Term.mk (.triop op a b c) t).WT ↔
+    (Term.mk (.Triop op a b c) t).WT ↔
       op.WT a.ty.sort b.ty.sort c.ty.sort t.sort ∧ a.WT ∧ b.WT ∧ c.WT := by
   simp [Term.WT]
 
-theorem eval_unop {FS ρ op a t} (h : (Term.mk (.unop op a) t).WT) :
-    eval FS ρ (.mk (.unop op a) t) = evUnop FS op (eval FS ρ a) := by
+theorem eval_unop {FS ρ op a t} (h : (Term.mk (.Unop op a) t).WT) :
+    eval FS ρ (.mk (.Unop op a) t) = evUnop FS op (eval FS ρ a) := by
   rw [eval_eq_ev h, eval_eq_ev (WT_unop.1 h).2, ev]
 
-theorem eval_binop {FS ρ op a b t} (h : (Term.mk (.binop op a b) t).WT) :
-    eval FS ρ (.mk (.binop op a b) t) = evBinop FS op (eval FS ρ a) (eval FS ρ b) := by
+theorem eval_binop {FS ρ op a b t} (h : (Term.mk (.Binop op a b) t).WT) :
+    eval FS ρ (.mk (.Binop op a b) t) = evBinop FS op (eval FS ρ a) (eval FS ρ b) := by
   have := WT_binop.1 h
   rw [eval_eq_ev h, eval_eq_ev this.2.1, eval_eq_ev this.2.2, ev]
 
-theorem eval_ite {FS ρ g a b t} (h : (Term.mk (.triop .ite g a b) t).WT) :
-    eval FS ρ (.mk (.triop .ite g a b) t) =
+theorem eval_ite {FS ρ g a b t} (h : (Term.mk (.Triop .Ite g a b) t).WT) :
+    eval FS ρ (.mk (.Triop .Ite g a b) t) =
       match eval FS ρ g with
       | some (.bool true) => eval FS ρ a
       | some (.bool false) => eval FS ρ b
@@ -85,8 +85,8 @@ theorem eval_ite {FS ρ g a b t} (h : (Term.mk (.triop .ite g a b) t).WT) :
   simp only [ev]
   split <;> simp_all
 
-theorem eval_fma {FS ρ a b c t} (h : (Term.mk (.triop .fma a b c) t).WT) :
-    eval FS ρ (.mk (.triop .fma a b c) t) =
+theorem eval_fma {FS ρ a b c t} (h : (Term.mk (.Triop .Fma a b c) t).WT) :
+    eval FS ρ (.mk (.Triop .Fma a b c) t) =
       evFma FS (eval FS ρ a) (eval FS ρ b) (eval FS ρ c) := by
   have := WT_triop.1 h
   rw [eval_eq_ev h, eval_eq_ev this.2.1, eval_eq_ev this.2.2.1, eval_eq_ev this.2.2.2, ev]
@@ -140,8 +140,8 @@ theorem por_mono {a a' b b'} (ha : OLe a a') (hb : OLe b b') : OLe (por a b) (po
 theorem evBinop_mono {FS op a a' b b'} (ha : OLe a a') (hb : OLe b b') :
     OLe (evBinop FS op a b) (evBinop FS op a' b') := by
   cases op
-  case and_ => exact pand_mono ha hb
-  case or_ => exact por_mono ha hb
+  case And => exact pand_mono ha hb
+  case Or => exact por_mono ha hb
   all_goals
     intro v e
     rcases a with _ | x
@@ -169,8 +169,8 @@ theorem Refines.intro {FS : FloatSem} {a b : Term} (syn : a.WT → b.WT ∧ b.ty
   ⟨syn, fun ρ v e => sem ρ v (eval_WT e) (syn (eval_WT e)).1 e⟩
 
 theorem Refines.unop {FS op a a' t t'} (ha : Refines FS a a')
-    (ht : (Term.mk (.unop op a) t).WT → t'.sort = t.sort) :
-    Refines FS (.mk (.unop op a) t) (.mk (.unop op a') t') := by
+    (ht : (Term.mk (.Unop op a) t).WT → t'.sort = t.sort) :
+    Refines FS (.mk (.Unop op a) t) (.mk (.Unop op a') t') := by
   refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
   · have ⟨w1, w2⟩ := WT_unop.1 w
     have ⟨w3, s3⟩ := ha.syn w2
@@ -180,8 +180,8 @@ theorem Refines.unop {FS op a a' t t'} (ha : Refines FS a a')
     exact evUnop_mono (ha.sem ρ) v e
 
 theorem Refines.binop {FS op a a' b b' t t'} (ha : Refines FS a a') (hb : Refines FS b b')
-    (ht : (Term.mk (.binop op a b) t).WT → t'.sort = t.sort) :
-    Refines FS (.mk (.binop op a b) t) (.mk (.binop op a' b') t') := by
+    (ht : (Term.mk (.Binop op a b) t).WT → t'.sort = t.sort) :
+    Refines FS (.mk (.Binop op a b) t) (.mk (.Binop op a' b') t') := by
   refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
   · have ⟨w1, wa, wb⟩ := WT_binop.1 w
     have ⟨wa', sa⟩ := ha.syn wa
@@ -192,8 +192,8 @@ theorem Refines.binop {FS op a a' b b' t t'} (ha : Refines FS a a') (hb : Refine
     exact evBinop_mono (ha.sem ρ) (hb.sem ρ) v e
 
 theorem Refines.ite {FS g g' a a' b b' t t'} (hg : Refines FS g g') (ha : Refines FS a a')
-    (hb : Refines FS b b') (ht : (Term.mk (.triop .ite g a b) t).WT → t'.sort = t.sort) :
-    Refines FS (.mk (.triop .ite g a b) t) (.mk (.triop .ite g' a' b') t') := by
+    (hb : Refines FS b b') (ht : (Term.mk (.Triop .Ite g a b) t).WT → t'.sort = t.sort) :
+    Refines FS (.mk (.Triop .Ite g a b) t) (.mk (.Triop .Ite g' a' b') t') := by
   refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
   · have ⟨w1, wg, wa, wb⟩ := WT_triop.1 w
     have ⟨wg', sg⟩ := hg.syn wg
@@ -209,8 +209,8 @@ theorem Refines.ite {FS g g' a a' b b' t t'} (hg : Refines FS g g') (ha : Refine
     · simp at e
 
 theorem Refines.fma {FS a a' b b' c c' t t'} (ha : Refines FS a a') (hb : Refines FS b b')
-    (hc : Refines FS c c') (ht : (Term.mk (.triop .fma a b c) t).WT → t'.sort = t.sort) :
-    Refines FS (.mk (.triop .fma a b c) t) (.mk (.triop .fma a' b' c') t') := by
+    (hc : Refines FS c c') (ht : (Term.mk (.Triop .Fma a b c) t).WT → t'.sort = t.sort) :
+    Refines FS (.mk (.Triop .Fma a b c) t) (.mk (.Triop .Fma a' b' c') t') := by
   refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
   · have ⟨w1, wa, wb, wc⟩ := WT_triop.1 w
     have ⟨wa', sa⟩ := ha.syn wa
@@ -234,29 +234,29 @@ open Classical
 /-! ## Literals -/
 
 theorem WT_bitVec {z t} :
-    (Term.mk (.bitVec z) t).WT ↔
-      ∃ n : Nat, 0 < n ∧ (t = .bitVector n ∨ t = .loc n) ∧ 0 ≤ z ∧ z < 2 ^ n := by
+    (Term.mk (.BitVec z) t).WT ↔
+      ∃ n : Nat, 0 < n ∧ (t = .TBitVector n ∨ t = .TLoc n) ∧ 0 ≤ z ∧ z < 2 ^ n := by
   simp [Term.WT]
 
-theorem eval_bitVec {FS ρ z t} (h : (Term.mk (.bitVec z) t).WT) :
-    eval FS ρ (.mk (.bitVec z) t) = some (.bv t.width (BitVec.ofInt _ z)) := by
+theorem eval_bitVec {FS ρ z t} (h : (Term.mk (.BitVec z) t).WT) :
+    eval FS ρ (.mk (.BitVec z) t) = some (.bv t.width (BitVec.ofInt _ z)) := by
   rw [eval_eq_ev h, ev]
 
-theorem eval_bitVec' {FS ρ z t n} (h : (Term.mk (.bitVec z) t).WT)
-    (hn : t = .bitVector n ∨ t = .loc n) :
-    eval FS ρ (.mk (.bitVec z) t) = some (.bv n.toNat (BitVec.ofInt _ z)) := by
+theorem eval_bitVec' {FS ρ z t n} (h : (Term.mk (.BitVec z) t).WT)
+    (hn : t = .TBitVector n ∨ t = .TLoc n) :
+    eval FS ρ (.mk (.BitVec z) t) = some (.bv n.toNat (BitVec.ofInt _ z)) := by
   rw [eval_bitVec h, Ty.width, size_of_ty_of_bits hn]
 
-theorem WT_bool {b t} : (Term.mk (.bool b) t).WT ↔ t = .bool := by simp [Term.WT]
+theorem WT_bool {b t} : (Term.mk (.Bool b) t).WT ↔ t = .TBool := by simp [Term.WT]
 
-theorem eval_bool {FS ρ b t} (h : t = .bool) :
-    eval FS ρ (.mk (.bool b) t) = some (.bool b) := by
+theorem eval_bool {FS ρ b t} (h : t = .TBool) :
+    eval FS ρ (.mk (.Bool b) t) = some (.bool b) := by
   subst h; rw [eval_eq_ev (WT_bool.2 rfl), ev]
 
 @[simp] theorem v_true_WT : v_true.WT := by simp [v_true, Term.WT]
 @[simp] theorem v_false_WT : v_false.WT := by simp [v_false, Term.WT]
-@[simp] theorem v_true_ty : v_true.ty = .bool := rfl
-@[simp] theorem v_false_ty : v_false.ty = .bool := rfl
+@[simp] theorem v_true_ty : v_true.ty = .TBool := rfl
+@[simp] theorem v_false_ty : v_false.ty = .TBool := rfl
 @[simp] theorem eval_v_true {FS ρ} : eval FS ρ v_true = some (.bool true) := eval_bool rfl
 @[simp] theorem eval_v_false {FS ρ} : eval FS ρ v_false = some (.bool false) := eval_bool rfl
 
@@ -273,7 +273,7 @@ theorem mk_masked_WT {n z : Int} (hn : 0 < n) : (mk_masked n z).WT := by
   · exact emod_two_pow_nonneg _ _
   · exact emod_two_pow_lt _ _
 
-@[simp] theorem mk_masked_ty {n z : Int} : (mk_masked n z).ty = .bitVector n := rfl
+@[simp] theorem mk_masked_ty {n z : Int} : (mk_masked n z).ty = .TBitVector n := rfl
 
 theorem BitVec.ofInt_emod_two_pow {w : Nat} (z : Int) :
     BitVec.ofInt w (z % 2 ^ w) = BitVec.ofInt w z := by

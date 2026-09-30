@@ -14,26 +14,26 @@ open Classical
   structure Oracle where
   tag_le : Term → Term → Bool
   sort_by_tag : (List Term) → (List Term)
-  f_add : FloatLit → FloatLit → FloatLit
-  f_sub : FloatLit → FloatLit → FloatLit
-  f_mul : FloatLit → FloatLit → FloatLit
-  f_div : FloatLit → FloatLit → FloatLit
-  f_rem : FloatLit → FloatLit → FloatLit
-  f_fmod : FloatLit → FloatLit → FloatLit
-  f_min : FloatLit → FloatLit → FloatLit
-  f_max : FloatLit → FloatLit → FloatLit
-  f_fma : FloatLit → FloatLit → FloatLit → FloatLit
-  f_sqrt : FloatLit → FloatLit
-  f_round : RM → FloatLit → FloatLit
-  f_convert : RM → Prec → FloatLit → FloatLit
-  f_to_int : RM → Bool → Int → FloatLit → (Option Int)
-  f_of_int : RM → Bool → Prec → Int → Int → (Option FloatLit)
+  f_add : Float → Float → Float
+  f_sub : Float → Float → Float
+  f_mul : Float → Float → Float
+  f_div : Float → Float → Float
+  f_rem : Float → Float → Float
+  f_fmod : Float → Float → Float
+  f_min : Float → Float → Float
+  f_max : Float → Float → Float
+  f_fma : Float → Float → Float → Float
+  f_sqrt : Float → Float
+  f_round : Rm → Float → Float
+  f_convert : Rm → Fp → Float → Float
+  f_to_int : Rm → Bool → Int → Float → (Option Int)
+  f_of_int : Rm → Bool → Fp → Int → Int → (Option Float)
 
 def size (v : Term) : Int :=
   (size_of_ty (ty v))
 
 def is_bv (t : Ty) : Bool :=
-  ((firstSome [(match t with | (Ty.bitVector _) => some (true) | _ => none)]).getD
+  ((firstSome [(match t with | (Ty.TBitVector _) => some (true) | _ => none)]).getD
     (match t with | _ => false))
 
 def zmin (a : Int) (b : Int) : Int :=
@@ -98,41 +98,41 @@ mutual
 
 def msb_of (v : Term) : Int :=
   ((firstSome [(match v with
-                 | (Term.mk (Kind.bitVec z) _) =>
+                 | (Term.mk (Kind.BitVec z) _) =>
                  (if (decide (z > (0 : Int))) then some ((log2 z)) else none)
                  | _ => none),
     (match v with
-      | (Term.mk (Kind.bitVec bvr__1) _) =>
+      | (Term.mk (Kind.BitVec bvr__1) _) =>
       (if (decide (bvr__1 = (0 : Int)))
       then some (((size v) - (1 : Int)))
       else none)
       | _ => none),
     (match v with
-      | (Term.mk (Kind.binop Binop.bitAnd bv1 bv2) _) =>
+      | (Term.mk (Kind.Binop Binop.BitAnd bv1 bv2) _) =>
       some ((zmin (msb_of bv1) (msb_of bv2)))
       | _ => none),
     (match v with
-      | (Term.mk (Kind.triop Triop.ite _ l r) _) =>
+      | (Term.mk (Kind.Triop Triop.Ite _ l r) _) =>
       some ((zmax (msb_of l) (msb_of r)))
       | _ => none),
     (match v with
-      | (Term.mk (Kind.unop (Unop.bvExtend false _) v) _) =>
+      | (Term.mk (Kind.Unop (Unop.BvExtend false _) v) _) =>
       some ((msb_of v))
       | _ => none),
     (match v with
-      | (Term.mk (Kind.binop (Binop.rem false) _ (Term.mk (Kind.bitVec k) _)) _) =>
+      | (Term.mk (Kind.Binop (Binop.Rem false) _ (Term.mk (Kind.BitVec k) _)) _) =>
       (if (decide (k > (1 : Int)))
       then some ((log2 (k - (1 : Int))))
       else none)
       | _ => none),
     (match v with
-      | (Term.mk (Kind.binop Binop.mod_ _ (Term.mk (Kind.bitVec k) _)) _) =>
+      | (Term.mk (Kind.Binop Binop.Mod _ (Term.mk (Kind.BitVec k) _)) _) =>
       (if ((decide (k > (1 : Int))) && (decide (k < (zshiftl (1 : Int) ((size v) - (1 : Int))))))
       then some ((log2 (k - (1 : Int))))
       else none)
       | _ => none),
     (match v with
-      | (Term.mk (Kind.binop (Binop.rem true) (Term.mk (Kind.bitVec k) _) _) _) =>
+      | (Term.mk (Kind.Binop (Binop.Rem true) (Term.mk (Kind.BitVec k) _) _) _) =>
       (if ((decide (k > (0 : Int))) && (decide (k < (zshiftl (1 : Int) ((size v) - (1 : Int))))))
       then some ((log2 k))
       else none)
@@ -187,19 +187,19 @@ mutual
 
 def sure_neq (a : Term) (b : Term) : Bool :=
   ((! (decide ((ty a) = (ty b)))) || ((firstSome [(match a, b with
-                                                    | (Term.mk (Kind.bitVec a) _), (Term.mk (Kind.bitVec b) _) =>
+                                                    | (Term.mk (Kind.BitVec a) _), (Term.mk (Kind.BitVec b) _) =>
                                                     some ((! (decide (a = b))))
                                                     | _, _ => none),
                                        (match a, b with
-                                         | (Term.mk (Kind.float a) _), (Term.mk (Kind.float b) _) =>
+                                         | (Term.mk (Kind.Float a) _), (Term.mk (Kind.Float b) _) =>
                                          some ((! (f_equal a b)))
                                          | _, _ => none),
                                        (match a, b with
-                                         | (Term.mk (Kind.bool a) _), (Term.mk (Kind.bool b) _) =>
+                                         | (Term.mk (Kind.Bool a) _), (Term.mk (Kind.Bool b) _) =>
                                          some ((! (decide (a = b))))
                                          | _, _ => none),
                                        (match a, b with
-                                         | (Term.mk (Kind.ptr la oa) _), (Term.mk (Kind.ptr lb ob) _) =>
+                                         | (Term.mk (Kind.Ptr la oa) _), (Term.mk (Kind.Ptr lb ob) _) =>
                                          some (((sure_neq la lb) || (sure_neq oa ob)))
                                          | _, _ => none)]).getD
                                        (match a, b with | _, _ => false)))
@@ -229,22 +229,22 @@ def no_binders (l : (List (Int × Ty))) : Bool :=
 
 def upper_bound (v : Term) : Int :=
   ((firstSome [(match v with
-                 | (Term.mk (Kind.binop (Binop.lt s) _ c@(Term.mk (Kind.bitVec _) _)) _) =>
+                 | (Term.mk (Kind.Binop (Binop.Lt s) _ c@(Term.mk (Kind.BitVec _) _)) _) =>
                  some (((to_z s (bv_of_lit c)) - (1 : Int)))
                  | _ => none),
     (match v with
-      | (Term.mk (Kind.binop (Binop.leq s) _ c@(Term.mk (Kind.bitVec _) _)) _) =>
+      | (Term.mk (Kind.Binop (Binop.Leq s) _ c@(Term.mk (Kind.BitVec _) _)) _) =>
       some ((to_z s (bv_of_lit c)))
       | _ => none)]).getD
     (match v with | _ => (0 : Int)))
 
 def lower_bound (v : Term) : Int :=
   ((firstSome [(match v with
-                 | (Term.mk (Kind.binop (Binop.lt s) c@(Term.mk (Kind.bitVec _) _) _) _) =>
+                 | (Term.mk (Kind.Binop (Binop.Lt s) c@(Term.mk (Kind.BitVec _) _) _) _) =>
                  some (((to_z s (bv_of_lit c)) + (1 : Int)))
                  | _ => none),
     (match v with
-      | (Term.mk (Kind.binop (Binop.leq s) c@(Term.mk (Kind.bitVec _) _) _) _) =>
+      | (Term.mk (Kind.Binop (Binop.Leq s) c@(Term.mk (Kind.BitVec _) _) _) _) =>
       some ((to_z s (bv_of_lit c)))
       | _ => none)]).getD
     (match v with | _ => (0 : Int)))
@@ -266,7 +266,7 @@ def no_wrap (c : Checked) (v1 : Term) (v2 : Term) : Checked :=
 def cancellable (signed : Bool) (a : Term) : Bool :=
   (if signed
   then ((firstSome [(match a with
-                      | (Term.mk (Kind.bitVec _) _) =>
+                      | (Term.mk (Kind.BitVec _) _) =>
                       some ((decide ((to_z true (bv_of_lit a)) > (0 : Int))))
                       | _ => none)]).getD
          (match a with | _ => false))
@@ -279,27 +279,27 @@ def const_keeps_in_range (signed : Bool) (l : BvVal) (r : BvVal) : Bool :=
 
 def is_checked_unsigned_op (v : Term) : Bool :=
   ((firstSome [(match v with
-                 | (Term.mk (Kind.binop (Binop.add c) (Term.mk (Kind.bitVec _) _) _) _) =>
+                 | (Term.mk (Kind.Binop (Binop.Add c) (Term.mk (Kind.BitVec _) _) _) _) =>
                  some (c.unsigned)
                  | _ => none),
     (match v with
-      | (Term.mk (Kind.binop (Binop.add c) _ (Term.mk (Kind.bitVec _) _)) _) =>
+      | (Term.mk (Kind.Binop (Binop.Add c) _ (Term.mk (Kind.BitVec _) _)) _) =>
       some (c.unsigned)
       | _ => none),
     (match v with
-      | (Term.mk (Kind.binop (Binop.sub c) (Term.mk (Kind.bitVec _) _) _) _) =>
+      | (Term.mk (Kind.Binop (Binop.Sub c) (Term.mk (Kind.BitVec _) _) _) _) =>
       some (c.unsigned)
       | _ => none),
     (match v with
-      | (Term.mk (Kind.binop (Binop.sub c) _ (Term.mk (Kind.bitVec _) _)) _) =>
+      | (Term.mk (Kind.Binop (Binop.Sub c) _ (Term.mk (Kind.BitVec _) _)) _) =>
       some (c.unsigned)
       | _ => none),
     (match v with
-      | (Term.mk (Kind.binop (Binop.mul c) (Term.mk (Kind.bitVec _) _) _) _) =>
+      | (Term.mk (Kind.Binop (Binop.Mul c) (Term.mk (Kind.BitVec _) _) _) _) =>
       some (c.unsigned)
       | _ => none),
     (match v with
-      | (Term.mk (Kind.binop (Binop.mul c) _ (Term.mk (Kind.bitVec _) _)) _) =>
+      | (Term.mk (Kind.Binop (Binop.Mul c) _ (Term.mk (Kind.BitVec _) _)) _) =>
       some (c.unsigned)
       | _ => none)]).getD
     (match v with | _ => false))
@@ -340,15 +340,15 @@ decreasing_by all_goals (simp_wf; omega)
 
 end
 
-def fp_of (v : Term) : Prec :=
+def fp_of (v : Term) : Fp :=
   (fp_of_ty (ty v))
 
 def raw_fmod_of_rem (r : Term) (v1 : Term) (v2 : Term) : Term :=
   (let is_neg := fun (v : Term) =>
-    (Term.mk (Kind.unop Unop.fIsNeg v) Ty.bool);
-  (let abs2 := (Term.mk (Kind.unop Unop.fAbs v2) (ty v2));
-  (let correction := (Term.mk (Kind.triop Triop.ite (is_neg v1) (Term.mk (Kind.unop Unop.fNeg abs2) (ty v2)) abs2) (ty v2));
-  (Term.mk (Kind.triop Triop.ite (Term.mk (Kind.binop Binop.eq (is_neg r) (is_neg v1)) Ty.bool) r (Term.mk (Kind.binop Binop.fAdd r correction) (ty r))) (ty r)))))
+    (Term.mk (Kind.Unop Unop.FIsNeg v) Ty.TBool);
+  (let abs2 := (Term.mk (Kind.Unop Unop.FAbs v2) (ty v2));
+  (let correction := (Term.mk (Kind.Triop Triop.Ite (is_neg v1) (Term.mk (Kind.Unop Unop.FNeg abs2) (ty v2)) abs2) (ty v2));
+  (Term.mk (Kind.Triop Triop.Ite (Term.mk (Kind.Binop Binop.Eq (is_neg r) (is_neg v1)) Ty.TBool) r (Term.mk (Kind.Binop Binop.FAdd r correction) (ty r))) (ty r)))))
 
 /-- The rule functions, as used by the rules. -/
   structure Ops where
@@ -388,13 +388,13 @@ def raw_fmod_of_rem (r : Term) (v1 : Term) (v2 : Term) : Term :=
   bv_mul_overflows : Bool → Term → Term → Term
   bv_neg_overflows : Term → Term
   bv_sub_overflows : Bool → Term → Term → Term
-  bv_of_float : RM → Bool → Int → Term → Term
-  bv_to_float : RM → Bool → Prec → Term → Term
+  bv_of_float : Rm → Bool → Int → Term → Term
+  bv_to_float : Rm → Bool → Fp → Term → Term
   bv_to_float_raw : Term → Term
-  float_is_floatclass : FClass → Term → Term
+  float_is_floatclass : Fc → Term → Term
   float_is_negative : Term → Term
   float_is_positive : Term → Term
-  float_cast : RM → Prec → Term → Term
+  float_cast : Rm → Fp → Term → Term
   float_eq : Term → Term → Term
   float_lt : Term → Term → Term
   float_leq : Term → Term → Term
@@ -411,12 +411,12 @@ def raw_fmod_of_rem (r : Term) (v1 : Term) (v2 : Term) : Term :=
   float_min : Term → Term → Term
   float_max : Term → Term → Term
   float_sqrt : Term → Term
-  float_round : RM → Term → Term
+  float_round : Rm → Term → Term
   ptr_loc : Term → Term
   ptr_ofs : Term → Term
 
 def mk_commut_binop (O : Ops) (op : Binop) (l : Term) (r : Term) : Kind :=
-  (if (O.orc.tag_le l r) then (Kind.binop op l r) else (Kind.binop op r l))
+  (if (O.orc.tag_le l r) then (Kind.Binop op l r) else (Kind.Binop op r l))
 
 def signed_to_unsigned_cmp (O : Ops) (is_leq : Bool) (c_on_left : Bool) (c : BvVal) (v1 : Term) (v2 : Term) : Term :=
   (let bits := (size v1);
@@ -432,299 +432,299 @@ def signed_to_unsigned_cmp (O : Ops) (is_leq : Bool) (c_on_left : Bool) (c : BvV
        (if nonneg then (O.b_or c_cmp in_neg) else (O.b_and in_neg c_cmp))))))))
 
 @[bvr_spec] def b_and.spec (v1 : Term) (v2 : Term) : Term :=
-  (Term.mk (Kind.binop Binop.and_ v1 v2) Ty.bool)
+  (Term.mk (Kind.Binop Binop.And v1 v2) Ty.TBool)
 
 @[bvr_spec] def b_or.spec (v1 : Term) (v2 : Term) : Term :=
-  (Term.mk (Kind.binop Binop.or_ v1 v2) Ty.bool)
+  (Term.mk (Kind.Binop Binop.Or v1 v2) Ty.TBool)
 
 @[bvr_spec] def b_not.spec (sv : Term) : Term :=
-  (Term.mk (Kind.unop Unop.not_ sv) Ty.bool)
+  (Term.mk (Kind.Unop Unop.Not sv) Ty.TBool)
 
 @[bvr_spec] def b_ite.spec (guard : Term) (if_ : Term) (else_ : Term) : Term :=
-  (Term.mk (Kind.triop Triop.ite guard if_ else_) (ty if_))
+  (Term.mk (Kind.Triop Triop.Ite guard if_ else_) (ty if_))
 
 @[bvr_spec] def sem_eq.spec (v1 : Term) (v2 : Term) : Term :=
-  (Term.mk (Kind.binop Binop.eq v1 v2) Ty.bool)
+  (Term.mk (Kind.Binop Binop.Eq v1 v2) Ty.TBool)
 
 @[bvr_spec] def b_mk_exists.spec (binders : (List (Int × Ty))) (body : Term) : Term :=
-  (Term.mk (Kind.exists_ binders body) Ty.bool)
+  (Term.mk (Kind.Exists binders body) Ty.TBool)
 
 @[bvr_spec] def sem_eq_untyped.spec (v1 : Term) (v2 : Term) : Term :=
-  (Term.mk (Kind.binop Binop.eq v1 v2) Ty.bool)
+  (Term.mk (Kind.Binop Binop.Eq v1 v2) Ty.TBool)
 
 @[bvr_spec] def b_distinct.spec (l : (List Term)) : Term :=
-  (Term.mk (Kind.nop Nop.distinct l) Ty.bool)
+  (Term.mk (Kind.Nop Nop.Distinct l) Ty.TBool)
 
 @[bvr_spec] def bv_of_bool.spec (n : Int) (b : Term) : Term :=
-  (Term.mk (Kind.unop (Unop.bvOfBool n) b) (Ty.bitVector n))
+  (Term.mk (Kind.Unop (Unop.BvOfBool n) b) (Ty.TBitVector n))
 
 @[bvr_spec] def bv_to_bool.spec (v : Term) : Term :=
-  (Term.mk (Kind.unop Unop.not_ (Term.mk (Kind.binop Binop.eq v (bv_zero (size v))) Ty.bool)) Ty.bool)
+  (Term.mk (Kind.Unop Unop.Not (Term.mk (Kind.Binop Binop.Eq v (bv_zero (size v))) Ty.TBool)) Ty.TBool)
 
 @[bvr_spec] def bv_not_bool.spec (v : Term) : Term :=
-  (Term.mk (Kind.unop (Unop.bvOfBool (size v)) (Term.mk (Kind.binop Binop.eq v (bv_zero (size v))) Ty.bool)) (Ty.bitVector (size v)))
+  (Term.mk (Kind.Unop (Unop.BvOfBool (size v)) (Term.mk (Kind.Binop Binop.Eq v (bv_zero (size v))) Ty.TBool)) (Ty.TBitVector (size v)))
 
 @[bvr_spec] def bv_add.spec (checked : Checked) (v1 : Term) (v2 : Term) : Term :=
-  (Term.mk (Kind.binop (Binop.add checked) v1 v2) (ty v1))
+  (Term.mk (Kind.Binop (Binop.Add checked) v1 v2) (ty v1))
 
 @[bvr_spec] def bv_sub.spec (checked : Checked) (v1 : Term) (v2 : Term) : Term :=
-  (Term.mk (Kind.binop (Binop.sub checked) v1 v2) (ty v1))
+  (Term.mk (Kind.Binop (Binop.Sub checked) v1 v2) (ty v1))
 
 @[bvr_spec] def bv_neg.spec (checked : Bool) (v : Term) : Term :=
-  (Term.mk (Kind.unop (Unop.neg checked) v) (ty v))
+  (Term.mk (Kind.Unop (Unop.Neg checked) v) (ty v))
 
 @[bvr_spec] def bv_mod.spec (v1 : Term) (v2 : Term) : Term :=
-  (Term.mk (Kind.binop Binop.mod_ v1 v2) (ty v1))
+  (Term.mk (Kind.Binop Binop.Mod v1 v2) (ty v1))
 
 @[bvr_spec] def bv_rem.spec (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
-  (Term.mk (Kind.binop (Binop.rem signed) v1 v2) (ty v1))
+  (Term.mk (Kind.Binop (Binop.Rem signed) v1 v2) (ty v1))
 
 @[bvr_spec] def bv_not.spec (v : Term) : Term :=
-  (Term.mk (Kind.unop Unop.bvNot v) (ty v))
+  (Term.mk (Kind.Unop Unop.BvNot v) (ty v))
 
 @[bvr_spec] def bv_and.spec (v1 : Term) (v2 : Term) : Term :=
-  (Term.mk (Kind.binop Binop.bitAnd v1 v2) (Ty.bitVector (size v1)))
+  (Term.mk (Kind.Binop Binop.BitAnd v1 v2) (Ty.TBitVector (size v1)))
 
 @[bvr_spec] def bv_or.spec (v1 : Term) (v2 : Term) : Term :=
-  (Term.mk (Kind.binop Binop.bitOr v1 v2) (ty v1))
+  (Term.mk (Kind.Binop Binop.BitOr v1 v2) (ty v1))
 
 @[bvr_spec] def bv_xor.spec (v1 : Term) (v2 : Term) : Term :=
-  (Term.mk (Kind.binop Binop.bitXor v1 v2) (ty v1))
+  (Term.mk (Kind.Binop Binop.BitXor v1 v2) (ty v1))
 
 @[bvr_spec] def bv_extract.spec (from_ : Int) (to_ : Int) (v : Term) : Term :=
-  (Term.mk (Kind.unop (Unop.bvExtract from_ to_) v) (Ty.bitVector ((to_ - from_) + (1 : Int))))
+  (Term.mk (Kind.Unop (Unop.BvExtract from_ to_) v) (Ty.TBitVector ((to_ - from_) + (1 : Int))))
 
 @[bvr_spec] def bv_extend.spec (signed : Bool) (extend_by : Int) (v : Term) : Term :=
-  (Term.mk (Kind.unop (Unop.bvExtend signed extend_by) v) (Ty.bitVector ((size v) + extend_by)))
+  (Term.mk (Kind.Unop (Unop.BvExtend signed extend_by) v) (Ty.TBitVector ((size v) + extend_by)))
 
 @[bvr_spec] def bv_concat.spec (v1 : Term) (v2 : Term) : Term :=
-  (Term.mk (Kind.binop Binop.bvConcat v1 v2) (Ty.bitVector ((size v1) + (size v2))))
+  (Term.mk (Kind.Binop Binop.BvConcat v1 v2) (Ty.TBitVector ((size v1) + (size v2))))
 
 @[bvr_spec] def bv_shl.spec (v1 : Term) (v2 : Term) : Term :=
-  (Term.mk (Kind.binop Binop.shl v1 v2) (ty v1))
+  (Term.mk (Kind.Binop Binop.Shl v1 v2) (ty v1))
 
 @[bvr_spec] def bv_lshr.spec (v1 : Term) (v2 : Term) : Term :=
-  (Term.mk (Kind.binop Binop.lShr v1 v2) (ty v1))
+  (Term.mk (Kind.Binop Binop.LShr v1 v2) (ty v1))
 
 @[bvr_spec] def bv_ashr.spec (v1 : Term) (v2 : Term) : Term :=
-  (Term.mk (Kind.binop Binop.aShr v1 v2) (ty v1))
+  (Term.mk (Kind.Binop Binop.AShr v1 v2) (ty v1))
 
 @[bvr_spec] def bv_mul.spec (checked : Checked) (v1 : Term) (v2 : Term) : Term :=
-  (Term.mk (Kind.binop (Binop.mul checked) v1 v2) (ty v1))
+  (Term.mk (Kind.Binop (Binop.Mul checked) v1 v2) (ty v1))
 
 @[bvr_spec] def bv_div.spec (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
-  (Term.mk (Kind.binop (Binop.div signed) v1 v2) (ty v1))
+  (Term.mk (Kind.Binop (Binop.Div signed) v1 v2) (ty v1))
 
 @[bvr_spec] def bv_lt_zero.spec (v : Term) : Term :=
-  (Term.mk (Kind.binop (Binop.lt true) v (bv_zero (size v))) Ty.bool)
+  (Term.mk (Kind.Binop (Binop.Lt true) v (bv_zero (size v))) Ty.TBool)
 
 @[bvr_spec] def bv_lt.spec (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
-  (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool)
+  (Term.mk (Kind.Binop (Binop.Lt signed) v1 v2) Ty.TBool)
 
 @[bvr_spec] def bv_leq.spec (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
-  (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool)
+  (Term.mk (Kind.Binop (Binop.Leq signed) v1 v2) Ty.TBool)
 
 @[bvr_spec] def bv_add_overflows.spec (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
-  (Term.mk (Kind.binop (Binop.addOvf signed) v1 v2) Ty.bool)
+  (Term.mk (Kind.Binop (Binop.AddOvf signed) v1 v2) Ty.TBool)
 
 @[bvr_spec] def bv_mul_overflows.spec (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
-  (Term.mk (Kind.binop (Binop.mulOvf signed) v1 v2) Ty.bool)
+  (Term.mk (Kind.Binop (Binop.MulOvf signed) v1 v2) Ty.TBool)
 
 @[bvr_spec] def bv_neg_overflows.spec (v : Term) : Term :=
-  (Term.mk (Kind.binop Binop.eq (mk_masked (size v) (min_for true (size v))) v) Ty.bool)
+  (Term.mk (Kind.Binop Binop.Eq (mk_masked (size v) (min_for true (size v))) v) Ty.TBool)
 
 @[bvr_spec] def bv_sub_overflows.spec (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
-  (Term.mk (Kind.binop (Binop.subOvf signed) v1 v2) Ty.bool)
+  (Term.mk (Kind.Binop (Binop.SubOvf signed) v1 v2) Ty.TBool)
 
-@[bvr_spec] def bv_of_float.spec (rounding : RM) (signed : Bool) (sz : Int) (v : Term) : Term :=
-  (Term.mk (Kind.unop (Unop.bvOfFloat rounding signed sz) v) (Ty.bitVector sz))
+@[bvr_spec] def bv_of_float.spec (rounding : Rm) (signed : Bool) (sz : Int) (v : Term) : Term :=
+  (Term.mk (Kind.Unop (Unop.BvOfFloat rounding signed sz) v) (Ty.TBitVector sz))
 
-@[bvr_spec] def bv_to_float.spec (rounding : RM) (signed : Bool) (fp : Prec) (v : Term) : Term :=
-  (Term.mk (Kind.unop (Unop.floatOfBv rounding signed fp) v) (Ty.float fp))
+@[bvr_spec] def bv_to_float.spec (rounding : Rm) (signed : Bool) (fp : Fp) (v : Term) : Term :=
+  (Term.mk (Kind.Unop (Unop.FloatOfBv rounding signed fp) v) (Ty.TFloat fp))
 
 @[bvr_spec] def bv_to_float_raw.spec (v : Term) : Term :=
-  (Term.mk (Kind.unop (Unop.floatOfBvRaw (fp_of_size (size v))) v) (Ty.float (fp_of_size (size v))))
+  (Term.mk (Kind.Unop (Unop.FloatOfBvRaw (fp_of_size (size v))) v) (Ty.TFloat (fp_of_size (size v))))
 
-@[bvr_spec] def float_is_floatclass.spec (fc : FClass) (sv : Term) : Term :=
-  (Term.mk (Kind.unop (Unop.fIs fc) sv) Ty.bool)
+@[bvr_spec] def float_is_floatclass.spec (fc : Fc) (sv : Term) : Term :=
+  (Term.mk (Kind.Unop (Unop.FIs fc) sv) Ty.TBool)
 
 @[bvr_spec] def float_is_negative.spec (v : Term) : Term :=
-  (Term.mk (Kind.unop Unop.fIsNeg v) Ty.bool)
+  (Term.mk (Kind.Unop Unop.FIsNeg v) Ty.TBool)
 
 @[bvr_spec] def float_is_positive.spec (v : Term) : Term :=
-  (Term.mk (Kind.unop Unop.fIsPos v) Ty.bool)
+  (Term.mk (Kind.Unop Unop.FIsPos v) Ty.TBool)
 
-@[bvr_spec] def float_cast.spec (rounding : RM) (fp : Prec) (v : Term) : Term :=
-  (Term.mk (Kind.unop (Unop.floatOfFloat rounding fp) v) (Ty.float fp))
+@[bvr_spec] def float_cast.spec (rounding : Rm) (fp : Fp) (v : Term) : Term :=
+  (Term.mk (Kind.Unop (Unop.FloatOfFloat rounding fp) v) (Ty.TFloat fp))
 
 @[bvr_spec] def float_eq.spec (v1 : Term) (v2 : Term) : Term :=
-  (Term.mk (Kind.binop Binop.fEq v1 v2) Ty.bool)
+  (Term.mk (Kind.Binop Binop.FEq v1 v2) Ty.TBool)
 
 @[bvr_spec] def float_lt.spec (v1 : Term) (v2 : Term) : Term :=
-  (Term.mk (Kind.binop Binop.fLt v1 v2) Ty.bool)
+  (Term.mk (Kind.Binop Binop.FLt v1 v2) Ty.TBool)
 
 @[bvr_spec] def float_leq.spec (v1 : Term) (v2 : Term) : Term :=
-  (Term.mk (Kind.binop Binop.fLeq v1 v2) Ty.bool)
+  (Term.mk (Kind.Binop Binop.FLeq v1 v2) Ty.TBool)
 
 @[bvr_spec] def float_add.spec (v1 : Term) (v2 : Term) : Term :=
-  (Term.mk (Kind.binop Binop.fAdd v1 v2) (ty v1))
+  (Term.mk (Kind.Binop Binop.FAdd v1 v2) (ty v1))
 
 @[bvr_spec] def float_sub.spec (v1 : Term) (v2 : Term) : Term :=
-  (Term.mk (Kind.binop Binop.fSub v1 v2) (ty v1))
+  (Term.mk (Kind.Binop Binop.FSub v1 v2) (ty v1))
 
 @[bvr_spec] def float_div.spec (v1 : Term) (v2 : Term) : Term :=
-  (Term.mk (Kind.binop Binop.fDiv v1 v2) (ty v1))
+  (Term.mk (Kind.Binop Binop.FDiv v1 v2) (ty v1))
 
 @[bvr_spec] def float_mul.spec (v1 : Term) (v2 : Term) : Term :=
-  (Term.mk (Kind.binop Binop.fMul v1 v2) (ty v1))
+  (Term.mk (Kind.Binop Binop.FMul v1 v2) (ty v1))
 
 @[bvr_spec] def float_rem.spec (v1 : Term) (v2 : Term) : Term :=
-  (Term.mk (Kind.binop Binop.fRem v1 v2) (ty v1))
+  (Term.mk (Kind.Binop Binop.FRem v1 v2) (ty v1))
 
 @[bvr_spec] def float_abs.spec (v : Term) : Term :=
-  (Term.mk (Kind.unop Unop.fAbs v) (ty v))
+  (Term.mk (Kind.Unop Unop.FAbs v) (ty v))
 
 @[bvr_spec] def float_neg.spec (v : Term) : Term :=
-  (Term.mk (Kind.unop Unop.fNeg v) (ty v))
+  (Term.mk (Kind.Unop Unop.FNeg v) (ty v))
 
 @[bvr_spec] def float_fma.spec (a : Term) (b : Term) (c : Term) : Term :=
-  (Term.mk (Kind.triop Triop.fma a b c) (ty a))
+  (Term.mk (Kind.Triop Triop.Fma a b c) (ty a))
 
 @[bvr_spec] def float_fmod_of_rem.spec (r : Term) (v1 : Term) (v2 : Term) : Term :=
   (raw_fmod_of_rem r v1 v2)
 
 @[bvr_spec] def float_fmod.spec (v1 : Term) (v2 : Term) : Term :=
-  (raw_fmod_of_rem (Term.mk (Kind.binop Binop.fRem v1 v2) (ty v1)) v1 v2)
+  (raw_fmod_of_rem (Term.mk (Kind.Binop Binop.FRem v1 v2) (ty v1)) v1 v2)
 
 @[bvr_spec] def float_min.spec (v1 : Term) (v2 : Term) : Term :=
-  (Term.mk (Kind.binop Binop.fMin v1 v2) (ty v1))
+  (Term.mk (Kind.Binop Binop.FMin v1 v2) (ty v1))
 
 @[bvr_spec] def float_max.spec (v1 : Term) (v2 : Term) : Term :=
-  (Term.mk (Kind.binop Binop.fMax v1 v2) (ty v1))
+  (Term.mk (Kind.Binop Binop.FMax v1 v2) (ty v1))
 
 @[bvr_spec] def float_sqrt.spec (v : Term) : Term :=
-  (Term.mk (Kind.unop Unop.fSqrt v) (ty v))
+  (Term.mk (Kind.Unop Unop.FSqrt v) (ty v))
 
-@[bvr_spec] def float_round.spec (rm : RM) (sv : Term) : Term :=
-  (Term.mk (Kind.unop (Unop.fRound rm) sv) (ty sv))
+@[bvr_spec] def float_round.spec (rm : Rm) (sv : Term) : Term :=
+  (Term.mk (Kind.Unop (Unop.FRound rm) sv) (ty sv))
 
 @[bvr_spec] def ptr_loc.spec (p : Term) : Term :=
-  (Term.mk (Kind.unop Unop.getPtrLoc p) (Ty.loc (size p)))
+  (Term.mk (Kind.Unop Unop.GetPtrLoc p) (Ty.TLoc (size p)))
 
 @[bvr_spec] def ptr_ofs.spec (p : Term) : Term :=
-  (Term.mk (Kind.unop Unop.getPtrOfs p) (Ty.bitVector (size p)))
+  (Term.mk (Kind.Unop Unop.GetPtrOfs p) (Ty.TBitVector (size p)))
 
 def b_and.r_same (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with | v, bvr__2 => (whenSome (equal v bvr__2) (v)))
 
 def b_and.r_false_ (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.bool false) _), _ =>
+    | (Term.mk (Kind.Bool false) _), _ =>
     (whenSome true (v_false))
     | _, _ => none)
   <|> (match v1, v2 with
-        | _, (Term.mk (Kind.bool false) _) =>
+        | _, (Term.mk (Kind.Bool false) _) =>
         (whenSome true (v_false))
         | _, _ => none)
 
 def b_and.r_true_ (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.bool true) _), x =>
+    | (Term.mk (Kind.Bool true) _), x =>
     (whenSome true (x))
     | _, _ => none)
   <|> (match v1, v2 with
-        | x, (Term.mk (Kind.bool true) _) =>
+        | x, (Term.mk (Kind.Bool true) _) =>
         (whenSome true (x))
         | _, _ => none)
 
 def b_and.r_not (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | p, (Term.mk (Kind.unop Unop.not_ bvr__3) _) =>
+    | p, (Term.mk (Kind.Unop Unop.Not bvr__3) _) =>
     (whenSome (equal p bvr__3) (v_false))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.unop Unop.not_ bvr__3) _), p =>
+        | (Term.mk (Kind.Unop Unop.Not bvr__3) _), p =>
         (whenSome (equal p bvr__3) (v_false))
         | _, _ => none)
 
 def b_and.r_and_ (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | x@(Term.mk (Kind.binop Binop.and_ a _) _), bvr__7 =>
+    | x@(Term.mk (Kind.Binop Binop.And a _) _), bvr__7 =>
     (whenSome (equal a bvr__7) (x))
     | _, _ => none)
   <|> (match v1, v2 with
-        | x@(Term.mk (Kind.binop Binop.and_ _ a) _), bvr__7 =>
+        | x@(Term.mk (Kind.Binop Binop.And _ a) _), bvr__7 =>
         (whenSome (equal a bvr__7) (x))
         | _, _ => none)
   <|> (match v1, v2 with
-        | bvr__7, x@(Term.mk (Kind.binop Binop.and_ a _) _) =>
+        | bvr__7, x@(Term.mk (Kind.Binop Binop.And a _) _) =>
         (whenSome (equal a bvr__7) (x))
         | _, _ => none)
   <|> (match v1, v2 with
-        | bvr__7, x@(Term.mk (Kind.binop Binop.and_ _ a) _) =>
+        | bvr__7, x@(Term.mk (Kind.Binop Binop.And _ a) _) =>
         (whenSome (equal a bvr__7) (x))
         | _, _ => none)
 
 def b_and.r_or_ (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop Binop.or_ a _) _), bvr__6 =>
+    | (Term.mk (Kind.Binop Binop.Or a _) _), bvr__6 =>
     (whenSome (equal a bvr__6) (a))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.or_ _ a) _), bvr__6 =>
+        | (Term.mk (Kind.Binop Binop.Or _ a) _), bvr__6 =>
         (whenSome (equal a bvr__6) (a))
         | _, _ => none)
   <|> (match v1, v2 with
-        | bvr__6, (Term.mk (Kind.binop Binop.or_ a _) _) =>
+        | bvr__6, (Term.mk (Kind.Binop Binop.Or a _) _) =>
         (whenSome (equal a bvr__6) (a))
         | _, _ => none)
   <|> (match v1, v2 with
-        | bvr__6, (Term.mk (Kind.binop Binop.or_ _ a) _) =>
+        | bvr__6, (Term.mk (Kind.Binop Binop.Or _ a) _) =>
         (whenSome (equal a bvr__6) (a))
         | _, _ => none)
 
 def b_and.r_eq_neq (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop Binop.eq a x) _), (Term.mk (Kind.binop Binop.eq bvr__7 y) _) =>
+    | (Term.mk (Kind.Binop Binop.Eq a x) _), (Term.mk (Kind.Binop Binop.Eq bvr__7 y) _) =>
     (whenSome ((equal a bvr__7) && (sure_neq x y)) (v_false))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.eq a x) _), (Term.mk (Kind.binop Binop.eq y bvr__7) _) =>
+        | (Term.mk (Kind.Binop Binop.Eq a x) _), (Term.mk (Kind.Binop Binop.Eq y bvr__7) _) =>
         (whenSome ((equal a bvr__7) && (sure_neq x y)) (v_false))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.eq x a) _), (Term.mk (Kind.binop Binop.eq bvr__7 y) _) =>
+        | (Term.mk (Kind.Binop Binop.Eq x a) _), (Term.mk (Kind.Binop Binop.Eq bvr__7 y) _) =>
         (whenSome ((equal a bvr__7) && (sure_neq x y)) (v_false))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.eq x a) _), (Term.mk (Kind.binop Binop.eq y bvr__7) _) =>
+        | (Term.mk (Kind.Binop Binop.Eq x a) _), (Term.mk (Kind.Binop Binop.Eq y bvr__7) _) =>
         (whenSome ((equal a bvr__7) && (sure_neq x y)) (v_false))
         | _, _ => none)
 
 def b_and.r_eq_extracts (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop Binop.eq bv1@(Term.mk (Kind.bitVec _) _) (Term.mk (Kind.unop (Unop.bvExtract s1 e1) x) _)) _), (Term.mk (Kind.binop Binop.eq bv2@(Term.mk (Kind.bitVec _) _) (Term.mk (Kind.unop (Unop.bvExtract s2 e2) bvr__19) _)) _) =>
+    | (Term.mk (Kind.Binop Binop.Eq bv1@(Term.mk (Kind.BitVec _) _) (Term.mk (Kind.Unop (Unop.BvExtract s1 e1) x) _)) _), (Term.mk (Kind.Binop Binop.Eq bv2@(Term.mk (Kind.BitVec _) _) (Term.mk (Kind.Unop (Unop.BvExtract s2 e2) bvr__19) _)) _) =>
     (whenSome ((equal x bvr__19) && ((decide ((e1 + (1 : Int)) = s2)) || (decide ((e2 + (1 : Int)) = s1))))
     ((if (decide ((e1 + (1 : Int)) = s2))
      then (O.sem_eq (O.bv_concat bv2 bv1) (O.bv_extract s1 e2 x))
      else (O.sem_eq (O.bv_concat bv1 bv2) (O.bv_extract s2 e1 x)))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.eq bv1@(Term.mk (Kind.bitVec _) _) (Term.mk (Kind.unop (Unop.bvExtract s1 e1) x) _)) _), (Term.mk (Kind.binop Binop.eq (Term.mk (Kind.unop (Unop.bvExtract s2 e2) bvr__19) _) bv2@(Term.mk (Kind.bitVec _) _)) _) =>
+        | (Term.mk (Kind.Binop Binop.Eq bv1@(Term.mk (Kind.BitVec _) _) (Term.mk (Kind.Unop (Unop.BvExtract s1 e1) x) _)) _), (Term.mk (Kind.Binop Binop.Eq (Term.mk (Kind.Unop (Unop.BvExtract s2 e2) bvr__19) _) bv2@(Term.mk (Kind.BitVec _) _)) _) =>
         (whenSome ((equal x bvr__19) && ((decide ((e1 + (1 : Int)) = s2)) || (decide ((e2 + (1 : Int)) = s1))))
         ((if (decide ((e1 + (1 : Int)) = s2))
          then (O.sem_eq (O.bv_concat bv2 bv1) (O.bv_extract s1 e2 x))
          else (O.sem_eq (O.bv_concat bv1 bv2) (O.bv_extract s2 e1 x)))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.eq (Term.mk (Kind.unop (Unop.bvExtract s1 e1) x) _) bv1@(Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.binop Binop.eq bv2@(Term.mk (Kind.bitVec _) _) (Term.mk (Kind.unop (Unop.bvExtract s2 e2) bvr__19) _)) _) =>
+        | (Term.mk (Kind.Binop Binop.Eq (Term.mk (Kind.Unop (Unop.BvExtract s1 e1) x) _) bv1@(Term.mk (Kind.BitVec _) _)) _), (Term.mk (Kind.Binop Binop.Eq bv2@(Term.mk (Kind.BitVec _) _) (Term.mk (Kind.Unop (Unop.BvExtract s2 e2) bvr__19) _)) _) =>
         (whenSome ((equal x bvr__19) && ((decide ((e1 + (1 : Int)) = s2)) || (decide ((e2 + (1 : Int)) = s1))))
         ((if (decide ((e1 + (1 : Int)) = s2))
          then (O.sem_eq (O.bv_concat bv2 bv1) (O.bv_extract s1 e2 x))
          else (O.sem_eq (O.bv_concat bv1 bv2) (O.bv_extract s2 e1 x)))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.eq (Term.mk (Kind.unop (Unop.bvExtract s1 e1) x) _) bv1@(Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.binop Binop.eq (Term.mk (Kind.unop (Unop.bvExtract s2 e2) bvr__19) _) bv2@(Term.mk (Kind.bitVec _) _)) _) =>
+        | (Term.mk (Kind.Binop Binop.Eq (Term.mk (Kind.Unop (Unop.BvExtract s1 e1) x) _) bv1@(Term.mk (Kind.BitVec _) _)) _), (Term.mk (Kind.Binop Binop.Eq (Term.mk (Kind.Unop (Unop.BvExtract s2 e2) bvr__19) _) bv2@(Term.mk (Kind.BitVec _) _)) _) =>
         (whenSome ((equal x bvr__19) && ((decide ((e1 + (1 : Int)) = s2)) || (decide ((e2 + (1 : Int)) = s1))))
         ((if (decide ((e1 + (1 : Int)) = s2))
          then (O.sem_eq (O.bv_concat bv2 bv1) (O.bv_extract s1 e2 x))
@@ -733,44 +733,44 @@ def b_and.r_eq_extracts (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def b_and.r_upper_bounds (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.binop (Binop.lt bvr__14) bvr__16 (Term.mk (Kind.bitVec _) _)) _) =>
+    | (Term.mk (Kind.Binop (Binop.Lt s) a (Term.mk (Kind.BitVec _) _)) _), (Term.mk (Kind.Binop (Binop.Lt bvr__14) bvr__16 (Term.mk (Kind.BitVec _) _)) _) =>
     (whenSome ((decide (s = bvr__14)) && (equal a bvr__16))
     ((if (decide ((upper_bound v1) ≤ (upper_bound v2))) then v1 else v2)))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.binop (Binop.leq bvr__20) bvr__22 (Term.mk (Kind.bitVec _) _)) _) =>
+        | (Term.mk (Kind.Binop (Binop.Lt s) a (Term.mk (Kind.BitVec _) _)) _), (Term.mk (Kind.Binop (Binop.Leq bvr__20) bvr__22 (Term.mk (Kind.BitVec _) _)) _) =>
         (whenSome ((decide (s = bvr__20)) && (equal a bvr__22))
         ((if (decide ((upper_bound v1) ≤ (upper_bound v2))) then v1 else v2)))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.binop (Binop.lt bvr__14) bvr__16 (Term.mk (Kind.bitVec _) _)) _) =>
+        | (Term.mk (Kind.Binop (Binop.Leq s) a (Term.mk (Kind.BitVec _) _)) _), (Term.mk (Kind.Binop (Binop.Lt bvr__14) bvr__16 (Term.mk (Kind.BitVec _) _)) _) =>
         (whenSome ((decide (s = bvr__14)) && (equal a bvr__16))
         ((if (decide ((upper_bound v1) ≤ (upper_bound v2))) then v1 else v2)))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.binop (Binop.leq bvr__20) bvr__22 (Term.mk (Kind.bitVec _) _)) _) =>
+        | (Term.mk (Kind.Binop (Binop.Leq s) a (Term.mk (Kind.BitVec _) _)) _), (Term.mk (Kind.Binop (Binop.Leq bvr__20) bvr__22 (Term.mk (Kind.BitVec _) _)) _) =>
         (whenSome ((decide (s = bvr__20)) && (equal a bvr__22))
         ((if (decide ((upper_bound v1) ≤ (upper_bound v2))) then v1 else v2)))
         | _, _ => none)
 
 def b_and.r_lower_bounds (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.lt s) (Term.mk (Kind.bitVec _) _) a) _), (Term.mk (Kind.binop (Binop.lt bvr__14) (Term.mk (Kind.bitVec _) _) bvr__18) _) =>
+    | (Term.mk (Kind.Binop (Binop.Lt s) (Term.mk (Kind.BitVec _) _) a) _), (Term.mk (Kind.Binop (Binop.Lt bvr__14) (Term.mk (Kind.BitVec _) _) bvr__18) _) =>
     (whenSome ((decide (s = bvr__14)) && (equal a bvr__18))
     ((if (decide ((lower_bound v1) ≥ (lower_bound v2))) then v1 else v2)))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.lt s) (Term.mk (Kind.bitVec _) _) a) _), (Term.mk (Kind.binop (Binop.leq bvr__20) (Term.mk (Kind.bitVec _) _) bvr__24) _) =>
+        | (Term.mk (Kind.Binop (Binop.Lt s) (Term.mk (Kind.BitVec _) _) a) _), (Term.mk (Kind.Binop (Binop.Leq bvr__20) (Term.mk (Kind.BitVec _) _) bvr__24) _) =>
         (whenSome ((decide (s = bvr__20)) && (equal a bvr__24))
         ((if (decide ((lower_bound v1) ≥ (lower_bound v2))) then v1 else v2)))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.leq s) (Term.mk (Kind.bitVec _) _) a) _), (Term.mk (Kind.binop (Binop.lt bvr__14) (Term.mk (Kind.bitVec _) _) bvr__18) _) =>
+        | (Term.mk (Kind.Binop (Binop.Leq s) (Term.mk (Kind.BitVec _) _) a) _), (Term.mk (Kind.Binop (Binop.Lt bvr__14) (Term.mk (Kind.BitVec _) _) bvr__18) _) =>
         (whenSome ((decide (s = bvr__14)) && (equal a bvr__18))
         ((if (decide ((lower_bound v1) ≥ (lower_bound v2))) then v1 else v2)))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.leq s) (Term.mk (Kind.bitVec _) _) a) _), (Term.mk (Kind.binop (Binop.leq bvr__20) (Term.mk (Kind.bitVec _) _) bvr__24) _) =>
+        | (Term.mk (Kind.Binop (Binop.Leq s) (Term.mk (Kind.BitVec _) _) a) _), (Term.mk (Kind.Binop (Binop.Leq bvr__20) (Term.mk (Kind.BitVec _) _) bvr__24) _) =>
         (whenSome ((decide (s = bvr__20)) && (equal a bvr__24))
         ((if (decide ((lower_bound v1) ≥ (lower_bound v2))) then v1 else v2)))
         | _, _ => none)
@@ -778,7 +778,7 @@ def b_and.r_lower_bounds (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 def b_and.r_default (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | _, _ =>
-    (whenSome true ((Term.mk (mk_commut_binop O Binop.and_ v1 v2) Ty.bool))))
+    (whenSome true ((Term.mk (mk_commut_binop O Binop.And v1 v2) Ty.TBool))))
 
 def b_and.step (O : Ops) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [b_and.r_same O v1 v2, b_and.r_false_ O v1 v2, b_and.r_true_ O v1 v2, b_and.r_not O v1 v2, b_and.r_and_ O v1 v2, b_and.r_or_ O v1 v2, b_and.r_eq_neq O v1 v2, b_and.r_eq_extracts O v1 v2, b_and.r_upper_bounds O v1 v2, b_and.r_lower_bounds O v1 v2, b_and.r_default O v1 v2]).getD (b_and.spec v1 v2)
@@ -788,176 +788,176 @@ def b_or.r_same (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def b_or.r_true_ (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.bool true) _), _ =>
+    | (Term.mk (Kind.Bool true) _), _ =>
     (whenSome true (v_true))
     | _, _ => none)
   <|> (match v1, v2 with
-        | _, (Term.mk (Kind.bool true) _) =>
+        | _, (Term.mk (Kind.Bool true) _) =>
         (whenSome true (v_true))
         | _, _ => none)
 
 def b_or.r_false_ (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.bool false) _), x =>
+    | (Term.mk (Kind.Bool false) _), x =>
     (whenSome true (x))
     | _, _ => none)
   <|> (match v1, v2 with
-        | x, (Term.mk (Kind.bool false) _) =>
+        | x, (Term.mk (Kind.Bool false) _) =>
         (whenSome true (x))
         | _, _ => none)
 
 def b_or.r_not (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | p, (Term.mk (Kind.unop Unop.not_ bvr__3) _) =>
+    | p, (Term.mk (Kind.Unop Unop.Not bvr__3) _) =>
     (whenSome (equal p bvr__3) (v_true))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.unop Unop.not_ bvr__3) _), p =>
+        | (Term.mk (Kind.Unop Unop.Not bvr__3) _), p =>
         (whenSome (equal p bvr__3) (v_true))
         | _, _ => none)
 
 def b_or.r_lt_lt (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.lt s) a b) _), (Term.mk (Kind.binop (Binop.lt bvr__6) bvr__8 bvr__9) _) =>
+    | (Term.mk (Kind.Binop (Binop.Lt s) a b) _), (Term.mk (Kind.Binop (Binop.Lt bvr__6) bvr__8 bvr__9) _) =>
     (whenSome (((decide (s = bvr__6)) && (equal b bvr__8)) && (equal a bvr__9))
     ((O.b_not (O.sem_eq a b))))
     | _, _ => none)
 
 def b_or.r_lt_leq (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.lt s) a b) _), (Term.mk (Kind.binop (Binop.leq bvr__6) bvr__8 bvr__9) _) =>
+    | (Term.mk (Kind.Binop (Binop.Lt s) a b) _), (Term.mk (Kind.Binop (Binop.Leq bvr__6) bvr__8 bvr__9) _) =>
     (whenSome (((decide (s = bvr__6)) && (equal b bvr__8)) && (equal a bvr__9))
     (v_true))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.leq bvr__6) bvr__8 bvr__9) _), (Term.mk (Kind.binop (Binop.lt s) a b) _) =>
+        | (Term.mk (Kind.Binop (Binop.Leq bvr__6) bvr__8 bvr__9) _), (Term.mk (Kind.Binop (Binop.Lt s) a b) _) =>
         (whenSome (((decide (s = bvr__6)) && (equal b bvr__8)) && (equal a bvr__9))
         (v_true))
         | _, _ => none)
 
 def b_or.r_or_ (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | x@(Term.mk (Kind.binop Binop.or_ a _) _), bvr__7 =>
+    | x@(Term.mk (Kind.Binop Binop.Or a _) _), bvr__7 =>
     (whenSome (equal a bvr__7) (x))
     | _, _ => none)
   <|> (match v1, v2 with
-        | x@(Term.mk (Kind.binop Binop.or_ _ a) _), bvr__7 =>
+        | x@(Term.mk (Kind.Binop Binop.Or _ a) _), bvr__7 =>
         (whenSome (equal a bvr__7) (x))
         | _, _ => none)
   <|> (match v1, v2 with
-        | bvr__7, x@(Term.mk (Kind.binop Binop.or_ a _) _) =>
+        | bvr__7, x@(Term.mk (Kind.Binop Binop.Or a _) _) =>
         (whenSome (equal a bvr__7) (x))
         | _, _ => none)
   <|> (match v1, v2 with
-        | bvr__7, x@(Term.mk (Kind.binop Binop.or_ _ a) _) =>
+        | bvr__7, x@(Term.mk (Kind.Binop Binop.Or _ a) _) =>
         (whenSome (equal a bvr__7) (x))
         | _, _ => none)
 
 def b_or.r_and_ (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop Binop.and_ a _) _), bvr__6 =>
+    | (Term.mk (Kind.Binop Binop.And a _) _), bvr__6 =>
     (whenSome (equal a bvr__6) (a))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.and_ _ a) _), bvr__6 =>
+        | (Term.mk (Kind.Binop Binop.And _ a) _), bvr__6 =>
         (whenSome (equal a bvr__6) (a))
         | _, _ => none)
   <|> (match v1, v2 with
-        | bvr__6, (Term.mk (Kind.binop Binop.and_ a _) _) =>
+        | bvr__6, (Term.mk (Kind.Binop Binop.And a _) _) =>
         (whenSome (equal a bvr__6) (a))
         | _, _ => none)
   <|> (match v1, v2 with
-        | bvr__6, (Term.mk (Kind.binop Binop.and_ _ a) _) =>
+        | bvr__6, (Term.mk (Kind.Binop Binop.And _ a) _) =>
         (whenSome (equal a bvr__6) (a))
         | _, _ => none)
 
 def b_or.r_complementary (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | ub@(Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec _) _)) _), lb@(Term.mk (Kind.binop (Binop.lt bvr__15) (Term.mk (Kind.bitVec _) _) bvr__19) _) =>
+    | ub@(Term.mk (Kind.Binop (Binop.Lt s) a (Term.mk (Kind.BitVec _) _)) _), lb@(Term.mk (Kind.Binop (Binop.Lt bvr__15) (Term.mk (Kind.BitVec _) _) bvr__19) _) =>
     (whenSome (((decide (s = bvr__15)) && (equal a bvr__19)) && (decide ((lower_bound lb) ≤ ((upper_bound ub) + (1 : Int)))))
     (v_true))
     | _, _ => none)
   <|> (match v1, v2 with
-        | ub@(Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec _) _)) _), lb@(Term.mk (Kind.binop (Binop.leq bvr__21) (Term.mk (Kind.bitVec _) _) bvr__25) _) =>
+        | ub@(Term.mk (Kind.Binop (Binop.Lt s) a (Term.mk (Kind.BitVec _) _)) _), lb@(Term.mk (Kind.Binop (Binop.Leq bvr__21) (Term.mk (Kind.BitVec _) _) bvr__25) _) =>
         (whenSome (((decide (s = bvr__21)) && (equal a bvr__25)) && (decide ((lower_bound lb) ≤ ((upper_bound ub) + (1 : Int)))))
         (v_true))
         | _, _ => none)
   <|> (match v1, v2 with
-        | ub@(Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec _) _)) _), lb@(Term.mk (Kind.binop (Binop.lt bvr__15) (Term.mk (Kind.bitVec _) _) bvr__19) _) =>
+        | ub@(Term.mk (Kind.Binop (Binop.Leq s) a (Term.mk (Kind.BitVec _) _)) _), lb@(Term.mk (Kind.Binop (Binop.Lt bvr__15) (Term.mk (Kind.BitVec _) _) bvr__19) _) =>
         (whenSome (((decide (s = bvr__15)) && (equal a bvr__19)) && (decide ((lower_bound lb) ≤ ((upper_bound ub) + (1 : Int)))))
         (v_true))
         | _, _ => none)
   <|> (match v1, v2 with
-        | ub@(Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec _) _)) _), lb@(Term.mk (Kind.binop (Binop.leq bvr__21) (Term.mk (Kind.bitVec _) _) bvr__25) _) =>
+        | ub@(Term.mk (Kind.Binop (Binop.Leq s) a (Term.mk (Kind.BitVec _) _)) _), lb@(Term.mk (Kind.Binop (Binop.Leq bvr__21) (Term.mk (Kind.BitVec _) _) bvr__25) _) =>
         (whenSome (((decide (s = bvr__21)) && (equal a bvr__25)) && (decide ((lower_bound lb) ≤ ((upper_bound ub) + (1 : Int)))))
         (v_true))
         | _, _ => none)
   <|> (match v1, v2 with
-        | lb@(Term.mk (Kind.binop (Binop.lt bvr__15) (Term.mk (Kind.bitVec _) _) bvr__19) _), ub@(Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec _) _)) _) =>
+        | lb@(Term.mk (Kind.Binop (Binop.Lt bvr__15) (Term.mk (Kind.BitVec _) _) bvr__19) _), ub@(Term.mk (Kind.Binop (Binop.Lt s) a (Term.mk (Kind.BitVec _) _)) _) =>
         (whenSome (((decide (s = bvr__15)) && (equal a bvr__19)) && (decide ((lower_bound lb) ≤ ((upper_bound ub) + (1 : Int)))))
         (v_true))
         | _, _ => none)
   <|> (match v1, v2 with
-        | lb@(Term.mk (Kind.binop (Binop.lt bvr__15) (Term.mk (Kind.bitVec _) _) bvr__19) _), ub@(Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec _) _)) _) =>
+        | lb@(Term.mk (Kind.Binop (Binop.Lt bvr__15) (Term.mk (Kind.BitVec _) _) bvr__19) _), ub@(Term.mk (Kind.Binop (Binop.Leq s) a (Term.mk (Kind.BitVec _) _)) _) =>
         (whenSome (((decide (s = bvr__15)) && (equal a bvr__19)) && (decide ((lower_bound lb) ≤ ((upper_bound ub) + (1 : Int)))))
         (v_true))
         | _, _ => none)
   <|> (match v1, v2 with
-        | lb@(Term.mk (Kind.binop (Binop.leq bvr__21) (Term.mk (Kind.bitVec _) _) bvr__25) _), ub@(Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec _) _)) _) =>
+        | lb@(Term.mk (Kind.Binop (Binop.Leq bvr__21) (Term.mk (Kind.BitVec _) _) bvr__25) _), ub@(Term.mk (Kind.Binop (Binop.Lt s) a (Term.mk (Kind.BitVec _) _)) _) =>
         (whenSome (((decide (s = bvr__21)) && (equal a bvr__25)) && (decide ((lower_bound lb) ≤ ((upper_bound ub) + (1 : Int)))))
         (v_true))
         | _, _ => none)
   <|> (match v1, v2 with
-        | lb@(Term.mk (Kind.binop (Binop.leq bvr__21) (Term.mk (Kind.bitVec _) _) bvr__25) _), ub@(Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec _) _)) _) =>
+        | lb@(Term.mk (Kind.Binop (Binop.Leq bvr__21) (Term.mk (Kind.BitVec _) _) bvr__25) _), ub@(Term.mk (Kind.Binop (Binop.Leq s) a (Term.mk (Kind.BitVec _) _)) _) =>
         (whenSome (((decide (s = bvr__21)) && (equal a bvr__25)) && (decide ((lower_bound lb) ≤ ((upper_bound ub) + (1 : Int)))))
         (v_true))
         | _, _ => none)
 
 def b_or.r_upper_eq (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | b@(Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.binop Binop.eq bvr__16 k@(Term.mk (Kind.bitVec _) _)) _) =>
+    | b@(Term.mk (Kind.Binop (Binop.Lt s) a (Term.mk (Kind.BitVec _) _)) _), (Term.mk (Kind.Binop Binop.Eq bvr__16 k@(Term.mk (Kind.BitVec _) _)) _) =>
     (let k := bv_of_lit k;
     (whenSome ((equal a bvr__16) && (decide ((to_z s k) ≤ (upper_bound b))))
     (b)))
     | _, _ => none)
   <|> (match v1, v2 with
-        | b@(Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.binop Binop.eq k@(Term.mk (Kind.bitVec _) _) bvr__16) _) =>
+        | b@(Term.mk (Kind.Binop (Binop.Lt s) a (Term.mk (Kind.BitVec _) _)) _), (Term.mk (Kind.Binop Binop.Eq k@(Term.mk (Kind.BitVec _) _) bvr__16) _) =>
         (let k := bv_of_lit k;
         (whenSome ((equal a bvr__16) && (decide ((to_z s k) ≤ (upper_bound b))))
         (b)))
         | _, _ => none)
   <|> (match v1, v2 with
-        | b@(Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.binop Binop.eq bvr__16 k@(Term.mk (Kind.bitVec _) _)) _) =>
+        | b@(Term.mk (Kind.Binop (Binop.Leq s) a (Term.mk (Kind.BitVec _) _)) _), (Term.mk (Kind.Binop Binop.Eq bvr__16 k@(Term.mk (Kind.BitVec _) _)) _) =>
         (let k := bv_of_lit k;
         (whenSome ((equal a bvr__16) && (decide ((to_z s k) ≤ (upper_bound b))))
         (b)))
         | _, _ => none)
   <|> (match v1, v2 with
-        | b@(Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.binop Binop.eq k@(Term.mk (Kind.bitVec _) _) bvr__16) _) =>
+        | b@(Term.mk (Kind.Binop (Binop.Leq s) a (Term.mk (Kind.BitVec _) _)) _), (Term.mk (Kind.Binop Binop.Eq k@(Term.mk (Kind.BitVec _) _) bvr__16) _) =>
         (let k := bv_of_lit k;
         (whenSome ((equal a bvr__16) && (decide ((to_z s k) ≤ (upper_bound b))))
         (b)))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.eq bvr__16 k@(Term.mk (Kind.bitVec _) _)) _), b@(Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec _) _)) _) =>
+        | (Term.mk (Kind.Binop Binop.Eq bvr__16 k@(Term.mk (Kind.BitVec _) _)) _), b@(Term.mk (Kind.Binop (Binop.Lt s) a (Term.mk (Kind.BitVec _) _)) _) =>
         (let k := bv_of_lit k;
         (whenSome ((equal a bvr__16) && (decide ((to_z s k) ≤ (upper_bound b))))
         (b)))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.eq bvr__16 k@(Term.mk (Kind.bitVec _) _)) _), b@(Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec _) _)) _) =>
+        | (Term.mk (Kind.Binop Binop.Eq bvr__16 k@(Term.mk (Kind.BitVec _) _)) _), b@(Term.mk (Kind.Binop (Binop.Leq s) a (Term.mk (Kind.BitVec _) _)) _) =>
         (let k := bv_of_lit k;
         (whenSome ((equal a bvr__16) && (decide ((to_z s k) ≤ (upper_bound b))))
         (b)))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.eq k@(Term.mk (Kind.bitVec _) _) bvr__16) _), b@(Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec _) _)) _) =>
+        | (Term.mk (Kind.Binop Binop.Eq k@(Term.mk (Kind.BitVec _) _) bvr__16) _), b@(Term.mk (Kind.Binop (Binop.Lt s) a (Term.mk (Kind.BitVec _) _)) _) =>
         (let k := bv_of_lit k;
         (whenSome ((equal a bvr__16) && (decide ((to_z s k) ≤ (upper_bound b))))
         (b)))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.eq k@(Term.mk (Kind.bitVec _) _) bvr__16) _), b@(Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec _) _)) _) =>
+        | (Term.mk (Kind.Binop Binop.Eq k@(Term.mk (Kind.BitVec _) _) bvr__16) _), b@(Term.mk (Kind.Binop (Binop.Leq s) a (Term.mk (Kind.BitVec _) _)) _) =>
         (let k := bv_of_lit k;
         (whenSome ((equal a bvr__16) && (decide ((to_z s k) ≤ (upper_bound b))))
         (b)))
@@ -965,49 +965,49 @@ def b_or.r_upper_eq (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def b_or.r_lower_eq (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | b@(Term.mk (Kind.binop (Binop.lt s) (Term.mk (Kind.bitVec _) _) a) _), (Term.mk (Kind.binop Binop.eq bvr__16 k@(Term.mk (Kind.bitVec _) _)) _) =>
+    | b@(Term.mk (Kind.Binop (Binop.Lt s) (Term.mk (Kind.BitVec _) _) a) _), (Term.mk (Kind.Binop Binop.Eq bvr__16 k@(Term.mk (Kind.BitVec _) _)) _) =>
     (let k := bv_of_lit k;
     (whenSome ((equal a bvr__16) && (decide ((lower_bound b) ≤ (to_z s k))))
     (b)))
     | _, _ => none)
   <|> (match v1, v2 with
-        | b@(Term.mk (Kind.binop (Binop.lt s) (Term.mk (Kind.bitVec _) _) a) _), (Term.mk (Kind.binop Binop.eq k@(Term.mk (Kind.bitVec _) _) bvr__16) _) =>
+        | b@(Term.mk (Kind.Binop (Binop.Lt s) (Term.mk (Kind.BitVec _) _) a) _), (Term.mk (Kind.Binop Binop.Eq k@(Term.mk (Kind.BitVec _) _) bvr__16) _) =>
         (let k := bv_of_lit k;
         (whenSome ((equal a bvr__16) && (decide ((lower_bound b) ≤ (to_z s k))))
         (b)))
         | _, _ => none)
   <|> (match v1, v2 with
-        | b@(Term.mk (Kind.binop (Binop.leq s) (Term.mk (Kind.bitVec _) _) a) _), (Term.mk (Kind.binop Binop.eq bvr__16 k@(Term.mk (Kind.bitVec _) _)) _) =>
+        | b@(Term.mk (Kind.Binop (Binop.Leq s) (Term.mk (Kind.BitVec _) _) a) _), (Term.mk (Kind.Binop Binop.Eq bvr__16 k@(Term.mk (Kind.BitVec _) _)) _) =>
         (let k := bv_of_lit k;
         (whenSome ((equal a bvr__16) && (decide ((lower_bound b) ≤ (to_z s k))))
         (b)))
         | _, _ => none)
   <|> (match v1, v2 with
-        | b@(Term.mk (Kind.binop (Binop.leq s) (Term.mk (Kind.bitVec _) _) a) _), (Term.mk (Kind.binop Binop.eq k@(Term.mk (Kind.bitVec _) _) bvr__16) _) =>
+        | b@(Term.mk (Kind.Binop (Binop.Leq s) (Term.mk (Kind.BitVec _) _) a) _), (Term.mk (Kind.Binop Binop.Eq k@(Term.mk (Kind.BitVec _) _) bvr__16) _) =>
         (let k := bv_of_lit k;
         (whenSome ((equal a bvr__16) && (decide ((lower_bound b) ≤ (to_z s k))))
         (b)))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.eq bvr__16 k@(Term.mk (Kind.bitVec _) _)) _), b@(Term.mk (Kind.binop (Binop.lt s) (Term.mk (Kind.bitVec _) _) a) _) =>
+        | (Term.mk (Kind.Binop Binop.Eq bvr__16 k@(Term.mk (Kind.BitVec _) _)) _), b@(Term.mk (Kind.Binop (Binop.Lt s) (Term.mk (Kind.BitVec _) _) a) _) =>
         (let k := bv_of_lit k;
         (whenSome ((equal a bvr__16) && (decide ((lower_bound b) ≤ (to_z s k))))
         (b)))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.eq bvr__16 k@(Term.mk (Kind.bitVec _) _)) _), b@(Term.mk (Kind.binop (Binop.leq s) (Term.mk (Kind.bitVec _) _) a) _) =>
+        | (Term.mk (Kind.Binop Binop.Eq bvr__16 k@(Term.mk (Kind.BitVec _) _)) _), b@(Term.mk (Kind.Binop (Binop.Leq s) (Term.mk (Kind.BitVec _) _) a) _) =>
         (let k := bv_of_lit k;
         (whenSome ((equal a bvr__16) && (decide ((lower_bound b) ≤ (to_z s k))))
         (b)))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.eq k@(Term.mk (Kind.bitVec _) _) bvr__16) _), b@(Term.mk (Kind.binop (Binop.lt s) (Term.mk (Kind.bitVec _) _) a) _) =>
+        | (Term.mk (Kind.Binop Binop.Eq k@(Term.mk (Kind.BitVec _) _) bvr__16) _), b@(Term.mk (Kind.Binop (Binop.Lt s) (Term.mk (Kind.BitVec _) _) a) _) =>
         (let k := bv_of_lit k;
         (whenSome ((equal a bvr__16) && (decide ((lower_bound b) ≤ (to_z s k))))
         (b)))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.eq k@(Term.mk (Kind.bitVec _) _) bvr__16) _), b@(Term.mk (Kind.binop (Binop.leq s) (Term.mk (Kind.bitVec _) _) a) _) =>
+        | (Term.mk (Kind.Binop Binop.Eq k@(Term.mk (Kind.BitVec _) _) bvr__16) _), b@(Term.mk (Kind.Binop (Binop.Leq s) (Term.mk (Kind.BitVec _) _) a) _) =>
         (let k := bv_of_lit k;
         (whenSome ((equal a bvr__16) && (decide ((lower_bound b) ≤ (to_z s k))))
         (b)))
@@ -1015,44 +1015,44 @@ def b_or.r_lower_eq (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def b_or.r_upper_bounds (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.binop (Binop.lt bvr__14) bvr__16 (Term.mk (Kind.bitVec _) _)) _) =>
+    | (Term.mk (Kind.Binop (Binop.Lt s) a (Term.mk (Kind.BitVec _) _)) _), (Term.mk (Kind.Binop (Binop.Lt bvr__14) bvr__16 (Term.mk (Kind.BitVec _) _)) _) =>
     (whenSome ((decide (s = bvr__14)) && (equal a bvr__16))
     ((if (decide ((upper_bound v1) ≤ (upper_bound v2))) then v2 else v1)))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.lt s) a (Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.binop (Binop.leq bvr__20) bvr__22 (Term.mk (Kind.bitVec _) _)) _) =>
+        | (Term.mk (Kind.Binop (Binop.Lt s) a (Term.mk (Kind.BitVec _) _)) _), (Term.mk (Kind.Binop (Binop.Leq bvr__20) bvr__22 (Term.mk (Kind.BitVec _) _)) _) =>
         (whenSome ((decide (s = bvr__20)) && (equal a bvr__22))
         ((if (decide ((upper_bound v1) ≤ (upper_bound v2))) then v2 else v1)))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.binop (Binop.lt bvr__14) bvr__16 (Term.mk (Kind.bitVec _) _)) _) =>
+        | (Term.mk (Kind.Binop (Binop.Leq s) a (Term.mk (Kind.BitVec _) _)) _), (Term.mk (Kind.Binop (Binop.Lt bvr__14) bvr__16 (Term.mk (Kind.BitVec _) _)) _) =>
         (whenSome ((decide (s = bvr__14)) && (equal a bvr__16))
         ((if (decide ((upper_bound v1) ≤ (upper_bound v2))) then v2 else v1)))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.leq s) a (Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.binop (Binop.leq bvr__20) bvr__22 (Term.mk (Kind.bitVec _) _)) _) =>
+        | (Term.mk (Kind.Binop (Binop.Leq s) a (Term.mk (Kind.BitVec _) _)) _), (Term.mk (Kind.Binop (Binop.Leq bvr__20) bvr__22 (Term.mk (Kind.BitVec _) _)) _) =>
         (whenSome ((decide (s = bvr__20)) && (equal a bvr__22))
         ((if (decide ((upper_bound v1) ≤ (upper_bound v2))) then v2 else v1)))
         | _, _ => none)
 
 def b_or.r_lower_bounds (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.lt s) (Term.mk (Kind.bitVec _) _) a) _), (Term.mk (Kind.binop (Binop.lt bvr__14) (Term.mk (Kind.bitVec _) _) bvr__18) _) =>
+    | (Term.mk (Kind.Binop (Binop.Lt s) (Term.mk (Kind.BitVec _) _) a) _), (Term.mk (Kind.Binop (Binop.Lt bvr__14) (Term.mk (Kind.BitVec _) _) bvr__18) _) =>
     (whenSome ((decide (s = bvr__14)) && (equal a bvr__18))
     ((if (decide ((lower_bound v1) ≥ (lower_bound v2))) then v2 else v1)))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.lt s) (Term.mk (Kind.bitVec _) _) a) _), (Term.mk (Kind.binop (Binop.leq bvr__20) (Term.mk (Kind.bitVec _) _) bvr__24) _) =>
+        | (Term.mk (Kind.Binop (Binop.Lt s) (Term.mk (Kind.BitVec _) _) a) _), (Term.mk (Kind.Binop (Binop.Leq bvr__20) (Term.mk (Kind.BitVec _) _) bvr__24) _) =>
         (whenSome ((decide (s = bvr__20)) && (equal a bvr__24))
         ((if (decide ((lower_bound v1) ≥ (lower_bound v2))) then v2 else v1)))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.leq s) (Term.mk (Kind.bitVec _) _) a) _), (Term.mk (Kind.binop (Binop.lt bvr__14) (Term.mk (Kind.bitVec _) _) bvr__18) _) =>
+        | (Term.mk (Kind.Binop (Binop.Leq s) (Term.mk (Kind.BitVec _) _) a) _), (Term.mk (Kind.Binop (Binop.Lt bvr__14) (Term.mk (Kind.BitVec _) _) bvr__18) _) =>
         (whenSome ((decide (s = bvr__14)) && (equal a bvr__18))
         ((if (decide ((lower_bound v1) ≥ (lower_bound v2))) then v2 else v1)))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.leq s) (Term.mk (Kind.bitVec _) _) a) _), (Term.mk (Kind.binop (Binop.leq bvr__20) (Term.mk (Kind.bitVec _) _) bvr__24) _) =>
+        | (Term.mk (Kind.Binop (Binop.Leq s) (Term.mk (Kind.BitVec _) _) a) _), (Term.mk (Kind.Binop (Binop.Leq bvr__20) (Term.mk (Kind.BitVec _) _) bvr__24) _) =>
         (whenSome ((decide (s = bvr__20)) && (equal a bvr__24))
         ((if (decide ((lower_bound v1) ≥ (lower_bound v2))) then v2 else v1)))
         | _, _ => none)
@@ -1060,145 +1060,145 @@ def b_or.r_lower_bounds (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 def b_or.r_default (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | _, _ =>
-    (whenSome true ((Term.mk (mk_commut_binop O Binop.or_ v1 v2) Ty.bool))))
+    (whenSome true ((Term.mk (mk_commut_binop O Binop.Or v1 v2) Ty.TBool))))
 
 def b_or.step (O : Ops) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [b_or.r_same O v1 v2, b_or.r_true_ O v1 v2, b_or.r_false_ O v1 v2, b_or.r_not O v1 v2, b_or.r_lt_lt O v1 v2, b_or.r_lt_leq O v1 v2, b_or.r_or_ O v1 v2, b_or.r_and_ O v1 v2, b_or.r_complementary O v1 v2, b_or.r_upper_eq O v1 v2, b_or.r_lower_eq O v1 v2, b_or.r_upper_bounds O v1 v2, b_or.r_lower_bounds O v1 v2, b_or.r_default O v1 v2]).getD (b_or.spec v1 v2)
 
 def b_not.r_true_ (O : Ops) (sv : Term) : Option Term :=
   (match sv with
-    | (Term.mk (Kind.bool true) _) =>
+    | (Term.mk (Kind.Bool true) _) =>
     (whenSome true (v_false))
     | _ => none)
 
 def b_not.r_false_ (O : Ops) (sv : Term) : Option Term :=
   (match sv with
-    | (Term.mk (Kind.bool false) _) =>
+    | (Term.mk (Kind.Bool false) _) =>
     (whenSome true (v_true))
     | _ => none)
 
 def b_not.r_not (O : Ops) (sv : Term) : Option Term :=
   (match sv with
-    | (Term.mk (Kind.unop Unop.not_ sv) _) =>
+    | (Term.mk (Kind.Unop Unop.Not sv) _) =>
     (whenSome true (sv))
     | _ => none)
 
 def b_not.r_lt (O : Ops) (sv : Term) : Option Term :=
   (match sv with
-    | (Term.mk (Kind.binop (Binop.lt signed) v1 v2) _) =>
+    | (Term.mk (Kind.Binop (Binop.Lt signed) v1 v2) _) =>
     (whenSome true ((O.bv_leq signed v2 v1)))
     | _ => none)
 
 def b_not.r_leq (O : Ops) (sv : Term) : Option Term :=
   (match sv with
-    | (Term.mk (Kind.binop (Binop.leq signed) v1 v2) _) =>
+    | (Term.mk (Kind.Binop (Binop.Leq signed) v1 v2) _) =>
     (whenSome true ((O.bv_lt signed v2 v1)))
     | _ => none)
 
 def b_not.r_or_ (O : Ops) (sv : Term) : Option Term :=
   (match sv with
-    | (Term.mk (Kind.binop Binop.or_ v1 v2) _) =>
+    | (Term.mk (Kind.Binop Binop.Or v1 v2) _) =>
     (whenSome true ((O.b_and (O.b_not v1) (O.b_not v2))))
     | _ => none)
 
 def b_not.r_and_ (O : Ops) (sv : Term) : Option Term :=
   (match sv with
-    | (Term.mk (Kind.binop Binop.and_ v1 v2) _) =>
+    | (Term.mk (Kind.Binop Binop.And v1 v2) _) =>
     (whenSome true ((O.b_or (O.b_not v1) (O.b_not v2))))
     | _ => none)
 
 def b_not.r_ite (O : Ops) (sv : Term) : Option Term :=
   (match sv with
-    | (Term.mk (Kind.triop Triop.ite g a b) _) =>
+    | (Term.mk (Kind.Triop Triop.Ite g a b) _) =>
     (whenSome true ((O.b_ite g (O.b_not a) (O.b_not b))))
     | _ => none)
 
 def b_not.r_eq_bit (O : Ops) (sv : Term) : Option Term :=
   (match sv with
-    | (Term.mk (Kind.binop Binop.eq c@bv@(Term.mk (Kind.bitVec _) _) v) _) =>
+    | (Term.mk (Kind.Binop Binop.Eq c@bv@(Term.mk (Kind.BitVec _) _) v) _) =>
     (let bv := bv_of_lit bv;
-    (whenSome (decide ((ty c) = (Ty.bitVector (1 : Int))))
+    (whenSome (decide ((ty c) = (Ty.TBitVector (1 : Int))))
     ((O.sem_eq (lit (lit_not bv)) v))))
     | _ => none)
   <|> (match sv with
-        | (Term.mk (Kind.binop Binop.eq v c@bv@(Term.mk (Kind.bitVec _) _)) _) =>
+        | (Term.mk (Kind.Binop Binop.Eq v c@bv@(Term.mk (Kind.BitVec _) _)) _) =>
         (let bv := bv_of_lit bv;
-        (whenSome (decide ((ty c) = (Ty.bitVector (1 : Int))))
+        (whenSome (decide ((ty c) = (Ty.TBitVector (1 : Int))))
         ((O.sem_eq (lit (lit_not bv)) v))))
         | _ => none)
 
 def b_not.r_distinct (O : Ops) (sv : Term) : Option Term :=
   (match sv with
-    | (Term.mk (Kind.nop Nop.distinct (l :: (r :: []))) _) =>
+    | (Term.mk (Kind.Nop Nop.Distinct (l :: (r :: []))) _) =>
     (whenSome true ((O.sem_eq l r)))
     | _ => none)
 
 def b_not.r_default (O : Ops) (sv : Term) : Option Term :=
   (match sv with
     | _ =>
-    (whenSome true ((Term.mk (Kind.unop Unop.not_ sv) Ty.bool))))
+    (whenSome true ((Term.mk (Kind.Unop Unop.Not sv) Ty.TBool))))
 
 def b_not.step (O : Ops) (sv : Term) : Term :=
   (firstSome [b_not.r_true_ O sv, b_not.r_false_ O sv, b_not.r_not O sv, b_not.r_lt O sv, b_not.r_leq O sv, b_not.r_or_ O sv, b_not.r_and_ O sv, b_not.r_ite O sv, b_not.r_eq_bit O sv, b_not.r_distinct O sv, b_not.r_default O sv]).getD (b_not.spec sv)
 
 def b_ite.r_true_ (O : Ops) (guard : Term) (if_ : Term) (else_ : Term) : Option Term :=
   (match guard, if_, else_ with
-    | (Term.mk (Kind.bool true) _), _, _ =>
+    | (Term.mk (Kind.Bool true) _), _, _ =>
     (whenSome true (if_))
     | _, _, _ => none)
 
 def b_ite.r_false_ (O : Ops) (guard : Term) (if_ : Term) (else_ : Term) : Option Term :=
   (match guard, if_, else_ with
-    | (Term.mk (Kind.bool false) _), _, _ =>
+    | (Term.mk (Kind.Bool false) _), _, _ =>
     (whenSome true (else_))
     | _, _, _ => none)
 
 def b_ite.r_bool (O : Ops) (guard : Term) (if_ : Term) (else_ : Term) : Option Term :=
   (match guard, if_, else_ with
-    | _, (Term.mk (Kind.bool true) _), (Term.mk (Kind.bool false) _) =>
+    | _, (Term.mk (Kind.Bool true) _), (Term.mk (Kind.Bool false) _) =>
     (whenSome true (guard))
     | _, _, _ => none)
 
 def b_ite.r_not_bool (O : Ops) (guard : Term) (if_ : Term) (else_ : Term) : Option Term :=
   (match guard, if_, else_ with
-    | _, (Term.mk (Kind.bool false) _), (Term.mk (Kind.bool true) _) =>
+    | _, (Term.mk (Kind.Bool false) _), (Term.mk (Kind.Bool true) _) =>
     (whenSome true ((O.b_not guard)))
     | _, _, _ => none)
 
 def b_ite.r_false_then (O : Ops) (guard : Term) (if_ : Term) (else_ : Term) : Option Term :=
   (match guard, if_, else_ with
-    | _, (Term.mk (Kind.bool false) _), _ =>
+    | _, (Term.mk (Kind.Bool false) _), _ =>
     (whenSome true ((O.b_and (O.b_not guard) else_)))
     | _, _, _ => none)
 
 def b_ite.r_true_then (O : Ops) (guard : Term) (if_ : Term) (else_ : Term) : Option Term :=
   (match guard, if_, else_ with
-    | _, (Term.mk (Kind.bool true) _), _ =>
+    | _, (Term.mk (Kind.Bool true) _), _ =>
     (whenSome true ((O.b_or guard else_)))
     | _, _, _ => none)
 
 def b_ite.r_false_else (O : Ops) (guard : Term) (if_ : Term) (else_ : Term) : Option Term :=
   (match guard, if_, else_ with
-    | _, _, (Term.mk (Kind.bool false) _) =>
+    | _, _, (Term.mk (Kind.Bool false) _) =>
     (whenSome true ((O.b_and guard if_)))
     | _, _, _ => none)
 
 def b_ite.r_true_else (O : Ops) (guard : Term) (if_ : Term) (else_ : Term) : Option Term :=
   (match guard, if_, else_ with
-    | _, _, (Term.mk (Kind.bool true) _) =>
+    | _, _, (Term.mk (Kind.Bool true) _) =>
     (whenSome true ((O.b_or (O.b_not guard) if_)))
     | _, _, _ => none)
 
 def b_ite.r_bv_of_bool (O : Ops) (guard : Term) (if_ : Term) (else_ : Term) : Option Term :=
   (match guard, if_, else_ with
-    | _, (Term.mk (Kind.bitVec bvr__2) _), (Term.mk (Kind.bitVec bvr__4) _) =>
+    | _, (Term.mk (Kind.BitVec bvr__2) _), (Term.mk (Kind.BitVec bvr__4) _) =>
     (whenSome (((decide (bvr__2 = (1 : Int))) && (decide (bvr__4 = (0 : Int)))) && (is_bv (ty if_)))
     ((O.bv_of_bool (size if_) guard)))
     | _, _, _ => none)
 
 def b_ite.r_not_guard (O : Ops) (guard : Term) (if_ : Term) (else_ : Term) : Option Term :=
   (match guard, if_, else_ with
-    | (Term.mk (Kind.unop Unop.not_ g) _), _, _ =>
+    | (Term.mk (Kind.Unop Unop.Not g) _), _, _ =>
     (whenSome true ((O.b_ite g else_ if_)))
     | _, _, _ => none)
 
@@ -1214,33 +1214,33 @@ def b_ite.r_guard_else (O : Ops) (guard : Term) (if_ : Term) (else_ : Term) : Op
 
 def b_ite.r_ite_then (O : Ops) (guard : Term) (if_ : Term) (else_ : Term) : Option Term :=
   (match guard, if_, else_ with
-    | g, (Term.mk (Kind.triop Triop.ite bvr__3 x _) _), _ =>
+    | g, (Term.mk (Kind.Triop Triop.Ite bvr__3 x _) _), _ =>
     (whenSome (equal g bvr__3) ((O.b_ite guard x else_)))
     | _, _, _ => none)
 
 def b_ite.r_ite_else (O : Ops) (guard : Term) (if_ : Term) (else_ : Term) : Option Term :=
   (match guard, if_, else_ with
-    | g, _, (Term.mk (Kind.triop Triop.ite bvr__4 _ y) _) =>
+    | g, _, (Term.mk (Kind.Triop Triop.Ite bvr__4 _ y) _) =>
     (whenSome (equal g bvr__4) ((O.b_ite guard if_ y)))
     | _, _, _ => none)
 
 def b_ite.r_and_ite_then (O : Ops) (guard : Term) (if_ : Term) (else_ : Term) : Option Term :=
   (match guard, if_, else_ with
-    | (Term.mk (Kind.binop Binop.and_ g _) _), (Term.mk (Kind.triop Triop.ite bvr__7 x _) _), _ =>
+    | (Term.mk (Kind.Binop Binop.And g _) _), (Term.mk (Kind.Triop Triop.Ite bvr__7 x _) _), _ =>
     (whenSome (equal g bvr__7) ((O.b_ite guard x else_)))
     | _, _, _ => none)
   <|> (match guard, if_, else_ with
-        | (Term.mk (Kind.binop Binop.and_ _ g) _), (Term.mk (Kind.triop Triop.ite bvr__7 x _) _), _ =>
+        | (Term.mk (Kind.Binop Binop.And _ g) _), (Term.mk (Kind.Triop Triop.Ite bvr__7 x _) _), _ =>
         (whenSome (equal g bvr__7) ((O.b_ite guard x else_)))
         | _, _, _ => none)
 
 def b_ite.r_or_ite_else (O : Ops) (guard : Term) (if_ : Term) (else_ : Term) : Option Term :=
   (match guard, if_, else_ with
-    | (Term.mk (Kind.binop Binop.or_ g _) _), _, (Term.mk (Kind.triop Triop.ite bvr__8 _ y) _) =>
+    | (Term.mk (Kind.Binop Binop.Or g _) _), _, (Term.mk (Kind.Triop Triop.Ite bvr__8 _ y) _) =>
     (whenSome (equal g bvr__8) ((O.b_ite guard if_ y)))
     | _, _, _ => none)
   <|> (match guard, if_, else_ with
-        | (Term.mk (Kind.binop Binop.or_ _ g) _), _, (Term.mk (Kind.triop Triop.ite bvr__8 _ y) _) =>
+        | (Term.mk (Kind.Binop Binop.Or _ g) _), _, (Term.mk (Kind.Triop Triop.Ite bvr__8 _ y) _) =>
         (whenSome (equal g bvr__8) ((O.b_ite guard if_ y)))
         | _, _, _ => none)
 
@@ -1253,7 +1253,7 @@ def b_ite.r_default (O : Ops) (guard : Term) (if_ : Term) (else_ : Term) : Optio
   (match guard, if_, else_ with
     | _, _, _ =>
     (whenSome true
-    ((Term.mk (Kind.triop Triop.ite guard if_ else_) (ty if_)))))
+    ((Term.mk (Kind.Triop Triop.Ite guard if_ else_) (ty if_)))))
 
 def b_ite.step (O : Ops) (guard : Term) (if_ : Term) (else_ : Term) : Term :=
   (firstSome [b_ite.r_true_ O guard if_ else_, b_ite.r_false_ O guard if_ else_, b_ite.r_bool O guard if_ else_, b_ite.r_not_bool O guard if_ else_, b_ite.r_false_then O guard if_ else_, b_ite.r_true_then O guard if_ else_, b_ite.r_false_else O guard if_ else_, b_ite.r_true_else O guard if_ else_, b_ite.r_bv_of_bool O guard if_ else_, b_ite.r_not_guard O guard if_ else_, b_ite.r_guard_then O guard if_ else_, b_ite.r_guard_else O guard if_ else_, b_ite.r_ite_then O guard if_ else_, b_ite.r_ite_else O guard if_ else_, b_ite.r_and_ite_then O guard if_ else_, b_ite.r_or_ite_else O guard if_ else_, b_ite.r_same O guard if_ else_, b_ite.r_default O guard if_ else_]).getD (b_ite.spec guard if_ else_)
@@ -1263,19 +1263,19 @@ def sem_eq.r_same (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def sem_eq.r_bools (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.bool b1) _), (Term.mk (Kind.bool b2) _) =>
+    | (Term.mk (Kind.Bool b1) _), (Term.mk (Kind.Bool b2) _) =>
     (whenSome true ((of_bool (decide (b1 = b2)))))
     | _, _ => none)
 
 def sem_eq.r_ptrs (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.ptr l1 o1) _), (Term.mk (Kind.ptr l2 o2) _) =>
+    | (Term.mk (Kind.Ptr l1 o1) _), (Term.mk (Kind.Ptr l2 o2) _) =>
     (whenSome true ((O.b_and (O.sem_eq l1 l2) (O.sem_eq o1 o2))))
     | _, _ => none)
 
 def sem_eq.r_bvs (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | b1@(Term.mk (Kind.bitVec _) _), b2@(Term.mk (Kind.bitVec _) _) =>
+    | b1@(Term.mk (Kind.BitVec _) _), b2@(Term.mk (Kind.BitVec _) _) =>
     (let b1 := bv_of_lit b1;
     let b2 := bv_of_lit b2;
     (whenSome true ((of_bool (decide ((to_z false b1) = (to_z false b2)))))))
@@ -1283,89 +1283,89 @@ def sem_eq.r_bvs (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def sem_eq.r_floats (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.float f1) _), (Term.mk (Kind.float f2) _) =>
+    | (Term.mk (Kind.Float f1) _), (Term.mk (Kind.Float f2) _) =>
     (whenSome true ((of_bool (f_bits_equal f1 f2))))
     | _, _ => none)
 
 def sem_eq.r_neg (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | c@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.unop (Unop.neg _) x) _) =>
+    | c@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Unop (Unop.Neg _) x) _) =>
     (whenSome true ((O.sem_eq (O.bv_neg false c) x)))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.unop (Unop.neg _) x) _), c@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Unop (Unop.Neg _) x) _), c@(Term.mk (Kind.BitVec _) _) =>
         (whenSome true ((O.sem_eq (O.bv_neg false c) x)))
         | _, _ => none)
 
 def sem_eq.r_not (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | c@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.unop Unop.bvNot x) _) =>
+    | c@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Unop Unop.BvNot x) _) =>
     (whenSome true ((O.sem_eq (O.bv_not c) x)))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.unop Unop.bvNot x) _), c@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Unop Unop.BvNot x) _), c@(Term.mk (Kind.BitVec _) _) =>
         (whenSome true ((O.sem_eq (O.bv_not c) x)))
         | _, _ => none)
 
 def sem_eq.r_add_const (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | c@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.add _) l@(Term.mk (Kind.bitVec _) _) r) _) =>
+    | c@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop (Binop.Add _) l@(Term.mk (Kind.BitVec _) _) r) _) =>
     (whenSome true ((O.sem_eq (O.bv_sub unchecked c l) r)))
     | _, _ => none)
   <|> (match v1, v2 with
-        | c@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.add _) r l@(Term.mk (Kind.bitVec _) _)) _) =>
+        | c@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop (Binop.Add _) r l@(Term.mk (Kind.BitVec _) _)) _) =>
         (whenSome true ((O.sem_eq (O.bv_sub unchecked c l) r)))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add _) l@(Term.mk (Kind.bitVec _) _) r) _), c@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop (Binop.Add _) l@(Term.mk (Kind.BitVec _) _) r) _), c@(Term.mk (Kind.BitVec _) _) =>
         (whenSome true ((O.sem_eq (O.bv_sub unchecked c l) r)))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add _) r l@(Term.mk (Kind.bitVec _) _)) _), c@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop (Binop.Add _) r l@(Term.mk (Kind.BitVec _) _)) _), c@(Term.mk (Kind.BitVec _) _) =>
         (whenSome true ((O.sem_eq (O.bv_sub unchecked c l) r)))
         | _, _ => none)
 
 def sem_eq.r_sub_const1 (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | c@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.sub _) l r@(Term.mk (Kind.bitVec _) _)) _) =>
+    | c@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop (Binop.Sub _) l r@(Term.mk (Kind.BitVec _) _)) _) =>
     (whenSome true ((O.sem_eq (O.bv_add unchecked c r) l)))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.sub _) l r@(Term.mk (Kind.bitVec _) _)) _), c@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop (Binop.Sub _) l r@(Term.mk (Kind.BitVec _) _)) _), c@(Term.mk (Kind.BitVec _) _) =>
         (whenSome true ((O.sem_eq (O.bv_add unchecked c r) l)))
         | _, _ => none)
 
 def sem_eq.r_sub_const2 (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | c@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.sub _) l@(Term.mk (Kind.bitVec _) _) r) _) =>
+    | c@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop (Binop.Sub _) l@(Term.mk (Kind.BitVec _) _) r) _) =>
     (whenSome true ((O.sem_eq (O.bv_sub unchecked l c) r)))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.sub _) l@(Term.mk (Kind.bitVec _) _) r) _), c@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop (Binop.Sub _) l@(Term.mk (Kind.BitVec _) _) r) _), c@(Term.mk (Kind.BitVec _) _) =>
         (whenSome true ((O.sem_eq (O.bv_sub unchecked l c) r)))
         | _, _ => none)
 
 def sem_eq.r_self_add (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | x, (Term.mk (Kind.binop (Binop.add _) bvr__4 bv@(Term.mk (Kind.bitVec _) _)) _) =>
+    | x, (Term.mk (Kind.Binop (Binop.Add _) bvr__4 bv@(Term.mk (Kind.BitVec _) _)) _) =>
     (let bv := bv_of_lit bv;
     (whenSome (equal x bvr__4)
     ((of_bool (decide ((to_z false bv) = (0 : Int)))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | x, (Term.mk (Kind.binop (Binop.add _) bv@(Term.mk (Kind.bitVec _) _) bvr__4) _) =>
+        | x, (Term.mk (Kind.Binop (Binop.Add _) bv@(Term.mk (Kind.BitVec _) _) bvr__4) _) =>
         (let bv := bv_of_lit bv;
         (whenSome (equal x bvr__4)
         ((of_bool (decide ((to_z false bv) = (0 : Int)))))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add _) bvr__4 bv@(Term.mk (Kind.bitVec _) _)) _), x =>
+        | (Term.mk (Kind.Binop (Binop.Add _) bvr__4 bv@(Term.mk (Kind.BitVec _) _)) _), x =>
         (let bv := bv_of_lit bv;
         (whenSome (equal x bvr__4)
         ((of_bool (decide ((to_z false bv) = (0 : Int)))))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add _) bv@(Term.mk (Kind.bitVec _) _) bvr__4) _), x =>
+        | (Term.mk (Kind.Binop (Binop.Add _) bv@(Term.mk (Kind.BitVec _) _) bvr__4) _), x =>
         (let bv := bv_of_lit bv;
         (whenSome (equal x bvr__4)
         ((of_bool (decide ((to_z false bv) = (0 : Int)))))))
@@ -1373,7 +1373,7 @@ def sem_eq.r_self_add (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def sem_eq.r_add_add (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.add _) l@bv_l@(Term.mk (Kind.bitVec _) _) y) _), (Term.mk (Kind.binop (Binop.add _) r@bv_r@(Term.mk (Kind.bitVec _) _) x) _) =>
+    | (Term.mk (Kind.Binop (Binop.Add _) l@bv_l@(Term.mk (Kind.BitVec _) _) y) _), (Term.mk (Kind.Binop (Binop.Add _) r@bv_r@(Term.mk (Kind.BitVec _) _) x) _) =>
     (let bv_l := bv_of_lit bv_l;
     let bv_r := bv_of_lit bv_r;
     (whenSome true
@@ -1382,7 +1382,7 @@ def sem_eq.r_add_add (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
      else (O.sem_eq y (O.bv_add unchecked x (O.bv_sub unchecked r l)))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add _) l@bv_l@(Term.mk (Kind.bitVec _) _) y) _), (Term.mk (Kind.binop (Binop.add _) x r@bv_r@(Term.mk (Kind.bitVec _) _)) _) =>
+        | (Term.mk (Kind.Binop (Binop.Add _) l@bv_l@(Term.mk (Kind.BitVec _) _) y) _), (Term.mk (Kind.Binop (Binop.Add _) x r@bv_r@(Term.mk (Kind.BitVec _) _)) _) =>
         (let bv_l := bv_of_lit bv_l;
         let bv_r := bv_of_lit bv_r;
         (whenSome true
@@ -1391,7 +1391,7 @@ def sem_eq.r_add_add (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
          else (O.sem_eq y (O.bv_add unchecked x (O.bv_sub unchecked r l)))))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add _) y l@bv_l@(Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.binop (Binop.add _) r@bv_r@(Term.mk (Kind.bitVec _) _) x) _) =>
+        | (Term.mk (Kind.Binop (Binop.Add _) y l@bv_l@(Term.mk (Kind.BitVec _) _)) _), (Term.mk (Kind.Binop (Binop.Add _) r@bv_r@(Term.mk (Kind.BitVec _) _) x) _) =>
         (let bv_l := bv_of_lit bv_l;
         let bv_r := bv_of_lit bv_r;
         (whenSome true
@@ -1400,7 +1400,7 @@ def sem_eq.r_add_add (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
          else (O.sem_eq y (O.bv_add unchecked x (O.bv_sub unchecked r l)))))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add _) y l@bv_l@(Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.binop (Binop.add _) x r@bv_r@(Term.mk (Kind.bitVec _) _)) _) =>
+        | (Term.mk (Kind.Binop (Binop.Add _) y l@bv_l@(Term.mk (Kind.BitVec _) _)) _), (Term.mk (Kind.Binop (Binop.Add _) x r@bv_r@(Term.mk (Kind.BitVec _) _)) _) =>
         (let bv_l := bv_of_lit bv_l;
         let bv_r := bv_of_lit bv_r;
         (whenSome true
@@ -1411,7 +1411,7 @@ def sem_eq.r_add_add (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def sem_eq.r_mul_const (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | n@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.mul ck) m@(Term.mk (Kind.bitVec _) _) x) _) =>
+    | n@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop (Binop.Mul ck) m@(Term.mk (Kind.BitVec _) _) x) _) =>
     (let n := bv_of_lit n;
     let m := bv_of_lit m;
     (whenSome (is_checked ck)
@@ -1433,7 +1433,7 @@ def sem_eq.r_mul_const (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
                else v_false))))))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | n@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.mul ck) x m@(Term.mk (Kind.bitVec _) _)) _) =>
+        | n@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop (Binop.Mul ck) x m@(Term.mk (Kind.BitVec _) _)) _) =>
         (let n := bv_of_lit n;
         let m := bv_of_lit m;
         (whenSome (is_checked ck)
@@ -1457,7 +1457,7 @@ def sem_eq.r_mul_const (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
                    else v_false))))))))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.mul ck) m@(Term.mk (Kind.bitVec _) _) x) _), n@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop (Binop.Mul ck) m@(Term.mk (Kind.BitVec _) _) x) _), n@(Term.mk (Kind.BitVec _) _) =>
         (let m := bv_of_lit m;
         let n := bv_of_lit n;
         (whenSome (is_checked ck)
@@ -1481,7 +1481,7 @@ def sem_eq.r_mul_const (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
                    else v_false))))))))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.mul ck) x m@(Term.mk (Kind.bitVec _) _)) _), n@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop (Binop.Mul ck) x m@(Term.mk (Kind.BitVec _) _)) _), n@(Term.mk (Kind.BitVec _) _) =>
         (let m := bv_of_lit m;
         let n := bv_of_lit n;
         (whenSome (is_checked ck)
@@ -1507,34 +1507,34 @@ def sem_eq.r_mul_const (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def sem_eq.r_ite_ite (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.triop Triop.ite b l r) _), (Term.mk (Kind.triop Triop.ite bvr__7 l' r') _) =>
+    | (Term.mk (Kind.Triop Triop.Ite b l r) _), (Term.mk (Kind.Triop Triop.Ite bvr__7 l' r') _) =>
     (whenSome (equal b bvr__7) ((O.b_ite b (O.sem_eq l l') (O.sem_eq r r'))))
     | _, _ => none)
 
 def sem_eq.r_mul_cancel (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.mul ck1) a@(Term.mk (Kind.bitVec _) _) b) _), (Term.mk (Kind.binop (Binop.mul ck2) a'@(Term.mk (Kind.bitVec _) _) d) _) =>
+    | (Term.mk (Kind.Binop (Binop.Mul ck1) a@(Term.mk (Kind.BitVec _) _) b) _), (Term.mk (Kind.Binop (Binop.Mul ck2) a'@(Term.mk (Kind.BitVec _) _) d) _) =>
     (let a := bv_of_lit a;
     let a' := bv_of_lit a';
     (whenSome ((decide ((to_z false a) = (to_z false a'))) && ((decide ((zland (to_z false a) (1 : Int)) = (1 : Int))) || ((decide ((to_z false a) ≠ (0 : Int))) && (is_checked (checked_meet ck1 ck2)))))
     ((O.sem_eq b d))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.mul ck1) a@(Term.mk (Kind.bitVec _) _) b) _), (Term.mk (Kind.binop (Binop.mul ck2) d a'@(Term.mk (Kind.bitVec _) _)) _) =>
+        | (Term.mk (Kind.Binop (Binop.Mul ck1) a@(Term.mk (Kind.BitVec _) _) b) _), (Term.mk (Kind.Binop (Binop.Mul ck2) d a'@(Term.mk (Kind.BitVec _) _)) _) =>
         (let a := bv_of_lit a;
         let a' := bv_of_lit a';
         (whenSome ((decide ((to_z false a) = (to_z false a'))) && ((decide ((zland (to_z false a) (1 : Int)) = (1 : Int))) || ((decide ((to_z false a) ≠ (0 : Int))) && (is_checked (checked_meet ck1 ck2)))))
         ((O.sem_eq b d))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.mul ck1) b a@(Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.binop (Binop.mul ck2) a'@(Term.mk (Kind.bitVec _) _) d) _) =>
+        | (Term.mk (Kind.Binop (Binop.Mul ck1) b a@(Term.mk (Kind.BitVec _) _)) _), (Term.mk (Kind.Binop (Binop.Mul ck2) a'@(Term.mk (Kind.BitVec _) _) d) _) =>
         (let a := bv_of_lit a;
         let a' := bv_of_lit a';
         (whenSome ((decide ((to_z false a) = (to_z false a'))) && ((decide ((zland (to_z false a) (1 : Int)) = (1 : Int))) || ((decide ((to_z false a) ≠ (0 : Int))) && (is_checked (checked_meet ck1 ck2)))))
         ((O.sem_eq b d))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.mul ck1) b a@(Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.binop (Binop.mul ck2) d a'@(Term.mk (Kind.bitVec _) _)) _) =>
+        | (Term.mk (Kind.Binop (Binop.Mul ck1) b a@(Term.mk (Kind.BitVec _) _)) _), (Term.mk (Kind.Binop (Binop.Mul ck2) d a'@(Term.mk (Kind.BitVec _) _)) _) =>
         (let a := bv_of_lit a;
         let a' := bv_of_lit a';
         (whenSome ((decide ((to_z false a) = (to_z false a'))) && ((decide ((zland (to_z false a) (1 : Int)) = (1 : Int))) || ((decide ((to_z false a) ≠ (0 : Int))) && (is_checked (checked_meet ck1 ck2)))))
@@ -1543,13 +1543,13 @@ def sem_eq.r_mul_cancel (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def sem_eq.r_or_zero (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.bitVec bvr__1) _), (Term.mk (Kind.binop Binop.bitOr l r) _) =>
+    | (Term.mk (Kind.BitVec bvr__1) _), (Term.mk (Kind.Binop Binop.BitOr l r) _) =>
     (whenSome (decide (bvr__1 = (0 : Int)))
     ((let z := (bv_zero (size v1));
      (O.b_and (O.sem_eq l z) (O.sem_eq r z)))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.bitOr l r) _), (Term.mk (Kind.bitVec bvr__1) _) =>
+        | (Term.mk (Kind.Binop Binop.BitOr l r) _), (Term.mk (Kind.BitVec bvr__1) _) =>
         (whenSome (decide (bvr__1 = (0 : Int)))
         ((let z := (bv_zero (size v1));
          (O.b_and (O.sem_eq l z) (O.sem_eq r z)))))
@@ -1557,28 +1557,28 @@ def sem_eq.r_or_zero (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def sem_eq.r_and_mask (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | n@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop Binop.bitAnd mask@(Term.mk (Kind.bitVec _) _) _) _) =>
+    | n@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop Binop.BitAnd mask@(Term.mk (Kind.BitVec _) _) _) _) =>
     (let n := bv_of_lit n;
     let mask := bv_of_lit mask;
     (whenSome (! (decide ((to_z false (lit_and n (lit_not mask))) = (0 : Int))))
     (v_false)))
     | _, _ => none)
   <|> (match v1, v2 with
-        | n@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop Binop.bitAnd _ mask@(Term.mk (Kind.bitVec _) _)) _) =>
+        | n@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop Binop.BitAnd _ mask@(Term.mk (Kind.BitVec _) _)) _) =>
         (let n := bv_of_lit n;
         let mask := bv_of_lit mask;
         (whenSome (! (decide ((to_z false (lit_and n (lit_not mask))) = (0 : Int))))
         (v_false)))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.bitAnd mask@(Term.mk (Kind.bitVec _) _) _) _), n@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop Binop.BitAnd mask@(Term.mk (Kind.BitVec _) _) _) _), n@(Term.mk (Kind.BitVec _) _) =>
         (let mask := bv_of_lit mask;
         let n := bv_of_lit n;
         (whenSome (! (decide ((to_z false (lit_and n (lit_not mask))) = (0 : Int))))
         (v_false)))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.bitAnd _ mask@(Term.mk (Kind.bitVec _) _)) _), n@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop Binop.BitAnd _ mask@(Term.mk (Kind.BitVec _) _)) _), n@(Term.mk (Kind.BitVec _) _) =>
         (let mask := bv_of_lit mask;
         let n := bv_of_lit n;
         (whenSome (! (decide ((to_z false (lit_and n (lit_not mask))) = (0 : Int))))
@@ -1587,7 +1587,7 @@ def sem_eq.r_and_mask (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def sem_eq.r_concat_const (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | z@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop Binop.bvConcat l r) _) =>
+    | z@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop Binop.BvConcat l r) _) =>
     (whenSome true
     ((let size_r := (size r);
      (let size_l := (size l);
@@ -1596,7 +1596,7 @@ def sem_eq.r_concat_const (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
      (O.b_and (O.sem_eq l z_l) (O.sem_eq r z_r))))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.bvConcat l r) _), z@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop Binop.BvConcat l r) _), z@(Term.mk (Kind.BitVec _) _) =>
         (whenSome true
         ((let size_r := (size r);
          (let size_l := (size l);
@@ -1607,7 +1607,7 @@ def sem_eq.r_concat_const (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def sem_eq.r_zext_const (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.unop (Unop.bvExtend false «by») bv) _), z@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Unop (Unop.BvExtend false «by») bv) _), z@(Term.mk (Kind.BitVec _) _) =>
     (let z := bv_of_lit z;
     (whenSome true
     ((let z := (to_z false z);
@@ -1619,7 +1619,7 @@ def sem_eq.r_zext_const (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
           (O.sem_eq bv z_bv)))))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | z@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.unop (Unop.bvExtend false «by») bv) _) =>
+        | z@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Unop (Unop.BvExtend false «by») bv) _) =>
         (let z := bv_of_lit z;
         (whenSome true
         ((let z := (to_z false z);
@@ -1633,7 +1633,7 @@ def sem_eq.r_zext_const (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def sem_eq.r_ite_concat (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.triop Triop.ite b t@(Term.mk (Kind.bitVec _) _) e@(Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.binop Binop.bvConcat l r) _) =>
+    | (Term.mk (Kind.Triop Triop.Ite b t@(Term.mk (Kind.BitVec _) _) e@(Term.mk (Kind.BitVec _) _)) _), (Term.mk (Kind.Binop Binop.BvConcat l r) _) =>
     (whenSome true
     ((let size_r := (size r);
      (let size_l := (size l);
@@ -1644,7 +1644,7 @@ def sem_eq.r_ite_concat (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
      (O.b_and (O.sem_eq (O.b_ite b t_l e_l) l) (O.sem_eq (O.b_ite b t_r e_r) r))))))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.bvConcat l r) _), (Term.mk (Kind.triop Triop.ite b t@(Term.mk (Kind.bitVec _) _) e@(Term.mk (Kind.bitVec _) _)) _) =>
+        | (Term.mk (Kind.Binop Binop.BvConcat l r) _), (Term.mk (Kind.Triop Triop.Ite b t@(Term.mk (Kind.BitVec _) _) e@(Term.mk (Kind.BitVec _) _)) _) =>
         (whenSome true
         ((let size_r := (size r);
          (let size_l := (size l);
@@ -1657,64 +1657,64 @@ def sem_eq.r_ite_concat (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def sem_eq.r_concat_concat (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop Binop.bvConcat l1 r1) _), (Term.mk (Kind.binop Binop.bvConcat l2 r2) _) =>
+    | (Term.mk (Kind.Binop Binop.BvConcat l1 r1) _), (Term.mk (Kind.Binop Binop.BvConcat l2 r2) _) =>
     (whenSome (decide ((size l1) = (size l2)))
     ((O.b_and (O.sem_eq l1 l2) (O.sem_eq r1 r2))))
     | _, _ => none)
 
 def sem_eq.r_ite_const (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.triop Triop.ite b l t) _), c@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Triop Triop.Ite b l t) _), c@(Term.mk (Kind.BitVec _) _) =>
     (whenSome true ((O.b_ite b (O.sem_eq l c) (O.sem_eq t c))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.triop Triop.ite b l t) _), c@(Term.mk (Kind.bool _) _) =>
+        | (Term.mk (Kind.Triop Triop.Ite b l t) _), c@(Term.mk (Kind.Bool _) _) =>
         (whenSome true ((O.b_ite b (O.sem_eq l c) (O.sem_eq t c))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | c@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.triop Triop.ite b l t) _) =>
+        | c@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Triop Triop.Ite b l t) _) =>
         (whenSome true ((O.b_ite b (O.sem_eq l c) (O.sem_eq t c))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | c@(Term.mk (Kind.bool _) _), (Term.mk (Kind.triop Triop.ite b l t) _) =>
+        | c@(Term.mk (Kind.Bool _) _), (Term.mk (Kind.Triop Triop.Ite b l t) _) =>
         (whenSome true ((O.b_ite b (O.sem_eq l c) (O.sem_eq t c))))
         | _, _ => none)
 
 def sem_eq.r_false_ (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.bool false) _), x =>
+    | (Term.mk (Kind.Bool false) _), x =>
     (whenSome true ((O.b_not x)))
     | _, _ => none)
   <|> (match v1, v2 with
-        | x, (Term.mk (Kind.bool false) _) =>
+        | x, (Term.mk (Kind.Bool false) _) =>
         (whenSome true ((O.b_not x)))
         | _, _ => none)
 
 def sem_eq.r_true_ (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.bool true) _), x =>
+    | (Term.mk (Kind.Bool true) _), x =>
     (whenSome true (x))
     | _, _ => none)
   <|> (match v1, v2 with
-        | x, (Term.mk (Kind.bool true) _) =>
+        | x, (Term.mk (Kind.Bool true) _) =>
         (whenSome true (x))
         | _, _ => none)
 
 def sem_eq.r_of_bools (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.unop (Unop.bvOfBool _) b) _), (Term.mk (Kind.unop (Unop.bvOfBool _) c) _) =>
+    | (Term.mk (Kind.Unop (Unop.BvOfBool _) b) _), (Term.mk (Kind.Unop (Unop.BvOfBool _) c) _) =>
     (whenSome true ((O.sem_eq b c)))
     | _, _ => none)
 
 def sem_eq.r_nots (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.unop Unop.not_ b) _), (Term.mk (Kind.unop Unop.not_ c) _) =>
+    | (Term.mk (Kind.Unop Unop.Not b) _), (Term.mk (Kind.Unop Unop.Not c) _) =>
     (whenSome true ((O.sem_eq b c)))
     | _, _ => none)
 
 def sem_eq.r_of_bool_const (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.unop (Unop.bvOfBool _) b) _), z@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Unop (Unop.BvOfBool _) b) _), z@(Term.mk (Kind.BitVec _) _) =>
     (let z := bv_of_lit z;
     (whenSome true
     ((let z := (to_z false z);
@@ -1723,7 +1723,7 @@ def sem_eq.r_of_bool_const (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
      else (if (decide (z = (0 : Int))) then (O.b_not b) else v_false))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | z@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.unop (Unop.bvOfBool _) b) _) =>
+        | z@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Unop (Unop.BvOfBool _) b) _) =>
         (let z := bv_of_lit z;
         (whenSome true
         ((let z := (to_z false z);
@@ -1745,7 +1745,7 @@ def sem_eq.r_msb (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 def sem_eq.r_default (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | _, _ =>
-    (whenSome true ((Term.mk (mk_commut_binop O Binop.eq v1 v2) Ty.bool))))
+    (whenSome true ((Term.mk (mk_commut_binop O Binop.Eq v1 v2) Ty.TBool))))
 
 def sem_eq.step (O : Ops) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [sem_eq.r_same O v1 v2, sem_eq.r_bools O v1 v2, sem_eq.r_ptrs O v1 v2, sem_eq.r_bvs O v1 v2, sem_eq.r_floats O v1 v2, sem_eq.r_neg O v1 v2, sem_eq.r_not O v1 v2, sem_eq.r_add_const O v1 v2, sem_eq.r_sub_const1 O v1 v2, sem_eq.r_sub_const2 O v1 v2, sem_eq.r_self_add O v1 v2, sem_eq.r_add_add O v1 v2, sem_eq.r_mul_const O v1 v2, sem_eq.r_ite_ite O v1 v2, sem_eq.r_mul_cancel O v1 v2, sem_eq.r_or_zero O v1 v2, sem_eq.r_and_mask O v1 v2, sem_eq.r_concat_const O v1 v2, sem_eq.r_zext_const O v1 v2, sem_eq.r_ite_concat O v1 v2, sem_eq.r_concat_concat O v1 v2, sem_eq.r_ite_const O v1 v2, sem_eq.r_false_ O v1 v2, sem_eq.r_true_ O v1 v2, sem_eq.r_of_bools O v1 v2, sem_eq.r_nots O v1 v2, sem_eq.r_of_bool_const O v1 v2, sem_eq.r_msb O v1 v2, sem_eq.r_default O v1 v2]).getD (sem_eq.spec v1 v2)
@@ -1759,7 +1759,7 @@ def b_mk_exists.r_default (O : Ops) (binders : (List (Int × Ty))) (body : Term)
   (match body with
     | _ =>
     (whenSome true
-    ((Term.mk (Kind.exists_ (used_binders binders body) body) Ty.bool))))
+    ((Term.mk (Kind.Exists (used_binders binders body) body) Ty.TBool))))
 
 def b_mk_exists.step (O : Ops) (binders : (List (Int × Ty))) (body : Term) : Term :=
   (firstSome [b_mk_exists.r_empty O binders body, b_mk_exists.r_default O binders body]).getD (b_mk_exists.spec binders body)
@@ -1792,20 +1792,20 @@ def b_distinct.r_default (O : Ops) (l : (List Term)) : Option Term :=
   (match l with
     | _ =>
     (whenSome true
-    ((Term.mk (Kind.nop Nop.distinct (O.orc.sort_by_tag l)) Ty.bool))))
+    ((Term.mk (Kind.Nop Nop.Distinct (O.orc.sort_by_tag l)) Ty.TBool))))
 
 def b_distinct.step (O : Ops) (l : (List Term)) : Term :=
   (firstSome [b_distinct.r_small O l, b_distinct.r_distinct O l, b_distinct.r_not_distinct O l, b_distinct.r_default O l]).getD (b_distinct.spec l)
 
 def bv_of_bool.r_true_ (O : Ops) (n : Int) (b : Term) : Option Term :=
   (match b with
-    | (Term.mk (Kind.bool true) _) =>
+    | (Term.mk (Kind.Bool true) _) =>
     (whenSome true ((bv_one n)))
     | _ => none)
 
 def bv_of_bool.r_false_ (O : Ops) (n : Int) (b : Term) : Option Term :=
   (match b with
-    | (Term.mk (Kind.bool false) _) =>
+    | (Term.mk (Kind.Bool false) _) =>
     (whenSome true ((bv_zero n)))
     | _ => none)
 
@@ -1813,21 +1813,21 @@ def bv_of_bool.r_default (O : Ops) (n : Int) (b : Term) : Option Term :=
   (match b with
     | _ =>
     (whenSome true
-    ((Term.mk (Kind.unop (Unop.bvOfBool n) b) (Ty.bitVector n)))))
+    ((Term.mk (Kind.Unop (Unop.BvOfBool n) b) (Ty.TBitVector n)))))
 
 def bv_of_bool.step (O : Ops) (n : Int) (b : Term) : Term :=
   (firstSome [bv_of_bool.r_true_ O n b, bv_of_bool.r_false_ O n b, bv_of_bool.r_default O n b]).getD (bv_of_bool.spec n b)
 
 def bv_to_bool.r_lit (O : Ops) (v : Term) : Option Term :=
   (match v with
-    | z@(Term.mk (Kind.bitVec _) _) =>
+    | z@(Term.mk (Kind.BitVec _) _) =>
     (let z := bv_of_lit z;
     (whenSome true ((of_bool (! (decide ((to_z false z) = (0 : Int))))))))
     | _ => none)
 
 def bv_to_bool.r_of_bool (O : Ops) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.unop (Unop.bvOfBool _) b) _) =>
+    | (Term.mk (Kind.Unop (Unop.BvOfBool _) b) _) =>
     (whenSome true (b))
     | _ => none)
 
@@ -1841,7 +1841,7 @@ def bv_to_bool.step (O : Ops) (v : Term) : Term :=
 
 def bv_not_bool.r_lit (O : Ops) (v : Term) : Option Term :=
   (match v with
-    | z@(Term.mk (Kind.bitVec _) _) =>
+    | z@(Term.mk (Kind.BitVec _) _) =>
     (let z := bv_of_lit z;
     (whenSome true
     ((if (decide ((to_z false z) = (0 : Int)))
@@ -1851,7 +1851,7 @@ def bv_not_bool.r_lit (O : Ops) (v : Term) : Option Term :=
 
 def bv_not_bool.r_of_bool (O : Ops) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.unop (Unop.bvOfBool n) g) _) =>
+    | (Term.mk (Kind.Unop (Unop.BvOfBool n) g) _) =>
     (whenSome true ((O.bv_of_bool n (O.b_not g))))
     | _ => none)
 
@@ -1865,7 +1865,7 @@ def bv_not_bool.step (O : Ops) (v : Term) : Term :=
 
 def bv_add.r_lits (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | l@(Term.mk (Kind.bitVec _) _), r@(Term.mk (Kind.bitVec _) _) =>
+    | l@(Term.mk (Kind.BitVec _) _), r@(Term.mk (Kind.BitVec _) _) =>
     (let l := bv_of_lit l;
     let r := bv_of_lit r;
     (whenSome true ((lit (lit_add l r)))))
@@ -1873,37 +1873,37 @@ def bv_add.r_lits (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option
 
 def bv_add.r_neg (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | x, (Term.mk (Kind.unop (Unop.neg _) y) _) =>
+    | x, (Term.mk (Kind.Unop (Unop.Neg _) y) _) =>
     (whenSome true ((O.bv_sub unchecked x y)))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.unop (Unop.neg _) y) _), x =>
+        | (Term.mk (Kind.Unop (Unop.Neg _) y) _), x =>
         (whenSome true ((O.bv_sub unchecked x y)))
         | _, _ => none)
 
 def bv_add.r_zero (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | x, (Term.mk (Kind.bitVec bvr__2) _) =>
+    | x, (Term.mk (Kind.BitVec bvr__2) _) =>
     (whenSome (decide (bvr__2 = (0 : Int))) (x))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.bitVec bvr__2) _), x =>
+        | (Term.mk (Kind.BitVec bvr__2) _), x =>
         (whenSome (decide (bvr__2 = (0 : Int))) (x))
         | _, _ => none)
 
 def bv_add.r_not_one (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.unop Unop.bvNot x) _), (Term.mk (Kind.bitVec bvr__4) _) =>
+    | (Term.mk (Kind.Unop Unop.BvNot x) _), (Term.mk (Kind.BitVec bvr__4) _) =>
     (whenSome (decide (bvr__4 = (1 : Int))) ((O.bv_neg false x)))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.bitVec bvr__4) _), (Term.mk (Kind.unop Unop.bvNot x) _) =>
+        | (Term.mk (Kind.BitVec bvr__4) _), (Term.mk (Kind.Unop Unop.BvNot x) _) =>
         (whenSome (decide (bvr__4 = (1 : Int))) ((O.bv_neg false x)))
         | _, _ => none)
 
 def bv_add.r_add_const (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.add c) k1@(Term.mk (Kind.bitVec _) _) r) _), k2@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Binop (Binop.Add c) k1@(Term.mk (Kind.BitVec _) _) r) _), k2@(Term.mk (Kind.BitVec _) _) =>
     (let k1 := bv_of_lit k1;
     let k2 := bv_of_lit k2;
     (whenSome true
@@ -1911,7 +1911,7 @@ def bv_add.r_add_const (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : O
      (O.bv_add checked (lit (lit_add k1 k2)) r)))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add c) r k1@(Term.mk (Kind.bitVec _) _)) _), k2@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop (Binop.Add c) r k1@(Term.mk (Kind.BitVec _) _)) _), k2@(Term.mk (Kind.BitVec _) _) =>
         (let k1 := bv_of_lit k1;
         let k2 := bv_of_lit k2;
         (whenSome true
@@ -1919,7 +1919,7 @@ def bv_add.r_add_const (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : O
          (O.bv_add checked (lit (lit_add k1 k2)) r)))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | k2@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.add c) k1@(Term.mk (Kind.bitVec _) _) r) _) =>
+        | k2@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop (Binop.Add c) k1@(Term.mk (Kind.BitVec _) _) r) _) =>
         (let k2 := bv_of_lit k2;
         let k1 := bv_of_lit k1;
         (whenSome true
@@ -1927,7 +1927,7 @@ def bv_add.r_add_const (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : O
          (O.bv_add checked (lit (lit_add k1 k2)) r)))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | k2@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.add c) r k1@(Term.mk (Kind.bitVec _) _)) _) =>
+        | k2@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop (Binop.Add c) r k1@(Term.mk (Kind.BitVec _) _)) _) =>
         (let k2 := bv_of_lit k2;
         let k1 := bv_of_lit k1;
         (whenSome true
@@ -1937,7 +1937,7 @@ def bv_add.r_add_const (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : O
 
 def bv_add.r_sub_const_r (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.sub c) l k1@(Term.mk (Kind.bitVec _) _)) _), k2@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Binop (Binop.Sub c) l k1@(Term.mk (Kind.BitVec _) _)) _), k2@(Term.mk (Kind.BitVec _) _) =>
     (let k1 := bv_of_lit k1;
     let k2 := bv_of_lit k2;
     (whenSome true
@@ -1945,7 +1945,7 @@ def bv_add.r_sub_const_r (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) :
      (O.bv_add checked l (lit (lit_sub k2 k1)))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | k2@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.sub c) l k1@(Term.mk (Kind.bitVec _) _)) _) =>
+        | k2@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop (Binop.Sub c) l k1@(Term.mk (Kind.BitVec _) _)) _) =>
         (let k2 := bv_of_lit k2;
         let k1 := bv_of_lit k1;
         (whenSome true
@@ -1955,7 +1955,7 @@ def bv_add.r_sub_const_r (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) :
 
 def bv_add.r_sub_const_l (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.sub c) k1@(Term.mk (Kind.bitVec _) _) r) _), k2@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Binop (Binop.Sub c) k1@(Term.mk (Kind.BitVec _) _) r) _), k2@(Term.mk (Kind.BitVec _) _) =>
     (let k1 := bv_of_lit k1;
     let k2 := bv_of_lit k2;
     (whenSome true
@@ -1963,7 +1963,7 @@ def bv_add.r_sub_const_l (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) :
      (O.bv_sub checked (lit (lit_add k1 k2)) r)))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | k2@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.sub c) k1@(Term.mk (Kind.bitVec _) _) r) _) =>
+        | k2@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop (Binop.Sub c) k1@(Term.mk (Kind.BitVec _) _) r) _) =>
         (let k2 := bv_of_lit k2;
         let k1 := bv_of_lit k1;
         (whenSome true
@@ -1973,56 +1973,56 @@ def bv_add.r_sub_const_l (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) :
 
 def bv_add.r_sub_cancel (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | r, (Term.mk (Kind.binop (Binop.sub _) l bvr__5) _) =>
+    | r, (Term.mk (Kind.Binop (Binop.Sub _) l bvr__5) _) =>
     (whenSome (equal r bvr__5) (l))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.sub _) l bvr__5) _), r =>
+        | (Term.mk (Kind.Binop (Binop.Sub _) l bvr__5) _), r =>
         (whenSome (equal r bvr__5) (l))
         | _, _ => none)
 
 def bv_add.r_add_sub (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.add _) a b) _), (Term.mk (Kind.binop (Binop.sub _) c bvr__10) _) =>
+    | (Term.mk (Kind.Binop (Binop.Add _) a b) _), (Term.mk (Kind.Binop (Binop.Sub _) c bvr__10) _) =>
     (whenSome (equal a bvr__10) ((O.bv_add unchecked b c)))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add _) b a) _), (Term.mk (Kind.binop (Binop.sub _) c bvr__10) _) =>
+        | (Term.mk (Kind.Binop (Binop.Add _) b a) _), (Term.mk (Kind.Binop (Binop.Sub _) c bvr__10) _) =>
         (whenSome (equal a bvr__10) ((O.bv_add unchecked b c)))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.sub _) c bvr__10) _), (Term.mk (Kind.binop (Binop.add _) a b) _) =>
+        | (Term.mk (Kind.Binop (Binop.Sub _) c bvr__10) _), (Term.mk (Kind.Binop (Binop.Add _) a b) _) =>
         (whenSome (equal a bvr__10) ((O.bv_add unchecked b c)))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.sub _) c bvr__10) _), (Term.mk (Kind.binop (Binop.add _) b a) _) =>
+        | (Term.mk (Kind.Binop (Binop.Sub _) c bvr__10) _), (Term.mk (Kind.Binop (Binop.Add _) b a) _) =>
         (whenSome (equal a bvr__10) ((O.bv_add unchecked b c)))
         | _, _ => none)
 
 def bv_add.r_factor (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.mul ck1) a b) _), (Term.mk (Kind.binop (Binop.mul ck2) bvr__9 c) _) =>
+    | (Term.mk (Kind.Binop (Binop.Mul ck1) a b) _), (Term.mk (Kind.Binop (Binop.Mul ck2) bvr__9 c) _) =>
     (whenSome (equal a bvr__9)
     ((if (checked_meet (checked_meet checked ck1) ck2).unsigned
      then (O.bv_mul checked_unsigned a (O.bv_add unchecked b c))
      else (O.bv_mul unchecked a (O.bv_add unchecked b c)))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.mul ck1) a b) _), (Term.mk (Kind.binop (Binop.mul ck2) c bvr__9) _) =>
+        | (Term.mk (Kind.Binop (Binop.Mul ck1) a b) _), (Term.mk (Kind.Binop (Binop.Mul ck2) c bvr__9) _) =>
         (whenSome (equal a bvr__9)
         ((if (checked_meet (checked_meet checked ck1) ck2).unsigned
          then (O.bv_mul checked_unsigned a (O.bv_add unchecked b c))
          else (O.bv_mul unchecked a (O.bv_add unchecked b c)))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.mul ck1) b a) _), (Term.mk (Kind.binop (Binop.mul ck2) bvr__9 c) _) =>
+        | (Term.mk (Kind.Binop (Binop.Mul ck1) b a) _), (Term.mk (Kind.Binop (Binop.Mul ck2) bvr__9 c) _) =>
         (whenSome (equal a bvr__9)
         ((if (checked_meet (checked_meet checked ck1) ck2).unsigned
          then (O.bv_mul checked_unsigned a (O.bv_add unchecked b c))
          else (O.bv_mul unchecked a (O.bv_add unchecked b c)))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.mul ck1) b a) _), (Term.mk (Kind.binop (Binop.mul ck2) c bvr__9) _) =>
+        | (Term.mk (Kind.Binop (Binop.Mul ck1) b a) _), (Term.mk (Kind.Binop (Binop.Mul ck2) c bvr__9) _) =>
         (whenSome (equal a bvr__9)
         ((if (checked_meet (checked_meet checked ck1) ck2).unsigned
          then (O.bv_mul checked_unsigned a (O.bv_add unchecked b c))
@@ -2031,7 +2031,7 @@ def bv_add.r_factor (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Opti
 
 def bv_add.r_factor_const (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.mul ck1) v_k1@k1@(Term.mk (Kind.bitVec _) _) r1) _), (Term.mk (Kind.binop (Binop.mul ck2) v_k2@k2@(Term.mk (Kind.bitVec _) _) r2) _) =>
+    | (Term.mk (Kind.Binop (Binop.Mul ck1) v_k1@k1@(Term.mk (Kind.BitVec _) _) r1) _), (Term.mk (Kind.Binop (Binop.Mul ck2) v_k2@k2@(Term.mk (Kind.BitVec _) _) r2) _) =>
     (let k1 := bv_of_lit k1;
     let k2 := bv_of_lit k2;
     (whenSome ((checked_meet (checked_meet checked ck1) ck2).unsigned && (((decide ((to_z false k1) ≠ (0 : Int))) || (decide ((to_z false k2) ≠ (0 : Int)))) && ((udivides k1 k2) || (udivides k2 k1))))
@@ -2043,7 +2043,7 @@ def bv_add.r_factor_const (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) 
           (O.bv_mul checked v_k2 (O.bv_add checked r2 (O.bv_mul checked common r1)))))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.mul ck1) v_k1@k1@(Term.mk (Kind.bitVec _) _) r1) _), (Term.mk (Kind.binop (Binop.mul ck2) r2 v_k2@k2@(Term.mk (Kind.bitVec _) _)) _) =>
+        | (Term.mk (Kind.Binop (Binop.Mul ck1) v_k1@k1@(Term.mk (Kind.BitVec _) _) r1) _), (Term.mk (Kind.Binop (Binop.Mul ck2) r2 v_k2@k2@(Term.mk (Kind.BitVec _) _)) _) =>
         (let k1 := bv_of_lit k1;
         let k2 := bv_of_lit k2;
         (whenSome ((checked_meet (checked_meet checked ck1) ck2).unsigned && (((decide ((to_z false k1) ≠ (0 : Int))) || (decide ((to_z false k2) ≠ (0 : Int)))) && ((udivides k1 k2) || (udivides k2 k1))))
@@ -2055,7 +2055,7 @@ def bv_add.r_factor_const (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) 
               (O.bv_mul checked v_k2 (O.bv_add checked r2 (O.bv_mul checked common r1)))))))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.mul ck1) r1 v_k1@k1@(Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.binop (Binop.mul ck2) v_k2@k2@(Term.mk (Kind.bitVec _) _) r2) _) =>
+        | (Term.mk (Kind.Binop (Binop.Mul ck1) r1 v_k1@k1@(Term.mk (Kind.BitVec _) _)) _), (Term.mk (Kind.Binop (Binop.Mul ck2) v_k2@k2@(Term.mk (Kind.BitVec _) _) r2) _) =>
         (let k1 := bv_of_lit k1;
         let k2 := bv_of_lit k2;
         (whenSome ((checked_meet (checked_meet checked ck1) ck2).unsigned && (((decide ((to_z false k1) ≠ (0 : Int))) || (decide ((to_z false k2) ≠ (0 : Int)))) && ((udivides k1 k2) || (udivides k2 k1))))
@@ -2067,7 +2067,7 @@ def bv_add.r_factor_const (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) 
               (O.bv_mul checked v_k2 (O.bv_add checked r2 (O.bv_mul checked common r1)))))))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.mul ck1) r1 v_k1@k1@(Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.binop (Binop.mul ck2) r2 v_k2@k2@(Term.mk (Kind.bitVec _) _)) _) =>
+        | (Term.mk (Kind.Binop (Binop.Mul ck1) r1 v_k1@k1@(Term.mk (Kind.BitVec _) _)) _), (Term.mk (Kind.Binop (Binop.Mul ck2) r2 v_k2@k2@(Term.mk (Kind.BitVec _) _)) _) =>
         (let k1 := bv_of_lit k1;
         let k2 := bv_of_lit k2;
         (whenSome ((checked_meet (checked_meet checked ck1) ck2).unsigned && (((decide ((to_z false k1) ≠ (0 : Int))) || (decide ((to_z false k2) ≠ (0 : Int)))) && ((udivides k1 k2) || (udivides k2 k1))))
@@ -2081,12 +2081,12 @@ def bv_add.r_factor_const (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) 
 
 def bv_add.r_ite (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.triop Triop.ite b l r) _), x@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Triop Triop.Ite b l r) _), x@(Term.mk (Kind.BitVec _) _) =>
     (whenSome true
     ((O.b_ite b (O.bv_add checked l x) (O.bv_add checked r x))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | x@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.triop Triop.ite b l r) _) =>
+        | x@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Triop Triop.Ite b l r) _) =>
         (whenSome true
         ((O.b_ite b (O.bv_add checked l x) (O.bv_add checked r x))))
         | _, _ => none)
@@ -2095,14 +2095,14 @@ def bv_add.r_default (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Opt
   (match v1, v2 with
     | _, _ =>
     (whenSome true
-    ((Term.mk (mk_commut_binop O (Binop.add (no_wrap checked v1 v2)) v1 v2) (ty v1)))))
+    ((Term.mk (mk_commut_binop O (Binop.Add (no_wrap checked v1 v2)) v1 v2) (ty v1)))))
 
 def bv_add.step (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [bv_add.r_lits O checked v1 v2, bv_add.r_neg O checked v1 v2, bv_add.r_zero O checked v1 v2, bv_add.r_not_one O checked v1 v2, bv_add.r_add_const O checked v1 v2, bv_add.r_sub_const_r O checked v1 v2, bv_add.r_sub_const_l O checked v1 v2, bv_add.r_sub_cancel O checked v1 v2, bv_add.r_add_sub O checked v1 v2, bv_add.r_factor O checked v1 v2, bv_add.r_factor_const O checked v1 v2, bv_add.r_ite O checked v1 v2, bv_add.r_default O checked v1 v2]).getD (bv_add.spec checked v1 v2)
 
 def bv_sub.r_lits (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | l@(Term.mk (Kind.bitVec _) _), r@(Term.mk (Kind.bitVec _) _) =>
+    | l@(Term.mk (Kind.BitVec _) _), r@(Term.mk (Kind.BitVec _) _) =>
     (let l := bv_of_lit l;
     let r := bv_of_lit r;
     (whenSome true ((lit (lit_sub l r)))))
@@ -2110,13 +2110,13 @@ def bv_sub.r_lits (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option
 
 def bv_sub.r_zero_r (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | _, (Term.mk (Kind.bitVec bvr__2) _) =>
+    | _, (Term.mk (Kind.BitVec bvr__2) _) =>
     (whenSome (decide (bvr__2 = (0 : Int))) (v1))
     | _, _ => none)
 
 def bv_sub.r_zero_l (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.bitVec bvr__1) _), _ =>
+    | (Term.mk (Kind.BitVec bvr__1) _), _ =>
     (whenSome (decide (bvr__1 = (0 : Int))) ((O.bv_neg checked.signed v2)))
     | _, _ => none)
 
@@ -2127,13 +2127,13 @@ def bv_sub.r_same (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option
 
 def bv_sub.r_neg_r (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | _, (Term.mk (Kind.unop (Unop.neg _) v2) _) =>
+    | _, (Term.mk (Kind.Unop (Unop.Neg _) v2) _) =>
     (whenSome true ((O.bv_add unchecked v1 v2)))
     | _, _ => none)
 
 def bv_sub.r_sub_const_l (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.sub c) k1@(Term.mk (Kind.bitVec _) _) s) _), k2@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Binop (Binop.Sub c) k1@(Term.mk (Kind.BitVec _) _) s) _), k2@(Term.mk (Kind.BitVec _) _) =>
     (let k1 := bv_of_lit k1;
     let k2 := bv_of_lit k2;
     (whenSome true
@@ -2143,7 +2143,7 @@ def bv_sub.r_sub_const_l (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) :
 
 def bv_sub.r_sub_const_r (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.sub c) s k1@(Term.mk (Kind.bitVec _) _)) _), k2@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Binop (Binop.Sub c) s k1@(Term.mk (Kind.BitVec _) _)) _), k2@(Term.mk (Kind.BitVec _) _) =>
     (let k1 := bv_of_lit k1;
     let k2 := bv_of_lit k2;
     (whenSome true
@@ -2153,7 +2153,7 @@ def bv_sub.r_sub_const_r (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) :
 
 def bv_sub.r_const_add (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | k1@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.add c) k2@(Term.mk (Kind.bitVec _) _) l) _) =>
+    | k1@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop (Binop.Add c) k2@(Term.mk (Kind.BitVec _) _) l) _) =>
     (let k1 := bv_of_lit k1;
     let k2 := bv_of_lit k2;
     (whenSome true
@@ -2161,7 +2161,7 @@ def bv_sub.r_const_add (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : O
      (O.bv_sub checked (lit (lit_sub k1 k2)) l)))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | k1@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.add c) l k2@(Term.mk (Kind.bitVec _) _)) _) =>
+        | k1@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop (Binop.Add c) l k2@(Term.mk (Kind.BitVec _) _)) _) =>
         (let k1 := bv_of_lit k1;
         let k2 := bv_of_lit k2;
         (whenSome true
@@ -2171,7 +2171,7 @@ def bv_sub.r_const_add (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : O
 
 def bv_sub.r_add_const (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.add c) k1@(Term.mk (Kind.bitVec _) _) l) _), k2@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Binop (Binop.Add c) k1@(Term.mk (Kind.BitVec _) _) l) _), k2@(Term.mk (Kind.BitVec _) _) =>
     (let k1 := bv_of_lit k1;
     let k2 := bv_of_lit k2;
     (whenSome true
@@ -2182,7 +2182,7 @@ def bv_sub.r_add_const (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : O
           (O.bv_add checked l (lit (lit_sub k1 k2))))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add c) l k1@(Term.mk (Kind.bitVec _) _)) _), k2@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop (Binop.Add c) l k1@(Term.mk (Kind.BitVec _) _)) _), k2@(Term.mk (Kind.BitVec _) _) =>
         (let k1 := bv_of_lit k1;
         let k2 := bv_of_lit k2;
         (whenSome true
@@ -2195,79 +2195,79 @@ def bv_sub.r_add_const (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : O
 
 def bv_sub.r_add_cancel_l (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.add _) l r) _), bvr__7 =>
+    | (Term.mk (Kind.Binop (Binop.Add _) l r) _), bvr__7 =>
     (whenSome (equal l bvr__7) (r))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add _) r l) _), bvr__7 =>
+        | (Term.mk (Kind.Binop (Binop.Add _) r l) _), bvr__7 =>
         (whenSome (equal l bvr__7) (r))
         | _, _ => none)
 
 def bv_sub.r_add_cancel_r (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.add _) l r) _), bvr__7 =>
+    | (Term.mk (Kind.Binop (Binop.Add _) l r) _), bvr__7 =>
     (whenSome (equal r bvr__7) (l))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add _) r l) _), bvr__7 =>
+        | (Term.mk (Kind.Binop (Binop.Add _) r l) _), bvr__7 =>
         (whenSome (equal r bvr__7) (l))
         | _, _ => none)
 
 def bv_sub.r_add_add (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.add _) l r1) _), (Term.mk (Kind.binop (Binop.add _) bvr__9 r2) _) =>
+    | (Term.mk (Kind.Binop (Binop.Add _) l r1) _), (Term.mk (Kind.Binop (Binop.Add _) bvr__9 r2) _) =>
     (whenSome (equal l bvr__9) ((O.bv_sub unchecked r1 r2)))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add _) l r1) _), (Term.mk (Kind.binop (Binop.add _) r2 bvr__9) _) =>
+        | (Term.mk (Kind.Binop (Binop.Add _) l r1) _), (Term.mk (Kind.Binop (Binop.Add _) r2 bvr__9) _) =>
         (whenSome (equal l bvr__9) ((O.bv_sub unchecked r1 r2)))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add _) r1 l) _), (Term.mk (Kind.binop (Binop.add _) bvr__9 r2) _) =>
+        | (Term.mk (Kind.Binop (Binop.Add _) r1 l) _), (Term.mk (Kind.Binop (Binop.Add _) bvr__9 r2) _) =>
         (whenSome (equal l bvr__9) ((O.bv_sub unchecked r1 r2)))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add _) r1 l) _), (Term.mk (Kind.binop (Binop.add _) r2 bvr__9) _) =>
+        | (Term.mk (Kind.Binop (Binop.Add _) r1 l) _), (Term.mk (Kind.Binop (Binop.Add _) r2 bvr__9) _) =>
         (whenSome (equal l bvr__9) ((O.bv_sub unchecked r1 r2)))
         | _, _ => none)
 
 def bv_sub.r_sub_sub (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | l, (Term.mk (Kind.binop (Binop.sub _) bvr__4 r) _) =>
+    | l, (Term.mk (Kind.Binop (Binop.Sub _) bvr__4 r) _) =>
     (whenSome (equal l bvr__4) (r))
     | _, _ => none)
 
 def bv_sub.r_ite_ite (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.triop Triop.ite b l r) _), (Term.mk (Kind.triop Triop.ite bvr__7 l' r') _) =>
+    | (Term.mk (Kind.Triop Triop.Ite b l r) _), (Term.mk (Kind.Triop Triop.Ite bvr__7 l' r') _) =>
     (whenSome (equal b bvr__7)
     ((O.b_ite b (O.bv_sub unchecked l l') (O.bv_sub unchecked r r'))))
     | _, _ => none)
 
 def bv_sub.r_ite_l (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.triop Triop.ite b l r) _), (Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Triop Triop.Ite b l r) _), (Term.mk (Kind.BitVec _) _) =>
     (whenSome true
     ((O.b_ite b (O.bv_sub unchecked l v2) (O.bv_sub unchecked r v2))))
     | _, _ => none)
 
 def bv_sub.r_ite_r (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.bitVec _) _), (Term.mk (Kind.triop Triop.ite b l r) _) =>
+    | (Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Triop Triop.Ite b l r) _) =>
     (whenSome true
     ((O.b_ite b (O.bv_sub unchecked v1 l) (O.bv_sub unchecked v1 r))))
     | _, _ => none)
 
 def bv_sub.r_of_bool_l (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.unop (Unop.bvOfBool n) b) _), (Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Unop (Unop.BvOfBool n) b) _), (Term.mk (Kind.BitVec _) _) =>
     (whenSome true
     ((O.b_ite b (O.bv_sub unchecked (bv_one n) v2) (O.bv_neg false v2))))
     | _, _ => none)
 
 def bv_sub.r_of_bool_r (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.bitVec _) _), (Term.mk (Kind.unop (Unop.bvOfBool n) b) _) =>
+    | (Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Unop (Unop.BvOfBool n) b) _) =>
     (whenSome true ((O.b_ite b (O.bv_sub unchecked v1 (bv_one n)) v1)))
     | _, _ => none)
 
@@ -2275,46 +2275,46 @@ def bv_sub.r_default (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Opt
   (match v1, v2 with
     | _, _ =>
     (whenSome true
-    ((Term.mk (Kind.binop (Binop.sub checked) v1 v2) (ty v1)))))
+    ((Term.mk (Kind.Binop (Binop.Sub checked) v1 v2) (ty v1)))))
 
 def bv_sub.step (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [bv_sub.r_lits O checked v1 v2, bv_sub.r_zero_r O checked v1 v2, bv_sub.r_zero_l O checked v1 v2, bv_sub.r_same O checked v1 v2, bv_sub.r_neg_r O checked v1 v2, bv_sub.r_sub_const_l O checked v1 v2, bv_sub.r_sub_const_r O checked v1 v2, bv_sub.r_const_add O checked v1 v2, bv_sub.r_add_const O checked v1 v2, bv_sub.r_add_cancel_l O checked v1 v2, bv_sub.r_add_cancel_r O checked v1 v2, bv_sub.r_add_add O checked v1 v2, bv_sub.r_sub_sub O checked v1 v2, bv_sub.r_ite_ite O checked v1 v2, bv_sub.r_ite_l O checked v1 v2, bv_sub.r_ite_r O checked v1 v2, bv_sub.r_of_bool_l O checked v1 v2, bv_sub.r_of_bool_r O checked v1 v2, bv_sub.r_default O checked v1 v2]).getD (bv_sub.spec checked v1 v2)
 
 def bv_neg.r_lit (O : Ops) (checked : Bool) (v : Term) : Option Term :=
   (match v with
-    | bv@(Term.mk (Kind.bitVec _) _) =>
+    | bv@(Term.mk (Kind.BitVec _) _) =>
     (let bv := bv_of_lit bv; (whenSome true ((lit (lit_neg bv)))))
     | _ => none)
 
 def bv_neg.r_neg (O : Ops) (checked : Bool) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.unop (Unop.neg _) x) _) =>
+    | (Term.mk (Kind.Unop (Unop.Neg _) x) _) =>
     (whenSome true (x))
     | _ => none)
 
 def bv_neg.r_ite (O : Ops) (checked : Bool) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.triop Triop.ite b l r) _) =>
+    | (Term.mk (Kind.Triop Triop.Ite b l r) _) =>
     (whenSome true ((O.b_ite b (O.bv_neg checked l) (O.bv_neg checked r))))
     | _ => none)
 
 def bv_neg.r_of_bool (O : Ops) (checked : Bool) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.unop (Unop.bvOfBool n) b) _) =>
+    | (Term.mk (Kind.Unop (Unop.BvOfBool n) b) _) =>
     (whenSome true ((O.b_ite b (O.bv_neg false (bv_one n)) (bv_zero n))))
     | _ => none)
 
 def bv_neg.r_default (O : Ops) (checked : Bool) (v : Term) : Option Term :=
   (match v with
     | _ =>
-    (whenSome true ((Term.mk (Kind.unop (Unop.neg checked) v) (ty v)))))
+    (whenSome true ((Term.mk (Kind.Unop (Unop.Neg checked) v) (ty v)))))
 
 def bv_neg.step (O : Ops) (checked : Bool) (v : Term) : Term :=
   (firstSome [bv_neg.r_lit O checked v, bv_neg.r_neg O checked v, bv_neg.r_ite O checked v, bv_neg.r_of_bool O checked v, bv_neg.r_default O checked v]).getD (bv_neg.spec checked v)
 
 def bv_mod.r_lits (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | l@(Term.mk (Kind.bitVec _) _), r@(Term.mk (Kind.bitVec _) _) =>
+    | l@(Term.mk (Kind.BitVec _) _), r@(Term.mk (Kind.BitVec _) _) =>
     (let l := bv_of_lit l;
     let r := bv_of_lit r;
     (whenSome true ((lit (lit_smod l r)))))
@@ -2322,21 +2322,21 @@ def bv_mod.r_lits (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def bv_mod.r_zero_r (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | _, (Term.mk (Kind.bitVec bvr__2) _) =>
+    | _, (Term.mk (Kind.BitVec bvr__2) _) =>
     (whenSome (decide (bvr__2 = (0 : Int))) (v1))
     | _, _ => none)
 
 def bv_mod.r_default (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | _, _ =>
-    (whenSome true ((Term.mk (Kind.binop Binop.mod_ v1 v2) (ty v1)))))
+    (whenSome true ((Term.mk (Kind.Binop Binop.Mod v1 v2) (ty v1)))))
 
 def bv_mod.step (O : Ops) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [bv_mod.r_lits O v1 v2, bv_mod.r_zero_r O v1 v2, bv_mod.r_default O v1 v2]).getD (bv_mod.spec v1 v2)
 
 def bv_rem.r_lits (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | l@(Term.mk (Kind.bitVec _) _), r@(Term.mk (Kind.bitVec _) _) =>
+    | l@(Term.mk (Kind.BitVec _) _), r@(Term.mk (Kind.BitVec _) _) =>
     (let l := bv_of_lit l;
     let r := bv_of_lit r;
     (whenSome true
@@ -2345,26 +2345,26 @@ def bv_rem.r_lits (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Ter
 
 def bv_rem.r_zero_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | _, (Term.mk (Kind.bitVec bvr__2) _) =>
+    | _, (Term.mk (Kind.BitVec bvr__2) _) =>
     (whenSome (decide (bvr__2 = (0 : Int))) (v1))
     | _, _ => none)
 
 def bv_rem.r_zero_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.bitVec bvr__1) _), _ =>
+    | (Term.mk (Kind.BitVec bvr__1) _), _ =>
     (whenSome (decide (bvr__1 = (0 : Int))) ((bv_zero (size v1))))
     | _, _ => none)
 
 def bv_rem.r_one_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | _, (Term.mk (Kind.bitVec bvr__2) _) =>
+    | _, (Term.mk (Kind.BitVec bvr__2) _) =>
     (whenSome ((decide (bvr__2 = (1 : Int))) && (! signed))
     ((bv_zero (size v1))))
     | _, _ => none)
 
 def bv_rem.r_pow2 (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | _, r@(Term.mk (Kind.bitVec _) _) =>
+    | _, r@(Term.mk (Kind.BitVec _) _) =>
     (let r := bv_of_lit r;
     (whenSome ((! signed) && ((is_pow2 (to_z false r)) && (decide ((to_z false r) > (1 : Int)))))
     ((let sz := (size v1);
@@ -2375,14 +2375,14 @@ def bv_rem.r_pow2 (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Ter
 
 def bv_rem.r_add (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.add ck) d@(Term.mk (Kind.bitVec _) _) r) _), d'@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Binop (Binop.Add ck) d@(Term.mk (Kind.BitVec _) _) r) _), d'@(Term.mk (Kind.BitVec _) _) =>
     (let d := bv_of_lit d;
     let d' := bv_of_lit d';
     (whenSome ((! signed) && (ck.unsigned && (decide ((to_z false d) = (to_z false d')))))
     ((O.bv_rem signed r v2))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add ck) r d@(Term.mk (Kind.bitVec _) _)) _), d'@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop (Binop.Add ck) r d@(Term.mk (Kind.BitVec _) _)) _), d'@(Term.mk (Kind.BitVec _) _) =>
         (let d := bv_of_lit d;
         let d' := bv_of_lit d';
         (whenSome ((! signed) && (ck.unsigned && (decide ((to_z false d) = (to_z false d')))))
@@ -2391,7 +2391,7 @@ def bv_rem.r_add (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term
 
 def bv_rem.r_rem_rem (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.rem false) r v_r1@r1@(Term.mk (Kind.bitVec _) _)) _), r2@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Binop (Binop.Rem false) r v_r1@r1@(Term.mk (Kind.BitVec _) _)) _), r2@(Term.mk (Kind.BitVec _) _) =>
     (let r1 := bv_of_lit r1;
     let r2 := bv_of_lit r2;
     (whenSome ((! signed) && ((decide ((to_z false r1) > (0 : Int))) && ((decide ((to_z false r2) > (0 : Int))) && ((udivides r2 r1) || (udivides r1 r2)))))
@@ -2404,34 +2404,34 @@ def bv_rem.r_rem_rem (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option 
 def bv_rem.r_default (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | _, _ =>
-    (whenSome true ((Term.mk (Kind.binop (Binop.rem signed) v1 v2) (ty v1)))))
+    (whenSome true ((Term.mk (Kind.Binop (Binop.Rem signed) v1 v2) (ty v1)))))
 
 def bv_rem.step (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [bv_rem.r_lits O signed v1 v2, bv_rem.r_zero_r O signed v1 v2, bv_rem.r_zero_l O signed v1 v2, bv_rem.r_one_r O signed v1 v2, bv_rem.r_pow2 O signed v1 v2, bv_rem.r_add O signed v1 v2, bv_rem.r_rem_rem O signed v1 v2, bv_rem.r_default O signed v1 v2]).getD (bv_rem.spec signed v1 v2)
 
 def bv_not.r_lit (O : Ops) (v : Term) : Option Term :=
   (match v with
-    | bv@(Term.mk (Kind.bitVec _) _) =>
+    | bv@(Term.mk (Kind.BitVec _) _) =>
     (let bv := bv_of_lit bv; (whenSome true ((lit (lit_not bv)))))
     | _ => none)
 
 def bv_not.r_ite (O : Ops) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.triop Triop.ite b l r) _) =>
+    | (Term.mk (Kind.Triop Triop.Ite b l r) _) =>
     (whenSome true ((O.b_ite b (O.bv_not l) (O.bv_not r))))
     | _ => none)
 
 def bv_not.r_default (O : Ops) (v : Term) : Option Term :=
   (match v with
     | _ =>
-    (whenSome true ((Term.mk (Kind.unop Unop.bvNot v) (ty v)))))
+    (whenSome true ((Term.mk (Kind.Unop Unop.BvNot v) (ty v)))))
 
 def bv_not.step (O : Ops) (v : Term) : Term :=
   (firstSome [bv_not.r_lit O v, bv_not.r_ite O v, bv_not.r_default O v]).getD (bv_not.spec v)
 
 def bv_and.r_lits (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | l@(Term.mk (Kind.bitVec _) _), r@(Term.mk (Kind.bitVec _) _) =>
+    | l@(Term.mk (Kind.BitVec _) _), r@(Term.mk (Kind.BitVec _) _) =>
     (let l := bv_of_lit l;
     let r := bv_of_lit r;
     (whenSome true ((lit (lit_and l r)))))
@@ -2439,71 +2439,71 @@ def bv_and.r_lits (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def bv_and.r_zero (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | _, (Term.mk (Kind.bitVec bvr__2) _) =>
+    | _, (Term.mk (Kind.BitVec bvr__2) _) =>
     (whenSome (decide (bvr__2 = (0 : Int))) ((bv_zero (size v1))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.bitVec bvr__2) _), _ =>
+        | (Term.mk (Kind.BitVec bvr__2) _), _ =>
         (whenSome (decide (bvr__2 = (0 : Int))) ((bv_zero (size v1))))
         | _, _ => none)
 
 def bv_and.r_ones (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | mask@(Term.mk (Kind.bitVec _) _), x =>
+    | mask@(Term.mk (Kind.BitVec _) _), x =>
     (let mask := bv_of_lit mask; (whenSome (is_ones mask) (x)))
     | _, _ => none)
   <|> (match v1, v2 with
-        | x, mask@(Term.mk (Kind.bitVec _) _) =>
+        | x, mask@(Term.mk (Kind.BitVec _) _) =>
         (let mask := bv_of_lit mask; (whenSome (is_ones mask) (x)))
         | _, _ => none)
 
 def bv_and.r_lshr_mask (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | base@(Term.mk (Kind.binop Binop.lShr _ shift@(Term.mk (Kind.bitVec _) _)) _), mask@(Term.mk (Kind.bitVec _) _) =>
+    | base@(Term.mk (Kind.Binop Binop.LShr _ shift@(Term.mk (Kind.BitVec _) _)) _), mask@(Term.mk (Kind.BitVec _) _) =>
     (let shift := bv_of_lit shift;
     let mask := bv_of_lit mask;
     (whenSome ((decide ((to_z false shift) < (size v1))) && (bits_in (lit_lshr (ones (size v1)) shift) mask))
-    ((Term.mk (kind base) (Ty.bitVector (size v1))))))
+    ((Term.mk (kind base) (Ty.TBitVector (size v1))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | mask@(Term.mk (Kind.bitVec _) _), base@(Term.mk (Kind.binop Binop.lShr _ shift@(Term.mk (Kind.bitVec _) _)) _) =>
+        | mask@(Term.mk (Kind.BitVec _) _), base@(Term.mk (Kind.Binop Binop.LShr _ shift@(Term.mk (Kind.BitVec _) _)) _) =>
         (let mask := bv_of_lit mask;
         let shift := bv_of_lit shift;
         (whenSome ((decide ((to_z false shift) < (size v1))) && (bits_in (lit_lshr (ones (size v1)) shift) mask))
-        ((Term.mk (kind base) (Ty.bitVector (size v1))))))
+        ((Term.mk (kind base) (Ty.TBitVector (size v1))))))
         | _, _ => none)
 
 def bv_and.r_ite (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | k@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.triop Triop.ite b l r) _) =>
+    | k@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Triop Triop.Ite b l r) _) =>
     (whenSome true ((O.b_ite b (O.bv_and k l) (O.bv_and k r))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.triop Triop.ite b l r) _), k@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Triop Triop.Ite b l r) _), k@(Term.mk (Kind.BitVec _) _) =>
         (whenSome true ((O.b_ite b (O.bv_and k l) (O.bv_and k r))))
         | _, _ => none)
 
 def bv_and.r_masks (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | m1@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop Binop.bitAnd x m2@(Term.mk (Kind.bitVec _) _)) _) =>
+    | m1@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop Binop.BitAnd x m2@(Term.mk (Kind.BitVec _) _)) _) =>
     (let m1 := bv_of_lit m1;
     let m2 := bv_of_lit m2;
     (whenSome true ((O.bv_and x (lit (lit_and m1 m2))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | m1@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop Binop.bitAnd m2@(Term.mk (Kind.bitVec _) _) x) _) =>
+        | m1@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop Binop.BitAnd m2@(Term.mk (Kind.BitVec _) _) x) _) =>
         (let m1 := bv_of_lit m1;
         let m2 := bv_of_lit m2;
         (whenSome true ((O.bv_and x (lit (lit_and m1 m2))))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.bitAnd x m2@(Term.mk (Kind.bitVec _) _)) _), m1@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop Binop.BitAnd x m2@(Term.mk (Kind.BitVec _) _)) _), m1@(Term.mk (Kind.BitVec _) _) =>
         (let m2 := bv_of_lit m2;
         let m1 := bv_of_lit m1;
         (whenSome true ((O.bv_and x (lit (lit_and m1 m2))))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.bitAnd m2@(Term.mk (Kind.bitVec _) _) x) _), m1@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop Binop.BitAnd m2@(Term.mk (Kind.BitVec _) _) x) _), m1@(Term.mk (Kind.BitVec _) _) =>
         (let m2 := bv_of_lit m2;
         let m1 := bv_of_lit m1;
         (whenSome true ((O.bv_and x (lit (lit_and m1 m2))))))
@@ -2511,56 +2511,56 @@ def bv_and.r_masks (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def bv_and.r_mask_or_mask (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | m@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop Binop.bitOr n@(Term.mk (Kind.bitVec _) _) (Term.mk (Kind.binop Binop.bitAnd p@(Term.mk (Kind.bitVec _) _) x) _)) _) =>
+    | m@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop Binop.BitOr n@(Term.mk (Kind.BitVec _) _) (Term.mk (Kind.Binop Binop.BitAnd p@(Term.mk (Kind.BitVec _) _) x) _)) _) =>
     (whenSome true
     ((let vty := (ty v1);
      (let m := (Term.mk (kind m) vty);
      (O.bv_or (O.bv_and m n) (O.bv_and x (O.bv_and m p)))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | m@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop Binop.bitOr n@(Term.mk (Kind.bitVec _) _) (Term.mk (Kind.binop Binop.bitAnd x p@(Term.mk (Kind.bitVec _) _)) _)) _) =>
+        | m@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop Binop.BitOr n@(Term.mk (Kind.BitVec _) _) (Term.mk (Kind.Binop Binop.BitAnd x p@(Term.mk (Kind.BitVec _) _)) _)) _) =>
         (whenSome true
         ((let vty := (ty v1);
          (let m := (Term.mk (kind m) vty);
          (O.bv_or (O.bv_and m n) (O.bv_and x (O.bv_and m p)))))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | m@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop Binop.bitOr (Term.mk (Kind.binop Binop.bitAnd p@(Term.mk (Kind.bitVec _) _) x) _) n@(Term.mk (Kind.bitVec _) _)) _) =>
+        | m@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop Binop.BitOr (Term.mk (Kind.Binop Binop.BitAnd p@(Term.mk (Kind.BitVec _) _) x) _) n@(Term.mk (Kind.BitVec _) _)) _) =>
         (whenSome true
         ((let vty := (ty v1);
          (let m := (Term.mk (kind m) vty);
          (O.bv_or (O.bv_and m n) (O.bv_and x (O.bv_and m p)))))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | m@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop Binop.bitOr (Term.mk (Kind.binop Binop.bitAnd x p@(Term.mk (Kind.bitVec _) _)) _) n@(Term.mk (Kind.bitVec _) _)) _) =>
+        | m@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop Binop.BitOr (Term.mk (Kind.Binop Binop.BitAnd x p@(Term.mk (Kind.BitVec _) _)) _) n@(Term.mk (Kind.BitVec _) _)) _) =>
         (whenSome true
         ((let vty := (ty v1);
          (let m := (Term.mk (kind m) vty);
          (O.bv_or (O.bv_and m n) (O.bv_and x (O.bv_and m p)))))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.bitOr n@(Term.mk (Kind.bitVec _) _) (Term.mk (Kind.binop Binop.bitAnd p@(Term.mk (Kind.bitVec _) _) x) _)) _), m@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop Binop.BitOr n@(Term.mk (Kind.BitVec _) _) (Term.mk (Kind.Binop Binop.BitAnd p@(Term.mk (Kind.BitVec _) _) x) _)) _), m@(Term.mk (Kind.BitVec _) _) =>
         (whenSome true
         ((let vty := (ty v1);
          (let m := (Term.mk (kind m) vty);
          (O.bv_or (O.bv_and m n) (O.bv_and x (O.bv_and m p)))))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.bitOr n@(Term.mk (Kind.bitVec _) _) (Term.mk (Kind.binop Binop.bitAnd x p@(Term.mk (Kind.bitVec _) _)) _)) _), m@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop Binop.BitOr n@(Term.mk (Kind.BitVec _) _) (Term.mk (Kind.Binop Binop.BitAnd x p@(Term.mk (Kind.BitVec _) _)) _)) _), m@(Term.mk (Kind.BitVec _) _) =>
         (whenSome true
         ((let vty := (ty v1);
          (let m := (Term.mk (kind m) vty);
          (O.bv_or (O.bv_and m n) (O.bv_and x (O.bv_and m p)))))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.bitOr (Term.mk (Kind.binop Binop.bitAnd p@(Term.mk (Kind.bitVec _) _) x) _) n@(Term.mk (Kind.bitVec _) _)) _), m@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop Binop.BitOr (Term.mk (Kind.Binop Binop.BitAnd p@(Term.mk (Kind.BitVec _) _) x) _) n@(Term.mk (Kind.BitVec _) _)) _), m@(Term.mk (Kind.BitVec _) _) =>
         (whenSome true
         ((let vty := (ty v1);
          (let m := (Term.mk (kind m) vty);
          (O.bv_or (O.bv_and m n) (O.bv_and x (O.bv_and m p)))))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.bitOr (Term.mk (Kind.binop Binop.bitAnd x p@(Term.mk (Kind.bitVec _) _)) _) n@(Term.mk (Kind.bitVec _) _)) _), m@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop Binop.BitOr (Term.mk (Kind.Binop Binop.BitAnd x p@(Term.mk (Kind.BitVec _) _)) _) n@(Term.mk (Kind.BitVec _) _)) _), m@(Term.mk (Kind.BitVec _) _) =>
         (whenSome true
         ((let vty := (ty v1);
          (let m := (Term.mk (kind m) vty);
@@ -2569,25 +2569,25 @@ def bv_and.r_mask_or_mask (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def bv_and.r_mask_or (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | m_and@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop Binop.bitOr _ m_or@(Term.mk (Kind.bitVec _) _)) _) =>
+    | m_and@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop Binop.BitOr _ m_or@(Term.mk (Kind.BitVec _) _)) _) =>
     (let m_and := bv_of_lit m_and;
     let m_or := bv_of_lit m_or;
     (whenSome (bits_in m_and m_or) ((lit m_and))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | m_and@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop Binop.bitOr m_or@(Term.mk (Kind.bitVec _) _) _) _) =>
+        | m_and@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop Binop.BitOr m_or@(Term.mk (Kind.BitVec _) _) _) _) =>
         (let m_and := bv_of_lit m_and;
         let m_or := bv_of_lit m_or;
         (whenSome (bits_in m_and m_or) ((lit m_and))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.bitOr _ m_or@(Term.mk (Kind.bitVec _) _)) _), m_and@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop Binop.BitOr _ m_or@(Term.mk (Kind.BitVec _) _)) _), m_and@(Term.mk (Kind.BitVec _) _) =>
         (let m_or := bv_of_lit m_or;
         let m_and := bv_of_lit m_and;
         (whenSome (bits_in m_and m_or) ((lit m_and))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.bitOr m_or@(Term.mk (Kind.bitVec _) _) _) _), m_and@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop Binop.BitOr m_or@(Term.mk (Kind.BitVec _) _) _) _), m_and@(Term.mk (Kind.BitVec _) _) =>
         (let m_or := bv_of_lit m_or;
         let m_and := bv_of_lit m_and;
         (whenSome (bits_in m_and m_or) ((lit m_and))))
@@ -2595,25 +2595,25 @@ def bv_and.r_mask_or (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def bv_and.r_mask_or_disj (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | m_and@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop Binop.bitOr x m_or@(Term.mk (Kind.bitVec _) _)) _) =>
+    | m_and@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop Binop.BitOr x m_or@(Term.mk (Kind.BitVec _) _)) _) =>
     (let m_and := bv_of_lit m_and;
     let m_or := bv_of_lit m_or;
     (whenSome (disjoint m_and m_or) ((O.bv_and x (lit m_and)))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | m_and@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop Binop.bitOr m_or@(Term.mk (Kind.bitVec _) _) x) _) =>
+        | m_and@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop Binop.BitOr m_or@(Term.mk (Kind.BitVec _) _) x) _) =>
         (let m_and := bv_of_lit m_and;
         let m_or := bv_of_lit m_or;
         (whenSome (disjoint m_and m_or) ((O.bv_and x (lit m_and)))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.bitOr x m_or@(Term.mk (Kind.bitVec _) _)) _), m_and@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop Binop.BitOr x m_or@(Term.mk (Kind.BitVec _) _)) _), m_and@(Term.mk (Kind.BitVec _) _) =>
         (let m_or := bv_of_lit m_or;
         let m_and := bv_of_lit m_and;
         (whenSome (disjoint m_and m_or) ((O.bv_and x (lit m_and)))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.bitOr m_or@(Term.mk (Kind.bitVec _) _) x) _), m_and@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop Binop.BitOr m_or@(Term.mk (Kind.BitVec _) _) x) _), m_and@(Term.mk (Kind.BitVec _) _) =>
         (let m_or := bv_of_lit m_or;
         let m_and := bv_of_lit m_and;
         (whenSome (disjoint m_and m_or) ((O.bv_and x (lit m_and)))))
@@ -2621,13 +2621,13 @@ def bv_and.r_mask_or_disj (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def bv_and.r_right_mask (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | v_mask@mask@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop Binop.bitAnd l r) _) =>
+    | v_mask@mask@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop Binop.BitAnd l r) _) =>
     (let mask := bv_of_lit mask;
     (whenSome (is_right_mask (to_z false mask))
     ((O.bv_and (O.bv_and v_mask l) (O.bv_and v_mask r)))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.bitAnd l r) _), v_mask@mask@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop Binop.BitAnd l r) _), v_mask@mask@(Term.mk (Kind.BitVec _) _) =>
         (let mask := bv_of_lit mask;
         (whenSome (is_right_mask (to_z false mask))
         ((O.bv_and (O.bv_and v_mask l) (O.bv_and v_mask r)))))
@@ -2635,23 +2635,23 @@ def bv_and.r_right_mask (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def bv_and.r_of_bool (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.bitVec bvr__1) _), b@(Term.mk (Kind.unop (Unop.bvOfBool _) _) _) =>
+    | (Term.mk (Kind.BitVec bvr__1) _), b@(Term.mk (Kind.Unop (Unop.BvOfBool _) _) _) =>
     (whenSome (decide (bvr__1 = (1 : Int))) (b))
     | _, _ => none)
   <|> (match v1, v2 with
-        | b@(Term.mk (Kind.unop (Unop.bvOfBool _) _) _), (Term.mk (Kind.bitVec bvr__1) _) =>
+        | b@(Term.mk (Kind.Unop (Unop.BvOfBool _) _) _), (Term.mk (Kind.BitVec bvr__1) _) =>
         (whenSome (decide (bvr__1 = (1 : Int))) (b))
         | _, _ => none)
 
 def bv_and.r_of_bools (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.unop (Unop.bvOfBool _) b1) _), (Term.mk (Kind.unop (Unop.bvOfBool _) b2) _) =>
+    | (Term.mk (Kind.Unop (Unop.BvOfBool _) b1) _), (Term.mk (Kind.Unop (Unop.BvOfBool _) b2) _) =>
     (whenSome true ((O.bv_of_bool (size v1) (O.b_and b1 b2))))
     | _, _ => none)
 
 def bv_and.r_ites (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.triop Triop.ite b1 l1 (Term.mk (Kind.bitVec bvr__4) _)) _), (Term.mk (Kind.triop Triop.ite b2 l2 (Term.mk (Kind.bitVec bvr__10) _)) _) =>
+    | (Term.mk (Kind.Triop Triop.Ite b1 l1 (Term.mk (Kind.BitVec bvr__4) _)) _), (Term.mk (Kind.Triop Triop.Ite b2 l2 (Term.mk (Kind.BitVec bvr__10) _)) _) =>
     (whenSome ((decide (bvr__4 = (0 : Int))) && (decide (bvr__10 = (0 : Int))))
     ((O.b_ite (O.b_and b1 b2) (O.bv_and l1 l2) (bv_zero (size v1)))))
     | _, _ => none)
@@ -2660,14 +2660,14 @@ def bv_and.r_default (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | _, _ =>
     (whenSome true
-    ((Term.mk (mk_commut_binop O Binop.bitAnd v1 v2) (Ty.bitVector (size v1))))))
+    ((Term.mk (mk_commut_binop O Binop.BitAnd v1 v2) (Ty.TBitVector (size v1))))))
 
 def bv_and.step (O : Ops) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [bv_and.r_lits O v1 v2, bv_and.r_zero O v1 v2, bv_and.r_ones O v1 v2, bv_and.r_lshr_mask O v1 v2, bv_and.r_ite O v1 v2, bv_and.r_masks O v1 v2, bv_and.r_mask_or_mask O v1 v2, bv_and.r_mask_or O v1 v2, bv_and.r_mask_or_disj O v1 v2, bv_and.r_right_mask O v1 v2, bv_and.r_of_bool O v1 v2, bv_and.r_of_bools O v1 v2, bv_and.r_ites O v1 v2, bv_and.r_default O v1 v2]).getD (bv_and.spec v1 v2)
 
 def bv_or.r_lits (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | l@(Term.mk (Kind.bitVec _) _), r@(Term.mk (Kind.bitVec _) _) =>
+    | l@(Term.mk (Kind.BitVec _) _), r@(Term.mk (Kind.BitVec _) _) =>
     (let l := bv_of_lit l;
     let r := bv_of_lit r;
     (whenSome true ((lit (lit_or l r)))))
@@ -2675,11 +2675,11 @@ def bv_or.r_lits (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def bv_or.r_zero (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | x, (Term.mk (Kind.bitVec bvr__2) _) =>
+    | x, (Term.mk (Kind.BitVec bvr__2) _) =>
     (whenSome (decide (bvr__2 = (0 : Int))) (x))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.bitVec bvr__2) _), x =>
+        | (Term.mk (Kind.BitVec bvr__2) _), x =>
         (whenSome (decide (bvr__2 = (0 : Int))) (x))
         | _, _ => none)
 
@@ -2688,25 +2688,25 @@ def bv_or.r_same (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def bv_or.r_mask_and (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | m1@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop Binop.bitAnd _ m2@(Term.mk (Kind.bitVec _) _)) _) =>
+    | m1@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop Binop.BitAnd _ m2@(Term.mk (Kind.BitVec _) _)) _) =>
     (let m1 := bv_of_lit m1;
     let m2 := bv_of_lit m2;
     (whenSome (bits_in m2 m1) ((lit m1))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | m1@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop Binop.bitAnd m2@(Term.mk (Kind.bitVec _) _) _) _) =>
+        | m1@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop Binop.BitAnd m2@(Term.mk (Kind.BitVec _) _) _) _) =>
         (let m1 := bv_of_lit m1;
         let m2 := bv_of_lit m2;
         (whenSome (bits_in m2 m1) ((lit m1))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.bitAnd _ m2@(Term.mk (Kind.bitVec _) _)) _), m1@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop Binop.BitAnd _ m2@(Term.mk (Kind.BitVec _) _)) _), m1@(Term.mk (Kind.BitVec _) _) =>
         (let m2 := bv_of_lit m2;
         let m1 := bv_of_lit m1;
         (whenSome (bits_in m2 m1) ((lit m1))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.bitAnd m2@(Term.mk (Kind.bitVec _) _) _) _), m1@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop Binop.BitAnd m2@(Term.mk (Kind.BitVec _) _) _) _), m1@(Term.mk (Kind.BitVec _) _) =>
         (let m2 := bv_of_lit m2;
         let m1 := bv_of_lit m1;
         (whenSome (bits_in m2 m1) ((lit m1))))
@@ -2714,25 +2714,25 @@ def bv_or.r_mask_and (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def bv_or.r_masks (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | m1@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop Binop.bitOr x m2@(Term.mk (Kind.bitVec _) _)) _) =>
+    | m1@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop Binop.BitOr x m2@(Term.mk (Kind.BitVec _) _)) _) =>
     (let m1 := bv_of_lit m1;
     let m2 := bv_of_lit m2;
     (whenSome true ((O.bv_or x (lit (lit_or m1 m2))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | m1@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop Binop.bitOr m2@(Term.mk (Kind.bitVec _) _) x) _) =>
+        | m1@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop Binop.BitOr m2@(Term.mk (Kind.BitVec _) _) x) _) =>
         (let m1 := bv_of_lit m1;
         let m2 := bv_of_lit m2;
         (whenSome true ((O.bv_or x (lit (lit_or m1 m2))))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.bitOr x m2@(Term.mk (Kind.bitVec _) _)) _), m1@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop Binop.BitOr x m2@(Term.mk (Kind.BitVec _) _)) _), m1@(Term.mk (Kind.BitVec _) _) =>
         (let m2 := bv_of_lit m2;
         let m1 := bv_of_lit m1;
         (whenSome true ((O.bv_or x (lit (lit_or m1 m2))))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.bitOr m2@(Term.mk (Kind.bitVec _) _) x) _), m1@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop Binop.BitOr m2@(Term.mk (Kind.BitVec _) _) x) _), m1@(Term.mk (Kind.BitVec _) _) =>
         (let m2 := bv_of_lit m2;
         let m1 := bv_of_lit m1;
         (whenSome true ((O.bv_or x (lit (lit_or m1 m2))))))
@@ -2740,7 +2740,7 @@ def bv_or.r_masks (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def bv_or.r_extend_shl (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.unop (Unop.bvExtend false nx) base) _), (Term.mk (Kind.binop Binop.shl (Term.mk (Kind.unop (Unop.bvExtend false _) tail) _) shift@(Term.mk (Kind.bitVec _) _)) _) =>
+    | (Term.mk (Kind.Unop (Unop.BvExtend false nx) base) _), (Term.mk (Kind.Binop Binop.Shl (Term.mk (Kind.Unop (Unop.BvExtend false _) tail) _) shift@(Term.mk (Kind.BitVec _) _)) _) =>
     (let shift := bv_of_lit shift;
     (whenSome ((decide ((to_z false shift) = (size base))) && (decide (nx > (0 : Int))))
     ((let tail_size := (size tail);
@@ -2753,7 +2753,7 @@ def bv_or.r_extend_shl (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
                (O.bv_concat new_tail base))))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.shl (Term.mk (Kind.unop (Unop.bvExtend false _) tail) _) shift@(Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.unop (Unop.bvExtend false nx) base) _) =>
+        | (Term.mk (Kind.Binop Binop.Shl (Term.mk (Kind.Unop (Unop.BvExtend false _) tail) _) shift@(Term.mk (Kind.BitVec _) _)) _), (Term.mk (Kind.Unop (Unop.BvExtend false nx) base) _) =>
         (let shift := bv_of_lit shift;
         (whenSome ((decide ((to_z false shift) = (size base))) && (decide (nx > (0 : Int))))
         ((let tail_size := (size tail);
@@ -2768,25 +2768,25 @@ def bv_or.r_extend_shl (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def bv_or.r_of_bools (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.unop (Unop.bvOfBool n) b1) _), (Term.mk (Kind.unop (Unop.bvOfBool _) b2) _) =>
+    | (Term.mk (Kind.Unop (Unop.BvOfBool n) b1) _), (Term.mk (Kind.Unop (Unop.BvOfBool _) b2) _) =>
     (whenSome true ((O.bv_of_bool n (O.b_or b1 b2))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.unop (Unop.bvOfBool _) b2) _), (Term.mk (Kind.unop (Unop.bvOfBool n) b1) _) =>
+        | (Term.mk (Kind.Unop (Unop.BvOfBool _) b2) _), (Term.mk (Kind.Unop (Unop.BvOfBool n) b1) _) =>
         (whenSome true ((O.bv_of_bool n (O.b_or b1 b2))))
         | _, _ => none)
 
 def bv_or.r_default (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | _, _ =>
-    (whenSome true ((Term.mk (mk_commut_binop O Binop.bitOr v1 v2) (ty v1)))))
+    (whenSome true ((Term.mk (mk_commut_binop O Binop.BitOr v1 v2) (ty v1)))))
 
 def bv_or.step (O : Ops) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [bv_or.r_lits O v1 v2, bv_or.r_zero O v1 v2, bv_or.r_same O v1 v2, bv_or.r_mask_and O v1 v2, bv_or.r_masks O v1 v2, bv_or.r_extend_shl O v1 v2, bv_or.r_of_bools O v1 v2, bv_or.r_default O v1 v2]).getD (bv_or.spec v1 v2)
 
 def bv_xor.r_lits (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | l@(Term.mk (Kind.bitVec _) _), r@(Term.mk (Kind.bitVec _) _) =>
+    | l@(Term.mk (Kind.BitVec _) _), r@(Term.mk (Kind.BitVec _) _) =>
     (let l := bv_of_lit l;
     let r := bv_of_lit r;
     (whenSome true ((lit (lit_xor l r)))))
@@ -2794,21 +2794,21 @@ def bv_xor.r_lits (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def bv_xor.r_zero (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | x, (Term.mk (Kind.bitVec bvr__2) _) =>
+    | x, (Term.mk (Kind.BitVec bvr__2) _) =>
     (whenSome (decide (bvr__2 = (0 : Int))) (x))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.bitVec bvr__2) _), x =>
+        | (Term.mk (Kind.BitVec bvr__2) _), x =>
         (whenSome (decide (bvr__2 = (0 : Int))) (x))
         | _, _ => none)
 
 def bv_xor.r_of_bools (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.unop (Unop.bvOfBool n) b1) _), (Term.mk (Kind.unop (Unop.bvOfBool _) b2) _) =>
+    | (Term.mk (Kind.Unop (Unop.BvOfBool n) b1) _), (Term.mk (Kind.Unop (Unop.BvOfBool _) b2) _) =>
     (whenSome true ((O.bv_of_bool n (O.b_not (O.sem_eq b1 b2)))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.unop (Unop.bvOfBool _) b2) _), (Term.mk (Kind.unop (Unop.bvOfBool n) b1) _) =>
+        | (Term.mk (Kind.Unop (Unop.BvOfBool _) b2) _), (Term.mk (Kind.Unop (Unop.BvOfBool n) b1) _) =>
         (whenSome true ((O.bv_of_bool n (O.b_not (O.sem_eq b1 b2)))))
         | _, _ => none)
 
@@ -2816,14 +2816,14 @@ def bv_xor.r_default (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | _, _ =>
     (whenSome true
-    ((Term.mk (mk_commut_binop O Binop.bitXor v1 v2) (ty v1)))))
+    ((Term.mk (mk_commut_binop O Binop.BitXor v1 v2) (ty v1)))))
 
 def bv_xor.step (O : Ops) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [bv_xor.r_lits O v1 v2, bv_xor.r_zero O v1 v2, bv_xor.r_of_bools O v1 v2, bv_xor.r_default O v1 v2]).getD (bv_xor.spec v1 v2)
 
 def bv_extract.r_lit (O : Ops) (from_ : Int) (to_ : Int) (v : Term) : Option Term :=
   (match v with
-    | bv@(Term.mk (Kind.bitVec _) _) =>
+    | bv@(Term.mk (Kind.BitVec _) _) =>
     (let bv := bv_of_lit bv;
     (whenSome true ((lit (lit_extract from_ to_ bv)))))
     | _ => none)
@@ -2836,28 +2836,28 @@ def bv_extract.r_full (O : Ops) (from_ : Int) (to_ : Int) (v : Term) : Option Te
 
 def bv_extract.r_and_ (O : Ops) (from_ : Int) (to_ : Int) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.binop Binop.bitAnd v1 v2) _) =>
+    | (Term.mk (Kind.Binop Binop.BitAnd v1 v2) _) =>
     (whenSome true
     ((O.bv_and (O.bv_extract from_ to_ v1) (O.bv_extract from_ to_ v2))))
     | _ => none)
 
 def bv_extract.r_or_ (O : Ops) (from_ : Int) (to_ : Int) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.binop Binop.bitOr v1 v2) _) =>
+    | (Term.mk (Kind.Binop Binop.BitOr v1 v2) _) =>
     (whenSome true
     ((O.bv_or (O.bv_extract from_ to_ v1) (O.bv_extract from_ to_ v2))))
     | _ => none)
 
 def bv_extract.r_xor (O : Ops) (from_ : Int) (to_ : Int) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.binop Binop.bitXor v1 v2) _) =>
+    | (Term.mk (Kind.Binop Binop.BitXor v1 v2) _) =>
     (whenSome true
     ((O.bv_xor (O.bv_extract from_ to_ v1) (O.bv_extract from_ to_ v2))))
     | _ => none)
 
 def bv_extract.r_shl (O : Ops) (from_ : Int) (to_ : Int) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.binop Binop.shl v1 shift@(Term.mk (Kind.bitVec _) _)) _) =>
+    | (Term.mk (Kind.Binop Binop.Shl v1 shift@(Term.mk (Kind.BitVec _) _)) _) =>
     (let shift := bv_of_lit shift;
     (whenSome true
     ((let shift := (to_z false shift);
@@ -2872,7 +2872,7 @@ def bv_extract.r_shl (O : Ops) (from_ : Int) (to_ : Int) (v : Term) : Option Ter
 
 def bv_extract.r_lshr (O : Ops) (from_ : Int) (to_ : Int) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.binop Binop.lShr v1 shift@(Term.mk (Kind.bitVec _) _)) _) =>
+    | (Term.mk (Kind.Binop Binop.LShr v1 shift@(Term.mk (Kind.BitVec _) _)) _) =>
     (let shift := bv_of_lit shift;
     (whenSome true
     ((let shift := (to_z false shift);
@@ -2888,28 +2888,28 @@ def bv_extract.r_lshr (O : Ops) (from_ : Int) (to_ : Int) (v : Term) : Option Te
 
 def bv_extract.r_ite (O : Ops) (from_ : Int) (to_ : Int) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.triop Triop.ite b l r) _) =>
+    | (Term.mk (Kind.Triop Triop.Ite b l r) _) =>
     (whenSome true
     ((O.b_ite b (O.bv_extract from_ to_ l) (O.bv_extract from_ to_ r))))
     | _ => none)
 
 def bv_extract.r_zext_high (O : Ops) (from_ : Int) (to_ : Int) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.unop (Unop.bvExtend false «by») _) _) =>
+    | (Term.mk (Kind.Unop (Unop.BvExtend false «by») _) _) =>
     (whenSome (decide (from_ ≥ ((size v) - «by»)))
     ((bv_zero ((to_ - from_) + (1 : Int)))))
     | _ => none)
 
 def bv_extract.r_sext_bit (O : Ops) (from_ : Int) (to_ : Int) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.unop (Unop.bvExtend true «by») x) _) =>
+    | (Term.mk (Kind.Unop (Unop.BvExtend true «by») x) _) =>
     (whenSome ((decide (from_ ≥ ((size v) - «by»))) && (decide (from_ = to_)))
     ((O.bv_extract ((size x) - (1 : Int)) ((size x) - (1 : Int)) x)))
     | _ => none)
 
 def bv_extract.r_ext_low (O : Ops) (from_ : Int) (to_ : Int) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.unop (Unop.bvExtend signed _) x) _) =>
+    | (Term.mk (Kind.Unop (Unop.BvExtend signed _) x) _) =>
     (whenSome (decide (from_ = (0 : Int)))
     ((let orig_size := (size x);
      (if (decide (to_ = (orig_size - (1 : Int))))
@@ -2921,21 +2921,21 @@ def bv_extract.r_ext_low (O : Ops) (from_ : Int) (to_ : Int) (v : Term) : Option
 
 def bv_extract.r_ext_orig (O : Ops) (from_ : Int) (to_ : Int) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.unop (Unop.bvExtend _ «by») x) _) =>
+    | (Term.mk (Kind.Unop (Unop.BvExtend _ «by») x) _) =>
     (whenSome (decide (to_ ≤ (((size v) - «by») - (1 : Int))))
     ((O.bv_extract from_ to_ x)))
     | _ => none)
 
 def bv_extract.r_extract (O : Ops) (from_ : Int) (to_ : Int) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.unop (Unop.bvExtract prev_from_ _) x) _) =>
+    | (Term.mk (Kind.Unop (Unop.BvExtract prev_from_ _) x) _) =>
     (whenSome true
     ((O.bv_extract (prev_from_ + from_) (prev_from_ + to_) x)))
     | _ => none)
 
 def bv_extract.r_concat (O : Ops) (from_ : Int) (to_ : Int) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.binop Binop.bvConcat l r) _) =>
+    | (Term.mk (Kind.Binop Binop.BvConcat l r) _) =>
     (whenSome true
     ((let size_r := (size r);
      (if (decide (from_ ≥ size_r))
@@ -2949,20 +2949,20 @@ def bv_extract.r_concat (O : Ops) (from_ : Int) (to_ : Int) (v : Term) : Option 
 
 def bv_extract.r_add_low (O : Ops) (from_ : Int) (to_ : Int) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.binop (Binop.add _) l r) _) =>
+    | (Term.mk (Kind.Binop (Binop.Add _) l r) _) =>
     (whenSome (decide (from_ = (0 : Int)))
     ((O.bv_add unchecked (O.bv_extract from_ to_ l) (O.bv_extract from_ to_ r))))
     | _ => none)
 
 def bv_extract.r_add_const (O : Ops) (from_ : Int) (to_ : Int) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.binop (Binop.add _) n@(Term.mk (Kind.bitVec _) _) x) _) =>
+    | (Term.mk (Kind.Binop (Binop.Add _) n@(Term.mk (Kind.BitVec _) _) x) _) =>
     (let n := bv_of_lit n;
     (whenSome (decide (to_ < (lsb (to_z false n))))
     ((O.bv_extract from_ to_ x))))
     | _ => none)
   <|> (match v with
-        | (Term.mk (Kind.binop (Binop.add _) x n@(Term.mk (Kind.bitVec _) _)) _) =>
+        | (Term.mk (Kind.Binop (Binop.Add _) x n@(Term.mk (Kind.BitVec _) _)) _) =>
         (let n := bv_of_lit n;
         (whenSome (decide (to_ < (lsb (to_z false n))))
         ((O.bv_extract from_ to_ x))))
@@ -2970,13 +2970,13 @@ def bv_extract.r_add_const (O : Ops) (from_ : Int) (to_ : Int) (v : Term) : Opti
 
 def bv_extract.r_mul_pow2 (O : Ops) (from_ : Int) (to_ : Int) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.binop (Binop.mul _) n@(Term.mk (Kind.bitVec _) _) _) _) =>
+    | (Term.mk (Kind.Binop (Binop.Mul _) n@(Term.mk (Kind.BitVec _) _) _) _) =>
     (let n := bv_of_lit n;
     (whenSome ((is_pow2 (to_z false n)) && (decide (to_ < (log2 (to_z false n)))))
     ((bv_zero ((to_ - from_) + (1 : Int))))))
     | _ => none)
   <|> (match v with
-        | (Term.mk (Kind.binop (Binop.mul _) _ n@(Term.mk (Kind.bitVec _) _)) _) =>
+        | (Term.mk (Kind.Binop (Binop.Mul _) _ n@(Term.mk (Kind.BitVec _) _)) _) =>
         (let n := bv_of_lit n;
         (whenSome ((is_pow2 (to_z false n)) && (decide (to_ < (log2 (to_z false n)))))
         ((bv_zero ((to_ - from_) + (1 : Int))))))
@@ -2984,14 +2984,14 @@ def bv_extract.r_mul_pow2 (O : Ops) (from_ : Int) (to_ : Int) (v : Term) : Optio
 
 def bv_extract.r_mul_low (O : Ops) (from_ : Int) (to_ : Int) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.binop (Binop.mul _) l r) _) =>
+    | (Term.mk (Kind.Binop (Binop.Mul _) l r) _) =>
     (whenSome (decide (from_ = (0 : Int)))
     ((O.bv_mul unchecked (O.bv_extract from_ to_ l) (O.bv_extract from_ to_ r))))
     | _ => none)
 
 def bv_extract.r_urem (O : Ops) (from_ : Int) (to_ : Int) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.binop (Binop.rem false) l n@(Term.mk (Kind.bitVec _) _)) _) =>
+    | (Term.mk (Kind.Binop (Binop.Rem false) l n@(Term.mk (Kind.BitVec _) _)) _) =>
     (let n := bv_of_lit n;
     (whenSome ((decide (from_ = (0 : Int))) && ((is_pow2 (to_z false n)) && (decide ((log2 (to_z false n)) < to_))))
     ((O.bv_rem false (O.bv_extract from_ to_ l) (lit (lit_extract from_ to_ n))))))
@@ -3001,14 +3001,14 @@ def bv_extract.r_default (O : Ops) (from_ : Int) (to_ : Int) (v : Term) : Option
   (match v with
     | _ =>
     (whenSome true
-    ((Term.mk (Kind.unop (Unop.bvExtract from_ to_) v) (Ty.bitVector ((to_ - from_) + (1 : Int)))))))
+    ((Term.mk (Kind.Unop (Unop.BvExtract from_ to_) v) (Ty.TBitVector ((to_ - from_) + (1 : Int)))))))
 
 def bv_extract.step (O : Ops) (from_ : Int) (to_ : Int) (v : Term) : Term :=
   (firstSome [bv_extract.r_lit O from_ to_ v, bv_extract.r_full O from_ to_ v, bv_extract.r_and_ O from_ to_ v, bv_extract.r_or_ O from_ to_ v, bv_extract.r_xor O from_ to_ v, bv_extract.r_shl O from_ to_ v, bv_extract.r_lshr O from_ to_ v, bv_extract.r_ite O from_ to_ v, bv_extract.r_zext_high O from_ to_ v, bv_extract.r_sext_bit O from_ to_ v, bv_extract.r_ext_low O from_ to_ v, bv_extract.r_ext_orig O from_ to_ v, bv_extract.r_extract O from_ to_ v, bv_extract.r_concat O from_ to_ v, bv_extract.r_add_low O from_ to_ v, bv_extract.r_add_const O from_ to_ v, bv_extract.r_mul_pow2 O from_ to_ v, bv_extract.r_mul_low O from_ to_ v, bv_extract.r_urem O from_ to_ v, bv_extract.r_default O from_ to_ v]).getD (bv_extract.spec from_ to_ v)
 
 def bv_extend.r_lit (O : Ops) (signed : Bool) (extend_by : Int) (v : Term) : Option Term :=
   (match v with
-    | bv@(Term.mk (Kind.bitVec _) _) =>
+    | bv@(Term.mk (Kind.BitVec _) _) =>
     (let bv := bv_of_lit bv;
     (whenSome true
     ((if signed
@@ -3018,21 +3018,21 @@ def bv_extend.r_lit (O : Ops) (signed : Bool) (extend_by : Int) (v : Term) : Opt
 
 def bv_extend.r_extend (O : Ops) (signed : Bool) (extend_by : Int) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.unop (Unop.bvExtend s prev_by) v) _) =>
+    | (Term.mk (Kind.Unop (Unop.BvExtend s prev_by) v) _) =>
     (whenSome (decide (s = signed))
     ((O.bv_extend signed (prev_by + extend_by) v)))
     | _ => none)
 
 def bv_extend.r_ite (O : Ops) (signed : Bool) (extend_by : Int) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.triop Triop.ite b l r) _) =>
+    | (Term.mk (Kind.Triop Triop.Ite b l r) _) =>
     (whenSome true
     ((O.b_ite b (O.bv_extend signed extend_by l) (O.bv_extend signed extend_by r))))
     | _ => none)
 
 def bv_extend.r_of_bool (O : Ops) (signed : Bool) (extend_by : Int) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.unop (Unop.bvOfBool n) b) _) =>
+    | (Term.mk (Kind.Unop (Unop.BvOfBool n) b) _) =>
     (whenSome ((! signed) || (decide (n > (1 : Int))))
     ((O.bv_of_bool ((size v) + extend_by) b)))
     | _ => none)
@@ -3041,14 +3041,14 @@ def bv_extend.r_default (O : Ops) (signed : Bool) (extend_by : Int) (v : Term) :
   (match v with
     | _ =>
     (whenSome true
-    ((Term.mk (Kind.unop (Unop.bvExtend signed extend_by) v) (Ty.bitVector ((size v) + extend_by))))))
+    ((Term.mk (Kind.Unop (Unop.BvExtend signed extend_by) v) (Ty.TBitVector ((size v) + extend_by))))))
 
 def bv_extend.step (O : Ops) (signed : Bool) (extend_by : Int) (v : Term) : Term :=
   (firstSome [bv_extend.r_lit O signed extend_by v, bv_extend.r_extend O signed extend_by v, bv_extend.r_ite O signed extend_by v, bv_extend.r_of_bool O signed extend_by v, bv_extend.r_default O signed extend_by v]).getD (bv_extend.spec signed extend_by v)
 
 def bv_concat.r_lits (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | l@(Term.mk (Kind.bitVec _) _), r@(Term.mk (Kind.bitVec _) _) =>
+    | l@(Term.mk (Kind.BitVec _) _), r@(Term.mk (Kind.BitVec _) _) =>
     (let l := bv_of_lit l;
     let r := bv_of_lit r;
     (whenSome true ((lit (lit_concat l r)))))
@@ -3056,33 +3056,33 @@ def bv_concat.r_lits (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def bv_concat.r_extracts (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.unop (Unop.bvExtract from1 to1) v) _), (Term.mk (Kind.unop (Unop.bvExtract from2 to2) bvr__9) _) =>
+    | (Term.mk (Kind.Unop (Unop.BvExtract from1 to1) v) _), (Term.mk (Kind.Unop (Unop.BvExtract from2 to2) bvr__9) _) =>
     (whenSome ((equal v bvr__9) && (decide ((to2 + (1 : Int)) = from1)))
     ((O.bv_extract from2 to1 v)))
     | _, _ => none)
 
 def bv_concat.r_extract_extracts (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.unop (Unop.bvExtract _ _) _) _), (Term.mk (Kind.binop Binop.bvConcat (Term.mk (Kind.unop (Unop.bvExtract _ _) _) _) (Term.mk (Kind.unop (Unop.bvExtract _ _) _) _)) _) =>
+    | (Term.mk (Kind.Unop (Unop.BvExtract _ _) _) _), (Term.mk (Kind.Binop Binop.BvConcat (Term.mk (Kind.Unop (Unop.BvExtract _ _) _) _) (Term.mk (Kind.Unop (Unop.BvExtract _ _) _) _)) _) =>
     (whenSome true
-    ((Term.mk (Kind.binop Binop.bvConcat v1 v2) (Ty.bitVector ((size v1) + (size v2))))))
+    ((Term.mk (Kind.Binop Binop.BvConcat v1 v2) (Ty.TBitVector ((size v1) + (size v2))))))
     | _, _ => none)
 
 def bv_concat.r_assoc_l (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.unop (Unop.bvExtract _ _) x) _), (Term.mk (Kind.binop Binop.bvConcat left@(Term.mk (Kind.unop (Unop.bvExtract _ _) bvr__10) _) right) _) =>
+    | (Term.mk (Kind.Unop (Unop.BvExtract _ _) x) _), (Term.mk (Kind.Binop Binop.BvConcat left@(Term.mk (Kind.Unop (Unop.BvExtract _ _) bvr__10) _) right) _) =>
     (whenSome (equal x bvr__10) ((O.bv_concat (O.bv_concat v1 left) right)))
     | _, _ => none)
 
 def bv_concat.r_assoc_r (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop Binop.bvConcat left right@(Term.mk (Kind.unop (Unop.bvExtract _ _) x) _)) _), (Term.mk (Kind.unop (Unop.bvExtract _ _) bvr__13) _) =>
+    | (Term.mk (Kind.Binop Binop.BvConcat left right@(Term.mk (Kind.Unop (Unop.BvExtract _ _) x) _)) _), (Term.mk (Kind.Unop (Unop.BvExtract _ _) bvr__13) _) =>
     (whenSome (equal x bvr__13) ((O.bv_concat left (O.bv_concat right v2))))
     | _, _ => none)
 
 def bv_concat.r_ites (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.triop Triop.ite b l1 r1) _), (Term.mk (Kind.triop Triop.ite bvr__7 l2 r2) _) =>
+    | (Term.mk (Kind.Triop Triop.Ite b l1 r1) _), (Term.mk (Kind.Triop Triop.Ite bvr__7 l2 r2) _) =>
     (whenSome (equal b bvr__7)
     ((O.b_ite b (O.bv_concat l1 l2) (O.bv_concat r1 r2))))
     | _, _ => none)
@@ -3091,14 +3091,14 @@ def bv_concat.r_default (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | _, _ =>
     (whenSome true
-    ((Term.mk (Kind.binop Binop.bvConcat v1 v2) (Ty.bitVector ((size v1) + (size v2)))))))
+    ((Term.mk (Kind.Binop Binop.BvConcat v1 v2) (Ty.TBitVector ((size v1) + (size v2)))))))
 
 def bv_concat.step (O : Ops) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [bv_concat.r_lits O v1 v2, bv_concat.r_extracts O v1 v2, bv_concat.r_extract_extracts O v1 v2, bv_concat.r_assoc_l O v1 v2, bv_concat.r_assoc_r O v1 v2, bv_concat.r_ites O v1 v2, bv_concat.r_default O v1 v2]).getD (bv_concat.spec v1 v2)
 
 def bv_shl.r_lits (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | l@(Term.mk (Kind.bitVec _) _), r@(Term.mk (Kind.bitVec _) _) =>
+    | l@(Term.mk (Kind.BitVec _) _), r@(Term.mk (Kind.BitVec _) _) =>
     (let l := bv_of_lit l;
     let r := bv_of_lit r;
     (whenSome true ((lit (lit_shl l r)))))
@@ -3106,20 +3106,20 @@ def bv_shl.r_lits (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def bv_shl.r_zero (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | _, (Term.mk (Kind.bitVec bvr__2) _) =>
+    | _, (Term.mk (Kind.BitVec bvr__2) _) =>
     (whenSome (decide (bvr__2 = (0 : Int))) (v1))
     | _, _ => none)
 
 def bv_shl.r_big (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | _, s@(Term.mk (Kind.bitVec _) _) =>
+    | _, s@(Term.mk (Kind.BitVec _) _) =>
     (let s := bv_of_lit s;
     (whenSome (decide ((to_z false s) ≥ (size v1))) ((bv_zero (size v1)))))
     | _, _ => none)
 
 def bv_shl.r_shl (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop Binop.shl v s1@(Term.mk (Kind.bitVec _) _)) _), s2@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Binop Binop.Shl v s1@(Term.mk (Kind.BitVec _) _)) _), s2@(Term.mk (Kind.BitVec _) _) =>
     (let s1 := bv_of_lit s1;
     let s2 := bv_of_lit s2;
     (whenSome true
@@ -3129,7 +3129,7 @@ def bv_shl.r_shl (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def bv_shl.r_lshr (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop Binop.lShr x sr@(Term.mk (Kind.bitVec _) _)) _), sl@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Binop Binop.LShr x sr@(Term.mk (Kind.BitVec _) _)) _), sl@(Term.mk (Kind.BitVec _) _) =>
     (let sr := bv_of_lit sr;
     let sl := bv_of_lit sl;
     (whenSome true
@@ -3141,13 +3141,13 @@ def bv_shl.r_lshr (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def bv_shl.r_and_mask (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop Binop.bitAnd x mask@(Term.mk (Kind.bitVec _) _)) _), s@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Binop Binop.BitAnd x mask@(Term.mk (Kind.BitVec _) _)) _), s@(Term.mk (Kind.BitVec _) _) =>
     (let mask := bv_of_lit mask;
     let s := bv_of_lit s;
     (whenSome true ((O.bv_and (O.bv_shl x v2) (lit (lit_shl mask s))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.bitAnd mask@(Term.mk (Kind.bitVec _) _) x) _), s@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop Binop.BitAnd mask@(Term.mk (Kind.BitVec _) _) x) _), s@(Term.mk (Kind.BitVec _) _) =>
         (let mask := bv_of_lit mask;
         let s := bv_of_lit s;
         (whenSome true ((O.bv_and (O.bv_shl x v2) (lit (lit_shl mask s))))))
@@ -3155,13 +3155,13 @@ def bv_shl.r_and_mask (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def bv_shl.r_or_mask (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop Binop.bitOr x mask@(Term.mk (Kind.bitVec _) _)) _), s@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Binop Binop.BitOr x mask@(Term.mk (Kind.BitVec _) _)) _), s@(Term.mk (Kind.BitVec _) _) =>
     (let mask := bv_of_lit mask;
     let s := bv_of_lit s;
     (whenSome true ((O.bv_or (O.bv_shl x v2) (lit (lit_shl mask s))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.bitOr mask@(Term.mk (Kind.bitVec _) _) x) _), s@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop Binop.BitOr mask@(Term.mk (Kind.BitVec _) _) x) _), s@(Term.mk (Kind.BitVec _) _) =>
         (let mask := bv_of_lit mask;
         let s := bv_of_lit s;
         (whenSome true ((O.bv_or (O.bv_shl x v2) (lit (lit_shl mask s))))))
@@ -3170,14 +3170,14 @@ def bv_shl.r_or_mask (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 def bv_shl.r_default (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | _, _ =>
-    (whenSome true ((Term.mk (Kind.binop Binop.shl v1 v2) (ty v1)))))
+    (whenSome true ((Term.mk (Kind.Binop Binop.Shl v1 v2) (ty v1)))))
 
 def bv_shl.step (O : Ops) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [bv_shl.r_lits O v1 v2, bv_shl.r_zero O v1 v2, bv_shl.r_big O v1 v2, bv_shl.r_shl O v1 v2, bv_shl.r_lshr O v1 v2, bv_shl.r_and_mask O v1 v2, bv_shl.r_or_mask O v1 v2, bv_shl.r_default O v1 v2]).getD (bv_shl.spec v1 v2)
 
 def bv_lshr.r_lits (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | l@(Term.mk (Kind.bitVec _) _), r@(Term.mk (Kind.bitVec _) _) =>
+    | l@(Term.mk (Kind.BitVec _) _), r@(Term.mk (Kind.BitVec _) _) =>
     (let l := bv_of_lit l;
     let r := bv_of_lit r;
     (whenSome true ((lit (lit_lshr l r)))))
@@ -3185,20 +3185,20 @@ def bv_lshr.r_lits (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def bv_lshr.r_zero (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | _, (Term.mk (Kind.bitVec bvr__2) _) =>
+    | _, (Term.mk (Kind.BitVec bvr__2) _) =>
     (whenSome (decide (bvr__2 = (0 : Int))) (v1))
     | _, _ => none)
 
 def bv_lshr.r_big (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | _, s@(Term.mk (Kind.bitVec _) _) =>
+    | _, s@(Term.mk (Kind.BitVec _) _) =>
     (let s := bv_of_lit s;
     (whenSome (decide ((to_z false s) ≥ (size v1))) ((bv_zero (size v1)))))
     | _, _ => none)
 
 def bv_lshr.r_lshr (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop Binop.lShr v s1@(Term.mk (Kind.bitVec _) _)) _), s2@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Binop Binop.LShr v s1@(Term.mk (Kind.BitVec _) _)) _), s2@(Term.mk (Kind.BitVec _) _) =>
     (let s1 := bv_of_lit s1;
     let s2 := bv_of_lit s2;
     (whenSome true
@@ -3208,13 +3208,13 @@ def bv_lshr.r_lshr (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def bv_lshr.r_and_mask (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop Binop.bitAnd x mask@(Term.mk (Kind.bitVec _) _)) _), s@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Binop Binop.BitAnd x mask@(Term.mk (Kind.BitVec _) _)) _), s@(Term.mk (Kind.BitVec _) _) =>
     (let mask := bv_of_lit mask;
     let s := bv_of_lit s;
     (whenSome true ((O.bv_and (O.bv_lshr x v2) (lit (lit_lshr mask s))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.bitAnd mask@(Term.mk (Kind.bitVec _) _) x) _), s@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop Binop.BitAnd mask@(Term.mk (Kind.BitVec _) _) x) _), s@(Term.mk (Kind.BitVec _) _) =>
         (let mask := bv_of_lit mask;
         let s := bv_of_lit s;
         (whenSome true ((O.bv_and (O.bv_lshr x v2) (lit (lit_lshr mask s))))))
@@ -3222,13 +3222,13 @@ def bv_lshr.r_and_mask (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def bv_lshr.r_or_mask (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop Binop.bitOr x mask@(Term.mk (Kind.bitVec _) _)) _), s@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Binop Binop.BitOr x mask@(Term.mk (Kind.BitVec _) _)) _), s@(Term.mk (Kind.BitVec _) _) =>
     (let mask := bv_of_lit mask;
     let s := bv_of_lit s;
     (whenSome true ((O.bv_or (O.bv_lshr x v2) (lit (lit_lshr mask s))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop Binop.bitOr mask@(Term.mk (Kind.bitVec _) _) x) _), s@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop Binop.BitOr mask@(Term.mk (Kind.BitVec _) _) x) _), s@(Term.mk (Kind.BitVec _) _) =>
         (let mask := bv_of_lit mask;
         let s := bv_of_lit s;
         (whenSome true ((O.bv_or (O.bv_lshr x v2) (lit (lit_lshr mask s))))))
@@ -3237,14 +3237,14 @@ def bv_lshr.r_or_mask (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 def bv_lshr.r_default (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | _, _ =>
-    (whenSome true ((Term.mk (Kind.binop Binop.lShr v1 v2) (ty v1)))))
+    (whenSome true ((Term.mk (Kind.Binop Binop.LShr v1 v2) (ty v1)))))
 
 def bv_lshr.step (O : Ops) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [bv_lshr.r_lits O v1 v2, bv_lshr.r_zero O v1 v2, bv_lshr.r_big O v1 v2, bv_lshr.r_lshr O v1 v2, bv_lshr.r_and_mask O v1 v2, bv_lshr.r_or_mask O v1 v2, bv_lshr.r_default O v1 v2]).getD (bv_lshr.spec v1 v2)
 
 def bv_ashr.r_lits (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | l@(Term.mk (Kind.bitVec _) _), r@(Term.mk (Kind.bitVec _) _) =>
+    | l@(Term.mk (Kind.BitVec _) _), r@(Term.mk (Kind.BitVec _) _) =>
     (let l := bv_of_lit l;
     let r := bv_of_lit r;
     (whenSome true ((lit (lit_ashr l r)))))
@@ -3252,13 +3252,13 @@ def bv_ashr.r_lits (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def bv_ashr.r_zero (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | _, (Term.mk (Kind.bitVec bvr__2) _) =>
+    | _, (Term.mk (Kind.BitVec bvr__2) _) =>
     (whenSome (decide (bvr__2 = (0 : Int))) (v1))
     | _, _ => none)
 
 def bv_ashr.r_big (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | _, s@(Term.mk (Kind.bitVec _) _) =>
+    | _, s@(Term.mk (Kind.BitVec _) _) =>
     (let s := bv_of_lit s;
     (whenSome (decide ((to_z false s) ≥ (size v1)))
     ((let sz := (size v1);
@@ -3267,7 +3267,7 @@ def bv_ashr.r_big (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 
 def bv_ashr.r_ashr (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop Binop.aShr v s1@(Term.mk (Kind.bitVec _) _)) _), s2@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Binop Binop.AShr v s1@(Term.mk (Kind.BitVec _) _)) _), s2@(Term.mk (Kind.BitVec _) _) =>
     (let s1 := bv_of_lit s1;
     let s2 := bv_of_lit s2;
     (whenSome true
@@ -3278,14 +3278,14 @@ def bv_ashr.r_ashr (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
 def bv_ashr.r_default (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | _, _ =>
-    (whenSome true ((Term.mk (Kind.binop Binop.aShr v1 v2) (ty v1)))))
+    (whenSome true ((Term.mk (Kind.Binop Binop.AShr v1 v2) (ty v1)))))
 
 def bv_ashr.step (O : Ops) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [bv_ashr.r_lits O v1 v2, bv_ashr.r_zero O v1 v2, bv_ashr.r_big O v1 v2, bv_ashr.r_ashr O v1 v2, bv_ashr.r_default O v1 v2]).getD (bv_ashr.spec v1 v2)
 
 def bv_mul.r_lits (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | l@(Term.mk (Kind.bitVec _) _), r@(Term.mk (Kind.bitVec _) _) =>
+    | l@(Term.mk (Kind.BitVec _) _), r@(Term.mk (Kind.BitVec _) _) =>
     (let l := bv_of_lit l;
     let r := bv_of_lit r;
     (whenSome true ((lit (lit_mul l r)))))
@@ -3293,33 +3293,33 @@ def bv_mul.r_lits (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option
 
 def bv_mul.r_one (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | x, (Term.mk (Kind.bitVec bvr__2) _) =>
+    | x, (Term.mk (Kind.BitVec bvr__2) _) =>
     (whenSome (decide (bvr__2 = (1 : Int))) (x))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.bitVec bvr__2) _), x =>
+        | (Term.mk (Kind.BitVec bvr__2) _), x =>
         (whenSome (decide (bvr__2 = (1 : Int))) (x))
         | _, _ => none)
 
 def bv_mul.r_zero (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | _, (Term.mk (Kind.bitVec bvr__2) _) =>
+    | _, (Term.mk (Kind.BitVec bvr__2) _) =>
     (whenSome (decide (bvr__2 = (0 : Int))) ((bv_zero (size v1))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.bitVec bvr__2) _), _ =>
+        | (Term.mk (Kind.BitVec bvr__2) _), _ =>
         (whenSome (decide (bvr__2 = (0 : Int))) ((bv_zero (size v1))))
         | _, _ => none)
 
 def bv_mul.r_neg (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | c@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.unop (Unop.neg true) x) _) =>
+    | c@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Unop (Unop.Neg true) x) _) =>
     (let c := bv_of_lit c;
     (whenSome (! (is_int_min c))
     ((O.bv_mul (checked_meet checked checked_signed) (lit (lit_neg c)) x))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.unop (Unop.neg true) x) _), c@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Unop (Unop.Neg true) x) _), c@(Term.mk (Kind.BitVec _) _) =>
         (let c := bv_of_lit c;
         (whenSome (! (is_int_min c))
         ((O.bv_mul (checked_meet checked checked_signed) (lit (lit_neg c)) x))))
@@ -3327,7 +3327,7 @@ def bv_mul.r_neg (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option 
 
 def bv_mul.r_mul_const (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.mul ckm) x n@(Term.mk (Kind.bitVec _) _)) _), m@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Binop (Binop.Mul ckm) x n@(Term.mk (Kind.BitVec _) _)) _), m@(Term.mk (Kind.BitVec _) _) =>
     (let n := bv_of_lit n;
     let m := bv_of_lit m;
     (whenSome (is_checked (checked_meet checked ckm))
@@ -3338,7 +3338,7 @@ def bv_mul.r_mul_const (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : O
      (O.bv_mul checked x (lit (lit_mul n m))))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.mul ckm) n@(Term.mk (Kind.bitVec _) _) x) _), m@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop (Binop.Mul ckm) n@(Term.mk (Kind.BitVec _) _) x) _), m@(Term.mk (Kind.BitVec _) _) =>
         (let n := bv_of_lit n;
         let m := bv_of_lit m;
         (whenSome (is_checked (checked_meet checked ckm))
@@ -3349,7 +3349,7 @@ def bv_mul.r_mul_const (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : O
          (O.bv_mul checked x (lit (lit_mul n m))))))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | m@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.mul ckm) x n@(Term.mk (Kind.bitVec _) _)) _) =>
+        | m@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop (Binop.Mul ckm) x n@(Term.mk (Kind.BitVec _) _)) _) =>
         (let m := bv_of_lit m;
         let n := bv_of_lit n;
         (whenSome (is_checked (checked_meet checked ckm))
@@ -3360,7 +3360,7 @@ def bv_mul.r_mul_const (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : O
          (O.bv_mul checked x (lit (lit_mul n m))))))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | m@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.mul ckm) n@(Term.mk (Kind.bitVec _) _) x) _) =>
+        | m@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop (Binop.Mul ckm) n@(Term.mk (Kind.BitVec _) _) x) _) =>
         (let m := bv_of_lit m;
         let n := bv_of_lit n;
         (whenSome (is_checked (checked_meet checked ckm))
@@ -3373,12 +3373,12 @@ def bv_mul.r_mul_const (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : O
 
 def bv_mul.r_ite (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.triop Triop.ite b l r) _), x@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Triop Triop.Ite b l r) _), x@(Term.mk (Kind.BitVec _) _) =>
     (whenSome true
     ((O.b_ite b (O.bv_mul unchecked l x) (O.bv_mul unchecked r x))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | x@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.triop Triop.ite b l r) _) =>
+        | x@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Triop Triop.Ite b l r) _) =>
         (whenSome true
         ((O.b_ite b (O.bv_mul unchecked l x) (O.bv_mul unchecked r x))))
         | _, _ => none)
@@ -3387,14 +3387,14 @@ def bv_mul.r_default (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Opt
   (match v1, v2 with
     | _, _ =>
     (whenSome true
-    ((Term.mk (mk_commut_binop O (Binop.mul checked) v1 v2) (ty v1)))))
+    ((Term.mk (mk_commut_binop O (Binop.Mul checked) v1 v2) (ty v1)))))
 
 def bv_mul.step (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [bv_mul.r_lits O checked v1 v2, bv_mul.r_one O checked v1 v2, bv_mul.r_zero O checked v1 v2, bv_mul.r_neg O checked v1 v2, bv_mul.r_mul_const O checked v1 v2, bv_mul.r_ite O checked v1 v2, bv_mul.r_default O checked v1 v2]).getD (bv_mul.spec checked v1 v2)
 
 def bv_div.r_lits (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | l@(Term.mk (Kind.bitVec _) _), r@(Term.mk (Kind.bitVec _) _) =>
+    | l@(Term.mk (Kind.BitVec _) _), r@(Term.mk (Kind.BitVec _) _) =>
     (let l := bv_of_lit l;
     let r := bv_of_lit r;
     (whenSome true
@@ -3403,30 +3403,30 @@ def bv_div.r_lits (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Ter
 
 def bv_div.r_one (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | _, (Term.mk (Kind.bitVec bvr__2) _) =>
+    | _, (Term.mk (Kind.BitVec bvr__2) _) =>
     (whenSome (decide (bvr__2 = (1 : Int))) (v1))
     | _, _ => none)
 
 def bv_div.r_mul_lits (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.mul checked) l@(Term.mk (Kind.bitVec _) _) r@(Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Binop (Binop.Mul checked) l@(Term.mk (Kind.BitVec _) _) r@(Term.mk (Kind.BitVec _) _)) _), (Term.mk (Kind.BitVec _) _) =>
     (whenSome true ((O.bv_div signed (O.bv_mul checked l r) v2)))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.mul checked) r@(Term.mk (Kind.bitVec _) _) l@(Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop (Binop.Mul checked) r@(Term.mk (Kind.BitVec _) _) l@(Term.mk (Kind.BitVec _) _)) _), (Term.mk (Kind.BitVec _) _) =>
         (whenSome true ((O.bv_div signed (O.bv_mul checked l r) v2)))
         | _, _ => none)
 
 def bv_div.r_mul_div (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.mul ⟨_, true⟩) n@(Term.mk (Kind.bitVec _) _) x) _), d@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Binop (Binop.Mul ⟨_, true⟩) n@(Term.mk (Kind.BitVec _) _) x) _), d@(Term.mk (Kind.BitVec _) _) =>
     (let n := bv_of_lit n;
     let d := bv_of_lit d;
     (whenSome ((! signed) && ((decide ((to_z false d) ≠ (0 : Int))) && (udivides d n)))
     ((O.bv_mul checked_unsigned x (lit (lit_udiv n d))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.mul ⟨_, true⟩) x n@(Term.mk (Kind.bitVec _) _)) _), d@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop (Binop.Mul ⟨_, true⟩) x n@(Term.mk (Kind.BitVec _) _)) _), d@(Term.mk (Kind.BitVec _) _) =>
         (let n := bv_of_lit n;
         let d := bv_of_lit d;
         (whenSome ((! signed) && ((decide ((to_z false d) ≠ (0 : Int))) && (udivides d n)))
@@ -3435,14 +3435,14 @@ def bv_div.r_mul_div (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option 
 
 def bv_div.r_div_mul (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.mul ⟨_, true⟩) n@(Term.mk (Kind.bitVec _) _) x) _), d@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Binop (Binop.Mul ⟨_, true⟩) n@(Term.mk (Kind.BitVec _) _) x) _), d@(Term.mk (Kind.BitVec _) _) =>
     (let n := bv_of_lit n;
     let d := bv_of_lit d;
     (whenSome ((! signed) && ((decide ((to_z false n) ≠ (0 : Int))) && (udivides n d)))
     ((O.bv_div signed x (lit (lit_udiv d n))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.mul ⟨_, true⟩) x n@(Term.mk (Kind.bitVec _) _)) _), d@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop (Binop.Mul ⟨_, true⟩) x n@(Term.mk (Kind.BitVec _) _)) _), d@(Term.mk (Kind.BitVec _) _) =>
         (let n := bv_of_lit n;
         let d := bv_of_lit d;
         (whenSome ((! signed) && ((decide ((to_z false n) ≠ (0 : Int))) && (udivides n d)))
@@ -3451,7 +3451,7 @@ def bv_div.r_div_mul (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option 
 
 def bv_div.r_div_div (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.div false) x n@(Term.mk (Kind.bitVec _) _)) _), d@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Binop (Binop.Div false) x n@(Term.mk (Kind.BitVec _) _)) _), d@(Term.mk (Kind.BitVec _) _) =>
     (let n := bv_of_lit n;
     let d := bv_of_lit d;
     (whenSome ((! signed) && ((decide ((to_z false n) ≠ (0 : Int))) && (! (mul_overflows false n d))))
@@ -3460,7 +3460,7 @@ def bv_div.r_div_div (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option 
 
 def bv_div.r_zext (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.unop (Unop.bvExtend false «by») x) _), z@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Unop (Unop.BvExtend false «by») x) _), z@(Term.mk (Kind.BitVec _) _) =>
     (let z := bv_of_lit z;
     (whenSome ((! signed) && (decide ((msb_of v2) < (size x))))
     ((O.bv_extend false «by» (O.bv_div signed x (lit (of_z (size x) (to_z false z))))))))
@@ -3469,71 +3469,71 @@ def bv_div.r_zext (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Ter
 def bv_div.r_default (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | _, _ =>
-    (whenSome true ((Term.mk (Kind.binop (Binop.div signed) v1 v2) (ty v1)))))
+    (whenSome true ((Term.mk (Kind.Binop (Binop.Div signed) v1 v2) (ty v1)))))
 
 def bv_div.step (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [bv_div.r_lits O signed v1 v2, bv_div.r_one O signed v1 v2, bv_div.r_mul_lits O signed v1 v2, bv_div.r_mul_div O signed v1 v2, bv_div.r_div_mul O signed v1 v2, bv_div.r_div_div O signed v1 v2, bv_div.r_zext O signed v1 v2, bv_div.r_default O signed v1 v2]).getD (bv_div.spec signed v1 v2)
 
 def bv_lt_zero.r_sext (O : Ops) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.unop (Unop.bvExtend true _) x) _) =>
+    | (Term.mk (Kind.Unop (Unop.BvExtend true _) x) _) =>
     (whenSome true ((O.bv_lt_zero x)))
     | _ => none)
 
 def bv_lt_zero.r_zext (O : Ops) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.unop (Unop.bvExtend false k) _) _) =>
+    | (Term.mk (Kind.Unop (Unop.BvExtend false k) _) _) =>
     (whenSome (decide (k > (0 : Int))) (v_false))
     | _ => none)
 
 def bv_lt_zero.r_srem (O : Ops) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.binop (Binop.rem true) l _) _) =>
+    | (Term.mk (Kind.Binop (Binop.Rem true) l _) _) =>
     (whenSome true
     ((O.b_and (O.bv_lt_zero l) (O.b_not (O.sem_eq v (bv_zero (size v)))))))
     | _ => none)
 
 def bv_lt_zero.r_concat (O : Ops) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.binop Binop.bvConcat l _) _) =>
+    | (Term.mk (Kind.Binop Binop.BvConcat l _) _) =>
     (whenSome true ((O.bv_lt_zero l)))
     | _ => none)
 
 def bv_lt_zero.r_not (O : Ops) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.unop Unop.bvNot x) _) =>
+    | (Term.mk (Kind.Unop Unop.BvNot x) _) =>
     (whenSome true ((O.b_not (O.bv_lt_zero x))))
     | _ => none)
 
 def bv_lt_zero.r_of_bool (O : Ops) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.unop (Unop.bvOfBool n) _) _) =>
+    | (Term.mk (Kind.Unop (Unop.BvOfBool n) _) _) =>
     (whenSome (decide (n > (1 : Int))) (v_false))
     | _ => none)
 
 def bv_lt_zero.r_ite (O : Ops) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.triop Triop.ite _ l r) _) =>
+    | (Term.mk (Kind.Triop Triop.Ite _ l r) _) =>
     (whenSome true
     ((let pos_l := (O.bv_lt_zero l);
      (let pos_r := (O.bv_lt_zero r);
      (if (equal pos_l pos_r)
      then pos_l
-     else (Term.mk (Kind.binop (Binop.lt true) v (bv_zero (size v))) Ty.bool))))))
+     else (Term.mk (Kind.Binop (Binop.Lt true) v (bv_zero (size v))) Ty.TBool))))))
     | _ => none)
 
 def bv_lt_zero.r_default (O : Ops) (v : Term) : Option Term :=
   (match v with
     | _ =>
     (whenSome true
-    ((Term.mk (Kind.binop (Binop.lt true) v (bv_zero (size v))) Ty.bool))))
+    ((Term.mk (Kind.Binop (Binop.Lt true) v (bv_zero (size v))) Ty.TBool))))
 
 def bv_lt_zero.step (O : Ops) (v : Term) : Term :=
   (firstSome [bv_lt_zero.r_sext O v, bv_lt_zero.r_zext O v, bv_lt_zero.r_srem O v, bv_lt_zero.r_concat O v, bv_lt_zero.r_not O v, bv_lt_zero.r_of_bool O v, bv_lt_zero.r_ite O v, bv_lt_zero.r_default O v]).getD (bv_lt_zero.spec v)
 
 def bv_lt.r_lits (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | l@(Term.mk (Kind.bitVec _) _), r@(Term.mk (Kind.bitVec _) _) =>
+    | l@(Term.mk (Kind.BitVec _) _), r@(Term.mk (Kind.BitVec _) _) =>
     (let l := bv_of_lit l;
     let r := bv_of_lit r;
     (whenSome true ((of_bool (decide ((to_z signed l) < (to_z signed r)))))))
@@ -3544,13 +3544,13 @@ def bv_lt.r_same (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term
 
 def bv_lt.r_negs (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.unop (Unop.neg true) a) _), (Term.mk (Kind.unop (Unop.neg true) b) _) =>
+    | (Term.mk (Kind.Unop (Unop.Neg true) a) _), (Term.mk (Kind.Unop (Unop.Neg true) b) _) =>
     (whenSome signed ((O.bv_lt signed b a)))
     | _, _ => none)
 
 def bv_lt.r_neg_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.unop (Unop.neg true) a) _), c@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Unop (Unop.Neg true) a) _), c@(Term.mk (Kind.BitVec _) _) =>
     (let c := bv_of_lit c;
     (whenSome (signed && (! (is_int_min c)))
     ((O.bv_lt signed (O.bv_neg false v2) a))))
@@ -3558,7 +3558,7 @@ def bv_lt.r_neg_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Ter
 
 def bv_lt.r_neg_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | c@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.unop (Unop.neg true) a) _) =>
+    | c@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Unop (Unop.Neg true) a) _) =>
     (let c := bv_of_lit c;
     (whenSome (signed && (! (is_int_min c)))
     ((O.bv_lt signed a (O.bv_neg false v1)))))
@@ -3566,79 +3566,79 @@ def bv_lt.r_neg_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Ter
 
 def bv_lt.r_const_add (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | c@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.add checked) r@(Term.mk (Kind.bitVec _) _) x) _) =>
+    | c@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop (Binop.Add checked) r@(Term.mk (Kind.BitVec _) _) x) _) =>
     (let c := bv_of_lit c;
     let r := bv_of_lit r;
     (whenSome (checked_has signed checked)
     ((if (sub_overflows signed c r)
      then (if (! signed)
           then v_true
-          else (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))
+          else (Term.mk (Kind.Binop (Binop.Lt signed) v1 v2) Ty.TBool))
      else (O.bv_lt signed (lit (lit_sub c r)) x)))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | c@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.add checked) x r@(Term.mk (Kind.bitVec _) _)) _) =>
+        | c@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop (Binop.Add checked) x r@(Term.mk (Kind.BitVec _) _)) _) =>
         (let c := bv_of_lit c;
         let r := bv_of_lit r;
         (whenSome (checked_has signed checked)
         ((if (sub_overflows signed c r)
          then (if (! signed)
               then v_true
-              else (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))
+              else (Term.mk (Kind.Binop (Binop.Lt signed) v1 v2) Ty.TBool))
          else (O.bv_lt signed (lit (lit_sub c r)) x)))))
         | _, _ => none)
 
 def bv_lt.r_add_const (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.add checked) l@(Term.mk (Kind.bitVec _) _) x) _), c@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Binop (Binop.Add checked) l@(Term.mk (Kind.BitVec _) _) x) _), c@(Term.mk (Kind.BitVec _) _) =>
     (let l := bv_of_lit l;
     let c := bv_of_lit c;
     (whenSome (checked_has signed checked)
     ((if (sub_overflows signed c l)
      then (if (! signed)
           then v_false
-          else (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))
+          else (Term.mk (Kind.Binop (Binop.Lt signed) v1 v2) Ty.TBool))
      else (O.bv_lt signed x (lit (lit_sub c l)))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add checked) x l@(Term.mk (Kind.bitVec _) _)) _), c@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop (Binop.Add checked) x l@(Term.mk (Kind.BitVec _) _)) _), c@(Term.mk (Kind.BitVec _) _) =>
         (let l := bv_of_lit l;
         let c := bv_of_lit c;
         (whenSome (checked_has signed checked)
         ((if (sub_overflows signed c l)
          then (if (! signed)
               then v_false
-              else (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))
+              else (Term.mk (Kind.Binop (Binop.Lt signed) v1 v2) Ty.TBool))
          else (O.bv_lt signed x (lit (lit_sub c l)))))))
         | _, _ => none)
 
 def bv_lt.r_self_add_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | a, (Term.mk (Kind.binop (Binop.add checked) bvr__4 b) _) =>
+    | a, (Term.mk (Kind.Binop (Binop.Add checked) bvr__4 b) _) =>
     (whenSome ((equal a bvr__4) && (checked_has signed checked))
     ((O.bv_lt signed (bv_zero (size v1)) b)))
     | _, _ => none)
   <|> (match v1, v2 with
-        | a, (Term.mk (Kind.binop (Binop.add checked) b bvr__4) _) =>
+        | a, (Term.mk (Kind.Binop (Binop.Add checked) b bvr__4) _) =>
         (whenSome ((equal a bvr__4) && (checked_has signed checked))
         ((O.bv_lt signed (bv_zero (size v1)) b)))
         | _, _ => none)
 
 def bv_lt.r_self_add_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.add checked) a b) _), bvr__7 =>
+    | (Term.mk (Kind.Binop (Binop.Add checked) a b) _), bvr__7 =>
     (whenSome ((equal a bvr__7) && (checked_has signed checked))
     ((O.bv_lt signed b (bv_zero (size v1)))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add checked) b a) _), bvr__7 =>
+        | (Term.mk (Kind.Binop (Binop.Add checked) b a) _), bvr__7 =>
         (whenSome ((equal a bvr__7) && (checked_has signed checked))
         ((O.bv_lt signed b (bv_zero (size v1)))))
         | _, _ => none)
 
 def bv_lt.r_add_add (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.add checked_l) l@(Term.mk (Kind.bitVec _) _) y) _), (Term.mk (Kind.binop (Binop.add checked_r) r@(Term.mk (Kind.bitVec _) _) x) _) =>
+    | (Term.mk (Kind.Binop (Binop.Add checked_l) l@(Term.mk (Kind.BitVec _) _) y) _), (Term.mk (Kind.Binop (Binop.Add checked_r) r@(Term.mk (Kind.BitVec _) _) x) _) =>
     (let l := bv_of_lit l;
     let r := bv_of_lit r;
     (whenSome ((checked_has signed checked_l) && (checked_has signed checked_r))
@@ -3646,10 +3646,10 @@ def bv_lt.r_add_add (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option T
      then (O.bv_lt signed (O.bv_add (checked_of_signed signed) y (lit (lit_sub l r))) x)
      else (if (const_keeps_in_range signed r l)
           then (O.bv_lt signed y (O.bv_add (checked_of_signed signed) x (lit (lit_sub r l))))
-          else (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))))))
+          else (Term.mk (Kind.Binop (Binop.Lt signed) v1 v2) Ty.TBool))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add checked_l) l@(Term.mk (Kind.bitVec _) _) y) _), (Term.mk (Kind.binop (Binop.add checked_r) x r@(Term.mk (Kind.bitVec _) _)) _) =>
+        | (Term.mk (Kind.Binop (Binop.Add checked_l) l@(Term.mk (Kind.BitVec _) _) y) _), (Term.mk (Kind.Binop (Binop.Add checked_r) x r@(Term.mk (Kind.BitVec _) _)) _) =>
         (let l := bv_of_lit l;
         let r := bv_of_lit r;
         (whenSome ((checked_has signed checked_l) && (checked_has signed checked_r))
@@ -3657,10 +3657,10 @@ def bv_lt.r_add_add (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option T
          then (O.bv_lt signed (O.bv_add (checked_of_signed signed) y (lit (lit_sub l r))) x)
          else (if (const_keeps_in_range signed r l)
               then (O.bv_lt signed y (O.bv_add (checked_of_signed signed) x (lit (lit_sub r l))))
-              else (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))))))
+              else (Term.mk (Kind.Binop (Binop.Lt signed) v1 v2) Ty.TBool))))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add checked_l) y l@(Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.binop (Binop.add checked_r) r@(Term.mk (Kind.bitVec _) _) x) _) =>
+        | (Term.mk (Kind.Binop (Binop.Add checked_l) y l@(Term.mk (Kind.BitVec _) _)) _), (Term.mk (Kind.Binop (Binop.Add checked_r) r@(Term.mk (Kind.BitVec _) _) x) _) =>
         (let l := bv_of_lit l;
         let r := bv_of_lit r;
         (whenSome ((checked_has signed checked_l) && (checked_has signed checked_r))
@@ -3668,10 +3668,10 @@ def bv_lt.r_add_add (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option T
          then (O.bv_lt signed (O.bv_add (checked_of_signed signed) y (lit (lit_sub l r))) x)
          else (if (const_keeps_in_range signed r l)
               then (O.bv_lt signed y (O.bv_add (checked_of_signed signed) x (lit (lit_sub r l))))
-              else (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))))))
+              else (Term.mk (Kind.Binop (Binop.Lt signed) v1 v2) Ty.TBool))))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add checked_l) y l@(Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.binop (Binop.add checked_r) x r@(Term.mk (Kind.bitVec _) _)) _) =>
+        | (Term.mk (Kind.Binop (Binop.Add checked_l) y l@(Term.mk (Kind.BitVec _) _)) _), (Term.mk (Kind.Binop (Binop.Add checked_r) x r@(Term.mk (Kind.BitVec _) _)) _) =>
         (let l := bv_of_lit l;
         let r := bv_of_lit r;
         (whenSome ((checked_has signed checked_l) && (checked_has signed checked_r))
@@ -3679,70 +3679,70 @@ def bv_lt.r_add_add (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option T
          then (O.bv_lt signed (O.bv_add (checked_of_signed signed) y (lit (lit_sub l r))) x)
          else (if (const_keeps_in_range signed r l)
               then (O.bv_lt signed y (O.bv_add (checked_of_signed signed) x (lit (lit_sub r l))))
-              else (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))))))
+              else (Term.mk (Kind.Binop (Binop.Lt signed) v1 v2) Ty.TBool))))))
         | _, _ => none)
 
 def bv_lt.r_one (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | _, (Term.mk (Kind.bitVec bvr__2) _) =>
+    | _, (Term.mk (Kind.BitVec bvr__2) _) =>
     (whenSome ((decide (bvr__2 = (1 : Int))) && (! signed))
     ((O.sem_eq v1 (bv_zero (size v1)))))
     | _, _ => none)
 
 def bv_lt.r_of_bool (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | _, (Term.mk (Kind.unop (Unop.bvOfBool n) b) _) =>
+    | _, (Term.mk (Kind.Unop (Unop.BvOfBool n) b) _) =>
     (whenSome (! signed) ((O.b_and b (O.sem_eq v1 (bv_zero n)))))
     | _, _ => none)
 
 def bv_lt.r_ite_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.triop Triop.ite b l r) _), _ =>
+    | (Term.mk (Kind.Triop Triop.Ite b l r) _), _ =>
     (whenSome true ((O.b_ite b (O.bv_lt signed l v2) (O.bv_lt signed r v2))))
     | _, _ => none)
 
 def bv_lt.r_ite_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | _, (Term.mk (Kind.triop Triop.ite b l r) _) =>
+    | _, (Term.mk (Kind.Triop Triop.Ite b l r) _) =>
     (whenSome true ((O.b_ite b (O.bv_lt signed v1 l) (O.bv_lt signed v1 r))))
     | _, _ => none)
 
 def bv_lt.r_lt_zero (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | _, (Term.mk (Kind.bitVec bvr__2) _) =>
+    | _, (Term.mk (Kind.BitVec bvr__2) _) =>
     (whenSome ((decide (bvr__2 = (0 : Int))) && (signed && (! (is_checked_unsigned_op v1))))
     ((O.bv_lt_zero v1)))
     | _, _ => none)
 
 def bv_lt.r_max_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | x@(Term.mk (Kind.bitVec _) _), _ =>
+    | x@(Term.mk (Kind.BitVec _) _), _ =>
     (let x := bv_of_lit x; (whenSome (is_max_of signed x) (v_false)))
     | _, _ => none)
 
 def bv_lt.r_min_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | _, x@(Term.mk (Kind.bitVec _) _) =>
+    | _, x@(Term.mk (Kind.BitVec _) _) =>
     (let x := bv_of_lit x; (whenSome (is_min_of signed x) (v_false)))
     | _, _ => none)
 
 def bv_lt.r_min_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | x@(Term.mk (Kind.bitVec _) _), _ =>
+    | x@(Term.mk (Kind.BitVec _) _), _ =>
     (let x := bv_of_lit x;
     (whenSome (is_min_of signed x) ((O.b_not (O.sem_eq v1 v2)))))
     | _, _ => none)
 
 def bv_lt.r_max_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | _, x@(Term.mk (Kind.bitVec _) _) =>
+    | _, x@(Term.mk (Kind.BitVec _) _) =>
     (let x := bv_of_lit x;
     (whenSome (is_max_of signed x) ((O.b_not (O.sem_eq v1 v2)))))
     | _, _ => none)
 
 def bv_lt.r_const_mul (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | c2@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.mul checked) x vc1@c1@(Term.mk (Kind.bitVec _) _)) _) =>
+    | c2@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop (Binop.Mul checked) x vc1@c1@(Term.mk (Kind.BitVec _) _)) _) =>
     (let c2 := bv_of_lit c2;
     let c1 := bv_of_lit c1;
     (whenSome ((checked_has signed checked) && (! (decide ((to_z false c1) = (0 : Int)))))
@@ -3759,7 +3759,7 @@ def bv_lt.r_const_mul (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option
           else (O.bv_leq signed (O.bv_div signed v1 vc1) x))))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | c2@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.mul checked) vc1@c1@(Term.mk (Kind.bitVec _) _) x) _) =>
+        | c2@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop (Binop.Mul checked) vc1@c1@(Term.mk (Kind.BitVec _) _) x) _) =>
         (let c2 := bv_of_lit c2;
         let c1 := bv_of_lit c1;
         (whenSome ((checked_has signed checked) && (! (decide ((to_z false c1) = (0 : Int)))))
@@ -3778,7 +3778,7 @@ def bv_lt.r_const_mul (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option
 
 def bv_lt.r_mul_const (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.mul checked) x vc1@c1@(Term.mk (Kind.bitVec _) _)) _), c2@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Binop (Binop.Mul checked) x vc1@c1@(Term.mk (Kind.BitVec _) _)) _), c2@(Term.mk (Kind.BitVec _) _) =>
     (let c1 := bv_of_lit c1;
     let c2 := bv_of_lit c2;
     (whenSome ((checked_has signed checked) && (! (decide ((to_z false c1) = (0 : Int)))))
@@ -3795,7 +3795,7 @@ def bv_lt.r_mul_const (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option
           else (O.bv_leq signed x (O.bv_div signed v2 vc1)))))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.mul checked) vc1@c1@(Term.mk (Kind.bitVec _) _) x) _), c2@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop (Binop.Mul checked) vc1@c1@(Term.mk (Kind.BitVec _) _) x) _), c2@(Term.mk (Kind.BitVec _) _) =>
         (let c1 := bv_of_lit c1;
         let c2 := bv_of_lit c2;
         (whenSome ((checked_has signed checked) && (! (decide ((to_z false c1) = (0 : Int)))))
@@ -3814,81 +3814,81 @@ def bv_lt.r_mul_const (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option
 
 def bv_lt.r_mul_mul (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.mul checked_l) a x) _), (Term.mk (Kind.binop (Binop.mul checked_r) bvr__9 y) _) =>
+    | (Term.mk (Kind.Binop (Binop.Mul checked_l) a x) _), (Term.mk (Kind.Binop (Binop.Mul checked_r) bvr__9 y) _) =>
     (whenSome ((equal a bvr__9) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))
     ((O.bv_lt signed x y)))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.mul checked_l) a x) _), (Term.mk (Kind.binop (Binop.mul checked_r) y bvr__9) _) =>
+        | (Term.mk (Kind.Binop (Binop.Mul checked_l) a x) _), (Term.mk (Kind.Binop (Binop.Mul checked_r) y bvr__9) _) =>
         (whenSome ((equal a bvr__9) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))
         ((O.bv_lt signed x y)))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.mul checked_l) x a) _), (Term.mk (Kind.binop (Binop.mul checked_r) bvr__9 y) _) =>
+        | (Term.mk (Kind.Binop (Binop.Mul checked_l) x a) _), (Term.mk (Kind.Binop (Binop.Mul checked_r) bvr__9 y) _) =>
         (whenSome ((equal a bvr__9) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))
         ((O.bv_lt signed x y)))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.mul checked_l) x a) _), (Term.mk (Kind.binop (Binop.mul checked_r) y bvr__9) _) =>
+        | (Term.mk (Kind.Binop (Binop.Mul checked_l) x a) _), (Term.mk (Kind.Binop (Binop.Mul checked_r) y bvr__9) _) =>
         (whenSome ((equal a bvr__9) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))
         ((O.bv_lt signed x y)))
         | _, _ => none)
 
 def bv_lt.r_const_sub1 (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | c@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.sub checked) x k@(Term.mk (Kind.bitVec _) _)) _) =>
+    | c@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop (Binop.Sub checked) x k@(Term.mk (Kind.BitVec _) _)) _) =>
     (let c := bv_of_lit c;
     let k := bv_of_lit k;
     (whenSome (checked_has signed checked)
     ((if (add_overflows signed c k)
      then (if (! signed)
           then v_false
-          else (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))
+          else (Term.mk (Kind.Binop (Binop.Lt signed) v1 v2) Ty.TBool))
      else (O.bv_lt signed (lit (lit_add c k)) x)))))
     | _, _ => none)
 
 def bv_lt.r_const_sub2 (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | c@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.sub checked) k@(Term.mk (Kind.bitVec _) _) x) _) =>
+    | c@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop (Binop.Sub checked) k@(Term.mk (Kind.BitVec _) _) x) _) =>
     (let c := bv_of_lit c;
     let k := bv_of_lit k;
     (whenSome (checked_has signed checked)
     ((if (sub_overflows signed k c)
      then (if (! signed)
           then v_false
-          else (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))
+          else (Term.mk (Kind.Binop (Binop.Lt signed) v1 v2) Ty.TBool))
      else (O.bv_lt signed x (lit (lit_sub k c)))))))
     | _, _ => none)
 
 def bv_lt.r_sub_const1 (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.sub checked) x k@(Term.mk (Kind.bitVec _) _)) _), c@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Binop (Binop.Sub checked) x k@(Term.mk (Kind.BitVec _) _)) _), c@(Term.mk (Kind.BitVec _) _) =>
     (let k := bv_of_lit k;
     let c := bv_of_lit c;
     (whenSome (checked_has signed checked)
     ((if (add_overflows signed c k)
      then (if (! signed)
           then v_true
-          else (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))
+          else (Term.mk (Kind.Binop (Binop.Lt signed) v1 v2) Ty.TBool))
      else (O.bv_lt signed x (lit (lit_add c k)))))))
     | _, _ => none)
 
 def bv_lt.r_sub_const2 (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.sub checked) k@(Term.mk (Kind.bitVec _) _) x) _), c@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Binop (Binop.Sub checked) k@(Term.mk (Kind.BitVec _) _) x) _), c@(Term.mk (Kind.BitVec _) _) =>
     (let k := bv_of_lit k;
     let c := bv_of_lit c;
     (whenSome (checked_has signed checked)
     ((if (sub_overflows signed k c)
      then (if (! signed)
           then v_true
-          else (Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))
+          else (Term.mk (Kind.Binop (Binop.Lt signed) v1 v2) Ty.TBool))
      else (O.bv_lt signed (lit (lit_sub k c)) x)))))
     | _, _ => none)
 
 def bv_lt.r_ub_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | _, c@(Term.mk (Kind.bitVec _) _) =>
+    | _, c@(Term.mk (Kind.BitVec _) _) =>
     (let c := bv_of_lit c;
     (whenSome ((! signed) && (decide ((unsigned_ub v1) < (to_z false c))))
     (v_true)))
@@ -3896,7 +3896,7 @@ def bv_lt.r_ub_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term
 
 def bv_lt.r_ub_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | c@(Term.mk (Kind.bitVec _) _), _ =>
+    | c@(Term.mk (Kind.BitVec _) _), _ =>
     (let c := bv_of_lit c;
     (whenSome ((! signed) && (decide ((unsigned_ub v2) ≤ (to_z false c))))
     (v_false)))
@@ -3904,7 +3904,7 @@ def bv_lt.r_ub_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term
 
 def bv_lt.r_to_unsigned_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | c@(Term.mk (Kind.bitVec _) _), _ =>
+    | c@(Term.mk (Kind.BitVec _) _), _ =>
     (let c := bv_of_lit c;
     (whenSome (signed && (is_checked_unsigned_op v2))
     ((signed_to_unsigned_cmp O false true c v1 v2))))
@@ -3912,7 +3912,7 @@ def bv_lt.r_to_unsigned_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Op
 
 def bv_lt.r_to_unsigned_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | _, c@(Term.mk (Kind.bitVec _) _) =>
+    | _, c@(Term.mk (Kind.BitVec _) _) =>
     (let c := bv_of_lit c;
     (whenSome (signed && (is_checked_unsigned_op v1))
     ((signed_to_unsigned_cmp O false false c v1 v2))))
@@ -3921,7 +3921,7 @@ def bv_lt.r_to_unsigned_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Op
 def bv_lt.r_default (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | _, _ =>
-    (whenSome true ((Term.mk (Kind.binop (Binop.lt signed) v1 v2) Ty.bool))))
+    (whenSome true ((Term.mk (Kind.Binop (Binop.Lt signed) v1 v2) Ty.TBool))))
 
 def bv_lt.step (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [bv_lt.r_lits O signed v1 v2, bv_lt.r_same O signed v1 v2, bv_lt.r_negs O signed v1 v2, bv_lt.r_neg_l O signed v1 v2, bv_lt.r_neg_r O signed v1 v2, bv_lt.r_const_add O signed v1 v2, bv_lt.r_add_const O signed v1 v2, bv_lt.r_self_add_r O signed v1 v2, bv_lt.r_self_add_l O signed v1 v2, bv_lt.r_add_add O signed v1 v2, bv_lt.r_one O signed v1 v2, bv_lt.r_of_bool O signed v1 v2, bv_lt.r_ite_l O signed v1 v2, bv_lt.r_ite_r O signed v1 v2, bv_lt.r_lt_zero O signed v1 v2, bv_lt.r_max_l O signed v1 v2, bv_lt.r_min_r O signed v1 v2, bv_lt.r_min_l O signed v1 v2, bv_lt.r_max_r O signed v1 v2, bv_lt.r_const_mul O signed v1 v2, bv_lt.r_mul_const O signed v1 v2, bv_lt.r_mul_mul O signed v1 v2, bv_lt.r_const_sub1 O signed v1 v2, bv_lt.r_const_sub2 O signed v1 v2, bv_lt.r_sub_const1 O signed v1 v2, bv_lt.r_sub_const2 O signed v1 v2, bv_lt.r_ub_r O signed v1 v2, bv_lt.r_ub_l O signed v1 v2, bv_lt.r_to_unsigned_l O signed v1 v2, bv_lt.r_to_unsigned_r O signed v1 v2, bv_lt.r_default O signed v1 v2]).getD (bv_lt.spec signed v1 v2)
@@ -3931,7 +3931,7 @@ def bv_leq.r_same (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Ter
 
 def bv_leq.r_lits (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | l@(Term.mk (Kind.bitVec _) _), r@(Term.mk (Kind.bitVec _) _) =>
+    | l@(Term.mk (Kind.BitVec _) _), r@(Term.mk (Kind.BitVec _) _) =>
     (let l := bv_of_lit l;
     let r := bv_of_lit r;
     (whenSome true ((of_bool (decide ((to_z signed l) ≤ (to_z signed r)))))))
@@ -3939,13 +3939,13 @@ def bv_leq.r_lits (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Ter
 
 def bv_leq.r_negs (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.unop (Unop.neg true) a) _), (Term.mk (Kind.unop (Unop.neg true) b) _) =>
+    | (Term.mk (Kind.Unop (Unop.Neg true) a) _), (Term.mk (Kind.Unop (Unop.Neg true) b) _) =>
     (whenSome signed ((O.bv_leq signed b a)))
     | _, _ => none)
 
 def bv_leq.r_neg_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.unop (Unop.neg true) a) _), c@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Unop (Unop.Neg true) a) _), c@(Term.mk (Kind.BitVec _) _) =>
     (let c := bv_of_lit c;
     (whenSome (signed && (! (is_int_min c)))
     ((O.bv_leq signed (O.bv_neg false v2) a))))
@@ -3953,7 +3953,7 @@ def bv_leq.r_neg_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Te
 
 def bv_leq.r_neg_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | c@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.unop (Unop.neg true) a) _) =>
+    | c@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Unop (Unop.Neg true) a) _) =>
     (let c := bv_of_lit c;
     (whenSome (signed && (! (is_int_min c)))
     ((O.bv_leq signed a (O.bv_neg false v1)))))
@@ -3961,55 +3961,55 @@ def bv_leq.r_neg_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Te
 
 def bv_leq.r_const_add (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | c@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.add checked) r@(Term.mk (Kind.bitVec _) _) x) _) =>
+    | c@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop (Binop.Add checked) r@(Term.mk (Kind.BitVec _) _) x) _) =>
     (let c := bv_of_lit c;
     let r := bv_of_lit r;
     (whenSome (checked_has signed checked)
     ((if (sub_overflows signed c r)
      then (if (! signed)
           then v_true
-          else (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))
+          else (Term.mk (Kind.Binop (Binop.Leq signed) v1 v2) Ty.TBool))
      else (O.bv_leq signed (lit (lit_sub c r)) x)))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | c@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.add checked) x r@(Term.mk (Kind.bitVec _) _)) _) =>
+        | c@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop (Binop.Add checked) x r@(Term.mk (Kind.BitVec _) _)) _) =>
         (let c := bv_of_lit c;
         let r := bv_of_lit r;
         (whenSome (checked_has signed checked)
         ((if (sub_overflows signed c r)
          then (if (! signed)
               then v_true
-              else (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))
+              else (Term.mk (Kind.Binop (Binop.Leq signed) v1 v2) Ty.TBool))
          else (O.bv_leq signed (lit (lit_sub c r)) x)))))
         | _, _ => none)
 
 def bv_leq.r_add_const (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.add checked) l@(Term.mk (Kind.bitVec _) _) x) _), c@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Binop (Binop.Add checked) l@(Term.mk (Kind.BitVec _) _) x) _), c@(Term.mk (Kind.BitVec _) _) =>
     (let l := bv_of_lit l;
     let c := bv_of_lit c;
     (whenSome (checked_has signed checked)
     ((if (sub_overflows signed c l)
      then (if (! signed)
           then v_false
-          else (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))
+          else (Term.mk (Kind.Binop (Binop.Leq signed) v1 v2) Ty.TBool))
      else (O.bv_leq signed x (lit (lit_sub c l)))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add checked) x l@(Term.mk (Kind.bitVec _) _)) _), c@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop (Binop.Add checked) x l@(Term.mk (Kind.BitVec _) _)) _), c@(Term.mk (Kind.BitVec _) _) =>
         (let l := bv_of_lit l;
         let c := bv_of_lit c;
         (whenSome (checked_has signed checked)
         ((if (sub_overflows signed c l)
          then (if (! signed)
               then v_false
-              else (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))
+              else (Term.mk (Kind.Binop (Binop.Leq signed) v1 v2) Ty.TBool))
          else (O.bv_leq signed x (lit (lit_sub c l)))))))
         | _, _ => none)
 
 def bv_leq.r_add_add (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.add checked_l) l@(Term.mk (Kind.bitVec _) _) y) _), (Term.mk (Kind.binop (Binop.add checked_r) r@(Term.mk (Kind.bitVec _) _) x) _) =>
+    | (Term.mk (Kind.Binop (Binop.Add checked_l) l@(Term.mk (Kind.BitVec _) _) y) _), (Term.mk (Kind.Binop (Binop.Add checked_r) r@(Term.mk (Kind.BitVec _) _) x) _) =>
     (let l := bv_of_lit l;
     let r := bv_of_lit r;
     (whenSome ((checked_has signed checked_l) && (checked_has signed checked_r))
@@ -4017,10 +4017,10 @@ def bv_leq.r_add_add (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option 
      then (O.bv_leq signed (O.bv_add (checked_of_signed signed) y (lit (lit_sub l r))) x)
      else (if (const_keeps_in_range signed r l)
           then (O.bv_leq signed y (O.bv_add (checked_of_signed signed) x (lit (lit_sub r l))))
-          else (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))))))
+          else (Term.mk (Kind.Binop (Binop.Leq signed) v1 v2) Ty.TBool))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add checked_l) l@(Term.mk (Kind.bitVec _) _) y) _), (Term.mk (Kind.binop (Binop.add checked_r) x r@(Term.mk (Kind.bitVec _) _)) _) =>
+        | (Term.mk (Kind.Binop (Binop.Add checked_l) l@(Term.mk (Kind.BitVec _) _) y) _), (Term.mk (Kind.Binop (Binop.Add checked_r) x r@(Term.mk (Kind.BitVec _) _)) _) =>
         (let l := bv_of_lit l;
         let r := bv_of_lit r;
         (whenSome ((checked_has signed checked_l) && (checked_has signed checked_r))
@@ -4028,10 +4028,10 @@ def bv_leq.r_add_add (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option 
          then (O.bv_leq signed (O.bv_add (checked_of_signed signed) y (lit (lit_sub l r))) x)
          else (if (const_keeps_in_range signed r l)
               then (O.bv_leq signed y (O.bv_add (checked_of_signed signed) x (lit (lit_sub r l))))
-              else (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))))))
+              else (Term.mk (Kind.Binop (Binop.Leq signed) v1 v2) Ty.TBool))))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add checked_l) y l@(Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.binop (Binop.add checked_r) r@(Term.mk (Kind.bitVec _) _) x) _) =>
+        | (Term.mk (Kind.Binop (Binop.Add checked_l) y l@(Term.mk (Kind.BitVec _) _)) _), (Term.mk (Kind.Binop (Binop.Add checked_r) r@(Term.mk (Kind.BitVec _) _) x) _) =>
         (let l := bv_of_lit l;
         let r := bv_of_lit r;
         (whenSome ((checked_has signed checked_l) && (checked_has signed checked_r))
@@ -4039,10 +4039,10 @@ def bv_leq.r_add_add (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option 
          then (O.bv_leq signed (O.bv_add (checked_of_signed signed) y (lit (lit_sub l r))) x)
          else (if (const_keeps_in_range signed r l)
               then (O.bv_leq signed y (O.bv_add (checked_of_signed signed) x (lit (lit_sub r l))))
-              else (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))))))
+              else (Term.mk (Kind.Binop (Binop.Leq signed) v1 v2) Ty.TBool))))))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add checked_l) y l@(Term.mk (Kind.bitVec _) _)) _), (Term.mk (Kind.binop (Binop.add checked_r) x r@(Term.mk (Kind.bitVec _) _)) _) =>
+        | (Term.mk (Kind.Binop (Binop.Add checked_l) y l@(Term.mk (Kind.BitVec _) _)) _), (Term.mk (Kind.Binop (Binop.Add checked_r) x r@(Term.mk (Kind.BitVec _) _)) _) =>
         (let l := bv_of_lit l;
         let r := bv_of_lit r;
         (whenSome ((checked_has signed checked_l) && (checked_has signed checked_r))
@@ -4050,48 +4050,48 @@ def bv_leq.r_add_add (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option 
          then (O.bv_leq signed (O.bv_add (checked_of_signed signed) y (lit (lit_sub l r))) x)
          else (if (const_keeps_in_range signed r l)
               then (O.bv_leq signed y (O.bv_add (checked_of_signed signed) x (lit (lit_sub r l))))
-              else (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))))))
+              else (Term.mk (Kind.Binop (Binop.Leq signed) v1 v2) Ty.TBool))))))
         | _, _ => none)
 
 def bv_leq.r_self_add_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | a, (Term.mk (Kind.binop (Binop.add checked) bvr__4 b) _) =>
+    | a, (Term.mk (Kind.Binop (Binop.Add checked) bvr__4 b) _) =>
     (whenSome ((equal a bvr__4) && (checked_has signed checked))
     ((O.bv_leq signed (bv_zero (size v1)) b)))
     | _, _ => none)
   <|> (match v1, v2 with
-        | a, (Term.mk (Kind.binop (Binop.add checked) b bvr__4) _) =>
+        | a, (Term.mk (Kind.Binop (Binop.Add checked) b bvr__4) _) =>
         (whenSome ((equal a bvr__4) && (checked_has signed checked))
         ((O.bv_leq signed (bv_zero (size v1)) b)))
         | _, _ => none)
 
 def bv_leq.r_self_add_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.add checked) a b) _), bvr__7 =>
+    | (Term.mk (Kind.Binop (Binop.Add checked) a b) _), bvr__7 =>
     (whenSome ((equal a bvr__7) && (checked_has signed checked))
     ((O.bv_leq signed b (bv_zero (size v1)))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.add checked) b a) _), bvr__7 =>
+        | (Term.mk (Kind.Binop (Binop.Add checked) b a) _), bvr__7 =>
         (whenSome ((equal a bvr__7) && (checked_has signed checked))
         ((O.bv_leq signed b (bv_zero (size v1)))))
         | _, _ => none)
 
 def bv_leq.r_min_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | x@(Term.mk (Kind.bitVec _) _), _ =>
+    | x@(Term.mk (Kind.BitVec _) _), _ =>
     (let x := bv_of_lit x; (whenSome (is_min_of signed x) (v_true)))
     | _, _ => none)
 
 def bv_leq.r_max_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | _, x@(Term.mk (Kind.bitVec _) _) =>
+    | _, x@(Term.mk (Kind.BitVec _) _) =>
     (let x := bv_of_lit x; (whenSome (is_max_of signed x) (v_true)))
     | _, _ => none)
 
 def bv_leq.r_const_mul (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | c2@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.mul checked) x vc1@c1@(Term.mk (Kind.bitVec _) _)) _) =>
+    | c2@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop (Binop.Mul checked) x vc1@c1@(Term.mk (Kind.BitVec _) _)) _) =>
     (let c2 := bv_of_lit c2;
     let c1 := bv_of_lit c1;
     (whenSome ((checked_has signed checked) && (! (decide ((to_z false c1) = (0 : Int)))))
@@ -4112,7 +4112,7 @@ def bv_leq.r_const_mul (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Optio
                else (O.bv_lt signed (O.bv_div signed v1 vc1) x)))))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | c2@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.mul checked) vc1@c1@(Term.mk (Kind.bitVec _) _) x) _) =>
+        | c2@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop (Binop.Mul checked) vc1@c1@(Term.mk (Kind.BitVec _) _) x) _) =>
         (let c2 := bv_of_lit c2;
         let c1 := bv_of_lit c1;
         (whenSome ((checked_has signed checked) && (! (decide ((to_z false c1) = (0 : Int)))))
@@ -4135,7 +4135,7 @@ def bv_leq.r_const_mul (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Optio
 
 def bv_leq.r_mul_const (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.mul checked) x vc1@c1@(Term.mk (Kind.bitVec _) _)) _), c2@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Binop (Binop.Mul checked) x vc1@c1@(Term.mk (Kind.BitVec _) _)) _), c2@(Term.mk (Kind.BitVec _) _) =>
     (let c1 := bv_of_lit c1;
     let c2 := bv_of_lit c2;
     (whenSome ((checked_has signed checked) && (! (decide ((to_z false c1) = (0 : Int)))))
@@ -4156,7 +4156,7 @@ def bv_leq.r_mul_const (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Optio
                else (O.bv_leq signed x (O.bv_div signed v2 vc1))))))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.mul checked) vc1@c1@(Term.mk (Kind.bitVec _) _) x) _), c2@(Term.mk (Kind.bitVec _) _) =>
+        | (Term.mk (Kind.Binop (Binop.Mul checked) vc1@c1@(Term.mk (Kind.BitVec _) _) x) _), c2@(Term.mk (Kind.BitVec _) _) =>
         (let c1 := bv_of_lit c1;
         let c2 := bv_of_lit c2;
         (whenSome ((checked_has signed checked) && (! (decide ((to_z false c1) = (0 : Int)))))
@@ -4179,29 +4179,29 @@ def bv_leq.r_mul_const (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Optio
 
 def bv_leq.r_mul_mul (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.mul checked_l) a x) _), (Term.mk (Kind.binop (Binop.mul checked_r) bvr__9 y) _) =>
+    | (Term.mk (Kind.Binop (Binop.Mul checked_l) a x) _), (Term.mk (Kind.Binop (Binop.Mul checked_r) bvr__9 y) _) =>
     (whenSome ((equal a bvr__9) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))
     ((O.bv_leq signed x y)))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.mul checked_l) a x) _), (Term.mk (Kind.binop (Binop.mul checked_r) y bvr__9) _) =>
+        | (Term.mk (Kind.Binop (Binop.Mul checked_l) a x) _), (Term.mk (Kind.Binop (Binop.Mul checked_r) y bvr__9) _) =>
         (whenSome ((equal a bvr__9) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))
         ((O.bv_leq signed x y)))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.mul checked_l) x a) _), (Term.mk (Kind.binop (Binop.mul checked_r) bvr__9 y) _) =>
+        | (Term.mk (Kind.Binop (Binop.Mul checked_l) x a) _), (Term.mk (Kind.Binop (Binop.Mul checked_r) bvr__9 y) _) =>
         (whenSome ((equal a bvr__9) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))
         ((O.bv_leq signed x y)))
         | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.mul checked_l) x a) _), (Term.mk (Kind.binop (Binop.mul checked_r) y bvr__9) _) =>
+        | (Term.mk (Kind.Binop (Binop.Mul checked_l) x a) _), (Term.mk (Kind.Binop (Binop.Mul checked_r) y bvr__9) _) =>
         (whenSome ((equal a bvr__9) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))
         ((O.bv_leq signed x y)))
         | _, _ => none)
 
 def bv_leq.r_udiv_big (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.div false) _ d@(Term.mk (Kind.bitVec _) _)) _), n@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Binop (Binop.Div false) _ d@(Term.mk (Kind.BitVec _) _)) _), n@(Term.mk (Kind.BitVec _) _) =>
     (let d := bv_of_lit d;
     let n := bv_of_lit n;
     (whenSome ((! signed) && (mul_overflows false n d)) (v_true)))
@@ -4209,73 +4209,73 @@ def bv_leq.r_udiv_big (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option
 
 def bv_leq.r_ite_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.triop Triop.ite b l r) _), (Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Triop Triop.Ite b l r) _), (Term.mk (Kind.BitVec _) _) =>
     (whenSome true
     ((O.b_ite b (O.bv_leq signed l v2) (O.bv_leq signed r v2))))
     | _, _ => none)
 
 def bv_leq.r_ite_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.bitVec _) _), (Term.mk (Kind.triop Triop.ite b l r) _) =>
+    | (Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Triop Triop.Ite b l r) _) =>
     (whenSome true
     ((O.b_ite b (O.bv_leq signed v1 l) (O.bv_leq signed v1 r))))
     | _, _ => none)
 
 def bv_leq.r_const_sub1 (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | c@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.sub checked) x k@(Term.mk (Kind.bitVec _) _)) _) =>
+    | c@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop (Binop.Sub checked) x k@(Term.mk (Kind.BitVec _) _)) _) =>
     (let c := bv_of_lit c;
     let k := bv_of_lit k;
     (whenSome (checked_has signed checked)
     ((if (add_overflows signed c k)
      then (if (! signed)
           then v_false
-          else (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))
+          else (Term.mk (Kind.Binop (Binop.Leq signed) v1 v2) Ty.TBool))
      else (O.bv_leq signed (lit (lit_add c k)) x)))))
     | _, _ => none)
 
 def bv_leq.r_const_sub2 (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | c@(Term.mk (Kind.bitVec _) _), (Term.mk (Kind.binop (Binop.sub checked) k@(Term.mk (Kind.bitVec _) _) x) _) =>
+    | c@(Term.mk (Kind.BitVec _) _), (Term.mk (Kind.Binop (Binop.Sub checked) k@(Term.mk (Kind.BitVec _) _) x) _) =>
     (let c := bv_of_lit c;
     let k := bv_of_lit k;
     (whenSome (checked_has signed checked)
     ((if (sub_overflows signed k c)
      then (if (! signed)
           then v_false
-          else (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))
+          else (Term.mk (Kind.Binop (Binop.Leq signed) v1 v2) Ty.TBool))
      else (O.bv_leq signed x (lit (lit_sub k c)))))))
     | _, _ => none)
 
 def bv_leq.r_sub_const1 (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.sub checked) x k@(Term.mk (Kind.bitVec _) _)) _), c@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Binop (Binop.Sub checked) x k@(Term.mk (Kind.BitVec _) _)) _), c@(Term.mk (Kind.BitVec _) _) =>
     (let k := bv_of_lit k;
     let c := bv_of_lit c;
     (whenSome (checked_has signed checked)
     ((if (add_overflows signed c k)
      then (if (! signed)
           then v_true
-          else (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))
+          else (Term.mk (Kind.Binop (Binop.Leq signed) v1 v2) Ty.TBool))
      else (O.bv_leq signed x (lit (lit_add c k)))))))
     | _, _ => none)
 
 def bv_leq.r_sub_const2 (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.binop (Binop.sub checked) k@(Term.mk (Kind.bitVec _) _) x) _), c@(Term.mk (Kind.bitVec _) _) =>
+    | (Term.mk (Kind.Binop (Binop.Sub checked) k@(Term.mk (Kind.BitVec _) _) x) _), c@(Term.mk (Kind.BitVec _) _) =>
     (let k := bv_of_lit k;
     let c := bv_of_lit c;
     (whenSome (checked_has signed checked)
     ((if (sub_overflows signed k c)
      then (if (! signed)
           then v_true
-          else (Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))
+          else (Term.mk (Kind.Binop (Binop.Leq signed) v1 v2) Ty.TBool))
      else (O.bv_leq signed (lit (lit_sub k c)) x)))))
     | _, _ => none)
 
 def bv_leq.r_ub_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | _, c@(Term.mk (Kind.bitVec _) _) =>
+    | _, c@(Term.mk (Kind.BitVec _) _) =>
     (let c := bv_of_lit c;
     (whenSome ((! signed) && (decide ((unsigned_ub v1) ≤ (to_z false c))))
     (v_true)))
@@ -4283,7 +4283,7 @@ def bv_leq.r_ub_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Ter
 
 def bv_leq.r_ub_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | c@(Term.mk (Kind.bitVec _) _), _ =>
+    | c@(Term.mk (Kind.BitVec _) _), _ =>
     (let c := bv_of_lit c;
     (whenSome ((! signed) && (decide ((unsigned_ub v2) < (to_z false c))))
     (v_false)))
@@ -4291,7 +4291,7 @@ def bv_leq.r_ub_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Ter
 
 def bv_leq.r_to_unsigned_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | c@(Term.mk (Kind.bitVec _) _), _ =>
+    | c@(Term.mk (Kind.BitVec _) _), _ =>
     (let c := bv_of_lit c;
     (whenSome (signed && (is_checked_unsigned_op v2))
     ((signed_to_unsigned_cmp O true true c v1 v2))))
@@ -4299,7 +4299,7 @@ def bv_leq.r_to_unsigned_l (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : O
 
 def bv_leq.r_to_unsigned_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | _, c@(Term.mk (Kind.bitVec _) _) =>
+    | _, c@(Term.mk (Kind.BitVec _) _) =>
     (let c := bv_of_lit c;
     (whenSome (signed && (is_checked_unsigned_op v1))
     ((signed_to_unsigned_cmp O true false c v1 v2))))
@@ -4308,14 +4308,15 @@ def bv_leq.r_to_unsigned_r (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : O
 def bv_leq.r_default (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | _, _ =>
-    (whenSome true ((Term.mk (Kind.binop (Binop.leq signed) v1 v2) Ty.bool))))
+    (whenSome true
+    ((Term.mk (Kind.Binop (Binop.Leq signed) v1 v2) Ty.TBool))))
 
 def bv_leq.step (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [bv_leq.r_same O signed v1 v2, bv_leq.r_lits O signed v1 v2, bv_leq.r_negs O signed v1 v2, bv_leq.r_neg_l O signed v1 v2, bv_leq.r_neg_r O signed v1 v2, bv_leq.r_const_add O signed v1 v2, bv_leq.r_add_const O signed v1 v2, bv_leq.r_add_add O signed v1 v2, bv_leq.r_self_add_r O signed v1 v2, bv_leq.r_self_add_l O signed v1 v2, bv_leq.r_min_l O signed v1 v2, bv_leq.r_max_r O signed v1 v2, bv_leq.r_const_mul O signed v1 v2, bv_leq.r_mul_const O signed v1 v2, bv_leq.r_mul_mul O signed v1 v2, bv_leq.r_udiv_big O signed v1 v2, bv_leq.r_ite_l O signed v1 v2, bv_leq.r_ite_r O signed v1 v2, bv_leq.r_const_sub1 O signed v1 v2, bv_leq.r_const_sub2 O signed v1 v2, bv_leq.r_sub_const1 O signed v1 v2, bv_leq.r_sub_const2 O signed v1 v2, bv_leq.r_ub_r O signed v1 v2, bv_leq.r_ub_l O signed v1 v2, bv_leq.r_to_unsigned_l O signed v1 v2, bv_leq.r_to_unsigned_r O signed v1 v2, bv_leq.r_default O signed v1 v2]).getD (bv_leq.spec signed v1 v2)
 
 def bv_add_overflows.r_lits (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | l@(Term.mk (Kind.bitVec _) _), r@(Term.mk (Kind.bitVec _) _) =>
+    | l@(Term.mk (Kind.BitVec _) _), r@(Term.mk (Kind.BitVec _) _) =>
     (let l := bv_of_lit l;
     let r := bv_of_lit r;
     (whenSome true ((of_bool (add_overflows signed l r)))))
@@ -4323,11 +4324,11 @@ def bv_add_overflows.r_lits (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : 
 
 def bv_add_overflows.r_zero (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.bitVec bvr__1) _), _ =>
+    | (Term.mk (Kind.BitVec bvr__1) _), _ =>
     (whenSome (decide (bvr__1 = (0 : Int))) (v_false))
     | _, _ => none)
   <|> (match v1, v2 with
-        | _, (Term.mk (Kind.bitVec bvr__1) _) =>
+        | _, (Term.mk (Kind.BitVec bvr__1) _) =>
         (whenSome (decide (bvr__1 = (0 : Int))) (v_false))
         | _, _ => none)
 
@@ -4340,19 +4341,19 @@ def bv_add_overflows.r_size1 (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) :
 
 def bv_add_overflows.r_unsigned (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | z@(Term.mk (Kind.bitVec _) _), x =>
+    | z@(Term.mk (Kind.BitVec _) _), x =>
     (let z := bv_of_lit z;
     (whenSome (! signed) ((O.bv_lt signed (lit (lit_not z)) x))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | x, z@(Term.mk (Kind.bitVec _) _) =>
+        | x, z@(Term.mk (Kind.BitVec _) _) =>
         (let z := bv_of_lit z;
         (whenSome (! signed) ((O.bv_lt signed (lit (lit_not z)) x))))
         | _, _ => none)
 
 def bv_add_overflows.r_signed (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | z@(Term.mk (Kind.bitVec _) _), x =>
+    | z@(Term.mk (Kind.BitVec _) _), x =>
     (let z := bv_of_lit z;
     (whenSome signed
     ((let n := (size v1);
@@ -4362,7 +4363,7 @@ def bv_add_overflows.r_signed (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) 
      else (O.bv_lt signed x (mk_masked n ((min_for signed n) - z)))))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | x, z@(Term.mk (Kind.bitVec _) _) =>
+        | x, z@(Term.mk (Kind.BitVec _) _) =>
         (let z := bv_of_lit z;
         (whenSome signed
         ((let n := (size v1);
@@ -4374,14 +4375,14 @@ def bv_add_overflows.r_signed (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) 
 
 def bv_add_overflows.r_of_bools (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.unop (Unop.bvOfBool n) b1) _), (Term.mk (Kind.unop (Unop.bvOfBool _) b2) _) =>
+    | (Term.mk (Kind.Unop (Unop.BvOfBool n) b1) _), (Term.mk (Kind.Unop (Unop.BvOfBool _) b2) _) =>
     (whenSome (decide (n > (1 : Int)))
     ((if (signed && (decide (n = (2 : Int))))
      then (O.b_and b1 b2)
      else v_false)))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.unop (Unop.bvOfBool _) b2) _), (Term.mk (Kind.unop (Unop.bvOfBool n) b1) _) =>
+        | (Term.mk (Kind.Unop (Unop.BvOfBool _) b2) _), (Term.mk (Kind.Unop (Unop.BvOfBool n) b1) _) =>
         (whenSome (decide (n > (1 : Int)))
         ((if (signed && (decide (n = (2 : Int))))
          then (O.b_and b1 b2)
@@ -4390,13 +4391,13 @@ def bv_add_overflows.r_of_bools (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term
 
 def bv_add_overflows.r_of_bool (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.unop (Unop.bvOfBool _) b) _), other =>
+    | (Term.mk (Kind.Unop (Unop.BvOfBool _) b) _), other =>
     (whenSome (decide ((size v1) > (1 : Int)))
     ((let n := (size v1);
      (O.b_and b (O.sem_eq other (mk_masked n (max_for signed n)))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | other, (Term.mk (Kind.unop (Unop.bvOfBool _) b) _) =>
+        | other, (Term.mk (Kind.Unop (Unop.BvOfBool _) b) _) =>
         (whenSome (decide ((size v1) > (1 : Int)))
         ((let n := (size v1);
          (O.b_and b (O.sem_eq other (mk_masked n (max_for signed n)))))))
@@ -4406,14 +4407,14 @@ def bv_add_overflows.r_default (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term)
   (match v1, v2 with
     | _, _ =>
     (whenSome true
-    ((Term.mk (mk_commut_binop O (Binop.addOvf signed) v1 v2) Ty.bool))))
+    ((Term.mk (mk_commut_binop O (Binop.AddOvf signed) v1 v2) Ty.TBool))))
 
 def bv_add_overflows.step (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [bv_add_overflows.r_lits O signed v1 v2, bv_add_overflows.r_zero O signed v1 v2, bv_add_overflows.r_size1 O signed v1 v2, bv_add_overflows.r_unsigned O signed v1 v2, bv_add_overflows.r_signed O signed v1 v2, bv_add_overflows.r_of_bools O signed v1 v2, bv_add_overflows.r_of_bool O signed v1 v2, bv_add_overflows.r_default O signed v1 v2]).getD (bv_add_overflows.spec signed v1 v2)
 
 def bv_mul_overflows.r_lits (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | l@(Term.mk (Kind.bitVec _) _), r@(Term.mk (Kind.bitVec _) _) =>
+    | l@(Term.mk (Kind.BitVec _) _), r@(Term.mk (Kind.BitVec _) _) =>
     (let l := bv_of_lit l;
     let r := bv_of_lit r;
     (whenSome true ((of_bool (mul_overflows signed l r)))))
@@ -4434,7 +4435,7 @@ def bv_mul_overflows.r_msb (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : O
 
 def bv_mul_overflows.r_const (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | z@(Term.mk (Kind.bitVec _) _), x =>
+    | z@(Term.mk (Kind.BitVec _) _), x =>
     (let z := bv_of_lit z;
     (whenSome ((! signed) || (decide ((size v1) > (1 : Int))))
     ((if ((decide ((to_z false z) = (0 : Int))) || (decide ((to_z false z) = (1 : Int))))
@@ -4454,7 +4455,7 @@ def bv_mul_overflows.r_const (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) :
           else (O.bv_lt signed (mk_masked n (tdiv ((zshiftl (1 : Int) n) - (1 : Int)) z)) x))))))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | x, z@(Term.mk (Kind.bitVec _) _) =>
+        | x, z@(Term.mk (Kind.BitVec _) _) =>
         (let z := bv_of_lit z;
         (whenSome ((! signed) || (decide ((size v1) > (1 : Int))))
         ((if ((decide ((to_z false z) = (0 : Int))) || (decide ((to_z false z) = (1 : Int))))
@@ -4476,11 +4477,11 @@ def bv_mul_overflows.r_const (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) :
 
 def bv_mul_overflows.r_div (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | x, (Term.mk (Kind.binop (Binop.div false) _ bvr__5) _) =>
+    | x, (Term.mk (Kind.Binop (Binop.Div false) _ bvr__5) _) =>
     (whenSome ((equal x bvr__5) && (! signed)) (v_false))
     | _, _ => none)
   <|> (match v1, v2 with
-        | (Term.mk (Kind.binop (Binop.div false) _ bvr__5) _), x =>
+        | (Term.mk (Kind.Binop (Binop.Div false) _ bvr__5) _), x =>
         (whenSome ((equal x bvr__5) && (! signed)) (v_false))
         | _, _ => none)
 
@@ -4488,7 +4489,7 @@ def bv_mul_overflows.r_default (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term)
   (match v1, v2 with
     | _, _ =>
     (whenSome true
-    ((Term.mk (mk_commut_binop O (Binop.mulOvf signed) v1 v2) Ty.bool))))
+    ((Term.mk (mk_commut_binop O (Binop.MulOvf signed) v1 v2) Ty.TBool))))
 
 def bv_mul_overflows.step (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [bv_mul_overflows.r_lits O signed v1 v2, bv_mul_overflows.r_size1 O signed v1 v2, bv_mul_overflows.r_msb O signed v1 v2, bv_mul_overflows.r_const O signed v1 v2, bv_mul_overflows.r_div O signed v1 v2, bv_mul_overflows.r_default O signed v1 v2]).getD (bv_mul_overflows.spec signed v1 v2)
@@ -4501,7 +4502,7 @@ def bv_neg_overflows.step (O : Ops) (v : Term) : Term :=
 
 def bv_sub_overflows.r_lits (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | l@(Term.mk (Kind.bitVec _) _), r@(Term.mk (Kind.bitVec _) _) =>
+    | l@(Term.mk (Kind.BitVec _) _), r@(Term.mk (Kind.BitVec _) _) =>
     (let l := bv_of_lit l;
     let r := bv_of_lit r;
     (whenSome true ((of_bool (sub_overflows signed l r)))))
@@ -4519,14 +4520,14 @@ def bv_sub_overflows.r_default (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term)
   (match v1, v2 with
     | _, _ =>
     (whenSome true
-    ((Term.mk (Kind.binop (Binop.subOvf signed) v1 v2) Ty.bool))))
+    ((Term.mk (Kind.Binop (Binop.SubOvf signed) v1 v2) Ty.TBool))))
 
 def bv_sub_overflows.step (O : Ops) (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [bv_sub_overflows.r_lits O signed v1 v2, bv_sub_overflows.r_same O signed v1 v2, bv_sub_overflows.r_unsigned O signed v1 v2, bv_sub_overflows.r_default O signed v1 v2]).getD (bv_sub_overflows.spec signed v1 v2)
 
-def bv_of_float.r_lit (O : Ops) (rounding : RM) (signed : Bool) (sz : Int) (v : Term) : Option Term :=
+def bv_of_float.r_lit (O : Ops) (rounding : Rm) (signed : Bool) (sz : Int) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.float f) _) =>
+    | (Term.mk (Kind.Float f) _) =>
     (whenSome true
     (((firstSome [(match (O.orc.f_to_int rounding signed sz f) with
                     | (some z) =>
@@ -4535,53 +4536,53 @@ def bv_of_float.r_lit (O : Ops) (rounding : RM) (signed : Bool) (sz : Int) (v : 
        (match (O.orc.f_to_int rounding signed sz f) with
          | none =>
          (whenSome true
-         ((Term.mk (Kind.unop (Unop.bvOfFloat rounding signed sz) v) (Ty.bitVector sz))))
+         ((Term.mk (Kind.Unop (Unop.BvOfFloat rounding signed sz) v) (Ty.TBitVector sz))))
          | _ => none)]).getD
        Inhabited.default)))
     | _ => none)
 
-def bv_of_float.r_default (O : Ops) (rounding : RM) (signed : Bool) (sz : Int) (v : Term) : Option Term :=
+def bv_of_float.r_default (O : Ops) (rounding : Rm) (signed : Bool) (sz : Int) (v : Term) : Option Term :=
   (match v with
     | _ =>
     (whenSome true
-    ((Term.mk (Kind.unop (Unop.bvOfFloat rounding signed sz) v) (Ty.bitVector sz)))))
+    ((Term.mk (Kind.Unop (Unop.BvOfFloat rounding signed sz) v) (Ty.TBitVector sz)))))
 
-def bv_of_float.step (O : Ops) (rounding : RM) (signed : Bool) (sz : Int) (v : Term) : Term :=
+def bv_of_float.step (O : Ops) (rounding : Rm) (signed : Bool) (sz : Int) (v : Term) : Term :=
   (firstSome [bv_of_float.r_lit O rounding signed sz v, bv_of_float.r_default O rounding signed sz v]).getD (bv_of_float.spec rounding signed sz v)
 
-def bv_to_float.r_lit (O : Ops) (rounding : RM) (signed : Bool) (fp : Prec) (v : Term) : Option Term :=
+def bv_to_float.r_lit (O : Ops) (rounding : Rm) (signed : Bool) (fp : Fp) (v : Term) : Option Term :=
   (match v with
-    | z@(Term.mk (Kind.bitVec _) _) =>
+    | z@(Term.mk (Kind.BitVec _) _) =>
     (let z := bv_of_lit z;
     (whenSome true
     (((firstSome [(match (O.orc.f_of_int rounding signed fp (size v) (to_z false z)) with
                     | (some f) =>
-                    (whenSome true ((Term.mk (Kind.float f) (Ty.float fp))))
+                    (whenSome true ((Term.mk (Kind.Float f) (Ty.TFloat fp))))
                     | _ => none),
        (match (O.orc.f_of_int rounding signed fp (size v) (to_z false z)) with
          | none =>
          (whenSome true
-         ((Term.mk (Kind.unop (Unop.floatOfBv rounding signed fp) v) (Ty.float fp))))
+         ((Term.mk (Kind.Unop (Unop.FloatOfBv rounding signed fp) v) (Ty.TFloat fp))))
          | _ => none)]).getD
        Inhabited.default))))
     | _ => none)
 
-def bv_to_float.r_default (O : Ops) (rounding : RM) (signed : Bool) (fp : Prec) (v : Term) : Option Term :=
+def bv_to_float.r_default (O : Ops) (rounding : Rm) (signed : Bool) (fp : Fp) (v : Term) : Option Term :=
   (match v with
     | _ =>
     (whenSome true
-    ((Term.mk (Kind.unop (Unop.floatOfBv rounding signed fp) v) (Ty.float fp)))))
+    ((Term.mk (Kind.Unop (Unop.FloatOfBv rounding signed fp) v) (Ty.TFloat fp)))))
 
-def bv_to_float.step (O : Ops) (rounding : RM) (signed : Bool) (fp : Prec) (v : Term) : Term :=
+def bv_to_float.step (O : Ops) (rounding : Rm) (signed : Bool) (fp : Fp) (v : Term) : Term :=
   (firstSome [bv_to_float.r_lit O rounding signed fp v, bv_to_float.r_default O rounding signed fp v]).getD (bv_to_float.spec rounding signed fp v)
 
 def bv_to_float_raw.r_lit (O : Ops) (v : Term) : Option Term :=
   (match v with
-    | z@(Term.mk (Kind.bitVec _) _) =>
+    | z@(Term.mk (Kind.BitVec _) _) =>
     (let z := bv_of_lit z;
     (whenSome true
     ((let fp := (fp_of_size (size v));
-     (Term.mk (Kind.float (f_of_bits fp (to_z false z))) (Ty.float fp))))))
+     (Term.mk (Kind.Float (f_of_bits fp (to_z false z))) (Ty.TFloat fp))))))
     | _ => none)
 
 def bv_to_float_raw.r_default (O : Ops) (v : Term) : Option Term :=
@@ -4589,257 +4590,256 @@ def bv_to_float_raw.r_default (O : Ops) (v : Term) : Option Term :=
     | _ =>
     (whenSome true
     ((let fp := (fp_of_size (size v));
-     (Term.mk (Kind.unop (Unop.floatOfBvRaw fp) v) (Ty.float fp))))))
+     (Term.mk (Kind.Unop (Unop.FloatOfBvRaw fp) v) (Ty.TFloat fp))))))
 
 def bv_to_float_raw.step (O : Ops) (v : Term) : Term :=
   (firstSome [bv_to_float_raw.r_lit O v, bv_to_float_raw.r_default O v]).getD (bv_to_float_raw.spec v)
 
-def float_is_floatclass.r_lit (O : Ops) (fc : FClass) (sv : Term) : Option Term :=
+def float_is_floatclass.r_lit (O : Ops) (fc : Fc) (sv : Term) : Option Term :=
   (match sv with
-    | (Term.mk (Kind.float f) _) =>
+    | (Term.mk (Kind.Float f) _) =>
     (whenSome true ((of_bool (f_is_class fc f))))
     | _ => none)
 
-def float_is_floatclass.r_default (O : Ops) (fc : FClass) (sv : Term) : Option Term :=
+def float_is_floatclass.r_default (O : Ops) (fc : Fc) (sv : Term) : Option Term :=
   (match sv with
     | _ =>
-    (whenSome true ((Term.mk (Kind.unop (Unop.fIs fc) sv) Ty.bool))))
+    (whenSome true ((Term.mk (Kind.Unop (Unop.FIs fc) sv) Ty.TBool))))
 
-def float_is_floatclass.step (O : Ops) (fc : FClass) (sv : Term) : Term :=
+def float_is_floatclass.step (O : Ops) (fc : Fc) (sv : Term) : Term :=
   (firstSome [float_is_floatclass.r_lit O fc sv, float_is_floatclass.r_default O fc sv]).getD (float_is_floatclass.spec fc sv)
 
 def float_is_negative.r_lit (O : Ops) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.float f) _) =>
+    | (Term.mk (Kind.Float f) _) =>
     (whenSome true ((of_bool (f_is_negative f))))
     | _ => none)
 
 def float_is_negative.r_default (O : Ops) (v : Term) : Option Term :=
   (match v with
     | _ =>
-    (whenSome true ((Term.mk (Kind.unop Unop.fIsNeg v) Ty.bool))))
+    (whenSome true ((Term.mk (Kind.Unop Unop.FIsNeg v) Ty.TBool))))
 
 def float_is_negative.step (O : Ops) (v : Term) : Term :=
   (firstSome [float_is_negative.r_lit O v, float_is_negative.r_default O v]).getD (float_is_negative.spec v)
 
 def float_is_positive.r_lit (O : Ops) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.float f) _) =>
+    | (Term.mk (Kind.Float f) _) =>
     (whenSome true ((of_bool (f_is_positive f))))
     | _ => none)
 
 def float_is_positive.r_default (O : Ops) (v : Term) : Option Term :=
   (match v with
     | _ =>
-    (whenSome true ((Term.mk (Kind.unop Unop.fIsPos v) Ty.bool))))
+    (whenSome true ((Term.mk (Kind.Unop Unop.FIsPos v) Ty.TBool))))
 
 def float_is_positive.step (O : Ops) (v : Term) : Term :=
   (firstSome [float_is_positive.r_lit O v, float_is_positive.r_default O v]).getD (float_is_positive.spec v)
 
-def float_cast.r_lit (O : Ops) (rounding : RM) (fp : Prec) (v : Term) : Option Term :=
+def float_cast.r_lit (O : Ops) (rounding : Rm) (fp : Fp) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.float f) _) =>
+    | (Term.mk (Kind.Float f) _) =>
     (whenSome true
-    ((Term.mk (Kind.float (O.orc.f_convert rounding fp f)) (Ty.float fp))))
+    ((Term.mk (Kind.Float (O.orc.f_convert rounding fp f)) (Ty.TFloat fp))))
     | _ => none)
 
-def float_cast.r_default (O : Ops) (rounding : RM) (fp : Prec) (v : Term) : Option Term :=
+def float_cast.r_default (O : Ops) (rounding : Rm) (fp : Fp) (v : Term) : Option Term :=
   (match v with
     | _ =>
     (whenSome true
-    ((Term.mk (Kind.unop (Unop.floatOfFloat rounding fp) v) (Ty.float fp)))))
+    ((Term.mk (Kind.Unop (Unop.FloatOfFloat rounding fp) v) (Ty.TFloat fp)))))
 
-def float_cast.step (O : Ops) (rounding : RM) (fp : Prec) (v : Term) : Term :=
+def float_cast.step (O : Ops) (rounding : Rm) (fp : Fp) (v : Term) : Term :=
   (firstSome [float_cast.r_lit O rounding fp v, float_cast.r_default O rounding fp v]).getD (float_cast.spec rounding fp v)
 
 def float_eq.r_lits (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.float f1) _), (Term.mk (Kind.float f2) _) =>
+    | (Term.mk (Kind.Float f1) _), (Term.mk (Kind.Float f2) _) =>
     (whenSome true ((of_bool (f_eq f1 f2))))
     | _, _ => none)
 
 def float_eq.r_same (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | v, bvr__2 =>
-    (whenSome (equal v bvr__2)
-    ((O.b_not (O.float_is_floatclass FClass.nan v)))))
+    (whenSome (equal v bvr__2) ((O.b_not (O.float_is_floatclass Fc.NaN v)))))
 
 def float_eq.r_lit (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | l@(Term.mk (Kind.float f) _), x =>
+    | l@(Term.mk (Kind.Float f) _), x =>
     (whenSome true
     ((if (f_is_nan f)
      then v_false
      else (if (f_is_zero f)
-          then (O.float_is_floatclass FClass.zero x)
+          then (O.float_is_floatclass Fc.Zero x)
           else (O.sem_eq l x)))))
     | _, _ => none)
   <|> (match v1, v2 with
-        | x, l@(Term.mk (Kind.float f) _) =>
+        | x, l@(Term.mk (Kind.Float f) _) =>
         (whenSome true
         ((if (f_is_nan f)
          then v_false
          else (if (f_is_zero f)
-              then (O.float_is_floatclass FClass.zero x)
+              then (O.float_is_floatclass Fc.Zero x)
               else (O.sem_eq l x)))))
         | _, _ => none)
 
 def float_eq.r_default (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | _, _ =>
-    (whenSome true ((Term.mk (mk_commut_binop O Binop.fEq v1 v2) Ty.bool))))
+    (whenSome true ((Term.mk (mk_commut_binop O Binop.FEq v1 v2) Ty.TBool))))
 
 def float_eq.step (O : Ops) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [float_eq.r_lits O v1 v2, float_eq.r_same O v1 v2, float_eq.r_lit O v1 v2, float_eq.r_default O v1 v2]).getD (float_eq.spec v1 v2)
 
 def float_lt.r_lits (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.float f1) _), (Term.mk (Kind.float f2) _) =>
+    | (Term.mk (Kind.Float f1) _), (Term.mk (Kind.Float f2) _) =>
     (whenSome true ((of_bool (f_lt f1 f2))))
     | _, _ => none)
 
 def float_lt.r_default (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | _, _ =>
-    (whenSome true ((Term.mk (Kind.binop Binop.fLt v1 v2) Ty.bool))))
+    (whenSome true ((Term.mk (Kind.Binop Binop.FLt v1 v2) Ty.TBool))))
 
 def float_lt.step (O : Ops) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [float_lt.r_lits O v1 v2, float_lt.r_default O v1 v2]).getD (float_lt.spec v1 v2)
 
 def float_leq.r_lits (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.float f1) _), (Term.mk (Kind.float f2) _) =>
+    | (Term.mk (Kind.Float f1) _), (Term.mk (Kind.Float f2) _) =>
     (whenSome true ((of_bool (f_le f1 f2))))
     | _, _ => none)
 
 def float_leq.r_default (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | _, _ =>
-    (whenSome true ((Term.mk (Kind.binop Binop.fLeq v1 v2) Ty.bool))))
+    (whenSome true ((Term.mk (Kind.Binop Binop.FLeq v1 v2) Ty.TBool))))
 
 def float_leq.step (O : Ops) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [float_leq.r_lits O v1 v2, float_leq.r_default O v1 v2]).getD (float_leq.spec v1 v2)
 
 def float_add.r_lits (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.float f1) _), (Term.mk (Kind.float f2) _) =>
-    (whenSome true ((Term.mk (Kind.float (O.orc.f_add f1 f2)) (ty v1))))
+    | (Term.mk (Kind.Float f1) _), (Term.mk (Kind.Float f2) _) =>
+    (whenSome true ((Term.mk (Kind.Float (O.orc.f_add f1 f2)) (ty v1))))
     | _, _ => none)
 
 def float_add.r_default (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | _, _ =>
-    (whenSome true ((Term.mk (Kind.binop Binop.fAdd v1 v2) (ty v1)))))
+    (whenSome true ((Term.mk (Kind.Binop Binop.FAdd v1 v2) (ty v1)))))
 
 def float_add.step (O : Ops) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [float_add.r_lits O v1 v2, float_add.r_default O v1 v2]).getD (float_add.spec v1 v2)
 
 def float_sub.r_lits (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.float f1) _), (Term.mk (Kind.float f2) _) =>
-    (whenSome true ((Term.mk (Kind.float (O.orc.f_sub f1 f2)) (ty v1))))
+    | (Term.mk (Kind.Float f1) _), (Term.mk (Kind.Float f2) _) =>
+    (whenSome true ((Term.mk (Kind.Float (O.orc.f_sub f1 f2)) (ty v1))))
     | _, _ => none)
 
 def float_sub.r_default (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | _, _ =>
-    (whenSome true ((Term.mk (Kind.binop Binop.fSub v1 v2) (ty v1)))))
+    (whenSome true ((Term.mk (Kind.Binop Binop.FSub v1 v2) (ty v1)))))
 
 def float_sub.step (O : Ops) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [float_sub.r_lits O v1 v2, float_sub.r_default O v1 v2]).getD (float_sub.spec v1 v2)
 
 def float_div.r_lits (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.float f1) _), (Term.mk (Kind.float f2) _) =>
-    (whenSome true ((Term.mk (Kind.float (O.orc.f_div f1 f2)) (ty v1))))
+    | (Term.mk (Kind.Float f1) _), (Term.mk (Kind.Float f2) _) =>
+    (whenSome true ((Term.mk (Kind.Float (O.orc.f_div f1 f2)) (ty v1))))
     | _, _ => none)
 
 def float_div.r_default (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | _, _ =>
-    (whenSome true ((Term.mk (Kind.binop Binop.fDiv v1 v2) (ty v1)))))
+    (whenSome true ((Term.mk (Kind.Binop Binop.FDiv v1 v2) (ty v1)))))
 
 def float_div.step (O : Ops) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [float_div.r_lits O v1 v2, float_div.r_default O v1 v2]).getD (float_div.spec v1 v2)
 
 def float_mul.r_lits (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.float f1) _), (Term.mk (Kind.float f2) _) =>
-    (whenSome true ((Term.mk (Kind.float (O.orc.f_mul f1 f2)) (ty v1))))
+    | (Term.mk (Kind.Float f1) _), (Term.mk (Kind.Float f2) _) =>
+    (whenSome true ((Term.mk (Kind.Float (O.orc.f_mul f1 f2)) (ty v1))))
     | _, _ => none)
 
 def float_mul.r_default (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | _, _ =>
-    (whenSome true ((Term.mk (Kind.binop Binop.fMul v1 v2) (ty v1)))))
+    (whenSome true ((Term.mk (Kind.Binop Binop.FMul v1 v2) (ty v1)))))
 
 def float_mul.step (O : Ops) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [float_mul.r_lits O v1 v2, float_mul.r_default O v1 v2]).getD (float_mul.spec v1 v2)
 
 def float_rem.r_lits (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.float f1) _), (Term.mk (Kind.float f2) _) =>
-    (whenSome true ((Term.mk (Kind.float (O.orc.f_rem f1 f2)) (ty v1))))
+    | (Term.mk (Kind.Float f1) _), (Term.mk (Kind.Float f2) _) =>
+    (whenSome true ((Term.mk (Kind.Float (O.orc.f_rem f1 f2)) (ty v1))))
     | _, _ => none)
 
 def float_rem.r_default (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | _, _ =>
-    (whenSome true ((Term.mk (Kind.binop Binop.fRem v1 v2) (ty v1)))))
+    (whenSome true ((Term.mk (Kind.Binop Binop.FRem v1 v2) (ty v1)))))
 
 def float_rem.step (O : Ops) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [float_rem.r_lits O v1 v2, float_rem.r_default O v1 v2]).getD (float_rem.spec v1 v2)
 
 def float_abs.r_lit (O : Ops) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.float f) _) =>
-    (whenSome true ((Term.mk (Kind.float (f_abs f)) (ty v))))
+    | (Term.mk (Kind.Float f) _) =>
+    (whenSome true ((Term.mk (Kind.Float (f_abs f)) (ty v))))
     | _ => none)
 
 def float_abs.r_abs (O : Ops) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.unop Unop.fAbs _) _) =>
+    | (Term.mk (Kind.Unop Unop.FAbs _) _) =>
     (whenSome true (v))
     | _ => none)
 
 def float_abs.r_default (O : Ops) (v : Term) : Option Term :=
   (match v with
     | _ =>
-    (whenSome true ((Term.mk (Kind.unop Unop.fAbs v) (ty v)))))
+    (whenSome true ((Term.mk (Kind.Unop Unop.FAbs v) (ty v)))))
 
 def float_abs.step (O : Ops) (v : Term) : Term :=
   (firstSome [float_abs.r_lit O v, float_abs.r_abs O v, float_abs.r_default O v]).getD (float_abs.spec v)
 
 def float_neg.r_lit (O : Ops) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.float f) _) =>
-    (whenSome true ((Term.mk (Kind.float (f_neg f)) (ty v))))
+    | (Term.mk (Kind.Float f) _) =>
+    (whenSome true ((Term.mk (Kind.Float (f_neg f)) (ty v))))
     | _ => none)
 
 def float_neg.r_neg (O : Ops) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.unop Unop.fNeg v) _) =>
+    | (Term.mk (Kind.Unop Unop.FNeg v) _) =>
     (whenSome true (v))
     | _ => none)
 
 def float_neg.r_default (O : Ops) (v : Term) : Option Term :=
   (match v with
     | _ =>
-    (whenSome true ((Term.mk (Kind.unop Unop.fNeg v) (ty v)))))
+    (whenSome true ((Term.mk (Kind.Unop Unop.FNeg v) (ty v)))))
 
 def float_neg.step (O : Ops) (v : Term) : Term :=
   (firstSome [float_neg.r_lit O v, float_neg.r_neg O v, float_neg.r_default O v]).getD (float_neg.spec v)
 
 def float_fma.r_lits (O : Ops) (a : Term) (b : Term) (c : Term) : Option Term :=
   (match a, b, c with
-    | (Term.mk (Kind.float fa) _), (Term.mk (Kind.float fb) _), (Term.mk (Kind.float fc) _) =>
-    (whenSome true ((Term.mk (Kind.float (O.orc.f_fma fa fb fc)) (ty a))))
+    | (Term.mk (Kind.Float fa) _), (Term.mk (Kind.Float fb) _), (Term.mk (Kind.Float fc) _) =>
+    (whenSome true ((Term.mk (Kind.Float (O.orc.f_fma fa fb fc)) (ty a))))
     | _, _, _ => none)
 
 def float_fma.r_default (O : Ops) (a : Term) (b : Term) (c : Term) : Option Term :=
   (match a, b, c with
     | _, _, _ =>
-    (whenSome true ((Term.mk (Kind.triop Triop.fma a b c) (ty a)))))
+    (whenSome true ((Term.mk (Kind.Triop Triop.Fma a b c) (ty a)))))
 
 def float_fma.step (O : Ops) (a : Term) (b : Term) (c : Term) : Term :=
   (firstSome [float_fma.r_lits O a b c, float_fma.r_default O a b c]).getD (float_fma.spec a b c)
@@ -4853,8 +4853,8 @@ def float_fmod_of_rem.step (O : Ops) (r : Term) (v1 : Term) (v2 : Term) : Term :
 
 def float_fmod.r_lits (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.float f1) _), (Term.mk (Kind.float f2) _) =>
-    (whenSome true ((Term.mk (Kind.float (O.orc.f_fmod f1 f2)) (ty v1))))
+    | (Term.mk (Kind.Float f1) _), (Term.mk (Kind.Float f2) _) =>
+    (whenSome true ((Term.mk (Kind.Float (O.orc.f_fmod f1 f2)) (ty v1))))
     | _, _ => none)
 
 def float_fmod.r_default (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
@@ -4867,63 +4867,63 @@ def float_fmod.step (O : Ops) (v1 : Term) (v2 : Term) : Term :=
 
 def float_min.r_lits (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.float f1) _), (Term.mk (Kind.float f2) _) =>
-    (whenSome true ((Term.mk (Kind.float (O.orc.f_min f1 f2)) (ty v1))))
+    | (Term.mk (Kind.Float f1) _), (Term.mk (Kind.Float f2) _) =>
+    (whenSome true ((Term.mk (Kind.Float (O.orc.f_min f1 f2)) (ty v1))))
     | _, _ => none)
 
 def float_min.r_default (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | _, _ =>
-    (whenSome true ((Term.mk (Kind.binop Binop.fMin v1 v2) (ty v1)))))
+    (whenSome true ((Term.mk (Kind.Binop Binop.FMin v1 v2) (ty v1)))))
 
 def float_min.step (O : Ops) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [float_min.r_lits O v1 v2, float_min.r_default O v1 v2]).getD (float_min.spec v1 v2)
 
 def float_max.r_lits (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
-    | (Term.mk (Kind.float f1) _), (Term.mk (Kind.float f2) _) =>
-    (whenSome true ((Term.mk (Kind.float (O.orc.f_max f1 f2)) (ty v1))))
+    | (Term.mk (Kind.Float f1) _), (Term.mk (Kind.Float f2) _) =>
+    (whenSome true ((Term.mk (Kind.Float (O.orc.f_max f1 f2)) (ty v1))))
     | _, _ => none)
 
 def float_max.r_default (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | _, _ =>
-    (whenSome true ((Term.mk (Kind.binop Binop.fMax v1 v2) (ty v1)))))
+    (whenSome true ((Term.mk (Kind.Binop Binop.FMax v1 v2) (ty v1)))))
 
 def float_max.step (O : Ops) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [float_max.r_lits O v1 v2, float_max.r_default O v1 v2]).getD (float_max.spec v1 v2)
 
 def float_sqrt.r_lit (O : Ops) (v : Term) : Option Term :=
   (match v with
-    | (Term.mk (Kind.float f) _) =>
-    (whenSome true ((Term.mk (Kind.float (O.orc.f_sqrt f)) (ty v))))
+    | (Term.mk (Kind.Float f) _) =>
+    (whenSome true ((Term.mk (Kind.Float (O.orc.f_sqrt f)) (ty v))))
     | _ => none)
 
 def float_sqrt.r_default (O : Ops) (v : Term) : Option Term :=
   (match v with
     | _ =>
-    (whenSome true ((Term.mk (Kind.unop Unop.fSqrt v) (ty v)))))
+    (whenSome true ((Term.mk (Kind.Unop Unop.FSqrt v) (ty v)))))
 
 def float_sqrt.step (O : Ops) (v : Term) : Term :=
   (firstSome [float_sqrt.r_lit O v, float_sqrt.r_default O v]).getD (float_sqrt.spec v)
 
-def float_round.r_lit (O : Ops) (rm : RM) (sv : Term) : Option Term :=
+def float_round.r_lit (O : Ops) (rm : Rm) (sv : Term) : Option Term :=
   (match sv with
-    | (Term.mk (Kind.float f) _) =>
-    (whenSome true ((Term.mk (Kind.float (O.orc.f_round rm f)) (ty sv))))
+    | (Term.mk (Kind.Float f) _) =>
+    (whenSome true ((Term.mk (Kind.Float (O.orc.f_round rm f)) (ty sv))))
     | _ => none)
 
-def float_round.r_default (O : Ops) (rm : RM) (sv : Term) : Option Term :=
+def float_round.r_default (O : Ops) (rm : Rm) (sv : Term) : Option Term :=
   (match sv with
     | _ =>
-    (whenSome true ((Term.mk (Kind.unop (Unop.fRound rm) sv) (ty sv)))))
+    (whenSome true ((Term.mk (Kind.Unop (Unop.FRound rm) sv) (ty sv)))))
 
-def float_round.step (O : Ops) (rm : RM) (sv : Term) : Term :=
+def float_round.step (O : Ops) (rm : Rm) (sv : Term) : Term :=
   (firstSome [float_round.r_lit O rm sv, float_round.r_default O rm sv]).getD (float_round.spec rm sv)
 
 def ptr_loc.r_ptr (O : Ops) (p : Term) : Option Term :=
   (match p with
-    | (Term.mk (Kind.ptr l _) _) =>
+    | (Term.mk (Kind.Ptr l _) _) =>
     (whenSome true (l))
     | _ => none)
 
@@ -4931,14 +4931,14 @@ def ptr_loc.r_default (O : Ops) (p : Term) : Option Term :=
   (match p with
     | _ =>
     (whenSome true
-    ((Term.mk (Kind.unop Unop.getPtrLoc p) (Ty.loc (size p))))))
+    ((Term.mk (Kind.Unop Unop.GetPtrLoc p) (Ty.TLoc (size p))))))
 
 def ptr_loc.step (O : Ops) (p : Term) : Term :=
   (firstSome [ptr_loc.r_ptr O p, ptr_loc.r_default O p]).getD (ptr_loc.spec p)
 
 def ptr_ofs.r_ptr (O : Ops) (p : Term) : Option Term :=
   (match p with
-    | (Term.mk (Kind.ptr _ o) _) =>
+    | (Term.mk (Kind.Ptr _ o) _) =>
     (whenSome true (o))
     | _ => none)
 
@@ -4947,7 +4947,7 @@ def ptr_ofs.r_default (O : Ops) (p : Term) : Option Term :=
     | _ =>
     (whenSome true
     ((let n := (size p);
-     (Term.mk (Kind.unop Unop.getPtrOfs p) (Ty.bitVector n))))))
+     (Term.mk (Kind.Unop Unop.GetPtrOfs p) (Ty.TBitVector n))))))
 
 def ptr_ofs.step (O : Ops) (p : Term) : Term :=
   (firstSome [ptr_ofs.r_ptr O p, ptr_ofs.r_default O p]).getD (ptr_ofs.spec p)

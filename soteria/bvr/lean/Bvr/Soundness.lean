@@ -4815,14 +4815,14 @@ theorem bv_sub_overflows.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) 
   refine Refines.firstSome_cons (fun res h => bv_sub_overflows.r_default.proof FS O hO signed v1 v2 res h) ?_
   exact Refines.firstSome_nil
 
-theorem bv_of_float.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (rounding : RM) (signed : Bool) (sz : Int) (v : Term) :
+theorem bv_of_float.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (rounding : Rm) (signed : Bool) (sz : Int) (v : Term) :
   Refines FS (bv_of_float.spec rounding signed sz v) (bv_of_float.step O rounding signed sz v) := by
   unfold bv_of_float.step
   refine Refines.firstSome_cons (fun res h => bv_of_float.r_lit.proof FS O hO rounding signed sz v res h) ?_
   refine Refines.firstSome_cons (fun res h => bv_of_float.r_default.proof FS O hO rounding signed sz v res h) ?_
   exact Refines.firstSome_nil
 
-theorem bv_to_float.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (rounding : RM) (signed : Bool) (fp : Prec) (v : Term) :
+theorem bv_to_float.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (rounding : Rm) (signed : Bool) (fp : Fp) (v : Term) :
   Refines FS (bv_to_float.spec rounding signed fp v) (bv_to_float.step O rounding signed fp v) := by
   unfold bv_to_float.step
   refine Refines.firstSome_cons (fun res h => bv_to_float.r_lit.proof FS O hO rounding signed fp v res h) ?_
@@ -4836,7 +4836,7 @@ theorem bv_to_float_raw.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (
   refine Refines.firstSome_cons (fun res h => bv_to_float_raw.r_default.proof FS O hO v res h) ?_
   exact Refines.firstSome_nil
 
-theorem float_is_floatclass.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (fc : FClass) (sv : Term) :
+theorem float_is_floatclass.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (fc : Fc) (sv : Term) :
   Refines FS (float_is_floatclass.spec fc sv) (float_is_floatclass.step O fc sv) := by
   unfold float_is_floatclass.step
   refine Refines.firstSome_cons (fun res h => float_is_floatclass.r_lit.proof FS O hO fc sv res h) ?_
@@ -4857,7 +4857,7 @@ theorem float_is_positive.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS)
   refine Refines.firstSome_cons (fun res h => float_is_positive.r_default.proof FS O hO v res h) ?_
   exact Refines.firstSome_nil
 
-theorem float_cast.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (rounding : RM) (fp : Prec) (v : Term) :
+theorem float_cast.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (rounding : Rm) (fp : Fp) (v : Term) :
   Refines FS (float_cast.spec rounding fp v) (float_cast.step O rounding fp v) := by
   unfold float_cast.step
   refine Refines.firstSome_cons (fun res h => float_cast.r_lit.proof FS O hO rounding fp v res h) ?_
@@ -4979,7 +4979,7 @@ theorem float_sqrt.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v : T
   refine Refines.firstSome_cons (fun res h => float_sqrt.r_default.proof FS O hO v res h) ?_
   exact Refines.firstSome_nil
 
-theorem float_round.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (rm : RM) (sv : Term) :
+theorem float_round.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (rm : Rm) (sv : Term) :
   Refines FS (float_round.spec rm sv) (float_round.step O rm sv) := by
   unfold float_round.step
   refine Refines.firstSome_cons (fun res h => float_round.r_lit.proof FS O hO rm sv res h) ?_

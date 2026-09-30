@@ -418,11 +418,11 @@ let add_binders env p =
 (** Types on which [=] and [<>] are allowed: structural equality coincides in
     OCaml and Lean. *)
 let rec eq_ty = function
-  | TInt | TBv | TBool | TUnit | TSty -> true
-  | TData _ as t -> (decl_of_ty t).d_eq
+  | TInt | TBool | TUnit -> true
+  | (TBv | TTerm | TKind | TSty | TVar | TData _) as t -> (decl_of_ty t).d_eq
   | TTuple l -> List.for_all eq_ty l
   | TOption t -> eq_ty t
-  | TTerm | TKind | TVar | TList _ -> false
+  | TList _ -> false
 
 (* ---------------------------------------------------------------- *)
 (* Desugaring of patterns
@@ -1383,7 +1383,18 @@ let language (str : structure) =
           operators =
             !lang.operators @ [ { sym; arity; node; smart; pre; on_bv } ];
         })
-    ops
+    ops;
+  let loc = match str with si :: _ -> si.pstr_loc | [] -> Location.none in
+  List.iter
+    (fun t ->
+      if Option.is_none (find_decl t) then error loc "type %s is not declared" t)
+    [ "t"; "kind"; "ty"; "bv"; "var" ];
+  List.iter
+    (fun c ->
+      match Option.bind (find_constr c) node_of_op with
+      | Some (_, [ _; _ ]) -> ()
+      | _ -> error loc "[@comm]: %s is not a binary operator" c)
+    !lang.commutative
 
 (** Replaces the operators in patterns ([a + b], [#x]) with the nodes that the
     language declares for them. The parameters of a node (e.g. the overflow

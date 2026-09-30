@@ -1,8 +1,8 @@
 (* The language of Bv_values, in which the rules of this directory are
    written: its types, with their OCaml and Lean names, the constructors of its
-   terms and the operators on them. bvr knows nothing else about Bv_values.
+   terms and the operators on them, which bvr no longer hard-codes.
 
-   - [[@ocaml t]] and [[@lean t]] give the OCaml and Lean types. The
+   - [[@ocaml "..."]] and [[@lean "..."]] give the OCaml and Lean types. The
      constructors of an OCaml type (and the fields of a record) are in the
      module of the type, and a Lean constructor is [[@lean]] of its type, dot,
      [[@lean]] of the constructor.
@@ -11,13 +11,13 @@
    - [[@operators]] on a kind constructor: the constructors of its first
      argument are node constructors too, [Add (c, l, r)] standing for
      [Binop (Add c, l, r)].
-   - [[@comm]] on an operator: its last two operands commute.
+   - [[@comm]] on a binary operator: its operands commute.
    - [[@literal]] on a kind constructor: its literals, [true] and [false] for a
      boolean, integers and [#x] for a bit-vector. *)
 
-type t [@ocaml "t"] [@lean "Term"]
+type t [@ocaml "t"] [@lean "Term"] [@noeq]
 type bv [@ocaml "bv"] [@lean "BvVal"]
-type var [@ocaml "Symex.Var.t"] [@lean "Int"]
+type var [@ocaml "Symex.Var.t"] [@lean "Int"] [@noeq]
 type float [@ocaml "Floatml.AnyFloat.t"] [@lean "FloatLit"] [@noeq]
 type ext [@ocaml "ext"] [@lean "Ext"]
 type ext_ty [@ocaml "ext_ty"] [@lean "ExtTy"]
@@ -25,7 +25,7 @@ type ext_ty [@ocaml "ext_ty"] [@lean "ExtTy"]
 type checked [@ocaml "Svalue_ast.checked"] [@lean "Checked"] =
   { signed : bool; unsigned : bool }
 
-type kind [@ocaml "(ghost, ext, ext_ty) Svalue_ast.t_kind"] [@lean "Kind"] =
+type kind [@ocaml "(ghost, ext, ext_ty) Svalue_ast.t_kind"] [@lean "Kind"] [@noeq] =
   | Var of var [@lean "var"]
   | Bool of bool [@lean "bool"] [@literal]
   | Float of float [@lean "float"]

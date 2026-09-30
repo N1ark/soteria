@@ -75,9 +75,10 @@ type lang = {
   decls : decl list;
   constrs : constr list;
   commutative : string list;
-      (** the binary operators whose operands commute: in [[@cases]] functions,
-          [[@comm]] may only swap theirs, and the swapped alternative is proved
-          from the other by commutativity *)
+      (** the binary operators whose operands commute, which patterns match in
+          either order: in [[@cases]] functions, [[@comm]] may only swap theirs,
+          and the swapped alternative is proved from the other by commutativity
+      *)
   node_kinds : string list;
       (** the kind constructors whose first argument is an operator, which then
           stands for the node: [Add (c, l, r)] for [Binop (Add c, l, r)] *)

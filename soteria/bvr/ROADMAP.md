@@ -414,11 +414,15 @@ per-arm statements as today, and keeps the arm proofs working.
    extensions summed with a base, E1), or stay a closed inductive per
    language, with the lemmas generated per language? The recommendation is
    generic terms, gated on the C4 spike.
+   *Decided: generic terms, if the C4 spike shows that the automation stays
+   as fast and as strong.*
 2. **How far the declaration goes (B4).** Should it generate the OCaml AST
    and its boilerplate (`pp`, `hash`, `iter_vars`, and the `Eval`,
    `Encoding` and `Expr.Subst` dispatch)? Doing so removes most of the "add a
    node in 10 places" cost on the OCaml side too, but it touches code outside
    bvr, which today is hand-tuned for performance.
+   *Decided: check only. `svalue_ast.ml` stays hand-written, and a generated
+   module checks that it has every declared constructor at its arity.*
 3. **The trusted base.** Today the soundness theorem is relative to
    `Semantics.lean`. Nothing checks that `Semantics.lean` agrees with
    `Encoding.ml` (the SMT semantics the solver actually uses) or with
@@ -426,10 +430,14 @@ per-arm statements as today, and keeps the arm proofs working.
    would be a differential test: evaluate random closed terms with the Lean
    evaluator (`lake exe`), with Z3 through `Encoding` and with `Eval`, and
    compare. Should it be part of phase A?
+   *Decided: yes, but after the generic core (C), as `Semantics.lean` will
+   move.*
 4. **Downstream rules (E2).** Do we want clients to add rules to base
    functions, or only to write rules for their own extension nodes? E2 is
    cheap once C2 exists, but it means that different clients run different,
    separately proved, simplifiers.
+   *Decided: no E2. Clients write rules for their own nodes and may disable
+   groups of base rules (E3), so that there is one proved base simplifier.*
 
 ## 5. Suggested order of PRs
 

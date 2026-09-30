@@ -439,6 +439,21 @@ per-arm statements as today, and keeps the arm proofs working.
    *Decided: no E2. Clients write rules for their own nodes and may disable
    groups of base rules (E3), so that there is one proved base simplifier.*
 
+5. **Composing languages from modules** (decided after the C4 trial, see
+   `lean/Bvr/Core/`). Languages are built from modules (Bool at the bottom,
+   then BitVec, Int, Float, Ptr, ...), each declared and proved once:
+   - In bvr, each module has its declaration and rules, and a language
+     (Bv_values, Tiny_values, soteria-rust's extension) lists its modules.
+     The generated OCaml of a language stays over its hand-written AST.
+   - In Lean, bvr generates each language's flat, concrete types, and one
+     instance per module (`HasBool L`, ...) whose laws hold by `rfl`. A
+     module's rules and proofs are generic over its class.
+   - A higher module may add rules to the rule functions of a lower one
+     (BitVec adds the bounds rules to Bool's `b_and`), proved once for every
+     language that has both; the order of the modules fixes the order of the
+     rules. This is inside a language's stack of modules: downstream clients
+     still do not extend base rules (question 4).
+
 ## 5. Suggested order of PRs
 
 | # | PR | Changes generated OCaml? |

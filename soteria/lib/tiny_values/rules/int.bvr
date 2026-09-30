@@ -1,0 +1,131 @@
+(* Integers *)
+
+rule add (v1 v2 : t) : Plus (v1, v2) <| TInt =
+  match v1 + v2 with
+  | zero: 0 + x -> x
+  | lits: Int a + Int b -> int_z (a + b)
+  | assoc: (x + Int a) + Int b -> add x (int_z (a + b))
+  | default: _ -> mk_commut_binop Plus v1 v2 <| TInt
+
+rule sub (v1 v2 : t) : Minus (v1, v2) <| TInt =
+  match v1 - v2 with
+  | zero: x - 0 -> x
+  | lits: Int a - Int b -> int_z (a - b)
+  | vars: Var a - Var b when var_equal a b -> zero
+  | sub_left: (Int a - x) - Int b -> sub (int_z (a - b)) x
+  | sub_right: (x - Int a) - Int b -> sub x (int_z (a + b))
+  | left_sub: Int a - (Int b - x) -> add (int_z (a - b)) x
+  | right_sub: Int a - (x - Int b) -> sub (int_z (a + b)) x
+  | add_self: (x + y) - x -> y
+  | self_add: x - (x + y) -> sub zero y
+  | default: _ -> Minus (v1, v2) <| TInt
+
+rule mul (v1 v2 : t) : Times (v1, v2) <| TInt =
+  match v1 * v2 with
+  | zero: 0 * _ -> zero
+  | one: 1 * x -> x
+  | lits: Int a * Int b -> int_z (a * b)
+  | default: _ -> mk_commut_binop Times v1 v2 <| TInt
+
+rule div (v1 v2 : t) : Div (v1, v2) <| TInt =
+  match (v1, v2) with
+  | one: _, 1 -> v1
+  | lits: Int a, Int b -> int_z (tdiv a b)
+  | mul: (x * Int a, Int b | Int b, x * Int a) when a = b -> x
+  | default: _ -> Div (v1, v2) <| TInt
+
+rule rem (v1 v2 : t) : Rem (v1, v2) <| ty v1 =
+  match (v1, v2) with
+  | one: _, 1 -> zero
+  | multiple: _, Int n when is_mod v1 n -> zero
+  | lits: Int a, Int b -> int_z (trem a b)
+  | mul: ((x * n) [@nocomm], (y * n) [@nocomm]
+         | (n * x) [@nocomm], (n * y) [@nocomm]) ->
+      mul n (rem x y)
+  | default: _ -> Rem (v1, v2) <| ty v1
+
+rule mod_ (v1 v2 : t) : Mod (v1, v2) <| TInt =
+  match (v1, v2) with
+  | one: _, 1 -> zero
+  | multiple: _, Int n when is_mod v1 n -> zero
+  | lits: Int a, Int b ->
+      let r = trem a b in
+      if r < 0 then int_z (r + b) else int_z r
+  | mod_mod: Mod (x, Int a), Int b when a >= b && divisible a b -> mod_ x v2
+  (* (x + (y mod a)) mod b <=> (x + y) mod b, when b divides a *)
+  | add_mod: (x + Mod (y, Int a)) [@nocomm], Int b
+    when a >= b && divisible a b ->
+      mod_ (x + y) v2
+  | default: _ -> Mod (v1, v2) <| TInt
+
+rule neg (v : t) : Minus (zero, v) <| TInt =
+  match v with
+  | lit: Int a -> int_z (-a)
+  | default: _ -> sub zero v
+
+(* Comparisons *)
+
+rule lt (v1 v2 : t) : Lt (v1, v2) <| TBool =
+  match (v1, v2) with
+  | lits: Int a, Int b -> of_bool (a < b)
+  | same: v, v -> v_false
+  | self_add: x, x + y -> lt zero y
+  | add_self: x + y, x -> lt y zero
+  | add_add: a + x, a + y -> lt x y
+  (* moving constants to one side *)
+  | add_const: v + Int a, Int b -> lt v (int_z (b - a))
+  | const_add: Int b, v + Int a -> lt (int_z (b - a)) v
+  | sub_const: v - Int a, Int b -> lt v (int_z (b + a))
+  | rsub_const: Int a - v, Int b -> lt (int_z (a - b)) v
+  | const_sub: Int b, v - Int a -> lt (int_z (b + a)) v
+  | const_rsub: Int b, Int a - v -> lt v (int_z (a - b))
+  | const_mul: Int b, Int a * v ->
+      if a = 0 then of_bool (b < 0)
+      else if divisible b a || b > 0 then (
+        if 0 < a then lt (int_z (tdiv b a)) v else lt v (int_z (tdiv b a)))
+      else if 0 < a then leq (int_z (tdiv b a)) v
+      else leq v (int_z (tdiv b a))
+  | mul_const: v * Int a, Int b ->
+      if a = 0 then of_bool (0 < b)
+      else if divisible b a || b < 0 then (
+        if 0 < a then lt v (int_z (tdiv b a)) else lt (int_z (tdiv b a)) v)
+      else if 0 < a then leq v (int_z (tdiv b a))
+      else leq (int_z (tdiv b a)) v
+  | mod_const: (Mod (_, Int a) | Rem (_, Int a)), Int b when a <= b -> v_true
+  | const_mod: Int b, (Mod (_, Int a) | Rem (_, Int a)) when b < -abs a ->
+      v_true
+  | const_ite: Int _, Ite (b, l, r) -> ite b (lt v1 l) (lt v1 r)
+  | ite_const: Ite (b, l, r), Int _ -> ite b (lt l v2) (lt r v2)
+  | default: _ -> Lt (v1, v2) <| TBool
+
+rule leq (v1 v2 : t) : Leq (v1, v2) <| TBool =
+  match (v1, v2) with
+  | lits: Int a, Int b -> of_bool (a <= b)
+  | same: v, v -> v_true
+  | self_add: x, x + y -> leq zero y
+  | add_add: a + x, a + y -> leq x y
+  (* moving constants to one side *)
+  | add_const: v + Int a, Int b -> leq v (int_z (b - a))
+  | const_add: Int b, v + Int a -> leq (int_z (b - a)) v
+  | sub_const: v - Int a, Int b -> leq v (int_z (b + a))
+  | rsub_const: Int a - v, Int b -> leq (int_z (a - b)) v
+  | const_sub: Int b, v - Int a -> leq (int_z (b + a)) v
+  | const_rsub: Int b, Int a - v -> leq v (int_z (a - b))
+  | const_mul: Int b, Int a * v ->
+      if a = 0 then of_bool (b < 0)
+      else if divisible b a || b < 0 then (
+        if 0 < a then leq (int_z (tdiv b a)) v else leq v (int_z (tdiv b a)))
+      else if 0 < a then lt (int_z (tdiv b a)) v
+      else lt v (int_z (tdiv b a))
+  | mul_const: v * Int a, Int b ->
+      if a = 0 then of_bool (b < 0)
+      else if divisible b a || b > 0 then (
+        if 0 < a then leq v (int_z (tdiv b a)) else leq (int_z (tdiv b a)) v)
+      else if 0 < a then lt v (int_z (tdiv b a))
+      else lt (int_z (tdiv b a)) v
+  | mod_const: (Mod (_, Int a) | Rem (_, Int a)), Int b when a <= b -> v_true
+  | const_rem: Int b, Rem (_, Int a) when b <= -abs a -> v_true
+  | const_mod: Int b, Mod (_, _) when b <= 0 -> v_true
+  | const_ite: Int _, Ite (b, l, r) -> ite b (leq v1 l) (leq v1 r)
+  | ite_const: Ite (b, l, r), Int _ -> ite b (leq l v2) (leq r v2)
+  | default: _ -> Leq (v1, v2) <| TBool

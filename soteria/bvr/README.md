@@ -11,6 +11,10 @@ promotes it to the source tree, where it is committed, and
 It also generates a Lean model of the rules, with one soundness statement per
 rule, which are proved in `lean/` (see [Proofs](#proofs)).
 
+The smart constructors of `Tiny_values.Svalue` are generated in the same way,
+from `soteria/lib/tiny_values/rules/*.bvr`, into a plain module with its own
+primitives; they have no Lean model yet.
+
 bvr is a small, pure, first-order language with its own typing. Its syntax is
 that of OCaml, apart from the declarations and rule names below; it is parsed
 by `bvr_parser.mly`.

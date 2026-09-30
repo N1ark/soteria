@@ -1,0 +1,73 @@
+(* Booleans *)
+
+rule and_ (v1 v2 : t) : And (v1, v2) <| TBool =
+  match v1 && v2 with
+  | same: v && v -> v
+  | false_: false && _ -> v_false
+  | true_: true && x -> x
+  | default: _ -> mk_commut_binop And v1 v2 <| TBool
+
+rule or_ (v1 v2 : t) : Or (v1, v2) <| TBool =
+  match v1 || v2 with
+  | true_: true || _ -> v_true
+  | false_: false || x -> x
+  | default: _ -> mk_commut_binop Or v1 v2 <| TBool
+
+rule not_ (sv : t) : Not sv <| TBool =
+  match sv with
+  | true_: true -> v_false
+  | false_: false -> v_true
+  | not: not v -> v
+  | lt: Lt (v1, v2) -> Leq (v2, v1) <| TBool
+  | leq: Leq (v1, v2) -> Lt (v2, v1) <| TBool
+  | or_: v1 || v2 -> mk_commut_binop And (not v1) (not v2) <| TBool
+  | and_: v1 && v2 -> mk_commut_binop Or (not v1) (not v2) <| TBool
+  | default: _ -> Not sv <| TBool
+
+(* whether the elements of [l] are surely pairwise different *)
+fn sure_neq_all (a : t) (l : t list) : bool =
+  match l with [] -> true | b :: l -> sure_neq a b && sure_neq_all a l
+
+fn sure_distinct (l : t list) : bool =
+  match l with [] -> true | a :: l -> sure_neq_all a l && sure_distinct l
+
+rule distinct (l : t list) : Distinct l <| TBool =
+  match l with
+  | small: [] | [ _ ] -> v_true
+  | distinct: _ when sure_distinct l -> v_true
+  | default: _ -> Distinct l <| TBool
+
+rule ite (guard if_ else_ : t) : Ite (guard, if_, else_) <| ty if_ =
+  match (guard, if_, else_) with
+  | true_: true, _, _ -> if_
+  | false_: false, _, _ -> else_
+  | bool: _, true, false -> guard
+  | not_bool: _, false, true -> not guard
+  | false_then: _, false, _ -> not guard && else_
+  | true_then: _, true, _ -> guard || else_
+  | false_else: _, _, false -> guard && if_
+  | true_else: _, _, true -> not guard || if_
+  | same: _, x, x -> if_
+  | default: _ -> Ite (guard, if_, else_) <| ty if_
+
+rule sem_eq (v1 v2 : t) : Eq (v1, v2) <| TBool =
+  match (v1, v2) with
+  | same: v, v -> v_true
+  | ints: Int a, Int b -> of_bool (a = b)
+  | bools: Bool a, Bool b -> of_bool (a = b)
+  (* x == x + y <=> y == 0 *)
+  | add_self: x, x + y -> sem_eq y zero
+  | add_add: a + x, a + y -> sem_eq x y
+  (* moving constants to the right *)
+  | add_const: v + Int a, Int b -> sem_eq v (int_z (b - a))
+  | sub_const: v - Int a, Int b -> sem_eq v (int_z (b + a))
+  | mul_const: (Int b, Int a * v | v * Int a, Int b) ->
+      if a = 0 then of_bool (b = 0)
+      else if trem b a = 0 then sem_eq v (int_z (tdiv b a))
+      else v_false
+  | default: _ -> mk_commut_binop Eq v1 v2 <| TBool
+
+rule sem_eq_untyped (v1 v2 : t) : Eq (v1, v2) <| TBool =
+  match (v1, v2) with
+  | ill_typed: _ when not (ty v1 = ty v2) -> v_false
+  | typed: _ -> sem_eq v1 v2

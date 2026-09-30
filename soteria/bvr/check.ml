@@ -15,19 +15,23 @@ let pp_loc ft (loc : Location.t) =
 (* ---------------------------------------------------------------- *)
 (* Types *)
 
+let ty_of_name = function
+  | "int" -> Some TInt
+  | "bv" -> Some TBv
+  | "bool" -> Some TBool
+  | "unit" -> Some TUnit
+  | "t" -> Some TTerm
+  | "kind" -> Some TKind
+  | "ty" -> Some TSty
+  | "var" -> Some TVar
+  | s when Option.is_some (find_decl s) -> Some (TData s)
+  | _ -> None
+
 let rec ty_of_core (ct : core_type) : Syntax.ty =
   match ct.ptyp_desc with
-  | Ptyp_constr ({ txt = Lident "int"; _ }, []) -> TInt
-  | Ptyp_constr ({ txt = Lident "bv"; _ }, []) -> TBv
-  | Ptyp_constr ({ txt = Lident "bool"; _ }, []) -> TBool
-  | Ptyp_constr ({ txt = Lident "unit"; _ }, []) -> TUnit
-  | Ptyp_constr ({ txt = Lident "t"; _ }, []) -> TTerm
-  | Ptyp_constr ({ txt = Lident "kind"; _ }, []) -> TKind
-  | Ptyp_constr ({ txt = Lident "ty"; _ }, []) -> TSty
-  | Ptyp_constr ({ txt = Lident "float"; _ }, []) -> TFloat
-  | Ptyp_constr ({ txt = Lident "var"; _ }, []) -> TVar
-  | Ptyp_constr ({ txt = Lident s; _ }, []) when List.mem s data_types ->
-      TData s
+  | Ptyp_constr ({ txt = Lident s; _ }, []) when Option.is_some (ty_of_name s)
+    ->
+      Option.get (ty_of_name s)
   | Ptyp_constr ({ txt = Lident "list"; _ }, [ t ]) -> TList (ty_of_core t)
   | Ptyp_constr ({ txt = Lident "option"; _ }, [ t ]) -> TOption (ty_of_core t)
   | Ptyp_tuple l -> TTuple (List.map ty_of_core l)
@@ -47,6 +51,9 @@ let rec ty_equal a b =
       List.length l1 = List.length l2 && List.for_all2 ty_equal l1 l2
   | TOption a, TOption b | TList a, TList b -> ty_equal a b
   | _ -> a = b
+
+(** The fields of a record type, with their types. *)
+let record_fields = function TData _ as t -> (decl_of_ty t).d_fields | _ -> []
 
 let expect loc ~expected ty =
   if not (ty_equal expected ty) then
@@ -80,24 +87,6 @@ let pid_counter = ref 0
 let next_pid () =
   incr pid_counter;
   !pid_counter
-
-(** Binary operators whose operands [[@comm]] may swap in [[@cases]] functions,
-    where the swapped alternative is proved from the other by commutativity.
-    Elsewhere, [[@comm]] just matches both orders. *)
-let commutative =
-  [
-    "Add";
-    "Mul";
-    "BitAnd";
-    "BitOr";
-    "BitXor";
-    "And";
-    "Or";
-    "Eq";
-    "FEq";
-    "AddOvf";
-    "MulOvf";
-  ]
 
 let rule_name_of_attrs (attrs : attributes) =
   List.find_map
@@ -137,15 +126,17 @@ let split_pexp (e : expression) =
   match e.pexp_desc with Pexp_tuple l -> Some l | _ -> None
 
 (** Operators can be used directly as node constructors: [Add (c, l, r)] stands
-    for [Binop (Add c, l, r)], [Not p] for [Unop (Not, p)], etc. *)
+    for [Binop (Add c, l, r)], [Not p] for [Unop (Not, p)], etc. (see
+    [Syntax.lang.node_kinds]). *)
 let node_of_op (op : constr) =
-  let kind name = Option.get (find_constr name) in
-  match op.c_res with
-  | TData "unop" -> Some (kind "Unop", [ TTerm ])
-  | TData "binop" -> Some (kind "Binop", [ TTerm; TTerm ])
-  | TData "triop" -> Some (kind "Triop", [ TTerm; TTerm; TTerm ])
-  | TData "nop" -> Some (kind "Nop", [ TList TTerm ])
-  | _ -> None
+  List.find_map
+    (fun k ->
+      let kc = Option.get (find_constr k) in
+      match kc.c_args with
+      | Arg t :: operands when t = op.c_res ->
+          Some (kc, List.map arg_ty operands)
+      | _ -> None)
+    !lang.node_kinds
 
 let has_attr name (attrs : attributes) =
   List.exists (fun (a : attribute) -> a.attr_name.txt = name) attrs
@@ -199,9 +190,9 @@ let rec pat (expected : Syntax.ty) (p : pattern) : Syntax.pat =
     let swapped =
       match q.p with
       | PTuple [ a; b ] when explicit -> Some (PTuple [ b; a ])
-      | PConstr (({ c_name = "Binop"; _ } as c), [ op; a; b ]) -> (
+      | PConstr (c, [ op; a; b ]) when List.mem c.c_name !lang.node_kinds -> (
           match op.p with
-          | PConstr (o, _) when List.mem o.c_name commutative ->
+          | PConstr (o, _) when is_commutative o.c_name ->
               if explicit || not (swap_is_trivial a b) then
                 Some (PConstr (c, [ op; b; a ]))
               else None
@@ -241,11 +232,12 @@ and pat' (expected : Syntax.ty) (p : pattern) : Syntax.pat =
            ] ))
   in
   match p.ppat_desc with
-  | Ppat_constant (Pconst_integer (s, None)) when expected = TTerm ->
-      lit_node "BitVec" (PInt (Z.of_string s))
+  | Ppat_constant (Pconst_integer (s, None))
+    when expected = TTerm && Option.is_some !lang.lit_bv ->
+      lit_node (Option.get !lang.lit_bv) (PInt (Z.of_string s))
   | Ppat_construct ({ txt = Lident (("true" | "false") as b); _ }, None)
-    when expected = TTerm ->
-      lit_node "Bool" (PBool (b = "true"))
+    when expected = TTerm && Option.is_some !lang.lit_bool ->
+      lit_node (Option.get !lang.lit_bool) (PBool (b = "true"))
   | Ppat_construct ({ txt = Lident name; _ }, arg)
     when (expected = TTerm || expected = TKind)
          && Option.fold ~none:false
@@ -327,8 +319,8 @@ and pat' (expected : Syntax.ty) (p : pattern) : Syntax.pat =
       | TList t -> mk (PCons (pat t h, pat expected tl))
       | _ -> error loc ":: at type %a" pp_ty expected)
   | Ppat_construct
-      ({ txt = Lident "BitVec"; _ }, Some (_, { ppat_desc = Ppat_var x; _ }))
-    when !cases_mode && expected = TTerm ->
+      ({ txt = Lident name; _ }, Some (_, { ppat_desc = Ppat_var x; _ }))
+    when !cases_mode && expected = TTerm && Some name = !lang.lit_bv ->
       mk (PLit x.txt)
   | Ppat_construct ({ txt = Lident name; _ }, arg) -> (
       match find_constr name with
@@ -358,15 +350,16 @@ and pat' (expected : Syntax.ty) (p : pattern) : Syntax.pat =
             c.c_args args;
           mk (PConstr (c, args)))
   | Ppat_record (fields, _) ->
-      if expected <> TData "checked" then
-        error loc "record patterns are only supported for checked";
+      let known = record_fields expected in
+      if known = [] then
+        error loc "unexpected record pattern at type %a" pp_ty expected;
       let fields =
         List.map
           (fun (({ txt; _ } : longident loc), p) ->
             let f = Longident.name txt in
-            if not (List.mem f checked_fields) then
-              error loc "unknown field %s" f;
-            (f, pat TBool p))
+            match List.assoc_opt f known with
+            | Some t -> (f, pat t p)
+            | None -> error loc "unknown field %s" f)
           fields
       in
       mk (PRecord fields)
@@ -425,10 +418,11 @@ let add_binders env p =
 (** Types on which [=] and [<>] are allowed: structural equality coincides in
     OCaml and Lean. *)
 let rec eq_ty = function
-  | TInt | TBv | TBool | TUnit | TSty | TData _ -> true
+  | TInt | TBv | TBool | TUnit | TSty -> true
+  | TData _ as t -> (decl_of_ty t).d_eq
   | TTuple l -> List.for_all eq_ty l
   | TOption t -> eq_ty t
-  | TTerm | TKind | TFloat | TVar | TList _ -> false
+  | TTerm | TKind | TVar | TList _ -> false
 
 (* ---------------------------------------------------------------- *)
 (* Desugaring of patterns
@@ -575,31 +569,38 @@ let cmp_ops = [ ("<", Lt); ("<=", Le); (">", Gt); (">=", Ge) ]
 let bit_ops =
   [ ("land", Land); ("lor", Lor); ("lxor", Lxor); ("lsl", Lsl); ("asr", Asr) ]
 
-(** Operators on terms: the smart constructor they call, and its leading
-    arguments. *)
-let term_ops =
-  let unchecked =
-    { e = ECall ("unchecked", []); ety = TData "checked"; eloc = Location.none }
-  in
-  let no = { e = EBool false; ety = TBool; eloc = Location.none } in
+(** The operators of the grammar. The parser gives prefix operators their OCaml
+    names. *)
+let infix_ops =
   [
-    ("+", ("bv_add", [ unchecked ]));
-    ("-", ("bv_sub", [ unchecked ]));
-    ("*", ("bv_mul", [ unchecked ]));
-    ("~-", ("bv_neg", [ no ]));
-    ("land", ("bv_and", []));
-    ("lor", ("bv_or", []));
-    ("lxor", ("bv_xor", []));
-    ("lognot", ("bv_not", []));
-    ("lsl", ("bv_shl", []));
-    ("lsr", ("bv_lshr", []));
-    ("asr", ("bv_ashr", []));
-    ("++", ("bv_concat", []));
-    ("&&", ("b_and", []));
-    ("||", ("b_or", []));
-    ("not", ("b_not", []));
-    ("==", ("sem_eq", []));
+    "+";
+    "-";
+    "*";
+    "land";
+    "lor";
+    "lxor";
+    "lsl";
+    "lsr";
+    "asr";
+    "++";
+    "&&";
+    "||";
+    "==";
   ]
+
+let prefix_ops = [ ("-", "~-"); ("~", "lognot"); ("not", "not") ]
+
+(** How an operator is written. *)
+let op_name op =
+  match List.find_opt (fun (_, o) -> o = op) prefix_ops with
+  | Some (p, _) -> "prefix " ^ p
+  | None -> op
+
+(** The operator [op] on bit-vector values: its primitive. *)
+let bv_op loc op ~arity =
+  match find_operator ~arity op with
+  | Some { on_bv = Some f; _ } -> f
+  | _ -> error loc "%s is not defined on bit-vector values" (op_name op)
 
 (** A bit-vector value where a term is expected is its literal. *)
 let lift (e : Syntax.expr) =
@@ -618,8 +619,15 @@ let rec expr env ?expected (e : expression) : Syntax.expr =
   in
   (* an operator on terms, if one of its operands is a term *)
   let term_op op (args : Syntax.expr list) =
-    let f, pre = List.assoc op term_ops in
+    let o =
+      match find_operator ~arity:(List.length args) op with
+      | Some o -> o
+      | None -> error loc "%s is not an operator on terms" (op_name op)
+    in
+    let f = o.smart in
     ignore (find_global env loc f);
+    (* the leading arguments, in the global scope *)
+    let pre = List.map (expr { env with vars = []; locals = [] }) o.pre in
     let args = List.map lift args in
     List.iter
       (fun (a : Syntax.expr) -> expect a.eloc ~expected:TTerm a.ety)
@@ -725,12 +733,7 @@ let rec expr env ?expected (e : expression) : Syntax.expr =
           | TBv ->
               (* modular arithmetic on bit-vector values *)
               expect b.eloc ~expected:TBv b.ety;
-              let f =
-                match op with
-                | "+" -> "lit_add"
-                | "-" -> "lit_sub"
-                | _ -> "lit_mul"
-              in
+              let f = bv_op loc op ~arity:2 in
               ignore (find_global env loc f);
               mk TBv (ECall (f, [ a; b ]))
           | _ ->
@@ -764,15 +767,7 @@ let rec expr env ?expected (e : expression) : Syntax.expr =
           | TBv, _ ->
               (* bitwise operations on bit-vector values *)
               expect b.eloc ~expected:TBv b.ety;
-              let f =
-                match op with
-                | "land" -> "lit_and"
-                | "lor" -> "lit_or"
-                | "lxor" -> "lit_xor"
-                | "lsl" -> "lit_shl"
-                | "lsr" -> "lit_lshr"
-                | _ -> "lit_ashr"
-              in
+              let f = bv_op loc op ~arity:2 in
               ignore (find_global env loc f);
               mk TBv (ECall (f, [ a; b ]))
           | _ ->
@@ -791,8 +786,9 @@ let rec expr env ?expected (e : expression) : Syntax.expr =
           match a.ety with
           | TTerm -> term_op "~-" [ a ]
           | TBv ->
-              ignore (find_global env loc "lit_neg");
-              mk TBv (ECall ("lit_neg", [ a ]))
+              let f = bv_op loc "~-" ~arity:1 in
+              ignore (find_global env loc f);
+              mk TBv (ECall (f, [ a ]))
           | _ ->
               expect a.eloc ~expected:TInt a.ety;
               mk TInt (EUnop (Neg, a)))
@@ -801,8 +797,9 @@ let rec expr env ?expected (e : expression) : Syntax.expr =
           match a.ety with
           | TTerm -> term_op op [ a ]
           | TBv ->
-              ignore (find_global env loc "lit_not");
-              mk TBv (ECall ("lit_not", [ a ]))
+              let f = bv_op loc op ~arity:1 in
+              ignore (find_global env loc f);
+              mk TBv (ECall (f, [ a ]))
           | _ ->
               expect a.eloc ~expected:TInt a.ety;
               mk TInt (EUnop (Lognot, a)))
@@ -880,20 +877,37 @@ let rec expr env ?expected (e : expression) : Syntax.expr =
       in
       mk (TTuple (List.map (fun e -> e.ety) l)) (ETuple l)
   | Pexp_record (fields, None) ->
-      let fields =
+      let names =
         List.map
-          (fun (({ txt; _ } : longident loc), e) ->
-            (Longident.name txt, expr env ~expected:TBool e))
+          (fun (({ txt; _ } : longident loc), _) -> Longident.name txt)
           fields
       in
-      if List.sort compare (List.map fst fields) <> checked_fields then
-        error loc
-          "a checked record needs exactly the fields signed and unsigned";
-      mk (TData "checked") (ERecord fields)
-  | Pexp_field (e, { txt = Lident f; _ }) ->
-      if not (List.mem f checked_fields) then error loc "unknown field %s" f;
-      let e = expr env ~expected:(TData "checked") e in
-      mk TBool (EField (e, f))
+      let d =
+        match
+          List.find_opt
+            (fun d ->
+              d.d_fields <> []
+              && List.sort compare (List.map fst d.d_fields)
+                 = List.sort compare names)
+            !lang.decls
+        with
+        | Some d -> d
+        | None -> error loc "no record type has exactly these fields"
+      in
+      let fields =
+        List.map2
+          (fun f (_, e) -> (f, expr env ~expected:(List.assoc f d.d_fields) e))
+          names fields
+      in
+      mk (TData d.d_name) (ERecord fields)
+  | Pexp_field (e, { txt = Lident f; _ }) -> (
+      match
+        List.find_opt (fun d -> List.mem_assoc f d.d_fields) !lang.decls
+      with
+      | None -> error loc "unknown field %s" f
+      | Some d ->
+          let e = expr env ~expected:(TData d.d_name) e in
+          mk (List.assoc f d.d_fields) (EField (e, f)))
   | Pexp_sequence ({ pexp_desc = Pexp_assert c; _ }, body) ->
       let c = expr env ~expected:TBool c in
       let body = expr env ?expected body in
@@ -971,24 +985,6 @@ and ret_of = function
 
 (* ---------------------------------------------------------------- *)
 (* Matching the spec of a rule *)
-
-(** The nodes of the infix operators on terms. *)
-let node_ops =
-  [
-    ("+", "Add");
-    ("-", "Sub");
-    ("*", "Mul");
-    ("land", "BitAnd");
-    ("lor", "BitOr");
-    ("lxor", "BitXor");
-    ("lsl", "Shl");
-    ("lsr", "LShr");
-    ("asr", "AShr");
-    ("++", "BvConcat");
-    ("&&", "And");
-    ("||", "Or");
-    ("==", "Eq");
-  ]
 
 (** Whether [x] occurs in [e], other than as the argument of [ty] or [size]. *)
 let mentions x (e : expression) =
@@ -1101,7 +1097,7 @@ let rec spec_match (spec : expression) (e : expression) =
         { lhs with ppat_desc = Ppat_tuple [ q; p ] }
     in
     let swap =
-      List.mem node commutative
+      is_commutative node
       && (not (has_attr "comm" lhs.ppat_attributes))
       && (not (once p && once q))
       && not symmetric
@@ -1154,8 +1150,8 @@ let rec spec_match (spec : expression) (e : expression) =
            _;
          } as scrut),
         cases )
-    when List.mem_assoc op node_ops ->
-      let op_node = List.assoc op node_ops in
+    when Option.is_some (find_operator ~arity:2 op) ->
+      let op_node = (Option.get (find_operator ~arity:2 op)).node in
       if op_node <> node then
         error scrut.pexp_loc "the spec of this rule is not a %s node" op_node;
       let case (c : Ppxlib.case) =
@@ -1187,6 +1183,256 @@ let rec spec_match (spec : expression) (e : expression) =
       in
       { e with pexp_desc = Pexp_match (scrut, List.map case cases) }
   | _ -> e
+
+(* ---------------------------------------------------------------- *)
+(* The declaration of the language *)
+
+let string_attr (a : attribute) =
+  match a.attr_payload with
+  | PStr
+      [
+        {
+          pstr_desc =
+            Pstr_eval
+              ({ pexp_desc = Pexp_constant (Pconst_string (s, _, _)); _ }, _);
+          _;
+        };
+      ] ->
+      s
+  | _ -> error a.attr_loc "expected [@%s \"...\"]" a.attr_name.txt
+
+let check_attrs allowed (attrs : attributes) =
+  List.iter
+    (fun (a : attribute) ->
+      if not (List.mem a.attr_name.txt allowed) then
+        error a.attr_loc "unknown attribute [@%s]" a.attr_name.txt)
+    attrs
+
+let required_attr loc name (attrs : attributes) =
+  match List.find_opt (fun a -> a.attr_name.txt = name) attrs with
+  | Some a -> string_attr a
+  | None -> error loc "missing [@%s \"...\"]" name
+
+(** Reads the declaration of a language, which the rules are then checked
+    against. *)
+let language (str : structure) =
+  let tds, ops =
+    List.partition_map
+      (fun (si : structure_item) ->
+        match si.pstr_desc with
+        | Pstr_type (_, [ td ]) -> Left td
+        | Pstr_eval (e, [ a ])
+          when List.mem a.attr_name.txt [ "infix"; "prefix" ] ->
+            Right (e, a)
+        | _ -> error si.pstr_loc "unsupported item in a language declaration")
+      str
+  in
+  (* the types first, so that they can refer to each other *)
+  let decls =
+    List.map
+      (fun (td : type_declaration) ->
+        let name = td.ptype_name.txt and loc = td.ptype_loc in
+        check_attrs [ "ocaml"; "lean"; "noeq" ] td.ptype_attributes;
+        (match ty_of_name name with
+        | Some (TInt | TBool | TUnit) -> error loc "%s is a built-in type" name
+        | _ -> ());
+        if Option.is_some (find_decl name) then
+          error loc "type %s is declared twice" name;
+        let d =
+          {
+            d_name = name;
+            d_ocaml = required_attr loc "ocaml" td.ptype_attributes;
+            d_lean = required_attr loc "lean" td.ptype_attributes;
+            d_eq = not (has_attr "noeq" td.ptype_attributes);
+            d_fields = [];
+          }
+        in
+        lang := { !lang with decls = !lang.decls @ [ d ] };
+        d)
+      tds
+  in
+  let decls =
+    List.map2
+      (fun d (td : type_declaration) ->
+        match td.ptype_kind with
+        | Ptype_record fields ->
+            {
+              d with
+              d_fields =
+                List.map
+                  (fun (l : label_declaration) ->
+                    (l.pld_name.txt, ty_of_core l.pld_type))
+                  fields;
+            }
+        | _ -> d)
+      decls tds
+  in
+  lang := { !lang with decls };
+  List.iter2
+    (fun d (td : type_declaration) ->
+      match td.ptype_kind with
+      | Ptype_variant cds ->
+          let res = Option.get (ty_of_name d.d_name) in
+          List.iter
+            (fun (cd : constructor_declaration) ->
+              let name = cd.pcd_name.txt and loc = cd.pcd_loc in
+              let attrs = cd.pcd_attributes in
+              check_attrs [ "lean"; "comm"; "literal"; "operators" ] attrs;
+              if Option.is_some (find_constr name) then
+                error loc "constructor %s is declared twice" name;
+              let args =
+                match cd.pcd_args with
+                | Pcstr_tuple l ->
+                    List.map
+                      (fun (ct : core_type) ->
+                        match ct.ptyp_desc with
+                        | Ptyp_constr ({ txt = Lident "nat"; _ }, []) -> Small
+                        | _ -> Arg (ty_of_core ct))
+                      l
+                | Pcstr_record _ -> error loc "unsupported constructor"
+              in
+              let c =
+                {
+                  c_name = name;
+                  c_res = res;
+                  c_args = args;
+                  c_lean = d.d_lean ^ "." ^ required_attr loc "lean" attrs;
+                }
+              in
+              let l = !lang in
+              let l = { l with constrs = l.constrs @ [ c ] } in
+              let l =
+                if has_attr "comm" attrs then
+                  { l with commutative = l.commutative @ [ name ] }
+                else l
+              in
+              let l =
+                if has_attr "operators" attrs then (
+                  if res <> TKind then
+                    error loc "[@operators] applies to kind constructors";
+                  match args with
+                  | Arg (TData _) :: _ ->
+                      { l with node_kinds = l.node_kinds @ [ name ] }
+                  | _ -> error loc "[@operators]: expected an operator argument")
+                else l
+              in
+              let l =
+                if has_attr "literal" attrs then
+                  match (res, args) with
+                  | TKind, [ Arg TBool ] when l.lit_bool = None ->
+                      { l with lit_bool = Some name }
+                  | TKind, [ Arg TInt ] when l.lit_bv = None ->
+                      { l with lit_bv = Some name }
+                  | _ ->
+                      error loc
+                        "[@literal]: expected the only kind constructor of \
+                         bool or of int literals"
+                else l
+              in
+              lang := l)
+            cds
+      | Ptype_abstract | Ptype_record _ -> ()
+      | Ptype_open -> error td.ptype_loc "unsupported type")
+    decls tds;
+  (* then the operators on terms *)
+  List.iter
+    (fun ((e : expression), (a : attribute)) ->
+      let loc = e.pexp_loc in
+      let sym = string_attr a in
+      let sym, arity =
+        if a.attr_name.txt = "infix" then (
+          if not (List.mem sym infix_ops) then
+            error a.attr_loc "%s is not an infix operator" sym;
+          (sym, 2))
+        else
+          match List.assoc_opt sym prefix_ops with
+          | Some s -> (s, 1)
+          | None -> error a.attr_loc "%s is not a prefix operator" sym
+      in
+      if Option.is_some (find_operator ~arity sym) then
+        error loc "operator %s is declared twice" sym;
+      let ident (e : expression) =
+        match e.pexp_desc with
+        | Pexp_ident { txt = Lident f; _ } -> f
+        | _ -> error e.pexp_loc "expected a function name"
+      in
+      let node, smart, on_bv =
+        match e.pexp_desc with
+        | Pexp_tuple [ n; s ] -> (n, s, None)
+        | Pexp_tuple [ n; s; b ] -> (n, s, Some (ident b))
+        | _ ->
+            error loc
+              "expected: node, smart constructor[, primitive on bit-vectors]"
+      in
+      let node =
+        match node.pexp_desc with
+        | Pexp_construct ({ txt = Lident n; _ }, None) -> (
+            match Option.bind (find_constr n) node_of_op with
+            | Some (_, operands) when List.length operands = arity -> n
+            | _ -> error node.pexp_loc "%s is not a node of arity %d" n arity)
+        | _ -> error node.pexp_loc "expected a node constructor"
+      in
+      let smart, pre =
+        match smart.pexp_desc with
+        | Pexp_apply (f, args) -> (ident f, List.map snd args)
+        | _ -> (ident smart, [])
+      in
+      lang :=
+        {
+          !lang with
+          operators =
+            !lang.operators @ [ { sym; arity; node; smart; pre; on_bv } ];
+        })
+    ops
+
+(** Replaces the operators in patterns ([a + b], [#x]) with the nodes that the
+    language declares for them. The parameters of a node (e.g. the overflow
+    check of [Add]) are left unconstrained. *)
+let desugar_ops =
+  object
+    inherit Ast_traverse.map as super
+
+    method! pattern p =
+      let p = super#pattern p in
+      let mk d =
+        {
+          ppat_desc = d;
+          ppat_loc = p.ppat_loc;
+          ppat_loc_stack = [];
+          ppat_attributes = [];
+        }
+      in
+      match p.ppat_desc with
+      | Ppat_construct ({ txt = Lident "#"; loc }, arg) -> (
+          match !lang.lit_bv with
+          | Some c ->
+              {
+                p with
+                ppat_desc = Ppat_construct ({ txt = Lident c; loc }, arg);
+              }
+          | None -> error p.ppat_loc "the language has no bit-vector literals")
+      | Ppat_construct ({ txt = Lident sym; loc }, Some (vars, arg))
+        when List.mem sym infix_ops || List.mem sym (List.map snd prefix_ops)
+        -> (
+          let arity, operands =
+            match arg.ppat_desc with
+            | Ppat_tuple l when List.mem sym infix_ops -> (2, l)
+            | _ -> (1, [ arg ])
+          in
+          match find_operator ~arity sym with
+          | None ->
+              error p.ppat_loc "%s is not an operator on terms" (op_name sym)
+          | Some o ->
+              let c = Option.get (find_constr o.node) in
+              let args = List.map (fun _ -> mk Ppat_any) c.c_args @ operands in
+              let arg = match args with [ a ] -> a | l -> mk (Ppat_tuple l) in
+              {
+                p with
+                ppat_desc =
+                  Ppat_construct ({ txt = Lident o.node; loc }, Some (vars, arg));
+              })
+      | _ -> p
+  end
 
 (* ---------------------------------------------------------------- *)
 (* Top-level *)
@@ -1247,6 +1493,7 @@ let raw_fn (vb : value_binding) =
       | _ -> error loc "%s: constants must be annotated with their type" rname)
 
 let program (str : structure) : program =
+  let str = desugar_ops#structure str in
   let prims, raws =
     List.fold_left
       (fun (prims, raws) (si : structure_item) ->

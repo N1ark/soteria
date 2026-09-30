@@ -128,25 +128,10 @@ let classify (p : program) =
 
 let rec lean_ty ft = function
   | TInt -> pf ft "Int"
-  | TBv -> pf ft "BvVal"
   | TBool -> pf ft "Bool"
   | TUnit -> pf ft "Unit"
-  | TTerm -> pf ft "Term"
-  | TKind -> pf ft "Kind"
-  | TSty -> pf ft "Ty"
-  | TFloat -> pf ft "FloatLit"
-  | TVar -> pf ft "Int"
-  | TData "unop" -> pf ft "Unop"
-  | TData "binop" -> pf ft "Binop"
-  | TData "triop" -> pf ft "Triop"
-  | TData "nop" -> pf ft "Nop"
-  | TData "checked" -> pf ft "Checked"
-  | TData "rm" -> pf ft "RM"
-  | TData "fp" -> pf ft "Prec"
-  | TData "fc" -> pf ft "FClass"
-  | TData "ext" -> pf ft "Ext"
-  | TData "ext_ty" -> pf ft "ExtTy"
-  | TData s -> failwith ("lean_ty: " ^ s)
+  | (TBv | TTerm | TKind | TSty | TVar | TData _) as t ->
+      pf ft "%s" (decl_of_ty t).d_lean
   | TTuple l -> pf ft "(%a)" (list ~sep:" × " lean_ty) l
   | TOption t -> pf ft "(Option %a)" lean_ty t
   | TList t -> pf ft "(List %a)" lean_ty t
@@ -154,11 +139,14 @@ let rec lean_ty ft = function
 (* ---------------------------------------------------------------- *)
 (* Patterns *)
 
+(** The Lean constructor of bit-vector literals. *)
+let lit_bv () = (Option.get (find_constr (Option.get !lang.lit_bv))).c_lean
+
 let rec pat ft (p : pat) =
   match p.p with
   | PAny -> pf ft "_"
   | PVar x -> pf ft "%s" (id x)
-  | PLit x -> pf ft "%s@(Term.mk (Kind.bitVec _) _)" (id x)
+  | PLit x -> pf ft "%s@(Term.mk (%s _) _)" (id x) (lit_bv ())
   | PAs (q, x) -> pf ft "%s@%a" (id x) pat q
   | POr _ | PComm _ -> failwith "gen_lean: or-pattern after desugaring"
   | PInt z -> pf ft "(%s : Int)" (Z.to_string z)
@@ -170,12 +158,13 @@ let rec pat ft (p : pat) =
   | PNil -> pf ft "[]"
   | PCons (h, t) -> pf ft "(%a :: %a)" pat h pat t
   | PRecord fs ->
-      let field f =
+      let field (f, _) =
         match List.assoc_opt f fs with
         | Some p -> Fmt.str "%a" pat p
         | None -> "_"
       in
-      pf ft "⟨%s, %s⟩" (field "signed") (field "unsigned")
+      pf ft "⟨%s⟩"
+        (String.concat ", " (List.map field (decl_of_ty p.pty).d_fields))
   | PConstr (c, args) ->
       let inner ft () =
         match args with
@@ -280,8 +269,10 @@ let rec expr ctx ft (e : expr) =
   | ENil -> pf ft "[]"
   | ECons (h, t) -> pf ft "(%a :: %a)" expr h expr t
   | ERecord fs ->
-      pf ft "({ signed := %a, unsigned := %a } : Checked)" expr
-        (List.assoc "signed" fs) expr (List.assoc "unsigned" fs)
+      let d = decl_of_ty e.ety in
+      pf ft "({ %a } : %s)"
+        (list (fun ft (f, _) -> pf ft "%s := %a" f expr (List.assoc f fs)))
+        d.d_fields d.d_lean
   | EField (e, f) -> pf ft "%a.%s" expr e f
   | EAssert (_, body) -> expr ft body
 
@@ -500,8 +491,8 @@ let pat_term (p : pat) =
     | PLit x ->
         let z = x ^ "__z" and t = x ^ "__T" in
         bind z "Int";
-        bind t "Ty";
-        let term = Printf.sprintf "(Term.mk (Kind.bitVec %s) %s)" z t in
+        bind t (ty_str TSty);
+        let term = Printf.sprintf "(Term.mk (%s %s) %s)" (lit_bv ()) z t in
         subst := (x, (Printf.sprintf "(bv_of_lit %s)" term, p.pid)) :: !subst;
         term
     | PAs (q, x) ->
@@ -519,16 +510,17 @@ let pat_term (p : pat) =
         let h = go h in
         "(" ^ h ^ " :: " ^ go t ^ ")"
     | PRecord fs ->
-        let field f =
+        let field (f, t) =
           match List.assoc_opt f fs with
           | Some q -> go q
           | None ->
               let x = Printf.sprintf "%s__%d" f p.pid in
-              bind x "Bool";
+              bind x (ty_str t);
               x
         in
-        let sg = field "signed" in
-        "⟨" ^ sg ^ ", " ^ field "unsigned" ^ "⟩"
+        "⟨"
+        ^ String.concat ", " (List.map field (decl_of_ty p.pty).d_fields)
+        ^ "⟩"
     | PConstr (c, args) ->
         let args = List.map go args in
         let inner =
@@ -537,7 +529,7 @@ let pat_term (p : pat) =
         in
         if p.pty = TTerm then (
           let t = Printf.sprintf "t__%d" p.pid in
-          bind t "Ty";
+          bind t (ty_str TSty);
           "(Term.mk " ^ inner ^ " " ^ t ^ ")")
         else inner
     | POr _ | PComm _ -> failwith "gen_lean: or-pattern after desugaring"

@@ -4,6 +4,7 @@
 
 (rule
  (deps
+  %{project_root}/soteria/lib/bv_values/rules/lang.bvl
   (glob_files %{project_root}/soteria/lib/bv_values/rules/*.bvr))
  (targets
   Model.lean.gen
@@ -17,6 +18,7 @@
     (run
      %{exe:../../main.exe}
      lean-model
+     %{project_root}/soteria/lib/bv_values/rules/lang.bvl
      %{project_root}/soteria/lib/bv_values/rules/prelude.bvr
      %{project_root}/soteria/lib/bv_values/rules/bool.bvr
      %{project_root}/soteria/lib/bv_values/rules/bitvec.bvr
@@ -27,6 +29,7 @@
     (run
      %{exe:../../main.exe}
      lean-statements
+     %{project_root}/soteria/lib/bv_values/rules/lang.bvl
      %{project_root}/soteria/lib/bv_values/rules/prelude.bvr
      %{project_root}/soteria/lib/bv_values/rules/bool.bvr
      %{project_root}/soteria/lib/bv_values/rules/bitvec.bvr
@@ -37,6 +40,7 @@
     (run
      %{exe:../../main.exe}
      lean-lifts
+     %{project_root}/soteria/lib/bv_values/rules/lang.bvl
      %{project_root}/soteria/lib/bv_values/rules/prelude.bvr
      %{project_root}/soteria/lib/bv_values/rules/bool.bvr
      %{project_root}/soteria/lib/bv_values/rules/bitvec.bvr
@@ -47,6 +51,7 @@
     (run
      %{exe:../../main.exe}
      lean-soundness
+     %{project_root}/soteria/lib/bv_values/rules/lang.bvl
      %{project_root}/soteria/lib/bv_values/rules/prelude.bvr
      %{project_root}/soteria/lib/bv_values/rules/bool.bvr
      %{project_root}/soteria/lib/bv_values/rules/bitvec.bvr

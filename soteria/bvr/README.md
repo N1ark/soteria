@@ -15,6 +15,17 @@ bvr is a small, pure, first-order language with its own typing. Its syntax is
 that of OCaml, apart from the declarations and rule names below; it is parsed
 by `bvr_parser.mly`.
 
+## The language
+
+bvr knows nothing about Bv_values itself: the types of its terms, their
+constructors and the operators on them are declared in
+`soteria/lib/bv_values/rules/lang.bvl`, which `bvr` reads before the rules
+(`bvr BACKEND lang.bvl FILE...`). For each type, it gives its OCaml and Lean
+names and, for a variant, the Lean names of its constructors; attributes mark
+the literals, the commutative operators and the kind constructors that
+operators stand for. `infix` and `prefix` declare what the operators on terms
+below build and match.
+
 ## Functions
 
 ```ocaml

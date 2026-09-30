@@ -5,6 +5,7 @@
  (targets svalue_rules.gen.ml)
  (mode promote)
  (deps
+  rules/lang.bvl
   (glob_files rules/*.bvr))
  (action
   (with-stdout-to
@@ -12,6 +13,7 @@
    (run
     %{exe:../../bvr/main.exe}
     ocaml
+    rules/lang.bvl
     rules/prelude.bvr
     rules/bool.bvr
     rules/bitvec.bvr

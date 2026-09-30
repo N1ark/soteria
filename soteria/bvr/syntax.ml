@@ -10,8 +10,8 @@ type ty =
   | TKind  (** the kind of an svalue *)
   | TSty  (** the type of an svalue *)
   | TData of string
-      (** operators, enums and records: [unop], [binop], [checked], ... *)
-  | TFloat  (** a concrete float literal *)
+      (** the other types declared by the language: operators, enums, records
+          and abstract types *)
   | TVar  (** a variable identifier *)
   | TTuple of ty list
   | TOption of ty
@@ -26,7 +26,6 @@ let rec pp_ty ft = function
   | TKind -> Fmt.string ft "kind"
   | TSty -> Fmt.string ft "ty"
   | TData s -> Fmt.string ft s
-  | TFloat -> Fmt.string ft "float"
   | TVar -> Fmt.string ft "var"
   | TTuple l -> Fmt.(parens (list ~sep:(any " * ") pp_ty)) ft l
   | TOption t -> Fmt.pf ft "%a option" pp_ty t
@@ -45,139 +44,82 @@ type constr = {
   c_lean : string;  (** fully qualified Lean name *)
 }
 
-let data_types =
-  [
-    "unop";
-    "binop";
-    "triop";
-    "nop";
-    "checked";
-    "rm";
-    "fp";
-    "fc";
-    "ext";
-    "ext_ty";
-  ]
+(** A type declared by the language: [kind], [ty], operators, enums, records and
+    abstract types. *)
+type decl = {
+  d_name : string;
+  d_ocaml : string;  (** the OCaml type *)
+  d_lean : string;  (** the Lean type *)
+  d_eq : bool;  (** whether [=] and [<>] are allowed at this type *)
+  d_fields : (string * ty) list;  (** the fields of a record type, in order *)
+}
 
-let constrs : constr list =
-  let mk res lean_ns l =
-    List.map
-      (fun (c_name, c_lean, c_args) ->
-        { c_name; c_res = res; c_args; c_lean = lean_ns ^ "." ^ c_lean })
-      l
-  in
-  let t = Arg TTerm and b = Arg TBool and d s = Arg (TData s) in
-  mk TKind "Kind"
-    [
-      ("Var", "var", [ Arg TVar ]);
-      ("Bool", "bool", [ b ]);
-      ("Float", "float", [ Arg TFloat ]);
-      ("Ptr", "ptr", [ t; t ]);
-      ("BitVec", "bitVec", [ Arg TInt ]);
-      ("Seq", "seq", [ Arg (TList TTerm) ]);
-      ("Unop", "unop", [ d "unop"; t ]);
-      ("Binop", "binop", [ d "binop"; t; t ]);
-      ("Triop", "triop", [ d "triop"; t; t; t ]);
-      ("Nop", "nop", [ d "nop"; Arg (TList TTerm) ]);
-      ("Exists", "exists_", [ Arg (TList (TTuple [ TVar; TSty ])); t ]);
-      ("Extension", "extension", [ d "ext" ]);
-    ]
-  @ mk (TData "unop") "Unop"
-      [
-        ("Not", "not_", []);
-        ("GetPtrLoc", "getPtrLoc", []);
-        ("GetPtrOfs", "getPtrOfs", []);
-        ("BvOfBool", "bvOfBool", [ Small ]);
-        ("BvOfFloat", "bvOfFloat", [ d "rm"; b; Small ]);
-        ("FloatOfBv", "floatOfBv", [ d "rm"; b; d "fp" ]);
-        ("FloatOfBvRaw", "floatOfBvRaw", [ d "fp" ]);
-        ("FloatOfFloat", "floatOfFloat", [ d "rm"; d "fp" ]);
-        ("BvExtract", "bvExtract", [ Small; Small ]);
-        ("BvExtend", "bvExtend", [ b; Small ]);
-        ("BvNot", "bvNot", []);
-        ("Neg", "neg", [ b ]);
-        ("FAbs", "fAbs", []);
-        ("FNeg", "fNeg", []);
-        ("FSqrt", "fSqrt", []);
-        ("FIs", "fIs", [ d "fc" ]);
-        ("FIsNeg", "fIsNeg", []);
-        ("FIsPos", "fIsPos", []);
-        ("FRound", "fRound", [ d "rm" ]);
-      ]
-  @ mk (TData "binop") "Binop"
-      [
-        ("And", "and_", []);
-        ("Or", "or_", []);
-        ("Eq", "eq", []);
-        ("FEq", "fEq", []);
-        ("FLeq", "fLeq", []);
-        ("FLt", "fLt", []);
-        ("FAdd", "fAdd", []);
-        ("FSub", "fSub", []);
-        ("FMul", "fMul", []);
-        ("FDiv", "fDiv", []);
-        ("FRem", "fRem", []);
-        ("FMin", "fMin", []);
-        ("FMax", "fMax", []);
-        ("Add", "add", [ d "checked" ]);
-        ("Sub", "sub", [ d "checked" ]);
-        ("Mul", "mul", [ d "checked" ]);
-        ("Div", "div", [ b ]);
-        ("Rem", "rem", [ b ]);
-        ("Mod", "mod_", []);
-        ("AddOvf", "addOvf", [ b ]);
-        ("SubOvf", "subOvf", [ b ]);
-        ("MulOvf", "mulOvf", [ b ]);
-        ("Lt", "lt", [ b ]);
-        ("Leq", "leq", [ b ]);
-        ("BvConcat", "bvConcat", []);
-        ("BitAnd", "bitAnd", []);
-        ("BitOr", "bitOr", []);
-        ("BitXor", "bitXor", []);
-        ("Shl", "shl", []);
-        ("LShr", "lShr", []);
-        ("AShr", "aShr", []);
-      ]
-  @ mk (TData "triop") "Triop" [ ("Fma", "fma", []); ("Ite", "ite", []) ]
-  @ mk (TData "nop") "Nop" [ ("Distinct", "distinct", []) ]
-  @ mk TSty "Ty"
-      [
-        ("TBool", "bool", []);
-        ("TFloat", "float", [ d "fp" ]);
-        ("TLoc", "loc", [ Small ]);
-        ("TPointer", "pointer", [ Small ]);
-        ("TSeq", "seq", [ Arg TSty ]);
-        ("TBitVector", "bitVector", [ Small ]);
-        ("TExtension", "extension", [ d "ext_ty" ]);
-      ]
-  @ mk (TData "fp") "Prec"
-      [
-        ("F16", "f16", []);
-        ("F32", "f32", []);
-        ("F64", "f64", []);
-        ("F128", "f128", []);
-      ]
-  @ mk (TData "rm") "RM"
-      [
-        ("NearestTiesToEven", "nearestTiesToEven", []);
-        ("Truncate", "truncate", []);
-        ("Ceil", "ceil", []);
-        ("Floor", "floor", []);
-        ("NearestTiesToAway", "nearestTiesToAway", []);
-      ]
-  @ mk (TData "fc") "FClass"
-      [
-        ("Normal", "normal", []);
-        ("Subnormal", "subnormal", []);
-        ("Zero", "zero", []);
-        ("Infinite", "infinite", []);
-        ("NaN", "nan", []);
-      ]
+(** An operator on terms, e.g. [+]: in expressions it calls its smart
+    constructor [smart], with the leading arguments [pre]; in patterns it
+    matches its [node], with any parameters; on bit-vector values it is the
+    primitive [on_bv]. *)
+type operator = {
+  sym : string;
+      (** as parsed: ["+"], ["&&"], ...; ["~-"], ["lognot"] and ["not"] for the
+          prefix [-], [~] and [not] *)
+  arity : int;
+  node : string;
+  smart : string;
+  pre : Ppxlib.expression list;
+  on_bv : string option;
+}
 
-let find_constr name = List.find_opt (fun c -> c.c_name = name) constrs
+(** The language that the rules are written in: its types, constructors and
+    operators, as declared in its [.bvl] file. *)
+type lang = {
+  decls : decl list;
+  constrs : constr list;
+  commutative : string list;
+      (** the binary operators whose operands commute: in [[@cases]] functions,
+          [[@comm]] may only swap theirs, and the swapped alternative is proved
+          from the other by commutativity *)
+  node_kinds : string list;
+      (** the kind constructors whose first argument is an operator, which then
+          stands for the node: [Add (c, l, r)] for [Binop (Add c, l, r)] *)
+  lit_bool : string option;  (** the kind constructor of boolean literals *)
+  lit_bv : string option;  (** the kind constructor of bit-vector literals *)
+  operators : operator list;
+}
 
-(** Fields of the [checked] record. *)
-let checked_fields = [ "signed"; "unsigned" ]
+let lang =
+  ref
+    {
+      decls = [];
+      constrs = [];
+      commutative = [];
+      node_kinds = [];
+      lit_bool = None;
+      lit_bv = None;
+      operators = [];
+    }
+
+let find_constr name = List.find_opt (fun c -> c.c_name = name) !lang.constrs
+let find_decl name = List.find_opt (fun d -> d.d_name = name) !lang.decls
+
+(** The name of the declaration of a type of the language. *)
+let decl_name = function
+  | TTerm -> Some "t"
+  | TKind -> Some "kind"
+  | TSty -> Some "ty"
+  | TBv -> Some "bv"
+  | TVar -> Some "var"
+  | TData s -> Some s
+  | _ -> None
+
+let decl_of_ty t =
+  match Option.bind (decl_name t) find_decl with
+  | Some d -> d
+  | None -> Fmt.failwith "type %a is not declared by the language" pp_ty t
+
+let find_operator ~arity sym =
+  List.find_opt (fun o -> o.sym = sym && o.arity = arity) !lang.operators
+
+let is_commutative name = List.mem name !lang.commutative
 
 type unop = Neg | Not | Lognot
 

@@ -1,11 +1,13 @@
 (** [bvr (ocaml | lean-model | lean-statements | lean-lifts | lean-soundness)
-     FILE...]: generates the OCaml implementation or the Lean model of the BVR
-    rules in [FILE...], on standard output. *)
+     LANG FILE...]: generates the OCaml implementation or the Lean model of the
+    BVR rules in [FILE...], written in the language declared in [LANG], on
+    standard output. *)
 
 let () =
   match Array.to_list Sys.argv with
-  | _ :: backend :: (_ :: _ as files) -> (
+  | _ :: backend :: lang :: (_ :: _ as files) -> (
       try
+        Check.language (Check.parse_file lang);
         let str = List.concat_map Check.parse_file files in
         let prog = Check.program str in
         let sources = List.map Filename.basename files in
@@ -27,5 +29,5 @@ let () =
   | _ ->
       prerr_endline
         "usage: bvr (ocaml | lean-model | lean-statements | lean-lifts | \
-         lean-soundness) FILE...";
+         lean-soundness) LANG FILE...";
       exit 2

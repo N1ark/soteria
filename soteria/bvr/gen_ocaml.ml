@@ -6,40 +6,26 @@ open Syntax
 
 let pf = Format.fprintf
 
-(** Where each constructor's type is defined, relative to [Svalue_ast]. *)
-let constr_path (c : constr) =
-  match c.c_res with
-  | TKind | TSty -> "Svalue_ast."
-  | TData "unop" -> "Svalue_ast.Unop."
-  | TData "binop" -> "Svalue_ast.Binop."
-  | TData "triop" -> "Svalue_ast.Triop."
-  | TData "nop" -> "Svalue_ast.Nop."
-  | TData "fp" -> "Svalue_ast.FloatPrecision."
-  | TData "rm" -> "Svalue_ast.RoundingMode."
-  | TData "fc" -> "Svalue_ast.FloatClass."
-  | _ -> failwith "constr_path"
+(** The module that defines a type of the language, with a trailing dot: where
+    its constructors and fields are. *)
+let module_of t =
+  let ty = (decl_of_ty t).d_ocaml in
+  let last = List.hd (List.rev (String.split_on_char ' ' ty)) in
+  match String.rindex_opt last '.' with
+  | Some i -> String.sub last 0 (i + 1)
+  | None -> ""
+
+let constr_path (c : constr) = module_of c.c_res
+
+(** The module of the fields [kind] and [ty] of terms: that of their kind. *)
+let term_path () = module_of TKind
 
 let rec ocaml_ty ft = function
   | TInt -> pf ft "Z.t"
-  | TBv -> pf ft "bv"
   | TBool -> pf ft "bool"
   | TUnit -> pf ft "unit"
-  | TTerm -> pf ft "t"
-  | TKind -> pf ft "(ghost, ext, ext_ty) Svalue_ast.t_kind"
-  | TSty -> pf ft "ext_ty Svalue_ast.ty"
-  | TFloat -> pf ft "Floatml.AnyFloat.t"
-  | TVar -> pf ft "Symex.Var.t"
-  | TData "unop" -> pf ft "Svalue_ast.Unop.t"
-  | TData "binop" -> pf ft "Svalue_ast.Binop.t"
-  | TData "triop" -> pf ft "Svalue_ast.Triop.t"
-  | TData "nop" -> pf ft "Svalue_ast.Nop.t"
-  | TData "checked" -> pf ft "Svalue_ast.checked"
-  | TData "rm" -> pf ft "Svalue_ast.RoundingMode.t"
-  | TData "fp" -> pf ft "Svalue_ast.FloatPrecision.t"
-  | TData "fc" -> pf ft "Svalue_ast.FloatClass.t"
-  | TData "ext" -> pf ft "ext"
-  | TData "ext_ty" -> pf ft "ext_ty"
-  | TData s -> failwith ("ocaml_ty: " ^ s)
+  | (TBv | TTerm | TKind | TSty | TVar | TData _) as t ->
+      pf ft "%s" (decl_of_ty t).d_ocaml
   | TTuple l ->
       pf ft "(%a)"
         (Format.pp_print_list ~pp_sep:(fun ft () -> pf ft " * ") ocaml_ty)
@@ -64,9 +50,9 @@ let rec pat ft (p : pat) =
   | PAny -> pf ft "_"
   | PVar x -> pf ft "%s" x
   | PLit x ->
-      pf ft
-        "({ Hc.node = { Svalue_ast.kind = Svalue_ast.BitVec _; _ }; _ } as %s)"
-        x
+      let c = Option.get (find_constr (Option.get !lang.lit_bv)) in
+      pf ft "({ Hc.node = { %skind = %s%s _; _ }; _ } as %s)" (term_path ())
+        (constr_path c) c.c_name x
   | PAs (p', x) -> pf ft "(%a as %s)" pat p' x
   | POr (a, b) | PComm (a, b) -> pf ft "(%a | %a)" pat a pat b
   | PInt z -> pf ft "%s" (Z.to_string z)
@@ -79,7 +65,8 @@ let rec pat ft (p : pat) =
   | PCons (h, t) -> pf ft "(%a :: %a)" pat h pat t
   | PRecord fields ->
       pf ft "{ %a; _ }"
-        (list ~sep:"; " (fun ft (f, p) -> pf ft "Svalue_ast.%s = %a" f pat p))
+        (list ~sep:"; " (fun ft (f, q) ->
+             pf ft "%s%s = %a" (module_of p.pty) f pat q))
         fields
   | PConstr (c, args) ->
       let inner ft () =
@@ -88,7 +75,7 @@ let rec pat ft (p : pat) =
         | _ -> pf ft "%s%s (%a)" (constr_path c) c.c_name (list pat) args
       in
       if p.pty = TTerm then
-        pf ft "{ Hc.node = { Svalue_ast.kind = %a; _ }; _ }" inner ()
+        pf ft "{ Hc.node = { %skind = %a; _ }; _ }" (term_path ()) inner ()
       else pf ft "(%a)" inner ()
 
 (* ---------------------------------------------------------------- *)
@@ -153,8 +140,8 @@ let rec expr ctx ft (e : expr) =
   | ENode (k, t) -> pf ft "(P.node %a %a)" expr k expr t
   | ECall ("equal", [ a; b ]) ->
       pf ft "(Int.equal %a.Hc.tag %a.Hc.tag)" expr a expr b
-  | ECall ("ty", [ a ]) -> pf ft "%a.Hc.node.Svalue_ast.ty" expr a
-  | ECall ("kind", [ a ]) -> pf ft "%a.Hc.node.Svalue_ast.kind" expr a
+  | ECall ("ty", [ a ]) -> pf ft "%a.Hc.node.%sty" expr a (term_path ())
+  | ECall ("kind", [ a ]) -> pf ft "%a.Hc.node.%skind" expr a (term_path ())
   | ECall ("tag_le", [ a; b ]) ->
       pf ft "(Int.compare %a.Hc.tag %a.Hc.tag <= 0)" expr a expr b
   | ECall ("to_z", [ s; { e = EVar x; _ } ]) when List.mem x ctx.raw ->
@@ -222,10 +209,11 @@ let rec expr ctx ft (e : expr) =
   | ENil -> pf ft "[]"
   | ECons (h, t) -> pf ft "(%a :: %a)" expr h expr t
   | ERecord fields ->
+      let m = module_of e.ety in
       pf ft "{ %a }"
-        (list ~sep:"; " (fun ft (f, e) -> pf ft "Svalue_ast.%s = %a" f expr e))
+        (list ~sep:"; " (fun ft (f, e) -> pf ft "%s%s = %a" m f expr e))
         fields
-  | EField (e, f) -> pf ft "%a.Svalue_ast.%s" expr e f
+  | EField (r, f) -> pf ft "%a.%s%s" expr r (module_of r.ety) f
   | EAssert (c, body) -> pf ft "@[<v>(assert %a;@ %a)@]" expr c expr body
 
 (** Converts the binders of [p] that [e] uses. *)

@@ -13,6 +13,7 @@ let keywords =
     ("fn", FN);
     ("if", IF);
     ("in", IN);
+    ("infix", INFIX);
     ("land", LAND);
     ("let", LET);
     ("lor", LOR);
@@ -21,11 +22,14 @@ let keywords =
     ("lxor", LXOR);
     ("match", MATCH);
     ("not", NOT);
+    ("of", OF);
     ("oracle", ORACLE);
+    ("prefix", PREFIX);
     ("prim", PRIM);
     ("rule", RULE);
     ("then", THEN);
     ("true", TRUE);
+    ("type", TYPE);
     ("when", WHEN);
     ("with", WITH);
   ]
@@ -40,6 +44,7 @@ rule token = parse
   | '\n' { Lexing.new_line lexbuf; token lexbuf }
   | "(*" { comment 0 lexbuf; token lexbuf }
   | ['0'-'9']+ as i { INT i }
+  | '"' ([^ '"' '\\' '\n']* as s) '"' { STRING s }
   | "_" { UNDERSCORE }
   | lid as s { match List.assoc_opt s keywords with Some k -> k | None -> LID s }
   | uid as s { UID s }

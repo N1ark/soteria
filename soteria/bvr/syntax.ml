@@ -76,6 +76,18 @@ type raw_typing = {
   rt_loc : Location.t;
 }
 
+(** An algebraic law of an operator, declared by an attribute on its
+    constructor, from which bvr derives the first rules of the operator's rule
+    function (see [Check.law_cases]). *)
+type law =
+  | Fold of string  (** [[@fold "f"]]: constant folding with [f] *)
+  | Unit of string  (** [[@unit "c"]]: the literal [c] is a (right) unit *)
+  | Zero of string  (** [[@zero "c"]]: the literal [c] is (right) absorbing *)
+  | Idem  (** [[@idem]]: [x op x = x] *)
+  | Invol  (** [[@invol]]: [op (op x) = x] *)
+  | Distrib_ite
+      (** [[@distrib_ite]]: [op (Ite (b, l, r)) = Ite (b, op l, op r)] *)
+
 (** The language that the rules are written in: its types, constructors and
     operators, as declared in its [.bvl] file. *)
 type lang = {
@@ -97,6 +109,8 @@ type lang = {
           value *)
   operators : operator list;
   raw_typing : (string * raw_typing) list;
+  laws : (string * law * Location.t) list;
+      (** the laws of the operators, in the order of their declaration *)
 }
 
 let lang =
@@ -111,6 +125,7 @@ let lang =
       lit_int = false;
       operators = [];
       raw_typing = [];
+      laws = [];
     }
 
 let find_constr name = List.find_opt (fun c -> c.c_name = name) !lang.constrs

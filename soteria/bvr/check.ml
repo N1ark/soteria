@@ -1260,6 +1260,53 @@ let int_literal (attrs : attributes) =
   | Some a when string_attr a = "int" -> true
   | Some a -> error a.attr_loc "expected [@literal] or [@literal \"int\"]"
 
+(** The attributes that declare the laws of an operator. *)
+let law_attrs = [ "fold"; "unit"; "zero"; "idem"; "invol"; "distrib_ite" ]
+
+let law_of_attr (a : attribute) =
+  match a.attr_name.txt with
+  | "fold" -> Some (Fold (string_attr a))
+  | "unit" -> Some (Unit (string_attr a))
+  | "zero" -> Some (Zero (string_attr a))
+  | "idem" -> Some Idem
+  | "invol" -> Some Invol
+  | "distrib_ite" -> Some Distrib_ite
+  | _ -> None
+
+let law_name = function
+  | Fold _ -> "fold"
+  | Unit _ -> "unit"
+  | Zero _ -> "zero"
+  | Idem -> "idem"
+  | Invol -> "invol"
+  | Distrib_ite -> "distrib_ite"
+
+(** The literal [c] of a [[@unit c]] or [[@zero c]] law. *)
+let law_literal loc c =
+  match c with
+  | ("0" | "1") when Option.is_some !lang.lit_bv && not !lang.lit_int -> ()
+  | ("true" | "false") when Option.is_some !lang.lit_bool -> ()
+  | _ -> error loc "expected the literal 0, 1, true or false"
+
+let check_law (name, law, loc) =
+  let operands =
+    match Option.bind (find_constr name) node_of_op with
+    | Some (_, operands) -> List.length operands
+    | None -> error loc "[@%s]: %s is not an operator" (law_name law) name
+  in
+  let expect n =
+    if operands <> n then
+      error loc "[@%s]: %s is not a %s operator" (law_name law) name
+        (if n = 1 then "unary" else "binary")
+  in
+  match law with
+  | Fold _ -> ()
+  | Unit c | Zero c ->
+      expect 2;
+      law_literal loc c
+  | Idem -> expect 2
+  | Invol | Distrib_ite -> expect 1
+
 (** Reads the declaration of a language, which the rules are then checked
     against. *)
 let language (str : structure) =
@@ -1341,7 +1388,8 @@ let language (str : structure) =
               let name = cd.pcd_name.txt and loc = cd.pcd_loc in
               let attrs = cd.pcd_attributes in
               check_attrs
-                [ "comm"; "literal"; "operators"; "params"; "sorts"; "when" ]
+                ([ "comm"; "literal"; "operators"; "params"; "sorts"; "when" ]
+                @ law_attrs)
                 attrs;
               let payload n =
                 Option.map
@@ -1397,6 +1445,19 @@ let language (str : structure) =
                 if has_attr "comm" attrs then
                   { l with commutative = l.commutative @ [ name ] }
                 else l
+              in
+              let l =
+                {
+                  l with
+                  laws =
+                    l.laws
+                    @ List.filter_map
+                        (fun (a : attribute) ->
+                          Option.map
+                            (fun law -> (name, law, a.attr_loc))
+                            (law_of_attr a))
+                        attrs;
+                }
               in
               let l =
                 if has_attr "operators" attrs then (
@@ -1503,7 +1564,8 @@ let language (str : structure) =
       match Option.bind (find_constr c) node_of_op with
       | Some (_, [ _; _ ]) -> ()
       | _ -> error loc "[@comm]: %s is not a binary operator" c)
-    !lang.commutative
+    !lang.commutative;
+  List.iter check_law !lang.laws
 
 (** Replaces the operators in patterns ([a + b], [#x]) with the nodes that the
     language declares for them. The parameters of a node (e.g. the overflow
@@ -1611,6 +1673,268 @@ let raw_fn (vb : value_binding) =
             rloc = loc;
           }
       | _ -> error loc "%s: constants must be annotated with their type" rname)
+
+(* ---------------------------------------------------------------- *)
+(* The laws of operators *)
+
+(** The node of the spec [C (x1, ..., xn) <| s] of a rule function, when its
+    arguments are the parameters of the function, in order: [C] and [s]. *)
+let spec_head (r : raw_fn) =
+  match r.rspec with
+  | Some
+      {
+        pexp_desc =
+          Pexp_apply
+            ( { pexp_desc = Pexp_ident { txt = Lident "<|"; _ }; _ },
+              [
+                ( _,
+                  { pexp_desc = Pexp_construct ({ txt = Lident n; _ }, arg); _ }
+                );
+                (_, sort);
+              ] );
+        _;
+      } ->
+      let args =
+        match arg with
+        | Some { pexp_desc = Pexp_tuple l; _ } -> l
+        | Some a -> [ a ]
+        | None -> []
+      in
+      let var (e : expression) =
+        match e.pexp_desc with
+        | Pexp_ident { txt = Lident x; _ } -> Some x
+        | _ -> None
+      in
+      if List.map var args = List.map (fun (x, _) -> Some x) r.rparams then
+        Some (n, sort)
+      else None
+  | _ -> None
+
+(** The rule function of the node [n]: the one whose spec is [n] over its
+    parameters. *)
+let rule_of_node loc raws n =
+  match
+    List.filter
+      (fun r ->
+        r.rcases
+        && match spec_head r with Some (m, _) -> m = n | None -> false)
+      raws
+  with
+  | [ r ] -> r
+  | [] -> error loc "no rule function has the spec %s over its parameters" n
+  | _ -> error loc "several rule functions have the spec %s" n
+
+let law_order = function
+  | Fold _ -> 0
+  | Unit _ -> 1
+  | Zero _ -> 2
+  | Idem -> 3
+  | Invol -> 4
+  | Distrib_ite -> 5
+
+(** The name of the rule of a case, if any (see [case]). *)
+let case_rule (c : Ppxlib.case) =
+  match (rule_name_of_attrs c.pc_lhs.ppat_attributes, c.pc_lhs.ppat_desc) with
+  | Some r, _ -> Some r
+  | None, Ppat_tuple l ->
+      rule_name_of_attrs (List.hd (List.rev l)).ppat_attributes
+  | None, _ -> None
+
+(** Adds the rules derived from the laws of each operator (see [Syntax.law]) to
+    its rule function, before its own rules, in the order of [law_order]. In the
+    rule function [f (p1, ..., v1, v2)] of a binary operator [op]:
+    - [[@fold "g"]]: [lits: #l, #r -> g pk ... pn l r], where [g] takes the last
+      parameters [pk ... pn] of the node, then its literals: bit-vector literals
+      are bound to [l] and [r] ([bv] for a unary operator), and the others to
+      the first letter of their type ([f1], [f2] or [f] for floats); a boolean
+      result is lifted with [of_bool], a float one with [Float (...) <| s],
+      where [s] is the sort of the spec;
+    - [[@unit "c"]]: [c: x, c -> x] if [op] is commutative (it then also matches
+      [c, x]), and otherwise [c: _, c -> v1];
+    - [[@zero "c"]]: [c: _, c -> c], where [c] stands for [bv_zero (size v1)],
+      [bv_one (size v1)], [v_true] or [v_false];
+    - [[@idem]]: [same: v, v -> v].
+
+    In that of a unary operator [Op], over [v]:
+    - [[@invol]]: [op: Op x -> x], named after [Op];
+    - [[@distrib_ite]]: [ite: Ite (b, l, r) -> ite b (f (..., l)) (f (..., r))],
+      where [ite] is the rule function of [Ite].
+
+    The literals [0], [1], [true] and [false] name their rules [zero], [one],
+    [true_] and [false_]. *)
+let law_cases globals raws =
+  let open Ast_builder.Default in
+  let derive raws n =
+    let laws =
+      List.filter_map
+        (fun (m, law, loc) -> if m = n then Some (law, loc) else None)
+        !lang.laws
+      |> List.stable_sort (fun (a, _) (b, _) ->
+          compare (law_order a) (law_order b))
+    in
+    let r = rule_of_node (snd (List.hd laws)) raws n in
+    let sort = snd (Option.get (spec_head r)) in
+    let op = Option.get (find_constr n) in
+    let nparams = List.length op.c_args in
+    let params = List.map fst r.rparams in
+    let node_params = List.filteri (fun i _ -> i < nparams) params in
+    let operands = List.filteri (fun i _ -> i >= nparams) params in
+    let lit_name = function "0" -> "zero" | "1" -> "one" | c -> c ^ "_" in
+    let case (law, loc) =
+      let var x = evar ~loc x in
+      let app f args = eapply ~loc (var f) args in
+      (* [n (_, ..., _, ps)] *)
+      let node_pat ps =
+        let args = List.map (fun _ -> ppat_any ~loc) op.c_args @ ps in
+        ppat_construct ~loc (Located.lident ~loc n)
+          (Some (match args with [ a ] -> a | l -> ppat_tuple ~loc l))
+      in
+      let lit_pat c =
+        if c = "true" || c = "false" then pbool ~loc (c = "true")
+        else ppat_constant ~loc (Pconst_integer (c, None))
+      in
+      let v1 = var (List.hd operands) in
+      let lit_term = function
+        | "0" -> app "bv_zero" [ app "size" [ v1 ] ]
+        | "1" -> app "bv_one" [ app "size" [ v1 ] ]
+        | c -> var ("v_" ^ c)
+      in
+      (* the kind constructor of the literals of type [t] *)
+      let lit_constr t =
+        match t with
+        | TBv when not !lang.lit_int -> Option.get !lang.lit_bv
+        | TBool when Option.is_some !lang.lit_bool -> Option.get !lang.lit_bool
+        | TData _ -> (
+            match
+              List.find_opt
+                (fun c -> c.c_res = TKind && c.c_args = [ Arg t ])
+                !lang.constrs
+            with
+            | Some c -> c.c_name
+            | None -> error loc "[@fold]: no literals of type %a" pp_ty t)
+        | _ -> error loc "[@fold]: no literals of type %a" pp_ty t
+      in
+      let rule, pats, body =
+        match law with
+        | Fold g ->
+            let s =
+              match List.assoc_opt g globals with
+              | Some s -> s
+              | None -> error loc "[@fold]: unknown function %s" g
+            in
+            let arity = List.length operands in
+            let k = List.length s.args - arity in
+            if k < 0 || k > nparams then
+              error loc "[@fold]: %s does not take the literals of %s" g n;
+            let tys = List.filteri (fun i _ -> i >= k) s.args in
+            let xs =
+              match tys with
+              | TBv :: _ when arity = 1 -> [ "bv" ]
+              | TBv :: _ when arity = 2 -> [ "l"; "r" ]
+              | t :: _ ->
+                  let x = String.sub (Fmt.str "%a" pp_ty t) 0 1 in
+                  if arity = 1 then [ x ]
+                  else List.init arity (fun i -> x ^ string_of_int (i + 1))
+              | [] -> []
+            in
+            let args = List.filteri (fun i _ -> i >= nparams - k) node_params in
+            let e = app g (List.map var (args @ xs)) in
+            let body =
+              match s.ret with
+              | TBool -> app "of_bool" [ e ]
+              | TData _ as t ->
+                  app "<|"
+                    [
+                      pexp_construct ~loc
+                        (Located.lident ~loc (lit_constr t))
+                        (Some e);
+                      sort;
+                    ]
+              | _ -> e
+            in
+            ( (if arity = 1 then "lit" else "lits"),
+              List.map2
+                (fun t x ->
+                  ppat_construct ~loc
+                    (Located.lident ~loc (lit_constr t))
+                    (Some (pvar ~loc x)))
+                tys xs,
+              body )
+        | Unit c when is_commutative n ->
+            (lit_name c, [ pvar ~loc "x"; lit_pat c ], var "x")
+        | Unit c -> (lit_name c, [ ppat_any ~loc; lit_pat c ], v1)
+        | Zero c -> (lit_name c, [ ppat_any ~loc; lit_pat c ], lit_term c)
+        | Idem -> ("same", [ pvar ~loc "v"; pvar ~loc "v" ], var "v")
+        | Invol ->
+            (String.lowercase_ascii n, [ node_pat [ pvar ~loc "x" ] ], var "x")
+        | Distrib_ite ->
+            let ite = (rule_of_node loc raws "Ite").rname in
+            let branch x = app r.rname (List.map var (node_params @ [ x ])) in
+            ( "ite",
+              [
+                ppat_construct ~loc
+                  (Located.lident ~loc "Ite")
+                  (Some
+                     (ppat_tuple ~loc
+                        [ pvar ~loc "b"; pvar ~loc "l"; pvar ~loc "r" ]));
+              ],
+              app ite [ var "b"; branch "l"; branch "r" ] )
+      in
+      (* the patterns of the operands, in the shape of the scrutinee *)
+      let lhs (scrut : expression) =
+        let matched = ref [] in
+        let operand (e : expression) =
+          match e.pexp_desc with
+          | Pexp_ident { txt = Lident x; _ } when List.mem x operands ->
+              matched := x :: !matched;
+              List.assoc x (List.combine operands pats)
+          | _ -> ppat_any ~loc
+        in
+        let p =
+          match scrut.pexp_desc with
+          | Pexp_tuple l -> ppat_tuple ~loc (List.map operand l)
+          | Pexp_apply
+              ( { pexp_desc = Pexp_ident { txt = Lident sym; _ }; _ },
+                [ (_, a); (_, b) ] )
+            when Option.is_some (find_operator ~arity:2 sym) ->
+              node_pat [ operand a; operand b ]
+          | _ -> operand scrut
+        in
+        if List.sort compare !matched <> List.sort compare operands then
+          error loc "[@%s]: %s does not match on the operands of %s"
+            (law_name law) r.rname n;
+        let name =
+          attribute ~loc ~name:{ txt = "r"; loc }
+            ~payload:(PStr [ pstr_eval ~loc (var rule) [] ])
+        in
+        { p with ppat_attributes = [ name ] }
+      in
+      (rule, fun scrut -> case ~lhs:(lhs scrut) ~guard:None ~rhs:body)
+    in
+    let derived = List.map case laws in
+    let rec body (e : expression) =
+      match e.pexp_desc with
+      | Pexp_sequence (a, b) -> { e with pexp_desc = Pexp_sequence (a, body b) }
+      | Pexp_match (scrut, cases) ->
+          List.iter
+            (fun c ->
+              match case_rule c with
+              | Some x when List.mem_assoc x derived ->
+                  error c.pc_lhs.ppat_loc
+                    "rule %s is derived from the laws of %s" x n
+              | _ -> ())
+            cases;
+          let derived = List.map (fun (_, c) -> c scrut) derived in
+          { e with pexp_desc = Pexp_match (scrut, derived @ cases) }
+      | _ -> error r.rloc "%s: the laws of %s need a match" r.rname n
+    in
+    List.map
+      (fun r' ->
+        if r'.rname = r.rname then { r with rbody = body r.rbody } else r')
+      raws
+  in
+  List.fold_left derive raws
+    (List.sort_uniq compare (List.map (fun (n, _, _) -> n) !lang.laws))
 
 (* ---------------------------------------------------------------- *)
 (* The typing of operators *)
@@ -1745,6 +2069,7 @@ let program (str : structure) : program =
         error Location.none "%s is defined twice" n)
     names;
   let env0 = { vars = []; locals = []; globals } in
+  let raws = law_cases globals raws in
   let fns =
     List.map
       (fun r ->

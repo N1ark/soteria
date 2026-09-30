@@ -26,7 +26,8 @@ their constructors and the operators on them are declared in
 `soteria/lib/bv_values/rules/lang.bvl`, which `bvr` reads before the rules
 (`bvr BACKEND lang.bvl FILE...`). Attributes mark the literals, the
 commutative operators and the kind constructors that operators stand for, and
-`infix` and `prefix` declare what the operators on terms build and match (see
+declare the laws of operators (see [Laws](#laws)); `infix` and `prefix` declare
+what the operators on terms build and match (see
 [Operators on terms](#operators-on-terms)).
 
 Names flow from bvr to Lean: bvr generates the Lean definitions of the
@@ -96,6 +97,38 @@ fn size (v : t) : int = size_of_ty (ty v)
   on terms: in `rule bv_sub (checked : checked) (v1 v2 : t) : Sub (checked,
   v1, v2) <| ty v1`, `match v1 - v2 with | sub_sub: l - (l - r) -> r` stands
   for `match v1, v2 with | sub_sub: l, (l - r) -> r`.
+
+## Laws
+
+Attributes on an operator in `lang.bvl` declare its algebraic laws, from which
+bvr derives the first rules of its *rule function* (the rule function whose
+spec is the operator over the function's parameters, e.g. `bv_mul` for
+`Mul (checked, v1, v2)`), in this order, before the rules written by hand. The
+derived rules are ordinary rules: they are generated and proved like the others,
+and a hand-written rule may not reuse their names.
+
+| law | derived rule, in `bv_add (checked) (v1 v2)`, `bv_sub`, `bv_neg`, ... |
+|---|---|
+| `[@fold "f"]` | `lits: #l + #r -> f l r`, `lit: #bv -> f bv` |
+| `[@unit "c"]` | `zero: x + 0 -> x` (commutative), `zero: _ lsl 0 -> v1` (otherwise) |
+| `[@zero "c"]` | `zero: _ * 0 -> bv_zero (size v1)`, `false_: _ && false -> v_false` |
+| `[@idem]` | `same: v && v -> v` |
+| `[@invol]` | `neg: -x -> x`, named after the operator (unary operators) |
+| `[@distrib_ite]` | `ite: Ite (b, l, r) -> b_ite b (bv_neg checked l) (bv_neg checked r)` (unary operators) |
+
+- `[@fold "f"]`: `f` takes the last parameters of the node that it has room
+  for (`lit_extract from_ to_ bv`, `add_overflows signed l r`), then the
+  literals, of the types of its arguments: bit-vector literals are bound to `l`
+  and `r` (`bv` for one operand), the others to the first letter of their type
+  (`Float f1`, `Float f2`, `Float f`). A `bool` result is lifted with `of_bool`,
+  and a result of another type `T` with its literal constructor, `C (f ...) <|
+  s`, where `s` is the sort of the spec (`Float (f_add f1 f2) <| ty v1`).
+- `[@unit "c"]` and `[@zero "c"]` take the literal `0`, `1`, `true` or `false`,
+  which names the rule (`zero`, `one`, `true_`, `false_`). On an operator that
+  does not commute, `c` is on the right; on one that does, the rule matches it
+  on either side.
+- `[@distrib_ite]` rebuilds the branches with the rule function itself, and
+  the `Ite` with the rule function of `Ite`.
 
 ## Terms
 

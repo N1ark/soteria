@@ -197,4 +197,6 @@ macro "bvr_shift" : tactic => `(tactic| (
        congr 1
        rw [zmin_emod (by omega) (by omega) (by omega)]; omega)))
 
+attribute [bvr_tactic "bvr_shift"] bv_shl.spec bv_lshr.spec bv_ashr.spec
+
 end Bvr.Lib

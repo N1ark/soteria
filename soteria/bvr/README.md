@@ -147,13 +147,22 @@ rules):
 - `Soundness.lean` proves each rule from its alternatives, and every function
   from its rules, up to `Bvr.opsN_sound`: the whole simplifier is sound.
 
-An alternative is one case of a rule, after expanding its or-patterns and the
-swaps of commutative operands; its statement is over the variables of its
-pattern, with its guard as a hypothesis (`f.r_name.aI.Stmt`). Its proof is
-`f.r_name.aI.proof` in `lean/Bvr/Proofs/` if there is one, and otherwise the
-tactic of the library of its function (`lean/Bvr/Lib/`). An alternative that
-only swaps commutative operands is proved from the unswapped one, if its guard
-and body do not depend on the swap.
+An alternative (an arm) is one case of a rule, after expanding its or-patterns
+and the swaps of commutative operands; its statement is over the variables of
+its pattern, with its guard as a hypothesis (`f.r_name.arm.Stmt`). An arm is
+named after the choices that produced it, so that reordering patterns does not
+rename it: the head constructor (or operator) of each or-pattern branch taken,
+with an index when both branches have the same head (`lt_leq`, `lt1`), and
+`swap` for a swap (numbered when there are several), prefixed by `cN` when the
+rule has several cases; an arm with no choice is `main`.
+
+Its proof is the theorem tagged `@[bvr_arm]` that proves `f.r_name.arm.Stmt`
+in `lean/Bvr/Proofs/`, if there is one; otherwise the tactic given to its
+function by `attribute [bvr_tactic tac] f.spec`, in the library that defines
+`tac` (`lean/Bvr/Lib/`); otherwise `bvr_auto`. `bvr_arm` rejects a theorem that
+proves no arm, or an arm that already has a proof. An alternative that only
+swaps commutative operands is proved from the unswapped one, if its guard and
+body do not depend on the swap.
 
 `lake build` checks every proof, and CI checks that the soundness theorem
 depends on no `sorry` (`check_axioms.lean`).

@@ -187,9 +187,10 @@ and case = {
   body : expr;
   rule : string option;
   cloc : Location.t;
-  alt : (int * int * bool) list;
+  alt : (int * int * bool * string) list;
       (** the alternative of the source case: for each or-pattern (and [[@comm]]
-          pattern, flagged) taken, its [pid] and the side chosen *)
+          pattern, flagged) taken, its [pid], the side chosen, and a name for
+          that side (see [Check.alternatives]) *)
 }
 
 type fn = {

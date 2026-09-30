@@ -7,51 +7,51 @@ namespace Bvr
 
 open Classical Lib
 
-theorem bv_extract.r_add_low.a1.proof : bv_extract.r_add_low.a1.Stmt := by
+@[bvr_arm] theorem bv_extract.r_add_low.main.proof : bv_extract.r_add_low.main.Stmt := by
   bvr_rule_sem
   all_goals bvr_zlits
   all_goals bvr_split; subst_vars; exact (BitVec.extractLsb'_add (by omega)).symm
 
-theorem bv_extract.r_mul_low.a1.proof : bv_extract.r_mul_low.a1.Stmt := by
+@[bvr_arm] theorem bv_extract.r_mul_low.main.proof : bv_extract.r_mul_low.main.Stmt := by
   bvr_rule_sem
   all_goals bvr_zlits
   all_goals bvr_split; subst_vars; exact (BitVec.extractLsb'_mul (by omega)).symm
 
-theorem bv_extract.r_add_const.a1.proof : bv_extract.r_add_const.a1.Stmt := by
+@[bvr_arm] theorem bv_extract.r_add_const.main.proof : bv_extract.r_add_const.main.Stmt := by
   bvr_rule_sem
   all_goals bvr_zlits
   all_goals bvr_split; subst_vars; exact (extractLsb'_add_lsb _ ‹_› ‹_› ‹_› ‹_› ‹_› ‹_›).symm
 
-theorem bv_extract.r_mul_pow2.a1.proof : bv_extract.r_mul_pow2.a1.Stmt := by
+@[bvr_arm] theorem bv_extract.r_mul_pow2.main.proof : bv_extract.r_mul_pow2.main.Stmt := by
   bvr_rule_sem
   all_goals bvr_zlits
   all_goals bvr_split; subst_vars; obtain ⟨k, rfl⟩ := is_pow2_exists ‹_›
   all_goals simp only [log2_two_pow] at *; exact (extractLsb'_mul_pow2 _ ‹_› ‹_› ‹_›).symm
 
-theorem bv_extract.r_urem.a1.proof : bv_extract.r_urem.a1.Stmt := by
+@[bvr_arm] theorem bv_extract.r_urem.main.proof : bv_extract.r_urem.main.Stmt := by
   bvr_rule_sem
   all_goals bvr_zlits
   all_goals subst_vars; obtain ⟨k, rfl⟩ := is_pow2_exists ‹_›
   all_goals simp only [log2_two_pow] at *
   all_goals exact extractLsb'_umod_pow2 _ (by omega) (by omega) (by omega) (by omega)
 
-theorem float_abs.r_abs.a1.proof : float_abs.r_abs.a1.Stmt := by
+@[bvr_arm] theorem float_abs.r_abs.main.proof : float_abs.r_abs.main.Stmt := by
   intro FS O hO a T
   exact Refines.funop_idem fun v => by
     rcases v with _ | ⟨_ | _ | _ | ⟨p, x⟩ | _ | _⟩ <;> simp [evUnop, FBits.abs_abs]
 
-theorem float_neg.r_neg.a1.proof : float_neg.r_neg.a1.Stmt := by
+@[bvr_arm] theorem float_neg.r_neg.main.proof : float_neg.r_neg.main.Stmt := by
   intro FS O hO a T
   exact Refines.funop_invol (by simp) fun v r => by
     rcases v with _ | ⟨_ | _ | _ | ⟨p, x⟩ | _ | _⟩ <;> simp [evUnop, FBits.neg_neg]
 
-theorem float_cast.r_lit.a1.proof : float_cast.r_lit.a1.Stmt := by
+@[bvr_arm] theorem float_cast.r_lit.main.proof : float_cast.r_lit.main.Stmt := by
   intro FS O hO rm fp f T
   refine Refines.lit_of_unop (fun w => ?_) (fun hf => (hO.orc.convert rm fp f hf).2.2)
   have := hO.orc.convert rm fp f (Float.WF_of_WT (WT_unop.1 w).2)
   exact ⟨by rw [this.1], this.2.1⟩
 
-theorem float_fma.r_lits.a1.proof : float_fma.r_lits.a1.Stmt := by
+@[bvr_arm] theorem float_fma.r_lits.main.proof : float_fma.r_lits.main.Stmt := by
   intro FS O hO fa Ta fb Tb fc Tc
   have key : (float_fma.spec (.mk (.Float fa) Ta) (.mk (.Float fb) Tb) (.mk (.Float fc) Tc)).WT →
       Ta = .TFloat fa.prec ∧ fa.WF ∧ fb.WF ∧ fc.WF ∧ fa.prec = fb.prec ∧ fa.prec = fc.prec := by
@@ -74,7 +74,7 @@ theorem float_fma.r_lits.a1.proof : float_fma.r_lits.a1.Stmt := by
     rw [float_fma.spec, eval_fma w, eval_float w1, eval_float w2, eval_float w3, this.2.2] at e
     rw [eval_float w']; exact e
 
-theorem float_fmod.r_lits.a1.proof : float_fmod.r_lits.a1.Stmt := by
+@[bvr_arm] theorem float_fmod.r_lits.main.proof : float_fmod.r_lits.main.Stmt := by
   intro FS O hO f1 T1 f2 T2
   have key : (float_fmod.spec (.mk (.Float f1) T1) (.mk (.Float f2) T2)).WT →
       T1 = .TFloat f1.prec ∧ T2 = .TFloat f2.prec ∧ f1.WF ∧ f2.WF ∧ f1.prec = f2.prec := by
@@ -98,7 +98,7 @@ theorem float_fmod.r_lits.a1.proof : float_fmod.r_lits.a1.Stmt := by
     simp only [float_fmod.spec, Float.term, ty_eq, Term.ty_mk] at e this
     rw [this.2.2] at e; exact e
 
-theorem bv_of_float.r_lit.a1.proof : bv_of_float.r_lit.a1.Stmt := by
+@[bvr_arm] theorem bv_of_float.r_lit.main.proof : bv_of_float.r_lit.main.Stmt := by
   intro FS O hO rm s n f T
   rcases ez : O.orc.f_to_int rm s n f with _ | z
   · simp [firstSome]; exact Refines.refl
@@ -112,7 +112,7 @@ theorem bv_of_float.r_lit.a1.proof : bv_of_float.r_lit.a1.Stmt := by
       rw [eval_mk_masked w1.1, ← hO.orc.to_int rm s n f z (Float.WF_of_WT w2) w1.1 ez]
       exact e
 
-theorem bv_to_float.r_lit.a1.proof : bv_to_float.r_lit.a1.Stmt := by
+@[bvr_arm] theorem bv_to_float.r_lit.main.proof : bv_to_float.r_lit.main.Stmt := by
   intro FS O hO rm s p z T
   have key : (bv_to_float.spec rm s p (.mk (.BitVec z) T)).WT →
       ∃ n : Int, 0 < n ∧ T = .TBitVector n ∧ 0 ≤ z ∧ z < 2 ^ n.toNat := by
@@ -134,7 +134,7 @@ theorem bv_to_float.r_lit.a1.proof : bv_to_float.r_lit.a1.Stmt := by
     · rw [bv_to_float.spec, eval_unop w, eval_bitVec' (WT_unop.1 w).2 (.inl rfl), he] at e
       rw [eval_eq_ev w']; simp only [ev]; exact e
 
-theorem bv_to_float_raw.r_lit.a1.proof : bv_to_float_raw.r_lit.a1.Stmt := by
+@[bvr_arm] theorem bv_to_float_raw.r_lit.main.proof : bv_to_float_raw.r_lit.main.Stmt := by
   intro FS O hO z T
   simp only [bv_to_float_raw.spec, size_eq, Term.ty_mk]
   generalize fp_of_size (size_of_ty T) = p
@@ -154,7 +154,7 @@ theorem bv_to_float_raw.r_lit.a1.proof : bv_to_float_raw.r_lit.a1.Stmt := by
     apply BitVec.eq_of_toNat_eq
     rw [BitVec.toNat_ofNat, BitVec.toNat_ofInt, Nat.mod_eq_of_lt (by omega)]; simp
 
-theorem float_eq.r_same.a1.proof : float_eq.r_same.a1.Stmt := by
+@[bvr_arm] theorem float_eq.r_same.main.proof : float_eq.r_same.main.Stmt := by
   intro FS O hO v1 v2 h
   simp only [equal, decide_eq_true_eq] at h; subst h
   refine Refines.trans ?_ (Refines.b_not hO (hO.float_is_floatclass .NaN v1))
@@ -170,7 +170,7 @@ theorem float_eq.r_same.a1.proof : float_eq.r_same.a1.Stmt := by
     rw [h1] at h2; cases h2
     rw [h1]; simp at h3; simp [evUnop, ← h3, FBits.isClass]
 
-theorem float_eq.r_lit.a1.proof : float_eq.r_lit.a1.Stmt := by
+@[bvr_arm] theorem float_eq.r_lit.main.proof : float_eq.r_lit.main.Stmt := by
   intro FS O hO v2 f T
   exact Refines.feq_lit hO (hO.sem_eq _ _)
 

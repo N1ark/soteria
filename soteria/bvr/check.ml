@@ -441,10 +441,29 @@ let rec product = function
       let rest = product xs in
       List.concat_map (fun a -> List.map (fun r -> a :: r) rest) x
 
+(** A name for what a pattern matches: its head constructor, or operator. *)
+let rec pat_head (p : Syntax.pat) =
+  match p.p with
+  | PConstr (c, op :: _) when List.mem c.c_name !lang.node_kinds -> pat_head op
+  | PConstr (c, _) -> String.uncapitalize_ascii c.c_name
+  | PAs (q, _) -> pat_head q
+  | PLit _ -> "lit"
+  | PBool b -> string_of_bool b
+  | PInt _ -> "int"
+  | PTuple l -> String.concat "_" (List.map pat_head l)
+  | PSome _ -> "some"
+  | PNone -> "none"
+  | PNil -> "nil"
+  | PCons _ -> "cons"
+  | PAny | PVar _ | PUnit | PRecord _ -> "any"
+  | POr _ | PComm _ -> ""
+
 (** The alternatives of a pattern, each with the choices made (see
-    [Syntax.case.alt]). *)
+    [Syntax.case.alt]). A side of an or-pattern is named after its head, with
+    its index if both sides have the same head (and not named if it is itself an
+    or-pattern); the swapped side of a [[@comm]] pattern is named [swap]. *)
 let rec alternatives (p : Syntax.pat) :
-    (Syntax.pat * (int * int * bool) list) list =
+    (Syntax.pat * (int * int * bool * string) list) list =
   let mk d = { p with p = d } in
   let one d = [ (mk d, []) ] in
   let prod l =
@@ -456,8 +475,15 @@ let rec alternatives (p : Syntax.pat) :
   | PAny | PVar _ | PLit _ | PInt _ | PBool _ | PUnit | PNone | PNil -> one p.p
   | POr (a, b) | PComm (a, b) ->
       let comm = match p.p with PComm _ -> true | _ -> false in
+      let name i q =
+        if comm then if i = 1 then "swap" else ""
+        else if pat_head a = pat_head b then pat_head q ^ string_of_int (i + 1)
+        else pat_head q
+      in
       let side i q =
-        List.map (fun (q, t) -> (q, (p.pid, i, comm) :: t)) (alternatives q)
+        List.map
+          (fun (q, t) -> (q, (p.pid, i, comm, name i q) :: t))
+          (alternatives q)
       in
       side 0 a @ side 1 b
   | PAs (q, x) -> List.map (fun (q, t) -> (mk (PAs (q, x)), t)) (alternatives q)

@@ -6,10 +6,10 @@ namespace Bvr
 
 open Classical Lib
 
-theorem b_and.r_eq_neq.a1.proof : b_and.r_eq_neq.a1.Stmt := by
+@[bvr_arm] theorem b_and.r_eq_neq.main.proof : b_and.r_eq_neq.main.Stmt := by
   bvr_and_eq_neq
 
-theorem b_and.r_eq_extracts.a1.proof : b_and.r_eq_extracts.a1.Stmt := by
+@[bvr_arm] theorem b_and.r_eq_extracts.main.proof : b_and.r_eq_extracts.main.Stmt := by
   bvr_rule_sem
   all_goals first
     | omega
@@ -17,7 +17,7 @@ theorem b_and.r_eq_extracts.a1.proof : b_and.r_eq_extracts.a1.Stmt := by
     | exact concat_ne_extract ‹_› (by omega) (by omega)
     | exact concat_ne_extract' ‹_› (by omega) (by omega)
 
-theorem b_not.r_distinct.a1.proof : b_not.r_distinct.a1.Stmt := by
+@[bvr_arm] theorem b_not.r_distinct.main.proof : b_not.r_distinct.main.Stmt := by
   intro FS O hO l r t
   simp only [bvr_spec]
   bvr_lift_body
@@ -29,7 +29,7 @@ theorem b_not.r_distinct.a1.proof : b_not.r_distinct.a1.Stmt := by
     simp only [ev, evList] at e ⊢
     cases hl : ev FS ρ l <;> cases hr : ev FS ρ r <;> simp_all [evUnop, evBinop]
 
-theorem b_mk_exists.r_empty.a1.proof : b_mk_exists.r_empty.a1.Stmt := by
+@[bvr_arm] theorem b_mk_exists.r_empty.main.proof : b_mk_exists.r_empty.main.Stmt := by
   intro FS O hO bs body hu
   replace hu : used_binders bs body = [] := by
     cases h : used_binders bs body <;> simp_all [no_binders, firstSome]
@@ -47,7 +47,7 @@ theorem b_mk_exists.r_empty.a1.proof : b_mk_exists.r_empty.a1.Stmt := by
       cases b <;> simp at e <;> rw [← e]
     · simp at e
 
-theorem b_mk_exists.r_default.a1.proof : b_mk_exists.r_default.a1.Stmt := by
+@[bvr_arm] theorem b_mk_exists.r_default.main.proof : b_mk_exists.r_default.main.Stmt := by
   intro FS O hO bs body
   refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_) <;>
     obtain ⟨-, hn, hw, hb, wb⟩ := WT_exists.1 w
@@ -57,7 +57,7 @@ theorem b_mk_exists.r_default.a1.proof : b_mk_exists.r_default.a1.Stmt := by
     rw [eval_eq_ev w, ev_exists_used hn hw] at e
     rw [eval_eq_ev w']; exact e
 
-theorem b_distinct.r_small.a1.proof : b_distinct.r_small.a1.Stmt := by
+@[bvr_arm] theorem b_distinct.r_small.main.proof : b_distinct.r_small.main.Stmt := by
   intro FS O hO l h
   rcases l with _ | ⟨a, _ | ⟨b, l⟩⟩ <;> simp [at_most_one, firstSome] at h <;>
     refine Refines.intro (fun w => by simp [b_distinct.spec, v_true, WT_bool]) (fun ρ v w _ e => ?_) <;>
@@ -66,7 +66,7 @@ theorem b_distinct.r_small.a1.proof : b_distinct.r_small.a1.Stmt := by
   · simp at e; simp [e]
   · split at e <;> simp_all
 
-theorem b_distinct.r_distinct.a1.proof : b_distinct.r_distinct.a1.Stmt := by
+@[bvr_arm] theorem b_distinct.r_distinct.main.proof : b_distinct.r_distinct.main.Stmt := by
   intro FS O hO l hc
   simp only [decide_eq_true_eq] at hc
   refine Refines.intro (fun w => by simp [v_true, WT_bool, b_distinct.spec]) (fun ρ v w _ e => ?_)
@@ -82,7 +82,7 @@ theorem b_distinct.r_distinct.a1.proof : b_distinct.r_distinct.a1.Stmt := by
     exact sure_neq_sound hs ((hE a ha).1.trans (hE b hb).1.symm) ea eb
   simp [this, v_true, eval_bool]
 
-theorem b_distinct.r_not_distinct.a1.proof : b_distinct.r_not_distinct.a1.Stmt := by
+@[bvr_arm] theorem b_distinct.r_not_distinct.main.proof : b_distinct.r_not_distinct.main.Stmt := by
   intro FS O hO l hc
   simp only [decide_eq_true_eq] at hc
   refine Refines.intro (fun w => by simp [v_false, WT_bool, b_distinct.spec]) (fun ρ v w _ e => ?_)
@@ -92,7 +92,7 @@ theorem b_distinct.r_not_distinct.a1.proof : b_distinct.r_not_distinct.a1.Stmt :
     fun h => this (List.Pairwise.of_map _ (fun a b hne he => hne (he ▸ rfl)) h)
   simp [this, v_false, eval_bool]
 
-theorem b_distinct.r_default.a1.proof : b_distinct.r_default.a1.Stmt := by
+@[bvr_arm] theorem b_distinct.r_default.main.proof : b_distinct.r_default.main.Stmt := by
   intro FS O hO l
   have hp := hO.orc.sort_by_tag l
   refine Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)

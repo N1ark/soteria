@@ -112,7 +112,7 @@ theorem zext_div_ok {m n : Nat} (hmn : m ≤ n) (x : BitVec m) {z : Int} (h0 : 0
       Nat.mod_eq_of_lt (by have := Nat.div_le_self x.toNat z.toNat; omega)]
   · simp
 
-theorem bv_add.r_default.a1.proof : bv_add.r_default.a1.Stmt := by
+@[bvr_arm] theorem bv_add.r_default.main.proof : bv_add.r_default.main.Stmt := by
   intro FS O hO checked v1 v2
   simp only [bv_add.spec, mk_commut_binop]
   refine Refines.trans Refines.add_no_wrap ?_
@@ -120,7 +120,7 @@ theorem bv_add.r_default.a1.proof : bv_add.r_default.a1.Stmt := by
   · exact Refines.refl
   · exact Refines.comm (by simp [Binop.Comm]) (fun _ => rfl)
 
-theorem bv_add.r_factor.a1.proof : bv_add.r_factor.a1.Stmt := by
+@[bvr_arm] theorem bv_add.r_factor.main.proof : bv_add.r_factor.main.Stmt := by
   bvr_rule_sem
   all_goals bvr_split
   all_goals subst_vars
@@ -128,7 +128,7 @@ theorem bv_add.r_factor.a1.proof : bv_add.r_factor.a1.Stmt := by
     | exact umul_add_ok ‹_› ‹_› ‹_›
     | exact BitVec.mul_add ..
 
-theorem bv_add.r_factor_const.a1.proof : bv_add.r_factor_const.a1.Stmt := by
+@[bvr_arm] theorem bv_add.r_factor_const.main.proof : bv_add.r_factor_const.main.Stmt := by
   bvr_rule_sem
   all_goals bvr_split
   all_goals subst_vars
@@ -136,15 +136,15 @@ theorem bv_add.r_factor_const.a1.proof : bv_add.r_factor_const.a1.Stmt := by
     | exact factor_ok (by bvr_nat) (by bvr_nat) ‹_› ‹_› ‹_›
     | exact factor_ok' (by bvr_nat) (by bvr_nat) ‹_› ‹_› ‹_›
 
-theorem bv_mul.r_neg.a1.proof : bv_mul.r_neg.a1.Stmt := by
+@[bvr_arm] theorem bv_mul.r_neg.main.proof : bv_mul.r_neg.main.Stmt := by
   bvr_rule_sem
   all_goals simp_all [smulOverflow_neg_swap]
 
-theorem bv_mul.r_mul_const.a1.proof : bv_mul.r_mul_const.a1.Stmt := by
+@[bvr_arm] theorem bv_mul.r_mul_const.main.proof : bv_mul.r_mul_const.main.Stmt := by
   bvr_rule_sem
   all_goals simp_all [BitVec.mul_assoc, umul_assoc_ok, smul_assoc_ok]
 
-theorem bv_div.r_mul_div.a1.proof : bv_div.r_mul_div.a1.Stmt := by
+@[bvr_arm] theorem bv_div.r_mul_div.main.proof : bv_div.r_mul_div.main.Stmt := by
   bvr_rule_sem
   all_goals bvr_split
   all_goals subst_vars
@@ -152,19 +152,19 @@ theorem bv_div.r_mul_div.a1.proof : bv_div.r_mul_div.a1.Stmt := by
     | exact (mul_div_ok (by bvr_nat) (by bvr_nat) ‹_›).1
     | exact (mul_div_ok (by bvr_nat) (by bvr_nat) ‹_›).2
 
-theorem bv_div.r_div_mul.a1.proof : bv_div.r_div_mul.a1.Stmt := by
+@[bvr_arm] theorem bv_div.r_div_mul.main.proof : bv_div.r_div_mul.main.Stmt := by
   bvr_rule_sem
   all_goals bvr_split
   all_goals subst_vars
   all_goals exact div_mul_ok (by bvr_nat) (by bvr_nat) ‹_›
 
-theorem bv_div.r_div_div.a1.proof : bv_div.r_div_div.a1.Stmt := by
+@[bvr_arm] theorem bv_div.r_div_div.main.proof : bv_div.r_div_div.main.Stmt := by
   bvr_rule_sem
   all_goals bvr_split
   all_goals subst_vars
   all_goals exact (div_div_ok (by bvr_nat) ‹_›).symm
 
-theorem bv_div.r_zext.a1.proof : bv_div.r_zext.a1.Stmt := by
+@[bvr_arm] theorem bv_div.r_zext.main.proof : bv_div.r_zext.main.Stmt := by
   bvr_rule_sem
   all_goals bvr_split
   all_goals subst_vars

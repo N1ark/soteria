@@ -646,13 +646,14 @@ let rec occurs ~ty_ok x (e : expr) =
     the function are swapped), with the arguments of its statement. *)
 let derived_from (grp : arm list) (a : arm) =
   let c = a.a_case in
-  if not (List.exists (fun (_, i, comm) -> comm && i = 1) c.alt) then None
+  if not (List.exists (fun (_, i, comm, _) -> comm && i = 1) c.alt) then None
   else
     let norm l = List.sort compare l in
     let base_alt =
       norm
         (List.map
-           (fun (p, i, comm) -> (p, (if comm then 0 else i), comm))
+           (fun (p, i, comm, n) ->
+             if comm then (p, 0, comm, "") else (p, i, comm, n))
            c.alt)
     in
     match
@@ -821,11 +822,54 @@ let model ~sources ft (p : program) =
      opsStep (opsN orc n)@]@ @ ";
   pf ft "end Bvr@]@."
 
-let arm_name f r i = Printf.sprintf "%s.r_%s.a%d" f.name (id r) (i + 1)
+(** The names of the arms of a rule: the names of the choices that produced each
+    (see [Check.alternatives]), in the order of the source, prefixed with the
+    index of its source case if the rule has several, or [main]. *)
+let arm_names (arms : arm list) =
+  let clocs =
+    List.fold_left
+      (fun l (a : arm) ->
+        if List.mem a.a_case.cloc l then l else l @ [ a.a_case.cloc ])
+      [] arms
+  in
+  List.map
+    (fun (a : arm) ->
+      let alt = List.sort compare a.a_case.alt in
+      (* the swaps are numbered if there are several *)
+      let swaps = List.filter (fun (_, _, comm, _) -> comm) alt in
+      let choices =
+        List.filter_map
+          (fun ((_, _, comm, n) as c) ->
+            if n = "" then None
+            else if comm && List.length swaps > 1 then
+              let rec index k = function
+                | x :: _ when x = c -> k
+                | _ :: l -> index (k + 1) l
+                | [] -> assert false
+              in
+              Some (n ^ string_of_int (index 1 swaps))
+            else Some n)
+          alt
+      in
+      let case =
+        if List.length clocs < 2 then []
+        else
+          let rec index k = function
+            | l :: _ when l = a.a_case.cloc -> k
+            | _ :: ls -> index (k + 1) ls
+            | [] -> assert false
+          in
+          [ Printf.sprintf "c%d" (index 1 clocs) ]
+      in
+      match case @ choices with [] -> "main" | l -> String.concat "_" l)
+    arms
+
+let arm_name f r arms i =
+  Printf.sprintf "%s.r_%s.%s" f.name (id r) (id (List.nth (arm_names arms) i))
 
 (** The statement of an arm: under its guard, the spec at the matched arguments
     is refined by the body. *)
-let arm_stmt ctx ft f r i (a : arm) =
+let arm_stmt ctx ft f r arms i (a : arm) =
   let c = a.a_case in
   let with_subst s k =
     subst := s;
@@ -833,7 +877,7 @@ let arm_stmt ctx ft f r i (a : arm) =
   in
   pf ft
     "@[<v 2>def %s.Stmt : Prop :=@ ∀ (FS : FloatSem) (O : Ops), O.Sound FS →@ "
-    (arm_name f r i);
+    (arm_name f r arms i);
   if a.a_binders <> [] then
     pf ft "∀ %a,@ "
       (list ~sep:" " (fun ft (x, t) -> pf ft "(%s : %s)" x t))
@@ -880,7 +924,7 @@ let statements ~sources ft (p : program) =
       if f.cases then
         List.iter
           (fun (r, arms) ->
-            List.iteri (fun i a -> arm_stmt ctx ft f r i a) arms)
+            List.iteri (fun i a -> arm_stmt ctx ft f r arms i a) arms)
           (arms f))
     (rule_fns ctx);
   pf ft "end Bvr@]@."
@@ -959,7 +1003,8 @@ let cases_proofs ft (f : fn) =
               (* a hand-written [.proof] if there is one, else the default
                  tactic *)
               pf ft "theorem %s.ok : %s.Stmt := bvr_proof%% %s@ @ "
-                (arm_name f r i) (arm_name f r i) (arm_name f r i)
+                (arm_name f r arms i) (arm_name f r arms i)
+                (arm_name f r arms i)
           | Some (b, args) ->
               let j =
                 let rec find k = function
@@ -974,9 +1019,9 @@ let cases_proofs ft (f : fn) =
                 "@[<v 2>theorem %s.ok : %s.Stmt := by@ intro FS O hO %a%s@ \
                  exact Refines.trans@   (by simp only [%s.spec, ty, \
                  Term.ty_mk]; bvr_comm)@   (%s.ok FS O hO %a%s)@]@ @ "
-                (arm_name f r i) (arm_name f r i)
+                (arm_name f r arms i) (arm_name f r arms i)
                 (list ~sep:" " (fun ft (x, _) -> pf ft "%s" x))
-                a.a_binders hg f.name (arm_name f r j)
+                a.a_binders hg f.name (arm_name f r arms j)
                 (list ~sep:" " Format.pp_print_string)
                 args hg)
         arms;
@@ -988,7 +1033,8 @@ let cases_proofs ft (f : fn) =
         f.name (id r) f.name (id r) args f f.name (id r)
         (Format.pp_print_list
            ~pp_sep:(fun ft () -> pf ft "@ ")
-           (fun ft i -> pf ft "· bvr_arm h (%s.ok FS O hO)" (arm_name f r i)))
+           (fun ft i ->
+             pf ft "· bvr_arm h (%s.ok FS O hO)" (arm_name f r arms i)))
         (List.init (List.length arms) Fun.id))
     (arms f)
 

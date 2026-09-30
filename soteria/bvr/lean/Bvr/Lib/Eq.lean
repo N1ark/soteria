@@ -922,4 +922,7 @@ macro "bvr_rule_b_sem" : tactic => `(tactic| (
     | (bvr_wt; done)
     | bvr_sem_b_core))
 
+attribute [bvr_tactic "bvr_rule_b"] sem_eq.spec bv_neg.spec bv_mod.spec bv_rem.spec
+  bv_add_overflows.spec bv_sub_overflows.spec bv_mul_overflows.spec bv_neg_overflows.spec
+
 end Bvr.Lib.SemEq

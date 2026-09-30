@@ -6,7 +6,7 @@ namespace Bvr
 
 open Classical Lib
 
-theorem bv_leq.r_udiv_big.a1.proof : bv_leq.r_udiv_big.a1.Stmt := by
+@[bvr_arm] theorem bv_leq.r_udiv_big.main.proof : bv_leq.r_udiv_big.main.Stmt := by
   bvr_cmp_using [smtUDiv_ule_of_umulOverflow]
 
 /-- `ite g p p` is `p`. -/
@@ -17,7 +17,7 @@ theorem refines_ite_same {FS g p} : Refines FS (.mk (.Triop .Ite g p p) .TBool) 
   · simp only [denB] at h
     split at h <;> simp_all
 
-theorem bv_lt_zero.r_ite.a1.proof : bv_lt_zero.r_ite.a1.Stmt := by
+@[bvr_arm] theorem bv_lt_zero.r_ite.main.proof : bv_lt_zero.r_ite.main.Stmt := by
   intro FS O hO g l r t
   simp only
   split

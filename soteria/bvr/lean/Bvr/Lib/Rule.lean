@@ -31,25 +31,22 @@ macro "bvr_msb" : tactic => `(tactic| (
        · omega
        · exact h))))
 
+attribute [bvr_tactic "bvr_msb"] bv_lt_zero.spec
+
 open Lean Elab Term in
 /-- `bvr_proof% X`: the proof of the statement `X.Stmt` of an arm, by its
-hand-written proof `X.proof` if there is one, and otherwise by the rule tactic
-of the library of its function, or `bvr_auto`. -/
+hand-written proof (`bvr_arm`) if there is one, and otherwise by the tactic of
+its function (`bvr_tactic`), or `bvr_auto`. -/
 elab "bvr_proof% " x:ident : term => do
   let n := `Bvr ++ x.getId
-  if (← getEnv).contains (n ++ `proof) then return mkConst (n ++ `proof)
+  let env ← getEnv
+  if let some p := (bvrArmExt.getState env).find? n then return mkConst p
   let f := x.getId.components.head!
-  let g := if f.toString.startsWith "float_" then "float_" else f.toString
-  let tac ← match g with
-    | "bv_lt" | "bv_leq" => `(tactic| first | (bvr_cmp; done) | bvr_auto)
-    | "bv_lt_zero" => `(tactic| first | (bvr_msb; done) | bvr_auto)
-    | "bv_shl" | "bv_lshr" | "bv_ashr" => `(tactic| first | (bvr_shift; done) | bvr_auto)
-    | "ptr_loc" | "ptr_ofs" =>
-      `(tactic| first | (bvr_ptr $(mkIdent (`Bvr ++ f ++ `spec)); done) | bvr_auto)
-    | "sem_eq" | "bv_neg" | "bv_mod" | "bv_rem" | "bv_add_overflows" | "bv_sub_overflows"
-    | "bv_mul_overflows" | "bv_neg_overflows" => `(tactic| first | (bvr_rule_b; done) | bvr_auto)
-    | "float_" => `(tactic| first | (bvr_float; done) | bvr_auto)
-    | _ => `(tactic| bvr_auto)
+  let tac ← match (bvrTacticExt.getState env).find? (`Bvr ++ f ++ `spec) with
+    | some t => do
+      let t ← ofExcept (Parser.runParserCategory env `tactic t)
+      `(tactic| first | ($(⟨t⟩):tactic; done) | bvr_auto)
+    | none => `(tactic| bvr_auto)
   let seq ← `(Lean.Parser.Tactic.tacticSeq| $tac:tactic)
   elabTermEnsuringType (← `(by $seq)) (some (mkConst (n ++ `Stmt)))
 

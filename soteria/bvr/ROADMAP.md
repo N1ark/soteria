@@ -6,8 +6,9 @@ OCaml-style `type` declarations and `infix`/`prefix` items rather than the
 syntax sketched below), the part of B2 that generates the Lean types
 (`Types.lean` and `Syntax.lean`, with the bvr names), B3 (`Binop.Comm` is
 generated from `[@comm]`; `evBinop_comm` remains the hand-written obligation),
-and A1 for the Lean files (`bvr lean-all` generates them in one run). §1
-describes the state before them.
+A1 for the Lean files (`bvr lean-all` generates them in one run), and A2–A4
+(`bvr_tactic` and `bvr_arm` attributes, and arms named after their choices,
+with `main` for an arm without any). §1 describes the state before them.
 
 ## 1. Where we are
 

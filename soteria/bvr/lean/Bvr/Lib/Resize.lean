@@ -277,4 +277,13 @@ macro "bvr_ptr " spec:ident : tactic => `(tactic| (
       subst hv
       rw [hp] at e; simp [evUnop] at e; subst e; first | exact h1 | exact h2))
 
+attribute [bvr_tactic "bvr_ptr ptr_loc.spec"] ptr_loc.spec
+attribute [bvr_tactic "bvr_ptr ptr_ofs.spec"] ptr_ofs.spec
+
+attribute [bvr_tactic "bvr_float"] float_is_floatclass.spec float_is_negative.spec
+  float_is_positive.spec float_cast.spec float_eq.spec float_lt.spec float_leq.spec
+  float_add.spec float_sub.spec float_div.spec float_mul.spec float_rem.spec float_abs.spec
+  float_neg.spec float_fma.spec float_fmod_of_rem.spec float_fmod.spec float_min.spec
+  float_max.spec float_sqrt.spec float_round.spec
+
 end Bvr.Lib

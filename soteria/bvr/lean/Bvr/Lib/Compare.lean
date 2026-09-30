@@ -643,4 +643,6 @@ macro_rules
            all_goals (try (simp_all [$ls,*]; done))
            all_goals (try (bvr_cmp_omega; done)))))
 
+attribute [bvr_tactic "bvr_cmp"] bv_lt.spec bv_leq.spec
+
 end Bvr.Lib

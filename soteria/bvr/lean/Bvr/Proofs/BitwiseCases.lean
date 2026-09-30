@@ -6,23 +6,23 @@ namespace Bvr
 
 open Classical Lib
 
-theorem bv_and.r_ones.a1.proof : bv_and.r_ones.a1.Stmt := by
+@[bvr_arm] theorem bv_and.r_ones.main.proof : bv_and.r_ones.main.Stmt := by
   bvr_rule_sem
   all_goals simp_all [is_ones_mk]
 
-theorem bv_and.r_lshr_mask.a1.proof : bv_and.r_lshr_mask.a1.Stmt := by
+@[bvr_arm] theorem bv_and.r_lshr_mask.main.proof : bv_and.r_lshr_mask.main.Stmt := by
   bvr_rule_sem
   all_goals subst_vars; exact (lshr_and_of_bits_in ‹_› _).symm
 
-theorem bv_and.r_lshr_mask.a2.proof : bv_and.r_lshr_mask.a2.Stmt := by
+@[bvr_arm] theorem bv_and.r_lshr_mask.swap.proof : bv_and.r_lshr_mask.swap.Stmt := by
   bvr_rule_sem
   all_goals subst_vars; rw [BitVec.and_comm]; exact (lshr_and_of_bits_in ‹_› _).symm
 
-theorem bv_and.r_mask_or_disj.a1.proof : bv_and.r_mask_or_disj.a1.Stmt := by
+@[bvr_arm] theorem bv_and.r_mask_or_disj.main.proof : bv_and.r_mask_or_disj.main.Stmt := by
   bvr_rule_sem
   all_goals subst_vars; exact (and_or_of_disjoint ‹_› _).symm
 
-theorem bv_or.r_extend_shl.a1.proof : bv_or.r_extend_shl.a1.Stmt := by
+@[bvr_arm] theorem bv_or.r_extend_shl.main.proof : bv_or.r_extend_shl.main.Stmt := by
   intro FS O hO nx base t5 w8 tail t11 z T t13 hg
   simp only [Bool.and_eq_true, decide_eq_true_eq] at hg
   obtain ⟨hs, hnx⟩ := hg

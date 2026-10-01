@@ -892,11 +892,18 @@ module Make (V : Value_ext) () = struct
              || (equal r1 l2 && sure_neq l1 r2)
              || (equal r1 r2 && sure_neq l1 l2) ->
           v_false
+      (* only for constants: if [bv1] or [bv2] could be undefined (an operation
+         whose overflow check does not hold), the conjunction could still be
+         false thanks to the other conjunct, while the merged equality would be
+         undefined *)
       | ( Binop
-            (Eq, bv1, { node = { kind = Unop (BvExtract (s1, e1), x); _ }; _ }),
+            ( Eq,
+              ({ node = { kind = BitVec _; _ }; _ } as bv1),
+              { node = { kind = Unop (BvExtract (s1, e1), x); _ }; _ } ),
           Binop
-            (Eq, bv2, { node = { kind = Unop (BvExtract (s2, e2), y); _ }; _ })
-        )
+            ( Eq,
+              ({ node = { kind = BitVec _; _ }; _ } as bv2),
+              { node = { kind = Unop (BvExtract (s2, e2), y); _ }; _ } ) )
         when equal x y && (e1 + 1 = s2 || e2 + 1 = s1) ->
           let bv, xy =
             if e1 + 1 = s2 then (BitVec.concat bv2 bv1, BitVec.extract s1 e2 x)
@@ -988,7 +995,8 @@ module Make (V : Value_ext) () = struct
       | _, Bool true, _ -> or_ guard else_
       | _, _, Bool false -> and_ guard if_
       | _, _, Bool true -> or_ (not guard) if_
-      | _, BitVec o, BitVec z when Z.(equal o one) && Z.equal z Z.zero ->
+      | _, BitVec o, BitVec z
+        when Z.(equal o one) && Z.equal z Z.zero && is_bv if_.node.ty ->
           BitVec.of_bool (size_of if_.node.ty) guard
       | Unop (Not, g), _, _ -> ite g else_ if_
       | _ when equal guard if_ -> or_ guard else_
@@ -1098,27 +1106,36 @@ module Make (V : Value_ext) () = struct
       | Triop (Ite, b, l, r), Triop (Ite, b', l', r') when equal b b' ->
           ite b (sem_eq l l') (sem_eq r r')
       (* Cancelling a common factor [a] from [a*b == a*d] is only sound when [a]
-         is odd (invertible modulo 2^n), or when both multiplications are
-         overflow-checked (so they behave like exact integer arithmetic). *)
+         is odd (invertible modulo 2^n), or when [a] is non-zero and both
+         multiplications are overflow-checked (so they behave like exact integer
+         arithmetic). *)
       | ( Binop (Mul ck1, { node = { kind = BitVec a; _ }; _ }, b),
           Binop (Mul ck2, { node = { kind = BitVec c; _ }; _ }, d) )
-        when Z.(equal a c) && (Z.is_odd a || is_checked (checked_meet ck1 ck2))
-        ->
+        when Z.(equal a c)
+             && (Z.is_odd a
+                || (Stdlib.not (Z.equal a Z.zero)
+                   && is_checked (checked_meet ck1 ck2))) ->
           sem_eq b d
       | ( Binop (Mul ck1, b, { node = { kind = BitVec a; _ }; _ }),
           Binop (Mul ck2, d, { node = { kind = BitVec c; _ }; _ }) )
-        when Z.(equal a c) && (Z.is_odd a || is_checked (checked_meet ck1 ck2))
-        ->
+        when Z.(equal a c)
+             && (Z.is_odd a
+                || (Stdlib.not (Z.equal a Z.zero)
+                   && is_checked (checked_meet ck1 ck2))) ->
           sem_eq b d
       | ( Binop (Mul ck1, { node = { kind = BitVec a; _ }; _ }, b),
           Binop (Mul ck2, d, { node = { kind = BitVec c; _ }; _ }) )
-        when Z.(equal a c) && (Z.is_odd a || is_checked (checked_meet ck1 ck2))
-        ->
+        when Z.(equal a c)
+             && (Z.is_odd a
+                || (Stdlib.not (Z.equal a Z.zero)
+                   && is_checked (checked_meet ck1 ck2))) ->
           sem_eq b d
       | ( Binop (Mul ck1, b, { node = { kind = BitVec a; _ }; _ }),
           Binop (Mul ck2, { node = { kind = BitVec c; _ }; _ }, d) )
-        when Z.(equal a c) && (Z.is_odd a || is_checked (checked_meet ck1 ck2))
-        ->
+        when Z.(equal a c)
+             && (Z.is_odd a
+                || (Stdlib.not (Z.equal a Z.zero)
+                   && is_checked (checked_meet ck1 ck2))) ->
           sem_eq b d (* Bitvectors *)
       (* 0 == L | R ==> 0 == L && 0 == R, splitting is better for the PC *)
       | (BitVec z, Binop (BitOr, l, r) | Binop (BitOr, l, r), BitVec z)
@@ -1450,12 +1467,19 @@ module Make (V : Value_ext) () = struct
       | Binop (Add _, b, a), Binop (Sub _, c, a') when equal a a' -> add b c
       | Binop (Sub _, c, a'), Binop (Add _, a, b) when equal a a' -> add b c
       | Binop (Sub _, c, a'), Binop (Add _, b, a) when equal a a' -> add b c
-      | Binop (Mul _, l1, r1), Binop (Mul _, l2, r2)
+      | Binop (Mul ck1, l1, r1), Binop (Mul ck2, l2, r2)
         when equal l1 l2 || equal l1 r2 || equal r1 l2 || equal r1 r2 ->
-          if equal l1 l2 then mul ~checked l1 (add ~checked r1 r2)
-          else if equal l1 r2 then mul ~checked l1 (add ~checked r1 l2)
-          else if equal r1 l2 then mul ~checked r1 (add ~checked l1 r2)
-          else mul ~checked r1 (add ~checked l1 l2)
+          (* if neither product nor the sum overflows unsigned, then neither
+             does the factored product *)
+          let checked =
+            if (checked_meet (checked_meet checked ck1) ck2).unsigned then
+              checked_unsigned
+            else unchecked
+          in
+          if equal l1 l2 then mul ~checked l1 (add r1 r2)
+          else if equal l1 r2 then mul ~checked l1 (add r1 l2)
+          else if equal r1 l2 then mul ~checked r1 (add l1 r2)
+          else mul ~checked r1 (add l1 l2)
       | ( Binop (Mul ck1, ({ node = { kind = BitVec l1; _ }; _ } as v_l1), r1),
           Binop (Mul ck2, ({ node = { kind = BitVec l2; _ }; _ } as v_l2), r2) )
       | ( Binop (Mul ck1, r1, ({ node = { kind = BitVec l1; _ }; _ } as v_l1)),
@@ -1464,9 +1488,10 @@ module Make (V : Value_ext) () = struct
           Binop (Mul ck2, r2, ({ node = { kind = BitVec l2; _ }; _ } as v_l2)) )
       | ( Binop (Mul ck1, r1, ({ node = { kind = BitVec l1; _ }; _ } as v_l1)),
           Binop (Mul ck2, r2, ({ node = { kind = BitVec l2; _ }; _ } as v_l2)) )
-        when is_checked (checked_meet (checked_meet checked ck1) ck2)
+        when (checked_meet (checked_meet checked ck1) ck2).unsigned
+             && Stdlib.not (Z.equal l1 Z.zero && Z.equal l2 Z.zero)
              && (Z.divisible l1 l2 || Z.divisible l2 l1) ->
-          let checked = checked_meet (checked_meet checked ck1) ck2 in
+          let checked = checked_unsigned in
           if Z.divisible l2 l1 then
             let common = mk (size_of v1.node.ty) (Z.div l2 l1) in
             mul ~checked v_l1 (add ~checked r1 (mul ~checked common r2))
@@ -1529,7 +1554,7 @@ module Make (V : Value_ext) () = struct
       | Binop (Add _, l, r), _ when equal l v2 -> r
       | Binop (Add _, l, r), _ when equal r v2 -> l
       | Binop (Add _, l1, r1), Binop (Add _, l2, r2) when equal l1 l2 ->
-          sub ~checked r1 r2
+          sub r1 r2
       | _l, Binop (Sub _, l', r) when equal v1 l' -> r
       (* distributing over a shared guard lets the branches cancel pairwise *)
       | Triop (Ite, b, l, r), Triop (Ite, b', l', r') when equal b b' ->
@@ -1555,6 +1580,8 @@ module Make (V : Value_ext) () = struct
         [rem ~signed:false]. *)
     and mod_ v1 v2 =
       match (v1.node.kind, v2.node.kind) with
+      (* by zero, the result is the dividend (as in SMT-LIB) *)
+      | _, BitVec r when Z.equal r Z.zero -> v1
       | BitVec l, BitVec r ->
           let size = size_of v1.node.ty in
           let l = bv_to_z true size l in
@@ -1562,7 +1589,7 @@ module Make (V : Value_ext) () = struct
           let res = Z.(l mod r) in
           let res =
             if Z.(res < zero) && Stdlib.not Z.(r < zero) then Z.(res + r)
-            else if Z.(res >= zero) && Z.(r < zero) then Z.(res + r)
+            else if Z.(res > zero) && Z.(r < zero) then Z.(res + r)
             else res
           in
           mk_masked size res
@@ -1572,6 +1599,8 @@ module Make (V : Value_ext) () = struct
         of the dividend [v1] if [signed]. *)
     and rem ~signed v1 v2 =
       match (v1.node.kind, v2.node.kind) with
+      (* by zero, the result is the dividend (as in SMT-LIB) *)
+      | _, BitVec r when Z.equal r Z.zero -> v1
       | BitVec l, BitVec r ->
           let size = size_of v1.node.ty in
           let l = bv_to_z signed size l in
@@ -1585,15 +1614,21 @@ module Make (V : Value_ext) () = struct
           let bitwidth = Z.log2 r in
           let lower = extract 0 (bitwidth - 1) v1 in
           extend ~signed:false (size - bitwidth) lower
-      | Binop (Add _, { node = { kind = BitVec l; _ }; _ }, r), BitVec d
+      (* (d + r) %u d = r %u d, when the addition does not wrap *)
+      | ( Binop
+            (Add { unsigned = true; _ }, { node = { kind = BitVec l; _ }; _ }, r),
+          BitVec d )
         when Stdlib.not signed && Z.(equal l d) ->
           rem ~signed r v2
-      | Binop (Add _, r, { node = { kind = BitVec l; _ }; _ }), BitVec d
+      | ( Binop
+            (Add { unsigned = true; _ }, r, { node = { kind = BitVec l; _ }; _ }),
+          BitVec d )
         when Stdlib.not signed && Z.(equal l d) ->
           rem ~signed r v2
       | ( Binop (Rem false, r, ({ node = { kind = BitVec r1; _ }; _ } as v_r1)),
           BitVec r2 )
         when Stdlib.not signed
+             && Z.(gt r1 zero && gt r2 zero)
              && Z.(equal zero (rem r1 r2) || equal zero (rem r2 r1)) ->
           let rhs = if Z.(equal (min r1 r2) r1) then v_r1 else v2 in
           rem ~signed r rhs
@@ -1948,8 +1983,8 @@ module Make (V : Value_ext) () = struct
           let r_low = extract from_ to_ r in
           mul ~checked:unchecked l_low r_low
       | Binop (Rem false, l, { node = { kind = BitVec n; _ }; _ })
-        when from_ = 0 && Z.log2 n < to_ ->
-          (* extract[0,N](X % M) when M < 2^M can be pushed down *)
+        when from_ = 0 && is_pow2 n && Z.log2 n < to_ ->
+          (* extract[0,N](X % 2^M) when M < N can be pushed down *)
           let l = extract from_ to_ l in
           rem ~signed:false l (mk (to_ + 1) n)
       | _ -> Unop (BvExtract (from_, to_), v) <| t_bv size
@@ -2128,8 +2163,15 @@ module Make (V : Value_ext) () = struct
           ( Binop (Mul ckm, { node = { kind = BitVec n; _ }; _ }, x)
           | Binop (Mul ckm, x, { node = { kind = BitVec n; _ }; _ }) ) )
         when is_checked (checked_meet checked ckm) ->
-          mul ~checked:(checked_meet checked ckm) x
-            (mk_masked (size_of v1.node.ty) Z.(n * m))
+          let size = size_of v1.node.ty in
+          let checked = checked_meet checked ckm in
+          (* the signed check only carries over if [n * m] does not overflow *)
+          let checked =
+            if overflows ~signed:true size n m Z.mul then
+              checked_meet checked checked_unsigned
+            else checked
+          in
+          mul ~checked x (mk_masked size Z.(n * m))
       (* only propagate down ites if we know it's concrete *)
       | Triop (Ite, b, l, r), BitVec x | BitVec x, Triop (Ite, b, l, r) ->
           let n = size_of v1.node.ty in
@@ -2144,7 +2186,13 @@ module Make (V : Value_ext) () = struct
           let size = size_of v1.node.ty in
           let l = bv_to_z signed size l in
           let r = bv_to_z signed size r in
-          let res = Z.(l / r) in
+          (* division by zero gives all ones, or 1 for signed negative
+             dividends *)
+          let res =
+            if Z.(equal r zero) then
+              if signed && Z.(lt l zero) then Z.one else Z.minus_one
+            else Z.(l / r)
+          in
           mk_masked size res
       | _, BitVec r when Z.equal r Z.one -> v1
       (* this case shouldn't happen but it avoids conflicts for the next two
@@ -2161,7 +2209,9 @@ module Make (V : Value_ext) () = struct
       | ( Binop
             (Mul { unsigned = true; _ }, x, { node = { kind = BitVec n; _ }; _ }),
           BitVec d )
-        when Stdlib.not signed && Z.(divisible n d) ->
+        when Stdlib.not signed
+             && Stdlib.not (Z.equal d Z.zero)
+             && Z.(divisible n d) ->
           (* (x * n) / d = x * (n / d) when n % d == 0 *)
           mul ~checked:checked_unsigned x (mk (size_of v1.node.ty) Z.(n / d))
       | ( Binop
@@ -2174,11 +2224,13 @@ module Make (V : Value_ext) () = struct
           (* (x * n) / d = x / (d / n) when d % n == 0 *)
           let divisor = Z.(d / n) in
           div ~signed x (mk (size_of v1.node.ty) divisor)
-      | Binop (Div s, x, { node = { kind = BitVec n; _ }; _ }), BitVec d
-        when s = signed
+      | Binop (Div false, x, { node = { kind = BitVec n; _ }; _ }), BitVec d
+        when Stdlib.not signed
+             && Stdlib.not (Z.equal n Z.zero)
              && (Stdlib.not @@ overflows ~signed (size_of v1.node.ty) n d Z.mul)
         ->
-          (* (x / n) / d = x / (n * d) (if n * d doesn't overflow) *)
+          (* (x /u n) /u d = x /u (n * d) (if n * d doesn't overflow); not for
+             signed divisions, which wrap for INT_MIN / -1 *)
           div ~signed x (mk (size_of v1.node.ty) Z.(n * d))
       | Unop (BvExtend (false, by), x), BitVec z
         when Stdlib.not signed && msb_of v2 < size_of x.node.ty ->
@@ -2307,7 +2359,7 @@ module Make (V : Value_ext) () = struct
             Binop (Lt signed, v, zero (size_of v.node.ty)) <| TBool
           in
           let not_eq_0 v =
-            Bool.not (Bool.sem_eq v1 (zero (size_of v.node.ty)))
+            Bool.not (Bool.sem_eq v (zero (size_of v.node.ty)))
           in
           (* this function returns if this node is negative if we can tell, and
              otherwise the node that represents the sign bit *)
@@ -2315,11 +2367,7 @@ module Make (V : Value_ext) () = struct
             match v.node.kind with
             | Unop (BvExtend (true, _), v) -> aux_lt_zero v
             | Unop (BvExtend (false, _), _) -> Bool.v_false
-            | Binop (Mod, _, r) -> Bool.and_ (aux_lt_zero r) (not_eq_0 v)
             | Binop (Rem true, l, _) -> Bool.and_ (aux_lt_zero l) (not_eq_0 v)
-            | Binop (Div true, l, r) ->
-                Bool.and_ (not_eq_0 v)
-                  (Bool.not (Bool.sem_eq (aux_lt_zero l) (aux_lt_zero r)))
             | Binop (BvConcat, l, _) -> aux_lt_zero l
             | Unop (BvNot, v) -> Bool.not (aux_lt_zero v)
             | Unop (BvOfBool n, _) when n > 1 -> Bool.v_false
@@ -2369,7 +2417,9 @@ module Make (V : Value_ext) () = struct
           let c1 = bv_to_z signed bits c1 in
           let c2 = bv_to_z signed bits c2 in
           (* be careful bc c1 = v2 and c2 = v1 in this case *)
-          if Z.divisible c2 c1 || Z.geq c2 Z.zero then
+          if Z.equal c1 Z.zero then (* the product is 0 *)
+            Bool.of_bool (Z.lt c2 Z.zero)
+          else if Z.divisible c2 c1 || Z.geq c2 Z.zero then
             if Z.lt c1 Z.zero then
               if
                 signed
@@ -2406,7 +2456,9 @@ module Make (V : Value_ext) () = struct
            *             (bvsle x (bvsdiv c2 c1))))))))) *)
           let c1 = bv_to_z signed bits c1 in
           let c2 = bv_to_z signed bits c2 in
-          if Z.divisible c2 c1 || Z.lt c2 Z.zero then
+          (* the product is 0 *)
+          if Z.equal c1 Z.zero then Bool.of_bool (Z.gt c2 Z.zero)
+          else if Z.divisible c2 c1 || Z.lt c2 Z.zero then
             if Z.lt c1 Z.zero then
               if
                 signed
@@ -2419,8 +2471,15 @@ module Make (V : Value_ext) () = struct
           else leq ~signed x (div ~signed v2 v1)
       | Binop (Mul checked_l, l1, r1), Binop (Mul checked_r, l2, r2)
         when checked_has ~signed checked_l && checked_has ~signed checked_r ->
-          (* Can only cancel common factor if it's provably non-zero *)
-          let is_nonzero v = sure_neq v (zero (size_of v.node.ty)) in
+          (* Can only cancel common factor if it's provably non-zero, and
+             positive if signed *)
+          let is_nonzero v =
+            if signed then
+              match v.node.kind with
+              | BitVec x -> Z.gt (bv_to_z true bits x) Z.zero
+              | _ -> false
+            else sure_neq v (zero (size_of v.node.ty))
+          in
           if equal l1 l2 && is_nonzero l1 then lt ~signed r1 r2
           else if equal l1 r2 && is_nonzero l1 then lt ~signed r1 l2
           else if equal r1 l2 && is_nonzero r1 then lt ~signed l1 r2
@@ -2583,7 +2642,9 @@ module Make (V : Value_ext) () = struct
           let c1 = bv_to_z signed bits c1 in
           let c2 = bv_to_z signed bits c2 in
           (* be careful bc c1 = v2 and c2 = v1 in this case *)
-          if Z.divisible c2 c1 then
+          if Z.equal c1 Z.zero then (* the product is 0 *)
+            Bool.of_bool (Z.leq c2 Z.zero)
+          else if Z.divisible c2 c1 then
             if Z.lt c1 Z.zero then
               if
                 signed
@@ -2627,7 +2688,9 @@ module Make (V : Value_ext) () = struct
            *               (bvsle x (bvsdiv c2 c1)))))))))) *)
           let c1 = bv_to_z signed bits c1 in
           let c2 = bv_to_z signed bits c2 in
-          if Z.divisible c2 c1 then
+          (* the product is 0 *)
+          if Z.equal c1 Z.zero then Bool.of_bool (Z.geq c2 Z.zero)
+          else if Z.divisible c2 c1 then
             if Z.lt c1 Z.zero then
               if
                 signed
@@ -2643,8 +2706,15 @@ module Make (V : Value_ext) () = struct
           else leq ~signed x (div ~signed v2 v1)
       | Binop (Mul checked_l, l1, r1), Binop (Mul checked_r, l2, r2)
         when checked_has ~signed checked_l && checked_has ~signed checked_r ->
-          (* Can only cancel common factor if it's provably non-zero *)
-          let is_nonzero v = sure_neq v (zero (size_of v.node.ty)) in
+          (* Can only cancel common factor if it's provably non-zero, and
+             positive if signed *)
+          let is_nonzero v =
+            if signed then
+              match v.node.kind with
+              | BitVec x -> Z.gt (bv_to_z true bits x) Z.zero
+              | _ -> false
+            else sure_neq v (zero (size_of v.node.ty))
+          in
           if equal l1 l2 && is_nonzero l1 then leq ~signed r1 r2
           else if equal l1 r2 && is_nonzero l1 then leq ~signed r1 l2
           else if equal r1 l2 && is_nonzero r1 then leq ~signed l1 r2
@@ -2948,7 +3018,6 @@ module Make (V : Value_ext) () = struct
     let cast ~rounding ~fp v =
       match v.node.kind with
       | Float f -> mk_raw fp (F.convert rounding fp f)
-      | _ when FloatPrecision.equal (fp_of v) fp -> v
       | _ -> Unop (FloatOfFloat (rounding, fp), v) <| t_float fp
 
     let eq v1 v2 =
@@ -2982,7 +3051,7 @@ module Make (V : Value_ext) () = struct
     let add v1 v2 =
       match (v1.node.kind, v2.node.kind) with
       | Float f1, Float f2 -> Float (F.add f1 f2) <| v1.node.ty
-      | _ -> mk_commut_binop FAdd v1 v2 <| v1.node.ty
+      | _ -> Binop (FAdd, v1, v2) <| v1.node.ty
 
     let sub v1 v2 =
       match (v1.node.kind, v2.node.kind) with
@@ -2997,7 +3066,7 @@ module Make (V : Value_ext) () = struct
     let mul v1 v2 =
       match (v1.node.kind, v2.node.kind) with
       | Float f1, Float f2 -> Float (F.mul f1 f2) <| v1.node.ty
-      | _ -> mk_commut_binop FMul v1 v2 <| v1.node.ty
+      | _ -> Binop (FMul, v1, v2) <| v1.node.ty
 
     let rem v1 v2 =
       match (v1.node.kind, v2.node.kind) with

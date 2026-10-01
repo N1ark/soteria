@@ -1,0 +1,81 @@
+(* The language of Bv_values, in which the rules of this directory are
+   written: its types, the constructors of its terms and the operators on
+   them, for Kanon (see its README for the syntax and attributes).
+
+   It is made of the modules that it uses: [bool], built into kanon and
+   shared with other languages, then [exists], [bitvec], [float] and [ptr], in
+   this order, each declared by its [.knl] file with its rules in its [.kn]
+   file.
+   A module declares its nodes ([node C ...], with the syntax and attributes
+   of the constructors below) and its operators on terms; this file declares
+   the types, as the OCaml AST has them, with their constructors that are not
+   nodes, and Kanon places each node in one of them ([And], a binary operator,
+   in [binop]), except [Distinct], which this file places in [nop].
+
+   Kanon generates the Lean definitions of these types, with the same names
+   (CamelCased for types: [ext_ty] is [ExtTy]), except for the abstract types,
+   which are defined by hand in [Kanon/Abstract.lean] (or are the Lean type
+   given by [[@lean "..."]]). In OCaml, the types are defined elsewhere, in
+   [Svalue_ast] and in soteria ([[@ocaml "..."]]).
+
+   The Lean model lives in the namespace [Kanon], and is parameterised by a
+   semantics of floats [FS]. *)
+
+[@@@lean_root "Kanon"]
+[@@@lean_param "FS" "FloatSem"]
+
+use +bool
+use "exists"
+use "bitvec"
+use "float"
+use "ptr"
+
+type var [@ocaml "Symex.Var.t"] [@lean "Int"] [@noeq]
+type float [@ocaml "Floatml.AnyFloat.t"] [@noeq]
+type ext
+type ext_ty
+
+type checked [@ocaml "Svalue_ast.checked"] =
+  { signed : bool; unsigned : bool }
+
+type kind [@ocaml "(ghost, ext, ext_ty) Svalue_ast.t_kind"] [@noeq] =
+  | Var of var
+  | Seq of t list
+  | Unop of unop * t [@operators]
+  | Binop of binop * t * t [@operators]
+  | Triop of triop * t * t * t [@operators]
+  | Nop of nop * t list [@operators]
+  | Extension of ext
+
+type unop [@ocaml "Svalue_ast.Unop.t"]
+
+type binop [@ocaml "Svalue_ast.Binop.t"]
+
+type triop [@ocaml "Svalue_ast.Triop.t"]
+
+type nop [@ocaml "Svalue_ast.Nop.t"] =
+  | Distinct
+
+type ty [@ocaml "ext_ty Svalue_ast.ty"] =
+  | TSeq of ty
+  | TExtension of ext_ty
+
+type fp [@ocaml "Svalue_ast.FloatPrecision.t"] =
+  | F16
+  | F32
+  | F64
+  | F128
+
+type rm [@ocaml "Svalue_ast.RoundingMode.t"] =
+  | NearestTiesToEven
+  | Truncate
+  | Ceil
+  | Floor
+  | NearestTiesToAway
+
+type fc [@ocaml "Svalue_ast.FloatClass.t"] =
+  | Normal
+  | Subnormal
+  | Zero
+  | Infinite
+  | NaN

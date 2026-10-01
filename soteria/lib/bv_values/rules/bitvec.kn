@@ -1,0 +1,1150 @@
+(* Bit-vectors: conversions, arithmetic and bitwise operations *)
+
+(* {1 Primitives} *)
+
+(* The size of a bit-vector, location or pointer type; fails otherwise. *)
+prim size_of_ty : ty -> int
+
+(* [mk_bv n z] is the bit-vector literal [z] of size [n]; asserts that [z] is
+   in range. *)
+prim mk_bv : int -> int -> t
+
+(* [mk_masked n z] is the bit-vector literal [z mod 2^n] of size [n]. *)
+prim mk_masked : int -> int -> t
+prim bv_zero : int -> t
+prim bv_one : int -> t
+
+(* Bit-vector values: a width, and a value of that width *)
+
+(* [bv_of_lit v] is the value of the bit-vector literal [v]; fails otherwise. *)
+prim bv_of_lit : t -> bv
+
+(* [lit l] is the literal of type [TBitVector (width l)] whose value is [l]. *)
+prim lit : bv -> t
+prim width : bv -> int
+
+(* [to_z signed l] is [l] read as a signed or unsigned integer. *)
+prim to_z : bool -> bv -> int
+
+(* [of_z n z] is [z mod 2^n], of width [n]. *)
+prim of_z : int -> int -> bv
+
+(* Modular arithmetic, at the width of the first operand; [+], [-], [*] and
+   unary [-] on [bv]s stand for these. Division is SMT-LIB's: by zero, it gives
+   all ones (and 1 for a negative signed dividend). *)
+prim lit_add : bv -> bv -> bv
+prim lit_sub : bv -> bv -> bv
+prim lit_mul : bv -> bv -> bv
+prim lit_neg : bv -> bv
+prim lit_udiv : bv -> bv -> bv
+prim lit_sdiv : bv -> bv -> bv
+
+(* Bitwise operations and shifts, at the width of the first operand; [land],
+   [lor], [lxor], [~], [lsl], [lsr] and [asr] on [bv]s stand for them. Shifts
+   by at least the width give 0 (all ones for a negative [lit_ashr]). *)
+prim lit_and : bv -> bv -> bv
+prim lit_or : bv -> bv -> bv
+prim lit_xor : bv -> bv -> bv
+prim lit_not : bv -> bv
+prim lit_shl : bv -> bv -> bv
+prim lit_lshr : bv -> bv -> bv
+prim lit_ashr : bv -> bv -> bv
+
+(* Remainders, SMT-LIB's: by zero, they give the dividend. [lit_srem] takes the
+   sign of the dividend and [lit_smod] that of the divisor. *)
+prim lit_urem : bv -> bv -> bv
+prim lit_srem : bv -> bv -> bv
+prim lit_smod : bv -> bv -> bv
+
+(* [lit_extract from_ to_ l] is bits [from_] to [to_] of [l], inclusive;
+   [lit_zext k l] and [lit_sext k l] extend [l] by [k] bits; [lit_concat l r]
+   has [l] in its high bits and [r] in its low bits. *)
+prim lit_extract : int -> int -> bv -> bv
+prim lit_zext : int -> bv -> bv
+prim lit_sext : int -> bv -> bv
+prim lit_concat : bv -> bv -> bv
+
+(* Integers *)
+prim signed_extract : int -> int -> int -> int
+prim popcount : int -> int
+prim log2 : int -> int
+prim tdiv : int -> int -> int
+prim trem : int -> int -> int
+prim divisible : int -> int -> bool
+
+(* {1 Helpers} *)
+
+fn size (v : t) : int [@ty_only] = size_of_ty (type_of v)
+fn is_bv (t : ty) : bool = match t with TBitVector _ -> true | _ -> false
+fn zmin (a b : int) : int = if a <= b then a else b
+fn zmax (a b : int) : int = if a >= b then a else b
+(* Checked flags *)
+
+fn unchecked : checked = { signed = false; unsigned = false }
+fn checked_both : checked = { signed = true; unsigned = true }
+fn checked_signed : checked = { signed = true; unsigned = false }
+fn checked_unsigned : checked = { signed = false; unsigned = true }
+
+fn checked_of_signed (signed : bool) : checked =
+  if signed then checked_signed else checked_unsigned
+
+fn checked_has (signed : bool) (c : checked) : bool =
+  if signed then c.signed else c.unsigned
+
+fn is_checked (c : checked) : bool = c.signed || c.unsigned
+
+fn checked_meet (a b : checked) : checked =
+  { signed = a.signed && b.signed; unsigned = a.unsigned && b.unsigned }
+
+(* Bit-vector integers *)
+
+(* [bv_to_z signed bits z] reads the bit-vector [z] of size [bits] as an
+   integer, with the given signedness. *)
+fn bv_to_z (signed : bool) (bits z : int) : int =
+  if signed then signed_extract z 0 bits else z
+
+fn max_for (signed : bool) (n : int) : int =
+  let n = if signed then n - 1 else n in
+  (1 lsl n) - 1
+
+fn min_for (signed : bool) (n : int) : int =
+  if signed then -(1 lsl (n - 1)) else 0
+
+(* whether [z] is of the form [0*1+] *)
+fn is_right_mask (z : int) : bool = z > 0 && popcount (z + 1) = 1
+
+(* for [z] of the form [0*1{n}], [n] *)
+fn right_mask_size (z : int) : int = log2 (z + 1)
+
+fn covers_bitwidth (bits z : int) : bool =
+  is_right_mask z && right_mask_size z = bits
+
+fn is_pow2 (z : int) : bool = z > 0 && popcount z = 1
+
+(* the least significant bit of [z] that is set, or 128 if [z] is 0 *)
+fn lsb (z : int) : int = if z = 0 then 128 else log2 (z land -z)
+
+fn msb_of (v : t) : int =
+  match v with
+  | #z when z > 0 -> log2 z
+  | 0 -> size v - 1
+  | bv1 land bv2 -> zmin (msb_of bv1) (msb_of bv2)
+  | Ite (_, l, r) -> zmax (msb_of l) (msb_of r)
+  | BvExtend (false, _, v) -> msb_of v
+  (* [x urem k] is below [k], and so is [x mod k] for a positive [k] *)
+  | _ urem #k when k > 1 -> log2 (k - 1)
+  | _ mod #k when k > 1 && k < 1 lsl (size v - 1) -> log2 (k - 1)
+  (* [k srem x] is between [0] and [k], for a non-negative [k] *)
+  | #k srem _ when k > 0 && k < 1 lsl (size v - 1) -> log2 k
+  | _ -> size v - 1
+
+(* whether [op l r] overflows, for [n]-bit bit-vectors *)
+fn overflows_add (signed : bool) (n l r : int) : bool =
+  let res = bv_to_z signed n l + bv_to_z signed n r in
+  res < min_for signed n || res > max_for signed n
+
+fn overflows_sub (signed : bool) (n l r : int) : bool =
+  let res = bv_to_z signed n l - bv_to_z signed n r in
+  res < min_for signed n || res > max_for signed n
+
+fn overflows_mul (signed : bool) (n l r : int) : bool =
+  let res = bv_to_z signed n l * bv_to_z signed n r in
+  res < min_for signed n || res > max_for signed n
+
+(* Bit-vector values *)
+
+fn is_int_min (l : bv) : bool = to_z true l = min_for true (width l)
+
+(* whether [l op r] overflows, as integers of [l]'s width *)
+fn add_overflows (signed : bool) (l r : bv) : bool =
+  let n = width l in
+  let res = to_z signed l + to_z signed r in
+  res < min_for signed n || res > max_for signed n
+
+fn sub_overflows (signed : bool) (l r : bv) : bool =
+  let n = width l in
+  let res = to_z signed l - to_z signed r in
+  res < min_for signed n || res > max_for signed n
+
+fn mul_overflows (signed : bool) (l r : bv) : bool =
+  let n = width l in
+  let res = to_z signed l * to_z signed r in
+  res < min_for signed n || res > max_for signed n
+
+(* whether [d] divides [n], as unsigned integers *)
+fn udivides (d n : bv) : bool = divisible (to_z false n) (to_z false d)
+
+(* Re-associating a checked add/sub folds two of its constants ([a], [b]) into
+   a single one. The rebuilt operation can overflow even when the originals
+   didn't (the fold wraps), so the [checked] flag only survives in a
+   signedness where that constant fold does not itself overflow. *)
+fn fold_checked (c : checked) (a b : bv) (is_add : bool) : checked =
+  let keep (signed : bool) =
+    checked_has signed c
+    && not (if is_add then add_overflows signed a b else sub_overflows signed a b)
+  in
+  { signed = keep true; unsigned = keep false }
+
+extend fn sure_neq =
+  | #a, #b -> not (a = b)
+
+(* Bitwise *)
+
+(* the value of width [n] with all bits set *)
+fn ones (n : int) : bv = lognot (of_z n 0)
+
+fn is_ones (l : bv) : bool = to_z true l = -1
+
+(* whether the bits set in [a] are all set in [b] *)
+fn bits_in (a b : bv) : bool = to_z false (a land b) = to_z false a
+
+(* whether no bit is set in both [a] and [b] *)
+fn disjoint (a b : bv) : bool = to_z false (a land b) = 0
+
+(* For an upper bound [a < c] or [a <= c] on [a], the largest value of [a] that
+   it allows, read as an integer in its signedness ([c - 1] for [a < c]). *)
+fn upper_bound (v : t) : int =
+  match v with
+  | Lt (s, _, (#_ as c)) -> to_z s (bv_of_lit c) - 1
+  | Leq (s, _, (#_ as c)) -> to_z s (bv_of_lit c)
+  | _ -> 0
+
+(* For a lower bound [c < a] or [c <= a] on [a], the smallest value of [a] that
+   it allows ([c + 1] for [c < a]). *)
+fn lower_bound (v : t) : int =
+  match v with
+  | Lt (s, (#_ as c), _) -> to_z s (bv_of_lit c) + 1
+  | Leq (s, (#_ as c), _) -> to_z s (bv_of_lit c)
+  | _ -> 0
+
+(* Compare *)
+
+(* whether [l] is the least (resp. greatest) integer of its width *)
+fn is_min_of (signed : bool) (l : bv) : bool =
+  to_z signed l = min_for signed (width l)
+
+fn is_max_of (signed : bool) (l : bv) : bool =
+  to_z signed l = max_for signed (width l)
+
+(* {1 Rules} *)
+
+rule bv_of_bool : BvOfBool (n, b) =
+  | true_: true -> bv_one n
+  | false_: false -> bv_zero n
+
+rule bv_to_bool (v : t) : Not (Eq (v, bv_zero (size v))) =
+  | lit: #z -> of_bool (not (to_z false z = 0))
+  | of_bool: BvOfBool (_, b) -> b
+  | default: _ -> not (v == bv_zero (size v))
+
+rule bv_not_bool (v : t) :
+    BvOfBool (size v, Eq (v, bv_zero (size v))) =
+  | lit: #z ->
+      if to_z false z = 0 then bv_one (size v) else bv_zero (size v)
+  | of_bool: BvOfBool (n, g) -> bv_of_bool n (not g)
+  | default: _ -> bv_of_bool (size v) (v == bv_zero (size v))
+
+rule bv_add : Add (checked, v1, v2) =
+  | neg: x + -y -> x - y
+  | zero: x + 0 -> x
+  | not_one: ~x + 1 -> -x
+  | add_const: Add (c, #k1, r) + #k2 ->
+      let checked = fold_checked (checked_meet checked c) k1 k2 true in
+      bv_add checked (k1 + k2) r
+  | sub_const_r: Sub (c, l, #k1) + #k2 ->
+      let checked = fold_checked (checked_meet checked c) k2 k1 false in
+      bv_add checked l (k2 - k1)
+  | sub_const_l: Sub (c, #k1, r) + #k2 ->
+      let checked = fold_checked (checked_meet checked c) k1 k2 true in
+      bv_sub checked (k1 + k2) r
+  | sub_cancel: r + (l - r) -> l
+  | add_sub: (a + b) + (c - a) -> b + c
+  (* a * b + a * c = a * (b + c); if neither product nor the sum overflows
+     unsigned, then neither does a * (b + c) *)
+  | factor: Mul (ck1, a, b) + Mul (ck2, a, c) ->
+      if (checked_meet (checked_meet checked ck1) ck2).unsigned then
+        bv_mul checked_unsigned a (b + c)
+      else a * (b + c)
+  | factor_const:
+      Mul (ck1, (#k1 as v_k1), r1) + Mul (ck2, (#k2 as v_k2), r2)
+    when (checked_meet (checked_meet checked ck1) ck2).unsigned
+         && (to_z false k1 <> 0 || to_z false k2 <> 0)
+         && (udivides k1 k2 || udivides k2 k1) ->
+      let checked = checked_unsigned in
+      if udivides k1 k2 then
+        let common = lit (lit_udiv k2 k1) in
+        bv_mul checked v_k1 (bv_add checked r1 (bv_mul checked common r2))
+      else
+        let common = lit (lit_udiv k1 k2) in
+        bv_mul checked v_k2 (bv_add checked r2 (bv_mul checked common r1))
+  (* only propagate down ites if we know it's concrete *)
+  | ite: Ite (b, l, r) + (#_ as x) ->
+      b_ite b (bv_add checked l x) (bv_add checked r x)
+  | default: _ -> Add (no_wrap checked v1 v2, v1, v2)
+
+(* [c], with the unsigned check when [v1 + v2] cannot wrap around *)
+fn no_wrap (c : checked) (v1 v2 : t) : checked =
+  if is_bv (type_of v1) && unsigned_ub v1 + unsigned_ub v2 < 1 lsl size v1 then
+    { signed = c.signed; unsigned = true }
+  else c
+
+rule bv_sub : Sub (checked, v1, v2) =
+  | zero_r: _ - 0 -> v1
+  | zero_l: 0 - _ ->
+      (* 0 - x = -x; the subtraction overflows (signed) iff x = INT_MIN, so a
+         signed-checked subtraction yields a signed-checked negation. *)
+      bv_neg checked.signed v2
+  | same: v - v -> bv_zero (size v1)
+  | neg_r: _ - -v2 -> v1 + v2
+  | sub_const_l: Sub (c, #k1, s) - #k2 ->
+      let checked = fold_checked (checked_meet c checked) k1 k2 false in
+      bv_sub checked (k1 - k2) s
+  | sub_const_r: Sub (c, s, #k1) - #k2 ->
+      let checked = fold_checked (checked_meet c checked) k1 k2 true in
+      bv_sub checked s (k1 + k2)
+  | const_add: #k1 - Add (c, #k2, l) ->
+      let checked = fold_checked (checked_meet c checked) k1 k2 false in
+      bv_sub checked (k1 - k2) l
+  (* (l + k1) - k2 = l + (k1 - k2) *)
+  | add_const: Add (c, #k1, l) - #k2 ->
+      (* if k1 < k2 there would be an overflow which causes problems since the
+         operation can't be deemed checked anymore. *)
+      if to_z false k1 < to_z false k2 then
+        let checked = fold_checked (checked_meet c checked) k2 k1 false in
+        bv_sub checked l (k2 - k1)
+      else
+        let checked = fold_checked (checked_meet c checked) k1 k2 false in
+        bv_add checked l (k1 - k2)
+  | add_cancel_l: (l + r) - l -> r
+  | add_cancel_r: (l + r) - r -> l
+  | add_add: (l + r1) - (l + r2) -> r1 - r2
+  | sub_sub: l - (l - r) -> r
+  (* distributing over a shared guard lets the branches cancel pairwise *)
+  | ite_ite: Ite (b, l, r) - Ite (b, l', r') -> b_ite b (l - l') (r - r')
+  (* only propagate down ites if we know it's concrete *)
+  | ite_l: Ite (b, l, r) - #_ -> b_ite b (l - v2) (r - v2)
+  | ite_r: #_ - Ite (b, l, r) -> b_ite b (v1 - l) (v1 - r)
+  | of_bool_l: BvOfBool (n, b) - #_ -> b_ite b (bv_one n - v2) (-v2)
+  | of_bool_r: #_ - BvOfBool (n, b) -> b_ite b (v1 - bv_one n) v1
+
+rule bv_neg : Neg (checked, v) =
+  | of_bool: BvOfBool (n, b) -> b_ite b (-bv_one n) (bv_zero n)
+
+rule bv_mod : Mod (v1, v2) =
+  | zero_r: _, 0 -> v1
+
+rule bv_rem : Rem (signed, v1, v2) =
+  | lits: #l, #r -> lit (if signed then lit_srem l r else lit_urem l r)
+  | zero_r: _, 0 -> v1
+  | zero_l: 0, _ -> bv_zero (size v1)
+  | one_r: _, 1 when not signed -> bv_zero (size v1)
+  (* x %u 2^k keeps the k lowest bits of x *)
+  | pow2: _, #r
+    when (not signed) && is_pow2 (to_z false r) && to_z false r > 1 ->
+      let sz = size v1 in
+      let bitwidth = log2 (to_z false r) in
+      let lower = bv_extract 0 (bitwidth - 1) v1 in
+      bv_extend false (sz - bitwidth) lower
+  (* (d + r) %u d = r %u d, when the addition does not wrap *)
+  | add: Add (ck, #d, r), #d'
+    when (not signed) && ck.unsigned && to_z false d = to_z false d' ->
+      bv_rem signed r v2
+  | rem_rem: r urem (#r1 as v_r1), #r2
+    when (not signed)
+         && to_z false r1 > 0
+         && to_z false r2 > 0
+         && (udivides r2 r1 || udivides r1 r2) ->
+      let rhs = if to_z false r1 <= to_z false r2 then v_r1 else v2 in
+      bv_rem signed r rhs
+
+rule bv_not : BvNot v
+
+rule bv_and : BitAnd (v1, v2) =
+  | ones: #mask land x when is_ones mask -> x
+  (* For (x >> s) & m, the mask is irrelevant if it entirely covers [bitsize -
+     s] *)
+  | lshr_mask: (_ lsr #shift as base) land #mask
+    when to_z false shift < size v1
+         && bits_in (ones (size v1) lsr shift) mask ->
+      base
+  | ite: (#_ as k) land Ite (b, l, r) -> b_ite b (k land l) (k land r)
+  | masks: #m1 land (x land #m2) -> x land (m1 land m2)
+  | mask_or_mask: (#_ as m) land ((#_ as n) lor ((#_ as p) land x)) ->
+      (m land n) lor (x land (m land p))
+  | mask_or: #m_and land (_ lor #m_or) when bits_in m_and m_or -> m_and
+  | mask_or_disj: #m_and land (x lor #m_or) when disjoint m_and m_or ->
+      x land m_and
+  (* if it's a right mask, it's usually beneficial to propagate it *)
+  | right_mask: (#mask as v_mask) land (l land r)
+    when is_right_mask (to_z false mask) ->
+      (v_mask land l) land (v_mask land r)
+  | of_bool: 1 land (BvOfBool _ as b) -> b
+  | of_bools: BvOfBool (_, b1) land BvOfBool (_, b2) ->
+      bv_of_bool (size v1) (b1 && b2)
+  | ites: Ite (b1, l1, 0) land Ite (b2, l2, 0) ->
+      b_ite (b1 && b2) (l1 land l2) (bv_zero (size v1))
+
+rule bv_or : BitOr (v1, v2) =
+  | mask_and: #m1 lor (_ land #m2) when bits_in m2 m1 -> m1
+  | masks: #m1 lor (x lor #m2) -> x lor (m1 lor m2)
+  (* 0x0..0X..X | (0x0..0Y..Y << N) when N = |X..X| ==> 0x0..0Y..YX..X *)
+  | extend_shl: BvExtend (false, nx, base) lor (BvExtend (false, _, tail) lsl #shift)
+    when to_z false shift = size base && nx > 0 ->
+      let tail_size = size tail in
+      if nx = tail_size then tail ++ base
+      else if nx > tail_size then
+        let new_base = tail ++ base in
+        bv_extend false (nx - tail_size) new_base
+      else
+        let new_tail = bv_extract 0 (nx - 1) tail in
+        new_tail ++ base
+  | of_bools: BvOfBool (n, b1) lor BvOfBool (_, b2) -> bv_of_bool n (b1 || b2)
+
+rule bv_xor : BitXor (v1, v2) =
+  | of_bools: BvOfBool (n, b1) lxor BvOfBool (_, b2) ->
+      bv_of_bool n (not (b1 == b2))
+
+(* [bv_extract from_ to_ v] covers the bits of [v] from index [from_] to index
+   [to_], inclusive. [0 <= from_ <= to_ < size v] must hold. *)
+rule bv_extract : BvExtract (from_, to_, (v : TBitVector sz)) =
+  | full: _ when from_ = 0 && to_ = sz - 1 -> v
+  | and_: v1 land v2 -> bv_extract from_ to_ v1 land bv_extract from_ to_ v2
+  | or_: v1 lor v2 -> bv_extract from_ to_ v1 lor bv_extract from_ to_ v2
+  | xor: v1 lxor v2 -> bv_extract from_ to_ v1 lxor bv_extract from_ to_ v2
+  | shl: v1 lsl #shift ->
+      let shift = to_z false shift in
+      if from_ >= shift then
+        (* All extracted bits come from the original v1, shifted *)
+        bv_extract (from_ - shift) (to_ - shift) v1
+      else if to_ < shift then
+        (* All extracted bits are zeros introduced by the shift *)
+        bv_zero (to_ - from_ + 1)
+      else
+        (* Some bits are zeros, some are from v1: bits [from_, shift-1] are 0,
+           bits [shift, to_] come from v1[0, to_-shift] *)
+        let high_part = bv_extract 0 (to_ - shift) v1 in
+        let low_zeros = bv_zero (shift - from_) in
+        high_part ++ low_zeros
+  | lshr: v1 lsr #shift ->
+      let shift = to_z false shift in
+      let prev_size = sz in
+      (* after a right shift by [shift], bit i of the result is bit (i+shift)
+         of the original if i+shift < prev_size, else 0 *)
+      if from_ + shift >= prev_size then
+        (* All extracted bits are zeros introduced by the shift *)
+        bv_zero (to_ - from_ + 1)
+      else if to_ + shift < prev_size then
+        (* All extracted bits come from the original v1, shifted *)
+        bv_extract (from_ + shift) (to_ + shift) v1
+      else
+        (* Some bits are from v1, some are zeros: bits [from_,
+           prev_size-shift-1] come from v1[from_+shift, prev_size-1], bits
+           [prev_size-shift, to_] are 0 *)
+        let low_part = bv_extract (from_ + shift) (prev_size - 1) v1 in
+        let high_zeros = bv_zero (to_ - (prev_size - shift - 1)) in
+        high_zeros ++ low_part
+  | ite: Ite (b, l, r) ->
+      b_ite b (bv_extract from_ to_ l) (bv_extract from_ to_ r)
+  | zext_high: BvExtend (false, by, _) when from_ >= sz - by ->
+      bv_zero (to_ - from_ + 1)
+  | sext_bit: BvExtend (true, by, x)
+    when from_ >= sz - by && from_ = to_ ->
+      bv_extract (size x - 1) (size x - 1) x
+  | ext_low: BvExtend (signed, _, x) when from_ = 0 ->
+      (* extracting from the beginning of an extended value *)
+      let orig_size = size x in
+      if to_ = orig_size - 1 then (* extracting exactly the original bits *)
+        x
+      else if to_ < orig_size then
+        (* extracting subset of original bits *)
+        bv_extract from_ to_ x
+      else (* we can reduce the extend *)
+        bv_extend signed (to_ - orig_size + 1) x
+  | ext_orig: BvExtend (_, by, x) when to_ <= sz - by - 1 ->
+      bv_extract from_ to_ x
+  | extract: BvExtract (prev_from_, _, x) ->
+      bv_extract (prev_from_ + from_) (prev_from_ + to_) x
+  | concat: l ++ r ->
+      let size_r = size r in
+      if from_ >= size_r then bv_extract (from_ - size_r) (to_ - size_r) l
+      else if to_ < size_r then bv_extract from_ to_ r
+      else
+        let r' = bv_extract from_ (size_r - 1) r in
+        let l' = bv_extract 0 (to_ - size_r) l in
+        l' ++ r'
+  | add_low: l + r when from_ = 0 -> bv_extract from_ to_ l + bv_extract from_ to_ r
+  | add_const: #n + x when to_ < lsb (to_z false n) ->
+      bv_extract from_ to_ x
+  | mul_pow2: #n * _
+    when is_pow2 (to_z false n) && to_ < log2 (to_z false n) ->
+      bv_zero (to_ - from_ + 1)
+  | mul_low: l * r when from_ = 0 ->
+      (* i think the extraction is necessarily unchecked? *)
+      bv_extract from_ to_ l * bv_extract from_ to_ r
+  | urem: l urem #n
+    when from_ = 0 && is_pow2 (to_z false n) && log2 (to_z false n) < to_ ->
+      bv_extract from_ to_ l urem lit_extract from_ to_ n
+
+rule bv_extend : BvExtend (signed, extend_by, v) =
+  | zero: _ when extend_by = 0 -> v
+  | lit: #bv -> if signed then lit_sext extend_by bv else lit_zext extend_by bv
+  | extend: BvExtend (s, prev_by, v) when s = signed ->
+      bv_extend signed (prev_by + extend_by) v
+  | ite: Ite (b, l, r) ->
+      b_ite b (bv_extend signed extend_by l) (bv_extend signed extend_by r)
+  (* can't extend if signed && n == 1, as it should be all 1s *)
+  | of_bool: BvOfBool (n, b) when (not signed) || n > 1 ->
+      bv_of_bool (size v + extend_by) b
+
+(* [bv_concat v1 v2] for [v1] of size [n] and [v2] of size [m] is a bitvector
+   of size [n + m] where the first [m] bits are [v2] and the following [n] are
+   [v1] *)
+rule bv_concat : BvConcat (v1, v2) =
+  | extracts: BvExtract (from1, to1, v) ++ BvExtract (from2, to2, v)
+    when to2 + 1 = from1 ->
+      bv_extract from2 to1 v
+  (* safeguard: to avoid infinite loops, we keep bv-concats of extracts
+     left-dominant *)
+  | extract_extracts: BvExtract _ ++ (BvExtract _ ++ BvExtract _) ->
+      BvConcat (v1, v2)
+  | assoc_l: BvExtract (_, _, x) ++ ((BvExtract (_, _, x) as left) ++ right) ->
+      (v1 ++ left) ++ right
+  | assoc_r: (left ++ (BvExtract (_, _, x) as right)) ++ BvExtract (_, _, x) ->
+      left ++ (right ++ v2)
+  | ites: Ite (b, l1, r1) ++ Ite (b, l2, r2) -> b_ite b (l1 ++ l2) (r1 ++ r2)
+
+rule bv_shl : Shl (v1, v2) =
+  | big: _ lsl #s when to_z false s >= size v1 -> bv_zero (size v1)
+  | shl: (v lsl #s1) lsl #s2 ->
+      let n = size v1 in
+      v lsl of_z n (zmin (to_z false s1 + to_z false s2) n)
+  | lshr: (x lsr #sr) lsl #sl ->
+      let n = size v1 in
+      if to_z false sl <= to_z false sr then
+        (* (x >> s1) << s2 where s2 < s1 = x >> (s1 - s2) & (mask with lower
+           bits cleared) *)
+        (x lsr (sr - sl)) land (ones n lsl sl)
+      else
+        (* (x >> s1) << s2 where s2 > s1 = x << (s2 - s1) & (mask with lower
+           bits cleared) *)
+        (x land (ones n lsl sr)) lsl (sl - sr)
+  | and_mask: (x land #mask) lsl #s -> (x lsl v2) land (mask lsl s)
+  | or_mask: (x lor #mask) lsl #s -> (x lsl v2) lor (mask lsl s)
+
+rule bv_lshr : LShr (v1, v2) =
+  | big: _ lsr #s when to_z false s >= size v1 -> bv_zero (size v1)
+  | lshr: (v lsr #s1) lsr #s2 ->
+      let n = size v1 in
+      v lsr of_z n (zmin (to_z false s1 + to_z false s2) n)
+  | and_mask: (x land #mask) lsr #s -> (x lsr v2) land (mask lsr s)
+  | or_mask: (x lor #mask) lsr #s -> (x lsr v2) lor (mask lsr s)
+
+rule bv_ashr : AShr (v1, v2) =
+  | big: _ asr #s when to_z false s >= size v1 ->
+      let sz = size v1 in
+      v1 asr of_z sz (sz - 1)
+  | ashr: (v asr #s1) asr #s2 ->
+      let sz = size v1 in
+      v asr of_z sz (zmin (to_z false s1 + to_z false s2) (sz - 1))
+
+rule bv_mul : Mul (checked, v1, v2) =
+  (* c * (-x) = (-c) * x (holds mod 2^n); with a checked negation (x <>
+     INT_MIN) and c <> INT_MIN, the signed no-overflow guarantee carries over
+     to the rebuilt product. *)
+  | neg: #c * Neg (true, x) when not (is_int_min c) ->
+      bv_mul (checked_meet checked checked_signed) (-c) x
+  (* (x * n) * m = x * (n * m) *)
+  | mul_const: Mul (ckm, x, #n) * #m when is_checked (checked_meet checked ckm) ->
+      let checked = checked_meet checked ckm in
+      (* the signed check only carries over if [n * m] does not overflow *)
+      let checked =
+        if mul_overflows true n m then checked_meet checked checked_unsigned
+        else checked
+      in
+      bv_mul checked x (n * m)
+  (* only propagate down ites if we know it's concrete *)
+  | ite: Ite (b, l, r) * (#_ as x) -> b_ite b (l * x) (r * x)
+
+rule bv_div : Div (signed, v1, v2) =
+  | lits: #l, #r -> lit (if signed then lit_sdiv l r else lit_udiv l r)
+  | one: _, 1 -> v1
+  (* this case shouldn't happen but it avoids conflicts for the next two
+     patterns *)
+  | mul_lits: Mul (checked, (#_ as l), (#_ as r)), #_ ->
+      bv_div signed (bv_mul checked l r) v2
+  | mul_div: Mul ({ unsigned = true; _ }, #n, x), #d
+    when (not signed) && to_z false d <> 0 && udivides d n ->
+      bv_mul checked_unsigned x (lit_udiv n d)
+  | div_mul: Mul ({ unsigned = true; _ }, #n, x), #d
+    when (not signed) && to_z false n <> 0 && udivides n d ->
+      bv_div signed x (lit_udiv d n)
+  (* (x /u n) /u d = x /u (n * d) (if n * d doesn't overflow); not for signed
+     divisions, which wrap for INT_MIN / -1 *)
+  | div_div: Div (false, x, #n), #d
+    when (not signed) && to_z false n <> 0 && not (mul_overflows false n d) ->
+      bv_div signed x (n * d)
+  | zext: BvExtend (false, by, x), #z
+    when (not signed) && msb_of v2 < size x ->
+      bv_extend false by (bv_div signed x (of_z (size x) (to_z false z)))
+
+(* Whether [v] is an addition, subtraction or multiplication involving a
+   constant that is known not to overflow when interpreted as unsigned. The
+   unsigned [lt]/[leq] cases can reduce such operations, so a signed comparison
+   against one is worth rewriting to unsigned. *)
+fn is_checked_unsigned_op (v : t) : bool =
+  match v with
+  | Add (c, #_, _)
+  | Sub (c, #_, _) [@comm]
+  | Mul (c, #_, _) ->
+      c.unsigned
+  | _ -> false
+
+(* An inclusive upper bound on the unsigned value of [v], derived from its most
+   significant possibly-set bit (e.g. [x & 0b11 <= 3]). Conservative: an
+   unknown value bounds to the full width's maximum. *)
+fn unsigned_ub (v : t) : int = (1 lsl (msb_of v + 1)) - 1
+
+(* When rewriting a checked comparison [y + l <op> x + r] into one with a
+   single symbolic sum (e.g. [y <op> x + (r - l)]), that rebuilt sum is only
+   guaranteed not to overflow when the joined constant [d] lies between [0] and
+   [base] (then [v + d] sits between the in-range values [v] and [v + base]).
+   Here [base] is [l] and [d] is [l - r], as integers of the given
+   signedness. *)
+fn const_keeps_in_range (signed : bool) (l r : bv) : bool =
+  let base = to_z signed l in
+  let d = base - to_z signed r in
+  zmin 0 base <= d && d <= zmax 0 base
+
+(* Whether [v <s 0]: whether this node is negative if we can tell, and
+   otherwise the node that represents the sign bit *)
+(* Whether [a] is a factor that can be cancelled on both sides of a comparison
+   of products that do not overflow *)
+fn cancellable (signed : bool) (a : t) : bool =
+  if signed then match a with #_ -> to_z true (bv_of_lit a) > 0 | _ -> false
+  else sure_neq a (bv_zero (size a))
+
+rule bv_lt_zero (v : t) : Lt (true, v, bv_zero (size v)) =
+  | sext: BvExtend (true, _, x) -> bv_lt_zero x
+  | zext: BvExtend (false, k, _) when k > 0 -> v_false
+  | srem: l srem _ ->
+      bv_lt_zero l && not (v == bv_zero (size v))
+  | concat: l ++ _ -> bv_lt_zero l
+  | not: ~x -> not (bv_lt_zero x)
+  | of_bool: BvOfBool (n, _) when n > 1 -> v_false
+  | ite: Ite (_, l, r) ->
+      let pos_l = bv_lt_zero l in
+      let pos_r = bv_lt_zero r in
+      if equal pos_l pos_r then pos_l else Lt (true, v, bv_zero (size v))
+
+rule bv_lt : Lt (signed, v1, v2) =
+  | lits: #l, #r -> of_bool (to_z signed l < to_z signed r)
+  | same: v, v -> v_false
+  | negs: Neg (true, a), Neg (true, b) when signed -> bv_lt signed b a
+  | neg_l: Neg (true, a), #c when signed && not (is_int_min c) ->
+      bv_lt signed (-v2) a
+  | neg_r: #c, Neg (true, a) when signed && not (is_int_min c) ->
+      bv_lt signed a (-v1)
+  (* c < r + x <=> c - r < x *)
+  | const_add: #c, Add (checked, #r, x)
+    when checked_has signed checked ->
+      if sub_overflows signed c r then
+        if not signed then v_true else Lt (signed, v1, v2)
+      else bv_lt signed (c - r) x
+  (* l + x < c <=> x < c - l *)
+  | add_const: Add (checked, #l, x), #c
+    when checked_has signed checked ->
+      if sub_overflows signed c l then
+        if not signed then v_false else Lt (signed, v1, v2)
+      else bv_lt signed x (c - l)
+  | self_add_r: a, Add (checked, a, b)
+    when checked_has signed checked ->
+      bv_lt signed (bv_zero (size v1)) b
+  | self_add_l: Add (checked, a, b), a
+    when checked_has signed checked ->
+      bv_lt signed b (bv_zero (size v1))
+  | add_add: ( Add (checked_l, #l, y),
+      Add (checked_r, #r, x) )
+    when checked_has signed checked_l && checked_has signed checked_r ->
+      (* y + l < x + r <=> y + (l - r) < x <=> y < x + (r - l); only sound when
+         the rebuilt symbolic sum is known not to overflow. *)
+      if const_keeps_in_range signed l r then
+        bv_lt signed (bv_add (checked_of_signed signed) y (l - r)) x
+      else if const_keeps_in_range signed r l then
+        bv_lt signed y (bv_add (checked_of_signed signed) x (r - l))
+      else Lt (signed, v1, v2)
+  | one: _, 1 when not signed -> v1 == bv_zero (size v1)
+  (* x < ite(b, 1, 0)
+   * => ite(b, x < 1, x < 0)
+   * => ite(b, x = 0, false)
+   * => b && x = 0 *)
+  | of_bool: _, BvOfBool (n, b) when not signed ->
+      b && v1 == bv_zero n
+  | ite_l: Ite (b, l, r), _ ->
+      b_ite b (bv_lt signed l v2) (bv_lt signed r v2)
+  | ite_r: _, Ite (b, l, r) ->
+      b_ite b (bv_lt signed v1 l) (bv_lt signed v1 r)
+  | lt_zero: _, 0 when signed && not (is_checked_unsigned_op v1) ->
+      bv_lt_zero v1
+  | max_l: #x, _ when is_max_of signed x -> v_false
+  | min_r: _, #x when is_min_of signed x -> v_false
+  | min_l: #x, _ when is_min_of signed x -> not (v1 == v2)
+  | max_r: _, #x when is_max_of signed x -> not (v1 == v2)
+  (* c2 < x * c1 *)
+  | const_mul: #c2, Mul (checked, x, (#c1 as vc1))
+    when checked_has signed checked && not (to_z false c1 = 0) ->
+      let z1 = to_z signed c1 in
+      let z2 = to_z signed c2 in
+      if divisible z2 z1 || z2 >= 0 then
+        if z1 < 0 then
+          if signed && z1 = -1 && is_int_min c2 then v_true
+          else bv_lt signed x (bv_div signed v1 vc1)
+        else bv_lt signed (bv_div signed v1 vc1) x
+      else if z1 < 0 then bv_leq signed x (bv_div signed v1 vc1)
+      else bv_leq signed (bv_div signed v1 vc1) x
+  (* x * c1 < c2 *)
+  | mul_const: Mul (checked, x, (#c1 as vc1)), #c2
+    when checked_has signed checked && not (to_z false c1 = 0) ->
+      let z1 = to_z signed c1 in
+      let z2 = to_z signed c2 in
+      if divisible z2 z1 || z2 < 0 then
+        if z1 < 0 then
+          if signed && z1 = -1 && is_int_min c2 then v_false
+          else bv_lt signed (bv_div signed v2 vc1) x
+        else bv_lt signed x (bv_div signed v2 vc1)
+      else if z1 < 0 then bv_leq signed (bv_div signed v2 vc1) x
+      else bv_leq signed x (bv_div signed v2 vc1)
+  (* a * x < a * y <=> x < y, when a is non-zero (positive if signed) and
+     neither product overflows *)
+  | mul_mul: Mul (checked_l, a, x), Mul (checked_r, a, y)
+    when checked_has signed checked_l
+         && checked_has signed checked_r
+         && cancellable signed a ->
+      bv_lt signed x y
+  (* c < x - k <=> c + k < x (when c + k doesn't overflow) *)
+  | const_sub1: #c, Sub (checked, x, #k)
+    when checked_has signed checked ->
+      if add_overflows signed c k then
+        if not signed then v_false else Lt (signed, v1, v2)
+      else bv_lt signed (c + k) x
+  (* c < k - x <=> x < k - c (when k - c doesn't overflow) *)
+  | const_sub2: #c, Sub (checked, #k, x)
+    when checked_has signed checked ->
+      if sub_overflows signed k c then
+        if not signed then v_false else Lt (signed, v1, v2)
+      else bv_lt signed x (k - c)
+  (* x - k < c <=> x < c + k (when c + k doesn't overflow) *)
+  | sub_const1: Sub (checked, x, #k), #c
+    when checked_has signed checked ->
+      if add_overflows signed c k then
+        if not signed then v_true else Lt (signed, v1, v2)
+      else bv_lt signed x (c + k)
+  (* k - x < c <=> k - c < x (when k - c doesn't overflow) *)
+  | sub_const2: Sub (checked, #k, x), #c
+    when checked_has signed checked ->
+      if sub_overflows signed k c then
+        if not signed then v_true else Lt (signed, v1, v2)
+      else bv_lt signed (k - c) x
+  | ub_r: _, #c when (not signed) && unsigned_ub v1 < to_z false c ->
+      v_true
+  | ub_l: #c, _ when (not signed) && unsigned_ub v2 <= to_z false c ->
+      v_false
+  | to_unsigned_l: #c, _ when signed && is_checked_unsigned_op v2 ->
+      signed_to_unsigned_cmp false true c v1 v2
+  | to_unsigned_r: _, #c when signed && is_checked_unsigned_op v1 ->
+      signed_to_unsigned_cmp false false c v1 v2
+
+rule bv_leq : Leq (signed, v1, v2) =
+  | same: v, v -> v_true
+  | lits: #l, #r -> of_bool (to_z signed l <= to_z signed r)
+  | negs: Neg (true, a), Neg (true, b) when signed -> bv_leq signed b a
+  | neg_l: Neg (true, a), #c when signed && not (is_int_min c) ->
+      bv_leq signed (-v2) a
+  | neg_r: #c, Neg (true, a) when signed && not (is_int_min c) ->
+      bv_leq signed a (-v1)
+  (* c <= r + x <=> c - r <= x *)
+  | const_add: #c, Add (checked, #r, x)
+    when checked_has signed checked ->
+      if sub_overflows signed c r then
+        if not signed then v_true else Leq (signed, v1, v2)
+      else bv_leq signed (c - r) x
+  (* l + x <= c <=> x <= c - l *)
+  | add_const: Add (checked, #l, x), #c
+    when checked_has signed checked ->
+      if sub_overflows signed c l then
+        if not signed then v_false else Leq (signed, v1, v2)
+      else bv_leq signed x (c - l)
+  | add_add: ( Add (checked_l, #l, y),
+      Add (checked_r, #r, x) )
+    when checked_has signed checked_l && checked_has signed checked_r ->
+      (* y + l <= x + r <=> y + (l - r) <= x <=> y <= x + (r - l); only sound
+         when the rebuilt symbolic sum is known not to overflow. *)
+      if const_keeps_in_range signed l r then
+        bv_leq signed (bv_add (checked_of_signed signed) y (l - r)) x
+      else if const_keeps_in_range signed r l then
+        bv_leq signed y (bv_add (checked_of_signed signed) x (r - l))
+      else Leq (signed, v1, v2)
+  | self_add_r: a, Add (checked, a, b)
+    when checked_has signed checked ->
+      bv_leq signed (bv_zero (size v1)) b
+  | self_add_l: Add (checked, a, b), a
+    when checked_has signed checked ->
+      bv_leq signed b (bv_zero (size v1))
+  | min_l: #x, _ when is_min_of signed x -> v_true
+  | max_r: _, #x when is_max_of signed x -> v_true
+  (* c2 <= x * c1 *)
+  | const_mul: #c2, Mul (checked, x, (#c1 as vc1))
+    when checked_has signed checked && not (to_z false c1 = 0) ->
+      let z1 = to_z signed c1 in
+      let z2 = to_z signed c2 in
+      if divisible z2 z1 then
+        if z1 < 0 then
+          if signed && z1 = -1 && is_int_min c2 then v_true
+          else bv_leq signed x (bv_div signed v1 vc1)
+        else bv_leq signed (bv_div signed v1 vc1) x
+      else if z1 < 0 then
+        if z2 < 0 then bv_leq signed x (bv_div signed v1 vc1)
+        else bv_lt signed x (bv_div signed v1 vc1)
+      else if z2 < 0 then bv_leq signed (bv_div signed v1 vc1) x
+      else bv_lt signed (bv_div signed v1 vc1) x
+  (* x * c1 <= c2 *)
+  | mul_const: Mul (checked, x, (#c1 as vc1)), #c2
+    when checked_has signed checked && not (to_z false c1 = 0) ->
+      let z1 = to_z signed c1 in
+      let z2 = to_z signed c2 in
+      if divisible z2 z1 then
+        if z1 < 0 then
+          if signed && z1 = -1 && is_int_min c2 then v_false
+          else bv_leq signed (bv_div signed v2 vc1) x
+        else bv_leq signed x (bv_div signed v2 vc1)
+      else if z1 < 0 then
+        if z2 < 0 then bv_lt signed (bv_div signed v2 vc1) x
+        else bv_leq signed (bv_div signed v2 vc1) x
+      else if z2 < 0 then bv_lt signed x (bv_div signed v2 vc1)
+      else bv_leq signed x (bv_div signed v2 vc1)
+  (* a * x <= a * y <=> x <= y, when a is non-zero (positive if signed) and
+     neither product overflows *)
+  | mul_mul: Mul (checked_l, a, x), Mul (checked_r, a, y)
+    when checked_has signed checked_l
+         && checked_has signed checked_r
+         && cancellable signed a ->
+      bv_leq signed x y
+  | udiv_big: Div (false, _, #d), #n
+    when (not signed) && mul_overflows false n d ->
+      v_true
+  | ite_l: Ite (b, l, r), #_ ->
+      b_ite b (bv_leq signed l v2) (bv_leq signed r v2)
+  | ite_r: #_, Ite (b, l, r) ->
+      b_ite b (bv_leq signed v1 l) (bv_leq signed v1 r)
+  (* c <= x - k <=> c + k <= x (when c + k doesn't overflow) *)
+  | const_sub1: #c, Sub (checked, x, #k)
+    when checked_has signed checked ->
+      if add_overflows signed c k then
+        if not signed then v_false else Leq (signed, v1, v2)
+      else bv_leq signed (c + k) x
+  (* c <= k - x <=> x <= k - c (when k - c doesn't overflow) *)
+  | const_sub2: #c, Sub (checked, #k, x)
+    when checked_has signed checked ->
+      if sub_overflows signed k c then
+        if not signed then v_false else Leq (signed, v1, v2)
+      else bv_leq signed x (k - c)
+  (* x - k <= c <=> x <= c + k (when c + k doesn't overflow) *)
+  | sub_const1: Sub (checked, x, #k), #c
+    when checked_has signed checked ->
+      if add_overflows signed c k then
+        if not signed then v_true else Leq (signed, v1, v2)
+      else bv_leq signed x (c + k)
+  (* k - x <= c <=> k - c <= x (when k - c doesn't overflow) *)
+  | sub_const2: Sub (checked, #k, x), #c
+    when checked_has signed checked ->
+      if sub_overflows signed k c then
+        if not signed then v_true else Leq (signed, v1, v2)
+      else bv_leq signed (k - c) x
+  | ub_r: _, #c when (not signed) && unsigned_ub v1 <= to_z false c ->
+      v_true
+  | ub_l: #c, _ when (not signed) && unsigned_ub v2 < to_z false c ->
+      v_false
+  | to_unsigned_l: #c, _ when signed && is_checked_unsigned_op v2 ->
+      signed_to_unsigned_cmp true true c v1 v2
+  | to_unsigned_r: _, #c when signed && is_checked_unsigned_op v1 ->
+      signed_to_unsigned_cmp true false c v1 v2
+
+(* Rewrites a signed comparison [v1 R v2] (with [R] being [<=] when [is_leq],
+   else [<]) where the concrete operand [c] is on the [c_on_left] side and the
+   other operand is a checked-unsigned operation, into an equivalent unsigned
+   formula. This lets the checked-unsigned reductions fire. Splitting the
+   non-constant operand [X] at the sign threshold [s = 2^(bits-1)] (so [X <u s]
+   is its non-negative half), and with [c_cmp] the same comparison taken
+   unsigned:
+   - [c] on the left: [c R X <=> c_cmp && X <u s] if [c >=s 0]
+     [c R X <=> X <u s || c_cmp] if [c <s 0]
+   - [c] on the right: [X R c <=> c_cmp || s <=u X] if [c >=s 0]
+     [X R c <=> s <=u X && c_cmp] if [c <s 0] *)
+fn signed_to_unsigned_cmp (is_leq c_on_left : bool) (c : bv) (v1 v2 : t) : t =
+  let bits = size v1 in
+  let sign_bit = mk_bv bits (1 lsl (bits - 1)) in
+  let c_cmp = if is_leq then bv_leq false v1 v2 else bv_lt false v1 v2 in
+  let nonneg = to_z true c >= 0 in
+  if c_on_left then
+    let in_pos = bv_lt false v2 sign_bit in
+    if nonneg then c_cmp && in_pos else in_pos || c_cmp
+  else
+    let in_neg = bv_leq false sign_bit v1 in
+    if nonneg then c_cmp || in_neg else in_neg && c_cmp
+
+(* Overflow checks *)
+
+rule bv_add_overflows : AddOvf (signed, v1, v2) =
+  | zero: 0, _ -> v_false
+  | size1: _ when size v1 = 1 ->
+      let one = bv_one 1 in
+      v1 == one && v2 == one
+  (* z + x overflows iff max - z < x *)
+  | unsigned: #z, x when not signed ->
+      bv_lt signed (~z) x
+  | signed: #z, x when signed ->
+      let n = size v1 in
+      let z = to_z signed z in
+      if z > 0 then
+        (* z > 0 so overflows if max - z < x *)
+        bv_lt signed (mk_masked n (max_for signed n - z)) x
+      else
+        (* z < 0 so overflows if x < min - z *)
+        bv_lt signed x (mk_masked n (min_for signed n - z))
+  | of_bools: BvOfBool (n, b1), BvOfBool (_, b2) when n > 1 ->
+      if signed && n = 2 then
+        (* Signed addition of two booleans of size 2 overflows iff they are both
+           true *)
+        b1 && b2
+      else v_false
+  | of_bool: BvOfBool (_, b), other when size v1 > 1 ->
+      let n = size v1 in
+      b && other == mk_masked n (max_for signed n)
+
+rule bv_mul_overflows : MulOvf (signed, v1, v2) =
+  | size1: _ when signed && size v1 = 1 ->
+      (* We need to special-case size one because the other simplifications will
+         mess with that case, and it's pretty easy to simplify. *)
+      let one = bv_one 1 in
+      v1 == one && v2 == one
+  | msb: _
+    when (signed && msb_of v1 + msb_of v2 < size v1 - 2)
+         || ((not signed) && msb_of v1 + msb_of v2 < size v1 - 1) ->
+      v_false
+  | const: #z, x when (not signed) || size v1 > 1 ->
+      if to_z false z = 0 || to_z false z = 1 then v_false
+      else
+        let n = size v1 in
+        let z = to_z signed z in
+        if signed then
+          (* For signed overflow, the correct condition is: z * x overflows iff
+             x < min_x or x > max_x, where min_x = ceil((-2^(n-1))/z), max_x =
+             floor((2^(n-1)-1)/z) for z > 0, and swapped for z < 0. *)
+          let min_val = -(1 lsl (n - 1)) in
+          let max_val = (1 lsl (n - 1)) - 1 in
+          if z = -1 then
+            (* z = -1: only overflows when x = MIN_VALUE *)
+            x == mk_masked n min_val
+          else
+            let min_x, max_x =
+              if z > 0 then (tdiv min_val z, tdiv max_val z)
+              else (tdiv max_val z, tdiv min_val z)
+            in
+            bv_lt signed x (mk_masked n min_x)
+            || bv_lt signed (mk_masked n max_x) x
+        else
+          (* For unsigned overflow, z * x overflows iff x > floor((2^n - 1) /
+             z) *)
+          bv_lt signed (mk_masked n (tdiv ((1 lsl n) - 1) z)) x
+  | div: x, Div (false, _, x) when not signed -> v_false
+
+rule bv_neg_overflows (v : t) :
+    Eq (mk_masked (size v) (min_for true (size v)), v) =
+  mk_masked (size v) (min_for true (size v)) == v
+
+rule bv_sub_overflows : SubOvf (signed, v1, v2) =
+  | same: v, v -> v_false
+  | unsigned: _ when not signed -> bv_lt signed v1 v2
+
+(* Float-bit-vector conversions *)
+
+rule bv_of_float : BvOfFloat (rounding, signed, sz, v) =
+  | lit: Float f -> (
+      match f_to_int rounding signed sz f with
+      | Some z -> mk_masked sz z
+      (* NaN, infinite, or out of range: SMT-Lib leaves the result unspecified,
+         so we keep the term symbolic. *)
+      | None -> BvOfFloat (rounding, signed, sz, v))
+
+rule bv_to_float : FloatOfBv (rounding, signed, fp, v) =
+  | lit: #z -> (
+      match f_of_int rounding signed fp (size v) (to_z false z) with
+      | Some f -> Float f
+      | None -> FloatOfBv (rounding, signed, fp, v))
+
+rule bv_to_float_raw (v : t) :
+    FloatOfBvRaw (fp_of_size (size v), v) =
+  | lit: #z ->
+      let fp = fp_of_size (size v) in
+      Float (f_of_bits fp (to_z false z))
+
+(* The rules of the bool module on bit-vectors *)
+
+extend rule b_and =
+  (* only for constants: if [bv1] or [bv2] could be undefined (an operation
+     whose overflow check does not hold), the conjunction could still be false
+     thanks to the other conjunct, while the merged equality would be
+     undefined *)
+  | eq_extracts:
+      (#_ as bv1) == BvExtract (s1, e1, x) && (#_ as bv2) == BvExtract (s2, e2, x)
+    when e1 + 1 = s2 || e2 + 1 = s1 ->
+      if e1 + 1 = s2 then bv2 ++ bv1 == bv_extract s1 e2 x
+      else bv1 ++ bv2 == bv_extract s2 e1 x
+  | upper_bounds:
+      (Lt (s, a, #_) | Leq (s, a, #_)) && (Lt (s, a, #_) | Leq (s, a, #_)) ->
+      if upper_bound v1 <= upper_bound v2 then v1 else v2
+  | lower_bounds:
+      (Lt (s, #_, a) | Leq (s, #_, a)) && (Lt (s, #_, a) | Leq (s, #_, a)) ->
+      if lower_bound v1 >= lower_bound v2 then v1 else v2
+
+extend rule b_or =
+  | lt_lt: Lt (s, a, b) || Lt (s, b, a) -> not (a == b)
+  | lt_leq: Lt (s, a, b) || Leq (s, b, a) -> v_true
+
+extend rule b_or =
+  (* an upper and a lower bound on the same value that (at least) touch cover
+     the whole domain, e.g. [a <= 2] || [3 <= a] *)
+  | complementary:
+      ((Lt (s, a, #_) | Leq (s, a, #_)) as ub)
+      || ((Lt (s, #_, a) | Leq (s, #_, a)) as lb)
+    when lower_bound lb <= upper_bound ub + 1 ->
+      v_true
+  | upper_eq: ((Lt (s, a, #_) | Leq (s, a, #_)) as b) || a == #k
+    when to_z s k <= upper_bound b ->
+      b
+  | lower_eq: ((Lt (s, #_, a) | Leq (s, #_, a)) as b) || a == #k
+    when lower_bound b <= to_z s k ->
+      b
+  | upper_bounds:
+      (Lt (s, a, #_) | Leq (s, a, #_)) || (Lt (s, a, #_) | Leq (s, a, #_)) ->
+      if upper_bound v1 <= upper_bound v2 then v2 else v1
+  | lower_bounds:
+      (Lt (s, #_, a) | Leq (s, #_, a)) || (Lt (s, #_, a) | Leq (s, #_, a)) ->
+      if lower_bound v1 >= lower_bound v2 then v2 else v1
+
+extend rule b_not =
+  | lt: Lt (signed, v1, v2) -> bv_leq signed v2 v1
+  | leq: Leq (signed, v1, v2) -> bv_lt signed v2 v1
+
+extend rule b_not =
+  | eq_bit: (#bv as c) == v when type_of c = TBitVector 1 -> ~bv == v
+
+extend rule b_ite =
+  | bv_of_bool: _, 1, 0 when is_bv (type_of if_) -> bv_of_bool (size if_) guard
+
+extend rule sem_eq =
+  | bvs: #b1 == #b2 -> of_bool (to_z false b1 = to_z false b2)
+  (* Arithmetics *)
+  | neg: (#_ as c) == -x -> -c == x
+  | not: (#_ as c) == ~x -> ~c == x
+  | add_const: (#_ as c) == (#_ as l) + r -> c - l == r
+  | sub_const1: (#_ as c) == l - (#_ as r) -> c + r == l
+  | sub_const2: (#_ as c) == (#_ as l) - r -> l - c == r
+  | self_add: x == x + #bv -> of_bool (to_z false bv = 0)
+  | add_add: (#bv_l as l) + y == (#bv_r as r) + x ->
+      (* y + l == x + r <=> y == x + (r - l) <=> y + (l - r) == x *)
+      (* we pick the option that will make a positive constant (superstition);
+         this rewrite holds modulo 2^n regardless of overflow, but the rebuilt
+         sum carries no overflow guarantee, so it stays unchecked. *)
+      if to_z false bv_l >= to_z false bv_r then x == y + (l - r)
+      else y == x + (r - l)
+  | mul_const: #n == Mul (ck, #m, x) when is_checked ck ->
+      (* the multiplication is exact in a checked signedness, so read the
+         constants in that signedness: the result must be a multiple of [m], and
+         dividing recovers [x] *)
+      let sz = size x in
+      let signed = not ck.unsigned in
+      let m = to_z signed m in
+      let n = to_z signed n in
+      if m = 0 then of_bool (n = 0)
+      else if n = 0 then x == bv_zero sz
+      else if divisible n m then
+        let q = tdiv n m in
+        let fits =
+          if signed then
+            let h = 1 lsl (sz - 1) in
+            -h <= q && q < h
+          else 0 <= q && q < 1 lsl sz
+        in
+        if fits then x == mk_masked sz q else v_false
+      else v_false
+
+extend rule sem_eq =
+  (* Cancelling a common factor [a] from [a*b == a*d] is only sound when [a] is
+     odd (invertible modulo 2^n), or when [a] is non-zero and both
+     multiplications are overflow-checked (so they behave like exact integer
+     arithmetic). *)
+  | mul_cancel: Mul (ck1, #a, b) == Mul (ck2, #a', d)
+    when to_z false a = to_z false a'
+         && (to_z false a land 1 = 1
+            || (to_z false a <> 0 && is_checked (checked_meet ck1 ck2))) ->
+      b == d
+  (* Bitvectors *)
+  (* 0 == L | R ==> 0 == L && 0 == R, splitting is better for the PC *)
+  | or_zero: 0 == l lor r ->
+      let z = bv_zero (size v1) in
+      l == z && r == z
+  (* for N == (M & X), if N has bits set that aren't in M, then it must be
+     false, since the mask would unset them *)
+  | and_mask: #n == #mask land _ when not (to_z false (n land lognot mask) = 0) ->
+      v_false
+  | concat_const: (#_ as z) == l ++ r ->
+      let size_r = size r in
+      let size_l = size l in
+      let z_r = bv_extract 0 (size_r - 1) z in
+      let z_l = bv_extract size_r (size_r + size_l - 1) z in
+      l == z_l && r == z_r
+  | zext_const: BvExtend (false, by, bv) == #z ->
+      let z = to_z false z in
+      let size_bv = size bv in
+      (* if any of the bits of z are set in [size_bv, size_bv+by), this cannot
+         be true since they're extended to 0 *)
+      let mask = ((1 lsl by) - 1) lsl size_bv in
+      if not (z land mask = 0) then v_false
+      else
+        let z_bv = mk_bv size_bv z in
+        bv == z_bv
+  (* ite(b, A::B, C::D) == l :: r <=>
+   * ite(b, A, C) == l && ite(b, B, D) == r *)
+  | ite_concat: Ite (b, (#_ as t), (#_ as e)) == l ++ r ->
+      let size_r = size r in
+      let size_l = size l in
+      let t_r = bv_extract 0 (size_r - 1) t in
+      let t_l = bv_extract size_r (size_r + size_l - 1) t in
+      let e_r = bv_extract 0 (size_r - 1) e in
+      let e_l = bv_extract size_r (size_r + size_l - 1) e in
+      b_ite b t_l e_l == l && b_ite b t_r e_r == r
+  | concat_concat: l1 ++ r1 == l2 ++ r2 when size l1 = size l2 ->
+      l1 == l2 && r1 == r2
+  (* BvOfBool and If-then-elses *)
+  (* (boolean literals are left to the rules [true_] and [false_]) *)
+  | ite_const: Ite (b, l, t) == (#_ as c) -> b_ite b (l == c) (t == c)
+
+extend rule sem_eq =
+  | of_bools: BvOfBool (_, b) == BvOfBool (_, c) -> b == c
+
+extend rule sem_eq =
+  | of_bool_const: BvOfBool (_, b) == #z ->
+      let z = to_z false z in
+      if z = 1 then b else if z = 0 then not b else v_false
+  (* special case: for BVs, check if we can infer the most significant set bits
+     and extract *)
+  | msb: _
+    when is_bv (type_of v1)
+         && is_bv (type_of v2)
+         &&
+         let msb = zmax (msb_of v1) (msb_of v2) in
+         0 <= msb && msb < size v1 - 1 ->
+      let msb = zmax (msb_of v1) (msb_of v2) in
+      let v1' = bv_extract 0 msb v1 in
+      let v2' = bv_extract 0 msb v2 in
+      v1' == v2'

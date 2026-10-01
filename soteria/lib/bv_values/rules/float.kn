@@ -1,0 +1,135 @@
+(* Floating point *)
+
+(* {1 Primitives} *)
+
+(* The precision of a float type; fails otherwise. *)
+prim fp_of_ty : ty -> fp
+
+(* Floats, see [Floatml.AnyFloat] *)
+prim fp_size : fp -> int
+(* The precision of a float. *)
+prim f_prec : float -> fp
+prim fp_of_size : int -> fp
+prim f_equal : float -> float -> bool
+prim f_bits_equal : float -> float -> bool
+prim f_to_bits : float -> int
+prim f_of_bits : fp -> int -> float
+prim f_nan : fp -> float
+prim f_is_class : fc -> float -> bool
+prim f_is_nan : float -> bool
+prim f_is_zero : float -> bool
+prim f_is_negative : float -> bool
+prim f_is_positive : float -> bool
+prim f_eq : float -> float -> bool
+prim f_lt : float -> float -> bool
+prim f_le : float -> float -> bool
+oracle f_add : float -> float -> float
+oracle f_sub : float -> float -> float
+oracle f_mul : float -> float -> float
+oracle f_div : float -> float -> float
+oracle f_rem : float -> float -> float
+oracle f_fmod : float -> float -> float
+oracle f_min : float -> float -> float
+oracle f_max : float -> float -> float
+oracle f_fma : float -> float -> float -> float
+prim f_abs : float -> float
+prim f_neg : float -> float
+oracle f_sqrt : float -> float
+oracle f_round : rm -> float -> float
+oracle f_convert : rm -> fp -> float -> float
+
+(* [f_to_int rm signed size f] converts [f] to an integer of [size] bits, if
+   that size is supported and the conversion is defined. *)
+oracle f_to_int : rm -> bool -> int -> float -> int option
+
+(* [f_of_int rm signed fp size z] converts the [size]-bit integer [z] to a
+   float, if that size is supported. *)
+oracle f_of_int : rm -> bool -> fp -> int -> int -> float option
+
+(* {1 Helpers} *)
+
+extend fn sure_neq =
+  | Float a, Float b -> not (f_equal a b)
+
+fn fp_of (v : t) : fp = fp_of_ty (type_of v)
+
+(* {1 Rules} *)
+
+rule float_is_floatclass : FIs (fc, sv)
+
+rule float_is_negative : FIsNeg v
+
+rule float_is_positive : FIsPos v
+
+rule float_cast : FloatOfFloat (rounding, fp, v)
+
+rule float_eq : FEq (v1, v2) =
+  | same: v, v -> not (float_is_floatclass NaN v)
+  (* Against a constant, [fp.eq] is decidable structurally *)
+  | lit: (Float f as l), x ->
+      if f_is_nan f then v_false
+      else if f_is_zero f then float_is_floatclass Zero x
+      else l == x
+
+rule float_lt : FLt (v1, v2)
+
+rule float_leq : FLeq (v1, v2)
+
+rule float_add : FAdd (v1, v2)
+
+rule float_sub : FSub (v1, v2)
+
+rule float_div : FDiv (v1, v2)
+
+rule float_mul : FMul (v1, v2)
+
+rule float_rem : FRem (v1, v2)
+
+rule float_abs : FAbs v =
+  | abs: FAbs _ -> v
+
+rule float_neg : FNeg v =
+  | neg: FNeg v -> v
+
+rule float_fma : Fma (a, b, c) =
+  | lits: Float fa, Float fb, Float fc -> Float (f_fma fa fb fc)
+
+(* C's [fmod] (and so Rust's [%] on floats), which truncates [x/y] where
+   [f_rem] rounds it to nearest. SMT-Lib has no such operator, so we emulate
+   it. [raw_fmod_of_rem] is that emulation, without simplifications; it serves
+   as the specification of [float_fmod_of_rem] and [f_fmod]. *)
+fn raw_fmod_of_rem (r v1 v2 : t) : t =
+  let is_neg (v : t) = FIsNeg v in
+  let abs2 = FAbs v2 in
+  let correction =
+    Ite (is_neg v1, FNeg abs2, abs2)
+  in
+  Ite (Eq (is_neg r, is_neg v1), r, FAdd (r, correction))
+
+(* [fmod] given an already-computed IEEE remainder, so a caller that has a
+   cheaper way to obtain one can reuse it. *)
+rule float_fmod_of_rem (r v1 v2 : t) : raw_fmod_of_rem r v1 v2 =
+  b_ite
+    (float_is_negative r == float_is_negative v1)
+    r
+    (float_add r
+       (b_ite (float_is_negative v1) (float_neg (float_abs v2)) (float_abs v2)))
+
+rule float_fmod (v1 v2 : t) : raw_fmod_of_rem (FRem (v1, v2)) v1 v2 =
+  | lits: Float f1, Float f2 -> Float (f_fmod f1 f2)
+  | default: _ -> float_fmod_of_rem (float_rem v1 v2) v1 v2
+
+(* [fp.min]/[fp.max]: the non-NaN argument wins, and which of [-0.0] and [+0.0]
+   is returned is left unspecified. *)
+rule float_min : FMin (v1, v2)
+
+rule float_max : FMax (v1, v2)
+
+rule float_sqrt : FSqrt v
+
+rule float_round : FRound (rm, sv)
+
+(* The rules of the bool module on floats *)
+
+extend rule sem_eq =
+  | floats: Float f1 == Float f2 -> of_bool (f_bits_equal f1 f2)

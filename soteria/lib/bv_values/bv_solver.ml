@@ -53,7 +53,10 @@ struct
     match v.node.kind with
     | Bool _ | BitVec _ | Float _ -> v
     | _ -> (
-        match trivial_truthiness (Typed.type_ v) with
+        match
+          if [%matches? TBool] v.node.ty then trivial_truthiness (Typed.type_ v)
+          else None
+        with
         | Some true -> Svalue.Bool.v_true
         | Some false -> Svalue.Bool.v_false
         | None -> (
@@ -202,7 +205,10 @@ struct
     match v.node.kind with
     | Bool _ | BitVec _ | Float _ -> v
     | _ -> (
-        match trivial_truthiness (Typed.type_ v) with
+        match
+          if [%matches? TBool] v.node.ty then trivial_truthiness (Typed.type_ v)
+          else None
+        with
         | Some true -> Svalue.Bool.v_true
         | Some false -> Svalue.Bool.v_false
         | None -> (

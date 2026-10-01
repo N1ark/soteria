@@ -31,6 +31,7 @@ FILES_TO_SCAN = [
     "soteria/lib/version.ml",
     "soteria-rust/lib/version.ml",
     ".github/workflows/build.yml",
+    ".github/workflows/test-lib.yml",
     ".github/workflows/test-packages.yml",
     ".github/workflows/benchmarks.yml",
     "soteria-rust.opam.template",

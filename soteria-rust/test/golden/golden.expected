@@ -1,0 +1,4070 @@
+
+##### PASS A: no crate (default pointer size)
+
+##### scalars
+== conc i8
+  v: 0x03
+  ty: (TBitVector 8)
+  cost: 1
+  evalf: =
+  smt: #x03  decls=[]
+== var i8
+  v: V|0|
+  ty: (TBitVector 8)
+  vars: |0|:(TBitVector 8)
+  cost: 3
+  eval: 0x07
+  evalf: 0x07
+  subst: 0x07
+  smt: |0|  decls=[]
+== conc i16
+  v: 0x4240
+  ty: (TBitVector 16)
+  cost: 1
+  evalf: =
+  smt: #x4240  decls=[]
+== var i16
+  v: V|1|
+  ty: (TBitVector 16)
+  vars: |1|:(TBitVector 16)
+  cost: 3
+  eval: =
+  evalf: =
+  subst: V|100001|
+  smt: |1|  decls=[]
+== conc i32
+  v: 0x00000001
+  ty: (TBitVector 32)
+  cost: 1
+  evalf: =
+  smt: #x00000001  decls=[]
+== var i32
+  v: V|2|
+  ty: (TBitVector 32)
+  vars: |2|:(TBitVector 32)
+  cost: 3
+  eval: 0x00000080
+  evalf: 0x00000080
+  subst: V|100002|
+  smt: |2|  decls=[]
+== conc i64
+  v: 0x0000000000000000
+  ty: (TBitVector 64)
+  cost: 1
+  evalf: =
+  smt: #x0000000000000000  decls=[]
+== var i64
+  v: V|3|
+  ty: (TBitVector 64)
+  vars: |3|:(TBitVector 64)
+  cost: 3
+  eval: =
+  evalf: =
+  subst: 0x00000000000003e8
+  smt: |3|  decls=[]
+== conc i128
+  v: 0x00000000000000000000000000000003
+  ty: (TBitVector 128)
+  cost: 1
+  evalf: =
+  smt: #x00000000000000000000000000000003  decls=[]
+== var i128
+  v: V|4|
+  ty: (TBitVector 128)
+  vars: |4|:(TBitVector 128)
+  cost: 3
+  eval: 0x0000000000000000000000000000002a
+  evalf: 0x0000000000000000000000000000002a
+  subst: V|100004|
+  smt: |4|  decls=[]
+== conc isize
+  v: 0x000000000000ffff
+  ty: (TBitVector 64)
+  cost: 1
+  evalf: =
+  smt: #x000000000000ffff  decls=[]
+== var isize
+  v: V|5|
+  ty: (TBitVector 64)
+  vars: |5|:(TBitVector 64)
+  cost: 3
+  eval: =
+  evalf: =
+  subst: V|100005|
+  smt: |5|  decls=[]
+== conc u8
+  v: 0xfe
+  ty: (TBitVector 8)
+  cost: 1
+  evalf: =
+  smt: #xfe  decls=[]
+== var u8
+  v: V|6|
+  ty: (TBitVector 8)
+  vars: |6|:(TBitVector 8)
+  cost: 3
+  eval: 0xff
+  evalf: 0xff
+  subst: 0xff
+  smt: |6|  decls=[]
+== conc u16
+  v: 0x0064
+  ty: (TBitVector 16)
+  cost: 1
+  evalf: =
+  smt: #x0064  decls=[]
+== var u16
+  v: V|7|
+  ty: (TBitVector 16)
+  vars: |7|:(TBitVector 16)
+  cost: 3
+  eval: =
+  evalf: =
+  subst: V|100007|
+  smt: |7|  decls=[]
+== conc u32
+  v: 0x00000007
+  ty: (TBitVector 32)
+  cost: 1
+  evalf: =
+  smt: #x00000007  decls=[]
+== var u32
+  v: V|8|
+  ty: (TBitVector 32)
+  vars: |8|:(TBitVector 32)
+  cost: 3
+  eval: 0x0000007f
+  evalf: 0x0000007f
+  subst: V|100008|
+  smt: |8|  decls=[]
+== conc u64
+  v: 0x0000000000000100
+  ty: (TBitVector 64)
+  cost: 1
+  evalf: =
+  smt: #x0000000000000100  decls=[]
+== var u64
+  v: V|9|
+  ty: (TBitVector 64)
+  vars: |9|:(TBitVector 64)
+  cost: 3
+  eval: =
+  evalf: =
+  subst: 0x0000000000000100
+  smt: |9|  decls=[]
+== conc u128
+  v: 0x0000000000000000000000000000007f
+  ty: (TBitVector 128)
+  cost: 1
+  evalf: =
+  smt: #x0000000000000000000000000000007f  decls=[]
+== var u128
+  v: V|10|
+  ty: (TBitVector 128)
+  vars: |10|:(TBitVector 128)
+  cost: 3
+  eval: 0x00000000000000000000000000000003
+  evalf: 0x00000000000000000000000000000003
+  subst: V|100010|
+  smt: |10|  decls=[]
+== conc usize
+  v: 0x000000000000007f
+  ty: (TBitVector 64)
+  cost: 1
+  evalf: =
+  smt: #x000000000000007f  decls=[]
+== var usize
+  v: V|11|
+  ty: (TBitVector 64)
+  vars: |11|:(TBitVector 64)
+  cost: 3
+  eval: =
+  evalf: =
+  subst: V|100011|
+  smt: |11|  decls=[]
+== conc bool
+  v: 0x80
+  ty: (TBitVector 8)
+  cost: 1
+  evalf: =
+  smt: #x80  decls=[]
+== var bool
+  v: V|12|
+  ty: (TBitVector 8)
+  vars: |12|:(TBitVector 8)
+  cost: 3
+  eval: 0x07
+  evalf: 0x07
+  subst: 0x07
+  smt: |12|  decls=[]
+== conc char
+  v: 0x00000001
+  ty: (TBitVector 32)
+  cost: 1
+  evalf: =
+  smt: #x00000001  decls=[]
+== var char
+  v: V|13|
+  ty: (TBitVector 32)
+  vars: |13|:(TBitVector 32)
+  cost: 3
+  eval: =
+  evalf: =
+  subst: V|100013|
+  smt: |13|  decls=[]
+== float f16 0.0
+  v: 0f
+  ty: (TFloat F16)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 5 11) #x0000)  decls=[]
+== float f16 1.5
+  v: 1.5f
+  ty: (TFloat F16)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 5 11) #x3e00)  decls=[]
+== float f16 -2.25
+  v: -2.25f
+  ty: (TFloat F16)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 5 11) #xc080)  decls=[]
+== float f16 3.0e10
+  v: +Inff
+  ty: (TFloat F16)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 5 11) #x7c00)  decls=[]
+== float f16 0.1
+  v: 0.099976f
+  ty: (TFloat F16)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 5 11) #x2e66)  decls=[]
+== float f16 1.0
+  v: 1f
+  ty: (TFloat F16)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 5 11) #x3c00)  decls=[]
+== float f16 -0.5
+  v: -0.5f
+  ty: (TFloat F16)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 5 11) #xb800)  decls=[]
+== zero f16
+  v: 0f
+  ty: (TFloat F16)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 5 11) #x0000)  decls=[]
+== neg_zero f16
+  v: -0f
+  ty: (TFloat F16)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 5 11) #x8000)  decls=[]
+== one f16
+  v: 1f
+  ty: (TFloat F16)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 5 11) #x3c00)  decls=[]
+== infinity f16
+  v: +Inff
+  ty: (TFloat F16)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 5 11) #x7c00)  decls=[]
+== neg_infinity f16
+  v: -Inff
+  ty: (TFloat F16)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 5 11) #xfc00)  decls=[]
+== nan f16
+  v: NaNf
+  ty: (TFloat F16)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 5 11) #x7e00)  decls=[]
+== of_z 7 f16
+  v: 7f
+  ty: (TFloat F16)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 5 11) #x4700)  decls=[]
+== var f16
+  v: V|14|
+  ty: (TFloat F16)
+  vars: |14|:(TFloat F16)
+  cost: 3
+  eval: +Inff
+  evalf: +Inff
+  subst: V|100014|
+  smt: |14|  decls=[]
+  fp_of: f16 -> f16
+== float f32 0.0
+  v: 0f
+  ty: (TFloat F32)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 8 24) #x00000000)  decls=[]
+== float f32 1.5
+  v: 1.5f
+  ty: (TFloat F32)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 8 24) #x3fc00000)  decls=[]
+== float f32 -2.25
+  v: -2.25f
+  ty: (TFloat F32)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 8 24) #xc0100000)  decls=[]
+== float f32 3.0e10
+  v: 3.0000001E+10f
+  ty: (TFloat F32)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 8 24) #x50df8476)  decls=[]
+== float f32 0.1
+  v: 0.100000001f
+  ty: (TFloat F32)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 8 24) #x3dcccccd)  decls=[]
+== float f32 1.0
+  v: 1f
+  ty: (TFloat F32)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 8 24) #x3f800000)  decls=[]
+== float f32 -0.5
+  v: -0.5f
+  ty: (TFloat F32)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 8 24) #xbf000000)  decls=[]
+== zero f32
+  v: 0f
+  ty: (TFloat F32)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 8 24) #x00000000)  decls=[]
+== neg_zero f32
+  v: -0f
+  ty: (TFloat F32)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 8 24) #x80000000)  decls=[]
+== one f32
+  v: 1f
+  ty: (TFloat F32)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 8 24) #x3f800000)  decls=[]
+== infinity f32
+  v: +Inff
+  ty: (TFloat F32)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 8 24) #x7f800000)  decls=[]
+== neg_infinity f32
+  v: -Inff
+  ty: (TFloat F32)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 8 24) #xff800000)  decls=[]
+== nan f32
+  v: NaNf
+  ty: (TFloat F32)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 8 24) #x7fc00000)  decls=[]
+== of_z 7 f32
+  v: 7f
+  ty: (TFloat F32)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 8 24) #x40e00000)  decls=[]
+== var f32
+  v: V|15|
+  ty: (TFloat F32)
+  vars: |15|:(TFloat F32)
+  cost: 3
+  eval: =
+  evalf: =
+  subst: -2.25f
+  smt: |15|  decls=[]
+  fp_of: f32 -> f32
+== float f64 0.0
+  v: 0f
+  ty: (TFloat F64)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 11 53) #x0000000000000000)  decls=[]
+== float f64 1.5
+  v: 1.5f
+  ty: (TFloat F64)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 11 53) #x3ff8000000000000)  decls=[]
+== float f64 -2.25
+  v: -2.25f
+  ty: (TFloat F64)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 11 53) #xc002000000000000)  decls=[]
+== float f64 3.0e10
+  v: 3.0E+10f
+  ty: (TFloat F64)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 11 53) #x421bf08eb0000000)  decls=[]
+== float f64 0.1
+  v: 0.10000000000000001f
+  ty: (TFloat F64)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 11 53) #x3fb999999999999a)  decls=[]
+== float f64 1.0
+  v: 1f
+  ty: (TFloat F64)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 11 53) #x3ff0000000000000)  decls=[]
+== float f64 -0.5
+  v: -0.5f
+  ty: (TFloat F64)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 11 53) #xbfe0000000000000)  decls=[]
+== zero f64
+  v: 0f
+  ty: (TFloat F64)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 11 53) #x0000000000000000)  decls=[]
+== neg_zero f64
+  v: -0f
+  ty: (TFloat F64)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 11 53) #x8000000000000000)  decls=[]
+== one f64
+  v: 1f
+  ty: (TFloat F64)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 11 53) #x3ff0000000000000)  decls=[]
+== infinity f64
+  v: +Inff
+  ty: (TFloat F64)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 11 53) #x7ff0000000000000)  decls=[]
+== neg_infinity f64
+  v: -Inff
+  ty: (TFloat F64)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 11 53) #xfff0000000000000)  decls=[]
+== nan f64
+  v: NaNf
+  ty: (TFloat F64)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 11 53) #x7ff8000000000001)  decls=[]
+== of_z 7 f64
+  v: 7f
+  ty: (TFloat F64)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 11 53) #x401c000000000000)  decls=[]
+== var f64
+  v: V|16|
+  ty: (TFloat F64)
+  vars: |16|:(TFloat F64)
+  cost: 3
+  eval: 1.5f
+  evalf: 1.5f
+  subst: V|100016|
+  smt: |16|  decls=[]
+  fp_of: f64 -> f64
+== float f128 0.0
+  v: 0f
+  ty: (TFloat F128)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 15 113) #x00000000000000000000000000000000)  decls=[]
+== float f128 1.5
+  v: 1.5f
+  ty: (TFloat F128)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 15 113) #x3fff8000000000000000000000000000)  decls=[]
+== float f128 -2.25
+  v: -2.25f
+  ty: (TFloat F128)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 15 113) #xc0002000000000000000000000000000)  decls=[]
+== float f128 3.0e10
+  v: 3.0E+10f
+  ty: (TFloat F128)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 15 113) #x4021bf08eb0000000000000000000000)  decls=[]
+== float f128 0.1
+  v: 0.100000000000000000000000000000000005f
+  ty: (TFloat F128)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 15 113) #x3ffb999999999999999999999999999a)  decls=[]
+== float f128 1.0
+  v: 1f
+  ty: (TFloat F128)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 15 113) #x3fff0000000000000000000000000000)  decls=[]
+== float f128 -0.5
+  v: -0.5f
+  ty: (TFloat F128)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 15 113) #xbffe0000000000000000000000000000)  decls=[]
+== zero f128
+  v: 0f
+  ty: (TFloat F128)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 15 113) #x00000000000000000000000000000000)  decls=[]
+== neg_zero f128
+  v: -0f
+  ty: (TFloat F128)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 15 113) #x80000000000000000000000000000000)  decls=[]
+== one f128
+  v: 1f
+  ty: (TFloat F128)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 15 113) #x3fff0000000000000000000000000000)  decls=[]
+== infinity f128
+  v: +Inff
+  ty: (TFloat F128)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 15 113) #x7fff0000000000000000000000000000)  decls=[]
+== neg_infinity f128
+  v: -Inff
+  ty: (TFloat F128)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 15 113) #xffff0000000000000000000000000000)  decls=[]
+== nan f128
+  v: NaNf
+  ty: (TFloat F128)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 15 113) #x7fff8000000000001000000000000000)  decls=[]
+== of_z 7 f128
+  v: 7f
+  ty: (TFloat F128)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 15 113) #x4001c000000000000000000000000000)  decls=[]
+== var f128
+  v: V|17|
+  ty: (TFloat F128)
+  vars: |17|:(TFloat F128)
+  cost: 3
+  eval: =
+  evalf: =
+  subst: V|100017|
+  smt: |17|  decls=[]
+  fp_of: f128 -> f128
+
+##### bit-vector and float arithmetic (shared part)
+== x + y
+  v: (V|18| + V|19|)
+  ty: (TBitVector 32)
+  vars: |18|:(TBitVector 32) |19|:(TBitVector 32)
+  cost: 81
+  eval: (0xfffffffe + V|19|)
+  evalf: (0xfffffffe + V|19|)
+  subst: (0xfffffffe + V|100019|)
+  smt: (bvadd |18| |19|)  decls=[]
+== y + x
+  v: (V|18| + V|19|)
+  ty: (TBitVector 32)
+  vars: |18|:(TBitVector 32) |19|:(TBitVector 32)
+  cost: 81
+  eval: (0xfffffffe + V|19|)
+  evalf: (0xfffffffe + V|19|)
+  subst: (0xfffffffe + V|100019|)
+  smt: (bvadd |18| |19|)  decls=[]
+== x + y checked
+  v: (V|18| +ck V|19|)
+  ty: (TBitVector 32)
+  vars: |18|:(TBitVector 32) |19|:(TBitVector 32)
+  cost: 81
+  eval: (0xfffffffe +ck V|19|)
+  evalf: (0xfffffffe +ck V|19|)
+  subst: (0xfffffffe +ck V|100019|)
+  smt: (bvadd |18| |19|)  decls=[]
+== x - y
+  v: (V|18| - V|19|)
+  ty: (TBitVector 32)
+  vars: |18|:(TBitVector 32) |19|:(TBitVector 32)
+  cost: 103
+  eval: (0xfffffffe - V|19|)
+  evalf: (0xfffffffe - V|19|)
+  subst: (0xfffffffe - V|100019|)
+  smt: (bvsub |18| |19|)  decls=[]
+== x - x
+  v: 0x00000000
+  ty: (TBitVector 32)
+  cost: 1
+  evalf: =
+  smt: #x00000000  decls=[]
+== x * y
+  v: (V|18| * V|19|)
+  ty: (TBitVector 32)
+  vars: |18|:(TBitVector 32) |19|:(TBitVector 32)
+  cost: 1906
+  eval: (0xfffffffe * V|19|)
+  evalf: (0xfffffffe * V|19|)
+  subst: (0xfffffffe * V|100019|)
+  smt: (bvmul |18| |19|)  decls=[]
+== x * 1
+  v: V|18|
+  ty: (TBitVector 32)
+  vars: |18|:(TBitVector 32)
+  cost: 3
+  eval: 0xfffffffe
+  evalf: 0xfffffffe
+  subst: 0xfffffffe
+  smt: |18|  decls=[]
+== x * 0
+  v: 0x00000000
+  ty: (TBitVector 32)
+  cost: 1
+  evalf: =
+  smt: #x00000000  decls=[]
+== x + 0
+  v: V|18|
+  ty: (TBitVector 32)
+  vars: |18|:(TBitVector 32)
+  cost: 3
+  eval: 0xfffffffe
+  evalf: 0xfffffffe
+  subst: 0xfffffffe
+  smt: |18|  decls=[]
+== (x + 3) + 4
+  v: (0x00000007 + V|18|)
+  ty: (TBitVector 32)
+  vars: |18|:(TBitVector 32)
+  cost: 79
+  eval: 0x00000005
+  evalf: 0x00000005
+  subst: 0x00000005
+  smt: (bvadd #x00000007 |18|)  decls=[]
+== 5 + 7
+  v: 0x0000000c
+  ty: (TBitVector 32)
+  cost: 1
+  evalf: =
+  smt: #x0000000c  decls=[]
+== x / 3
+  v: (V|18| /u 0x00000003)
+  ty: (TBitVector 32)
+  vars: |18|:(TBitVector 32)
+  cost: 3604
+  eval: 0x55555554
+  evalf: 0x55555554
+  subst: 0x55555554
+  smt: (bvudiv |18| #x00000003)  decls=[]
+== s /$ 3
+  v: (V|21| /s 0x00000003)
+  ty: (TBitVector 32)
+  vars: |21|:(TBitVector 32)
+  cost: 12704
+  eval: =
+  evalf: =
+  subst: 0x00000000
+  smt: (bvsdiv |21| #x00000003)  decls=[]
+== x % 3
+  v: (V|18| remu 0x00000003)
+  ty: (TBitVector 32)
+  vars: |18|:(TBitVector 32)
+  cost: 7104
+  eval: 0x00000002
+  evalf: 0x00000002
+  subst: 0x00000002
+  smt: (bvurem |18| #x00000003)  decls=[]
+== x mod y
+  v: (V|18| mod V|19|)
+  ty: (TBitVector 32)
+  vars: |18|:(TBitVector 32) |19|:(TBitVector 32)
+  cost: 12706
+  eval: (0xfffffffe mod V|19|)
+  evalf: (0xfffffffe mod V|19|)
+  subst: (0xfffffffe mod V|100019|)
+  smt: (bvsmod |18| |19|)  decls=[]
+== neg x
+  v: -(V|18|)
+  ty: (TBitVector 32)
+  vars: |18|:(TBitVector 32)
+  cost: 13
+  eval: 0x00000002
+  evalf: 0x00000002
+  subst: 0x00000002
+  smt: (bvneg |18|)  decls=[]
+== neg s checked
+  v: -ck(V|21|)
+  ty: (TBitVector 32)
+  vars: |21|:(TBitVector 32)
+  cost: 13
+  eval: =
+  evalf: =
+  subst: 0x00000001
+  smt: (bvneg |21|)  decls=[]
+== add_overflows x y
+  v: (V|18| +u_ovf V|19|)
+  ty: TBool
+  vars: |18|:(TBitVector 32) |19|:(TBitVector 32)
+  cost: 11
+  eval: (0x00000001 <u V|19|)
+  evalf: (0x00000001 <u V|19|)
+  subst: (0x00000001 <u V|100019|)
+  smt: (bvuaddo |18| |19|)  decls=[]
+== mul_overflows s y
+  v: (V|19| *s_ovf V|21|)
+  ty: TBool
+  vars: |19|:(TBitVector 32) |21|:(TBitVector 32)
+  cost: 206
+  eval: =
+  evalf: =
+  subst: (V|100019| == 0x80000000)
+  smt: (bvsmulo |19| |21|)  decls=[]
+== sub_overflows x x
+  v: false
+  ty: TBool
+  cost: 1
+  evalf: =
+  smt: false  decls=[]
+== neg_overflows s
+  v: (V|21| == 0x80000000)
+  ty: TBool
+  vars: |21|:(TBitVector 32)
+  cost: 5
+  eval: =
+  evalf: =
+  subst: false
+  smt: (= |21| #x80000000)  decls=[]
+== add_checked x y
+  v: ((V|18| +cku V|19|), (V|18| +u_ovf V|19|))
+  ty: (TExtension [(TBitVector 32); TBool])
+  vars: |18|:(TBitVector 32) |19|:(TBitVector 32) |18|:(TBitVector 32) |19|:(TBitVector 32)
+  cost: 100000
+  eval: ((0xfffffffe +cku V|19|), (0x00000001 <u V|19|))
+  evalf: ((0xfffffffe +cku V|19|), (0x00000001 <u V|19|))
+  subst: ((0xfffffffe +cku V|100019|), (0x00000001 <u V|100019|))
+  smt: (|@mk-tuple<(_ BitVec 32), Bool>| (bvadd |18| |19|) (bvuaddo |18| |19|))  decls=[|@tuple<(_ BitVec 32), Bool>|]
+== x < y
+  v: (V|18| <u V|19|)
+  ty: TBool
+  vars: |18|:(TBitVector 32) |19|:(TBitVector 32)
+  cost: 11
+  eval: (0xfffffffe <u V|19|)
+  evalf: (0xfffffffe <u V|19|)
+  subst: (0xfffffffe <u V|100019|)
+  smt: (bvult |18| |19|)  decls=[]
+== x <= y signed
+  v: (V|18| <=s V|19|)
+  ty: TBool
+  vars: |18|:(TBitVector 32) |19|:(TBitVector 32)
+  cost: 11
+  eval: (0xfffffffe <=s V|19|)
+  evalf: (0xfffffffe <=s V|19|)
+  subst: (0xfffffffe <=s V|100019|)
+  smt: (bvsle |18| |19|)  decls=[]
+== x < x
+  v: false
+  ty: TBool
+  cost: 1
+  evalf: =
+  smt: false  decls=[]
+== x > y
+  v: (V|19| <u V|18|)
+  ty: TBool
+  vars: |19|:(TBitVector 32) |18|:(TBitVector 32)
+  cost: 11
+  eval: (V|19| <u 0xfffffffe)
+  evalf: (V|19| <u 0xfffffffe)
+  subst: (V|100019| <u 0xfffffffe)
+  smt: (bvult |19| |18|)  decls=[]
+== x >= 0
+  v: true
+  ty: TBool
+  cost: 1
+  evalf: =
+  smt: true  decls=[]
+== concat x y
+  v: (V|18| ++ V|19|)
+  ty: (TBitVector 64)
+  vars: |18|:(TBitVector 32) |19|:(TBitVector 32)
+  cost: 7
+  eval: (0xfffffffe ++ V|19|)
+  evalf: (0xfffffffe ++ V|19|)
+  subst: (0xfffffffe ++ V|100019|)
+  smt: (concat |18| |19|)  decls=[]
+== extend 32 x
+  v: extend[u32](V|18|)
+  ty: (TBitVector 64)
+  vars: |18|:(TBitVector 32)
+  cost: 4
+  eval: 0x00000000fffffffe
+  evalf: 0x00000000fffffffe
+  subst: 0x00000000fffffffe
+  smt: ((_ zero_extend 32) |18|)  decls=[]
+== extend 32 s signed
+  v: extend[s32](V|21|)
+  ty: (TBitVector 64)
+  vars: |21|:(TBitVector 32)
+  cost: 4
+  eval: =
+  evalf: =
+  subst: 0xffffffffffffffff
+  smt: ((_ sign_extend 32) |21|)  decls=[]
+== extract 0 7 x
+  v: extract[0-7](V|18|)
+  ty: (TBitVector 8)
+  vars: |18|:(TBitVector 32)
+  cost: 4
+  eval: 0xfe
+  evalf: 0xfe
+  subst: 0xfe
+  smt: ((_ extract 7 0) |18|)  decls=[]
+== extract 8 15 (concat x y)
+  v: extract[8-15](V|19|)
+  ty: (TBitVector 8)
+  vars: |19|:(TBitVector 32)
+  cost: 4
+  eval: =
+  evalf: =
+  subst: extract[8-15](V|100019|)
+  smt: ((_ extract 15 8) |19|)  decls=[]
+== x & y
+  v: (V|18| & V|19|)
+  ty: (TBitVector 32)
+  vars: |18|:(TBitVector 32) |19|:(TBitVector 32)
+  cost: 7
+  eval: (0xfffffffe & V|19|)
+  evalf: (0xfffffffe & V|19|)
+  subst: (0xfffffffe & V|100019|)
+  smt: (bvand |18| |19|)  decls=[]
+== x & x
+  v: (V|18| & V|18|)
+  ty: (TBitVector 32)
+  vars: |18|:(TBitVector 32) |18|:(TBitVector 32)
+  cost: 7
+  eval: 0xfffffffe
+  evalf: 0xfffffffe
+  subst: 0xfffffffe
+  smt: (bvand |18| |18|)  decls=[]
+== x | y
+  v: (V|18| | V|19|)
+  ty: (TBitVector 32)
+  vars: |18|:(TBitVector 32) |19|:(TBitVector 32)
+  cost: 7
+  eval: (0xfffffffe | V|19|)
+  evalf: (0xfffffffe | V|19|)
+  subst: (0xfffffffe | V|100019|)
+  smt: (bvor |18| |19|)  decls=[]
+== x ^ y
+  v: (V|18| ^ V|19|)
+  ty: (TBitVector 32)
+  vars: |18|:(TBitVector 32) |19|:(TBitVector 32)
+  cost: 7
+  eval: (0xfffffffe ^ V|19|)
+  evalf: (0xfffffffe ^ V|19|)
+  subst: (0xfffffffe ^ V|100019|)
+  smt: (bvxor |18| |19|)  decls=[]
+== x ^ x
+  v: (V|18| ^ V|18|)
+  ty: (TBitVector 32)
+  vars: |18|:(TBitVector 32) |18|:(TBitVector 32)
+  cost: 7
+  eval: 0x00000000
+  evalf: 0x00000000
+  subst: 0x00000000
+  smt: (bvxor |18| |18|)  decls=[]
+== x << 3
+  v: (V|18| << 0x00000003)
+  ty: (TBitVector 32)
+  vars: |18|:(TBitVector 32)
+  cost: 39
+  eval: 0xfffffff0
+  evalf: 0xfffffff0
+  subst: 0xfffffff0
+  smt: (bvshl |18| #x00000003)  decls=[]
+== x >> y
+  v: (V|18| l>> V|19|)
+  ty: (TBitVector 32)
+  vars: |18|:(TBitVector 32) |19|:(TBitVector 32)
+  cost: 41
+  eval: (0xfffffffe l>> V|19|)
+  evalf: (0xfffffffe l>> V|19|)
+  subst: (0xfffffffe l>> V|100019|)
+  smt: (bvlshr |18| |19|)  decls=[]
+== s >>> 2
+  v: (V|21| a>> 0x00000002)
+  ty: (TBitVector 32)
+  vars: |21|:(TBitVector 32)
+  cost: 39
+  eval: =
+  evalf: =
+  subst: 0xffffffff
+  smt: (bvashr |21| #x00000002)  decls=[]
+== !x
+  v: !bv(V|18|)
+  ty: (TBitVector 32)
+  vars: |18|:(TBitVector 32)
+  cost: 4
+  eval: 0x00000001
+  evalf: 0x00000001
+  subst: 0x00000001
+  smt: (bvnot |18|)  decls=[]
+== !!x
+  v: !bv(!bv(V|18|))
+  ty: (TBitVector 32)
+  vars: |18|:(TBitVector 32)
+  cost: 5
+  eval: 0xfffffffe
+  evalf: 0xfffffffe
+  subst: 0xfffffffe
+  smt: (bvnot (bvnot |18|))  decls=[]
+== of_bool 8 b
+  EXN Assert_failure
+== to_bool a
+  v: (0x00 != V|22|)
+  ty: TBool
+  vars: |22|:(TBitVector 8)
+  cost: 6
+  eval: true
+  evalf: true
+  subst: (0x00 != V|100022|)
+  smt: (not (= #x00 |22|))  decls=[]
+== not_bool a
+  v: b2bv[8]((0x00 == V|22|))
+  ty: (TBitVector 8)
+  vars: |22|:(TBitVector 8)
+  cost: 6
+  eval: 0x00
+  evalf: 0x00
+  subst: b2bv[8]((0x00 == V|100022|))
+  smt: (ite (= #x00 |22|) #x01 #x00)  decls=[]
+== ite b x y
+  EXN Assert_failure
+== ite b x x
+  EXN Assert_failure
+== ite true x y
+  v: V|18|
+  ty: (TBitVector 32)
+  vars: |18|:(TBitVector 32)
+  cost: 3
+  eval: 0xfffffffe
+  evalf: 0xfffffffe
+  subst: 0xfffffffe
+  smt: |18|  decls=[]
+== x == y
+  v: (V|18| == V|19|)
+  ty: TBool
+  vars: |18|:(TBitVector 32) |19|:(TBitVector 32)
+  cost: 7
+  eval: (0xfffffffe == V|19|)
+  evalf: (0xfffffffe == V|19|)
+  subst: (0xfffffffe == V|100019|)
+  smt: (= |18| |19|)  decls=[]
+== x == x
+  v: true
+  ty: TBool
+  cost: 1
+  evalf: =
+  smt: true  decls=[]
+== x == 3
+  v: (V|18| == 0x00000003)
+  ty: TBool
+  vars: |18|:(TBitVector 32)
+  cost: 5
+  eval: false
+  evalf: false
+  subst: false
+  smt: (= |18| #x00000003)  decls=[]
+== b && b2
+  EXN Assert_failure
+== b && !b
+  EXN Assert_failure
+== b || !b
+  EXN Assert_failure
+== conj [b; b2; b]
+  EXN Assert_failure
+== distinct [x;y;z]
+  v: distinct(V|18-20|)
+  ty: TBool
+  vars: |18|:(TBitVector 32) |19|:(TBitVector 32) |20|:(TBitVector 32)
+  cost: 9
+  eval: distinct(0xfffffffe, V|19|, 0x00000064)
+  evalf: distinct(0xfffffffe, V|19|, 0x00000064)
+  subst: distinct(0xfffffffe, V|100019|, V|100020|)
+  smt: (distinct |18| |19| |20|)  decls=[]
+== distinct [x;y;x]
+  v: distinct(V|18|, V|18|, V|19|)
+  ty: TBool
+  vars: |18|:(TBitVector 32) |18|:(TBitVector 32) |19|:(TBitVector 32)
+  cost: 9
+  eval: false
+  evalf: false
+  subst: false
+  smt: (distinct |18| |18| |19|)  decls=[]
+== exists z. z < x
+  v: ∃ V|10018|:(TBitVector 32). (V|10018| <u V|18|)
+  ty: TBool
+  vars: |18|:(TBitVector 32)
+  cost: 100011
+  eval: ∃ V|10018|:(TBitVector 32). (V|10018| <u 0xfffffffe)
+  evalf: ∃ V|10018|:(TBitVector 32). (V|10018| <u 0xfffffffe)
+  subst: ∃ V|1|:(TBitVector 32). (V|1| <u 0xfffffffe)
+  smt: (exists ((|10018| (_ BitVec 32))) (bvult |10018| |18|))  decls=[]
+== exists z w. z < w && w < y
+  v: ∃ V|10019|:(TBitVector 32), V|10020|:(TBitVector 32). ((V|10020| <u V|19|) && (V|10019| <u V|10020|))
+  ty: TBool
+  vars: |19|:(TBitVector 32)
+  cost: 100023
+  eval: =
+  evalf: =
+  subst: ∃ V|100021|:(TBitVector 32), V|100020|:(TBitVector 32). ((V|100021| <u V|100019|) && (V|100020| <u V|100021|))
+  smt: (exists ((|10019| (_ BitVec 32)) (|10020| (_ BitVec 32))) (and (bvult |10020| |19|) (bvult |10019| |10020|)))  decls=[]
+== fx + fy
+  v: (V|25| +. V|26|)
+  ty: (TFloat F32)
+  vars: |25|:(TFloat F32) |26|:(TFloat F32)
+  cost: 136
+  eval: (V|25| +. 1f)
+  evalf: (V|25| +. 1f)
+  subst: (V|100025| +. V|100026|)
+  smt: (fp.add RNE |25| |26|)  decls=[]
+== fx + fx
+  v: (V|25| +. V|25|)
+  ty: (TFloat F32)
+  vars: |25|:(TFloat F32) |25|:(TFloat F32)
+  cost: 136
+  eval: =
+  evalf: =
+  subst: (V|100025| +. V|100025|)
+  smt: (fp.add RNE |25| |25|)  decls=[]
+== fx - fy
+  v: (V|25| -. V|26|)
+  ty: (TFloat F32)
+  vars: |25|:(TFloat F32) |26|:(TFloat F32)
+  cost: 136
+  eval: (V|25| -. 1f)
+  evalf: (V|25| -. 1f)
+  subst: (V|100025| -. V|100026|)
+  smt: (fp.sub RNE |25| |26|)  decls=[]
+== fx * 2.0
+  v: (V|25| *. 2f)
+  ty: (TFloat F32)
+  vars: |25|:(TFloat F32)
+  cost: 350
+  eval: =
+  evalf: =
+  subst: (V|100025| *. 2f)
+  smt: (fp.mul RNE |25| ((_ to_fp 8 24) #x40000000))  decls=[]
+== fx / fy
+  v: (V|25| /. V|26|)
+  ty: (TFloat F32)
+  vars: |25|:(TFloat F32) |26|:(TFloat F32)
+  cost: 1306
+  eval: (V|25| /. 1f)
+  evalf: (V|25| /. 1f)
+  subst: (V|100025| /. V|100026|)
+  smt: (fp.div RNE |25| |26|)  decls=[]
+== fx + nan
+  v: (V|25| +. NaNf)
+  ty: (TFloat F32)
+  vars: |25|:(TFloat F32)
+  cost: 135
+  eval: =
+  evalf: =
+  subst: (V|100025| +. NaNf)
+  smt: (fp.add RNE |25| ((_ to_fp 8 24) #x7fc00000))  decls=[]
+== 1.5 + 2.25
+  v: 3.75f
+  ty: (TFloat F32)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 8 24) #x40700000)  decls=[]
+== 1.0 / 0.0
+  v: +Inff
+  ty: (TFloat F64)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 11 53) #x7ff0000000000000)  decls=[]
+== -fx
+  v: neg.(V|25|)
+  ty: (TFloat F32)
+  vars: |25|:(TFloat F32)
+  cost: 7
+  eval: =
+  evalf: =
+  subst: neg.(V|100025|)
+  smt: (fp.neg |25|)  decls=[]
+== --fx
+  v: V|25|
+  ty: (TFloat F32)
+  vars: |25|:(TFloat F32)
+  cost: 3
+  eval: =
+  evalf: =
+  subst: V|100025|
+  smt: |25|  decls=[]
+== abs fx
+  v: abs.(V|25|)
+  ty: (TFloat F32)
+  vars: |25|:(TFloat F32)
+  cost: 7
+  eval: =
+  evalf: =
+  subst: abs.(V|100025|)
+  smt: (fp.abs |25|)  decls=[]
+== sqrt fx
+  v: sqrt.(V|25|)
+  ty: (TFloat F32)
+  vars: |25|:(TFloat F32)
+  cost: 283
+  eval: =
+  evalf: =
+  subst: sqrt.(V|100025|)
+  smt: (fp.sqrt RNE |25|)  decls=[]
+== sqrt 4.0
+  v: 2f
+  ty: (TFloat F64)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 11 53) #x4000000000000000)  decls=[]
+== fma fx fy fx
+  v: fma(V|25|, V|26|, V|25|)
+  ty: (TFloat F32)
+  vars: |25|:(TFloat F32) |26|:(TFloat F32) |25|:(TFloat F32)
+  cost: 409
+  eval: fma(V|25|, 1f, V|25|)
+  evalf: fma(V|25|, 1f, V|25|)
+  subst: fma(V|100025|, V|100026|, V|100025|)
+  smt: (fp.fma RNE |25| |26| |25|)  decls=[]
+== min fx fy
+  v: (V|25| min. V|26|)
+  ty: (TFloat F32)
+  vars: |25|:(TFloat F32) |26|:(TFloat F32)
+  cost: 30
+  eval: (V|25| min. 1f)
+  evalf: (V|25| min. 1f)
+  subst: (V|100025| min. V|100026|)
+  smt: (fp.min |25| |26|)  decls=[]
+== maximum fx fy
+  v: ((fis(NaN)(V|26|) || fis(NaN)(V|25|)) ? NaNf : ((V|25| <. V|26|) ? V|26| : ((V|26| <. V|25|) ? V|25| : (fisneg(V|25|) ? V|26| : V|25|))))
+  ty: (TFloat F32)
+  vars: |26|:(TFloat F32) |25|:(TFloat F32) |25|:(TFloat F32) |26|:(TFloat F32) |26|:(TFloat F32) |26|:(TFloat F32) |25|:(TFloat F32) |25|:(TFloat F32) |25|:(TFloat F32) |26|:(TFloat F32) |25|:(TFloat F32)
+  cost: 63
+  eval: (fis(NaN)(V|25|) ? NaNf : ((V|25| <. 1f) ? 1f : ((1f <. V|25|) ? V|25| : (fisneg(V|25|) ? 1f : V|25|))))
+  evalf: (fis(NaN)(V|25|) ? NaNf : ((V|25| <. 1f) ? 1f : ((1f <. V|25|) ? V|25| : (fisneg(V|25|) ? 1f : V|25|))))
+  subst: ((fis(NaN)(V|100026|) || fis(NaN)(V|100025|)) ? NaNf : ((V|100025| <. V|100026|) ? V|100026| : ((V|100026| <. V|100025|) ? V|100025| : (fisneg(V|100025|) ? V|100026| : V|100025|))))
+  smt: (ite (or (fp.isNaN |26|) (fp.isNaN |25|)) ((_ to_fp 8 24) #x7fc00000) (ite (fp.lt |25| |26|) |26| (ite (fp.lt |26| |25|) |25| (ite (fp.isNegative |25|) |26| |25|))))  decls=[]
+== round fx
+  v: fround(Ceil)(V|25|)
+  ty: (TFloat F32)
+  vars: |25|:(TFloat F32)
+  cost: 68
+  eval: =
+  evalf: =
+  subst: fround(Ceil)(V|100025|)
+  smt: (fp.roundToIntegral RTP |25|)  decls=[]
+== fx == fy
+  v: (V|25| ==. V|26|)
+  ty: TBool
+  vars: |25|:(TFloat F32) |26|:(TFloat F32)
+  cost: 9
+  eval: (1f == V|25|)
+  evalf: (1f == V|25|)
+  subst: (V|100025| ==. V|100026|)
+  smt: (fp.eq |25| |26|)  decls=[]
+== fx < fy
+  v: (V|25| <. V|26|)
+  ty: TBool
+  vars: |25|:(TFloat F32) |26|:(TFloat F32)
+  cost: 18
+  eval: (V|25| <. 1f)
+  evalf: (V|25| <. 1f)
+  subst: (V|100025| <. V|100026|)
+  smt: (fp.lt |25| |26|)  decls=[]
+== fx <= fx
+  v: (V|25| <=. V|25|)
+  ty: TBool
+  vars: |25|:(TFloat F32) |25|:(TFloat F32)
+  cost: 18
+  eval: =
+  evalf: =
+  subst: (V|100025| <=. V|100025|)
+  smt: (fp.leq |25| |25|)  decls=[]
+== is_nan fx
+  v: fis(NaN)(V|25|)
+  ty: TBool
+  vars: |25|:(TFloat F32)
+  cost: 4
+  eval: =
+  evalf: =
+  subst: fis(NaN)(V|100025|)
+  smt: (fp.isNaN |25|)  decls=[]
+== is_nan nan
+  v: true
+  ty: TBool
+  cost: 1
+  evalf: =
+  smt: true  decls=[]
+== is_zero fx
+  v: fis(Zero)(V|25|)
+  ty: TBool
+  vars: |25|:(TFloat F32)
+  cost: 4
+  eval: =
+  evalf: =
+  subst: fis(Zero)(V|100025|)
+  smt: (fp.isZero |25|)  decls=[]
+== is_negative -0.0
+  v: true
+  ty: TBool
+  cost: 1
+  evalf: =
+  smt: true  decls=[]
+== cast f32->f64
+  v: f2f[NearestTiesToEven,F64](V|25|)
+  ty: (TFloat F64)
+  vars: |25|:(TFloat F32)
+  cost: 258
+  eval: =
+  evalf: =
+  subst: f2f[NearestTiesToEven,F64](V|100025|)
+  smt: ((_ to_fp 11 53) RNE |25|)  decls=[]
+== cast f64->f32
+  v: f2f[NearestTiesToEven,F32](V|27|)
+  ty: (TFloat F32)
+  vars: |27|:(TFloat F64)
+  cost: 258
+  eval: =
+  evalf: =
+  subst: 1f
+  smt: ((_ to_fp 8 24) RNE |27|)  decls=[]
+== to_float x f32
+  v: ubv2f[NearestTiesToEven,F32](V|18|)
+  ty: (TFloat F32)
+  vars: |18|:(TBitVector 32)
+  cost: 81
+  eval: 4.2949673E+9f
+  evalf: 4.2949673E+9f
+  subst: 4.2949673E+9f
+  smt: ((_ to_fp_unsigned 8 24) RNE |18|)  decls=[]
+== of_float fx i32
+  v: f2sbv[Truncate,32](V|25|)
+  ty: (TBitVector 32)
+  vars: |25|:(TFloat F32)
+  cost: 1403
+  eval: =
+  evalf: =
+  subst: f2sbv[Truncate,32](V|100025|)
+  smt: ((_ fp.to_sbv 32) RTZ |25|)  decls=[]
+== to_float_raw x
+  v: bv2f[F32](V|18|)
+  ty: (TFloat F32)
+  vars: |18|:(TBitVector 32)
+  cost: 7
+  eval: NaNf
+  evalf: NaNf
+  subst: NaNf
+  smt: ((_ to_fp 8 24) |18|)  decls=[]
+== to_bits 1.5
+  v: 0x3fc00000
+  ty: (TBitVector 32)
+  cost: 1
+  evalf: =
+  smt: #x3fc00000  decls=[]
+
+##### thin pointers
+tags: ‖2‖ ‖3‖ ‖0‖ (zero)
+== no tag
+  v: &(0x0000000000000003, 0x0000000000000008)[*]
+  ty: (TExtension TThinPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000003 #x0000000000000008) #x0000000000000020 #x0000000000000004)  decls=[|@ptr<64>|,|@thin-ptr<64>|]
+  learn vs concrete: Some -> &(0x0000000000000003, 0x0000000000000008)[*]
+  learn vs symbolic: Some -> &(0x0000000000000003, 0x0000000000000008)[*]
+== tag A
+  v: &(0x0000000000000003, 0x0000000000000008)[‖2‖]
+  ty: (TExtension TThinPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000003 #x0000000000000008) #x0000000000000020 #x0000000000000004)  decls=[|@thin-ptr<64>|]
+  loc: 0x0000000000000003
+  ofs: 0x0000000000000008
+  decompose: 0x0000000000000003 , 0x0000000000000008
+  size_of: 0x0000000000000020
+  align_of: 0x0000000000000004
+  allocation_info: 0x0000000000000020 , 0x0000000000000004
+  tag_of: Some ‖2‖
+  is_null: false
+  is_at_null_loc: false
+  has_provenance: true
+  in_bound: true
+  as_id: 0x0000000000000003
+  add_ofs 4: &(0x0000000000000003, 0x000000000000000c)[‖2‖]
+  set_ofs 12: &(0x0000000000000003, 0x000000000000000c)[‖2‖]
+  with_tag zero: &(0x0000000000000003, 0x0000000000000008)[‖0‖]
+  with_tag none: &(0x0000000000000003, 0x0000000000000008)[*]
+  same_prov self: true
+  of_ptr_t: Ptr(&(0x0000000000000003, 0x0000000000000008)[‖2‖], ())
+  cast_ptr_t: &(0x0000000000000003, 0x0000000000000008)[‖2‖]
+  cast_ptr_f (wrong kind): EXN Cast error: expected (TExtension TFullPtr), got (TExtension TThinPtr) for value &(0x0000000000000003, 0x0000000000000008)[‖2‖]
+  learn vs concrete: Some -> &(0x0000000000000003, 0x0000000000000008)[‖2‖]
+  learn vs symbolic: Some -> &(0x0000000000000003, 0x0000000000000008)[‖2‖]
+== tag B
+  v: &(0x0000000000000003, 0x0000000000000008)[‖3‖]
+  ty: (TExtension TThinPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000003 #x0000000000000008) #x0000000000000020 #x0000000000000004)  decls=[|@thin-ptr<64>|]
+  learn vs concrete: Some -> &(0x0000000000000003, 0x0000000000000008)[‖3‖]
+  learn vs symbolic: Some -> &(0x0000000000000003, 0x0000000000000008)[‖3‖]
+== tag zero
+  v: &(0x0000000000000003, 0x0000000000000008)[‖0‖]
+  ty: (TExtension TThinPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000003 #x0000000000000008) #x0000000000000020 #x0000000000000004)  decls=[|@thin-ptr<64>|]
+  learn vs concrete: Some -> &(0x0000000000000003, 0x0000000000000008)[‖0‖]
+  learn vs symbolic: Some -> &(0x0000000000000003, 0x0000000000000008)[‖0‖]
+== null
+  v: &(0x0000000000000000, 0x0000000000000000)[*]
+  ty: (TExtension TThinPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000000 #x0000000000000000) #x0000000000000000 #x0000000000000001)  decls=[|@thin-ptr<64>|]
+  loc: 0x0000000000000000
+  ofs: 0x0000000000000000
+  decompose: 0x0000000000000000 , 0x0000000000000000
+  size_of: 0x0000000000000000
+  align_of: 0x0000000000000001
+  allocation_info: 0x0000000000000000 , 0x0000000000000001
+  tag_of: None
+  is_null: true
+  is_at_null_loc: true
+  has_provenance: false
+  in_bound: false
+  as_id: 0x0000000000000000
+  add_ofs 4: &(0x0000000000000000, 0x0000000000000004)[*]
+  set_ofs 12: &(0x0000000000000000, 0x000000000000000c)[*]
+  with_tag zero: &(0x0000000000000000, 0x0000000000000000)[‖0‖]
+  with_tag none: &(0x0000000000000000, 0x0000000000000000)[*]
+  same_prov self: true
+  of_ptr_t: Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ())
+  cast_ptr_t: &(0x0000000000000000, 0x0000000000000000)[*]
+  cast_ptr_f (wrong kind): EXN Cast error: expected (TExtension TFullPtr), got (TExtension TThinPtr) for value &(0x0000000000000000, 0x0000000000000000)[*]
+  learn vs concrete: Some -> &(0x0000000000000000, 0x0000000000000000)[*]
+  learn vs symbolic: Some -> &(0x0000000000000000, 0x0000000000000000)[*]
+== of_address 16
+  v: &(0x0000000000000000, 0x0000000000000010)[*]
+  ty: (TExtension TThinPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000000 #x0000000000000010) #x0000000000000000 #x0000000000000001)  decls=[|@thin-ptr<64>|]
+  learn vs concrete: Some -> &(0x0000000000000000, 0x0000000000000010)[*]
+  learn vs symbolic: Some -> &(0x0000000000000000, 0x0000000000000010)[*]
+== null_loc ptr
+  v: &(0x0000000000000000, 0x0000000000000008)[*]
+  ty: (TExtension TThinPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000000 #x0000000000000008) #x0000000000000020 #x0000000000000004)  decls=[|@thin-ptr<64>|]
+  learn vs concrete: Some -> &(0x0000000000000000, 0x0000000000000008)[*]
+  learn vs symbolic: Some -> &(0x0000000000000000, 0x0000000000000008)[*]
+== symbolic ofs
+  v: &(0x0000000000000003, V|33|)[‖2‖]
+  ty: (TExtension TThinPtr)
+  vars: |33|:(TBitVector 64)
+  cost: 100000
+  eval: =
+  evalf: =
+  subst: &(0x0000000000000003, 0xfffffffffffffffe)[‖2‖]
+  smt: (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000003 |33|) #x0000000000000020 #x0000000000000004)  decls=[|@thin-ptr<64>|]
+  loc: 0x0000000000000003
+  ofs: V|33|
+  decompose: 0x0000000000000003 , V|33|
+  size_of: 0x0000000000000020
+  align_of: 0x0000000000000004
+  allocation_info: 0x0000000000000020 , 0x0000000000000004
+  tag_of: Some ‖2‖
+  is_null: false
+  is_at_null_loc: false
+  has_provenance: true
+  in_bound: (V|33| <u 0x0000000000000020)
+  as_id: 0x0000000000000003
+  add_ofs 4: &(0x0000000000000003, (0x0000000000000004 + V|33|))[‖2‖]
+  set_ofs 12: &(0x0000000000000003, 0x000000000000000c)[‖2‖]
+  with_tag zero: &(0x0000000000000003, V|33|)[‖0‖]
+  with_tag none: &(0x0000000000000003, V|33|)[*]
+  same_prov self: true
+  of_ptr_t: Ptr(&(0x0000000000000003, V|33|)[‖2‖], ())
+  cast_ptr_t: &(0x0000000000000003, V|33|)[‖2‖]
+  cast_ptr_f (wrong kind): EXN Cast error: expected (TExtension TFullPtr), got (TExtension TThinPtr) for value &(0x0000000000000003, V|33|)[‖2‖]
+  learn vs concrete: None
+  learn vs symbolic: None
+== symbolic loc
+  v: &(V|32|, 0x0000000000000008)[*]
+  ty: (TExtension TThinPtr)
+  vars: |32|:(TBitVector 64)
+  cost: 100000
+  eval: &(0xffffffffffffff80, 0x0000000000000008)[*]
+  evalf: &(0xffffffffffffff80, 0x0000000000000008)[*]
+  subst: &(V|100032|, 0x0000000000000008)[*]
+  smt: (|@mk-thin-ptr<64>| (|@mk-ptr<64>| |32| #x0000000000000008) #x0000000000000020 #x0000000000000004)  decls=[|@thin-ptr<64>|]
+  learn vs concrete: None
+  learn vs symbolic: None
+== symbolic size+align
+  v: &(0x0000000000000003, 0x0000000000000008)[*]
+  ty: (TExtension TThinPtr)
+  vars: |31|:(TBitVector 64) |30|:(TBitVector 64)
+  cost: 100000
+  eval: &(0x0000000000000003, 0x0000000000000008)[*]
+  evalf: &(0x0000000000000003, 0x0000000000000008)[*]
+  subst: &(0x0000000000000003, 0x0000000000000008)[*]
+  smt: (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000003 #x0000000000000008) |31| |30|)  decls=[|@thin-ptr<64>|]
+  learn vs concrete: None
+  learn vs symbolic: None
+== var
+  v: V|29|
+  ty: (TExtension TThinPtr)
+  vars: |29|:(TExtension TThinPtr)
+  cost: 3
+  eval: =
+  evalf: =
+  subst: V|100029|
+  smt: |29|  decls=[]
+  loc: loc(V|29|.ptr)
+  ofs: ofs(V|29|.ptr)
+  decompose: loc(V|29|.ptr) , ofs(V|29|.ptr)
+  size_of: V|29|.size
+  align_of: V|29|.align
+  allocation_info: V|29|.size , V|29|.align
+  tag_of: None
+  is_null: (&(0x0000000000000000, 0x0000000000000000) == V|29|.ptr)
+  is_at_null_loc: (0x0000000000000000 == loc(V|29|.ptr))
+  has_provenance: (0x0000000000000000 != loc(V|29|.ptr))
+  in_bound: (ofs(V|29|.ptr) <u V|29|.size)
+  as_id: loc(V|29|.ptr)
+  add_ofs 4: &(loc(V|29|.ptr), (0x0000000000000004 + ofs(V|29|.ptr)))[*]
+  set_ofs 12: &(loc(V|29|.ptr), 0x000000000000000c)[*]
+  with_tag zero: V|29|.ptr[‖0‖]
+  with_tag none: V|29|.ptr[*]
+  same_prov self: true
+  of_ptr_t: Ptr(V|29|, ())
+  cast_ptr_t: V|29|
+  cast_ptr_f (wrong kind): EXN Cast error: expected (TExtension TFullPtr), got (TExtension TThinPtr) for value V|29|
+  learn vs concrete: Some -> &(0x0000000000000001, 0x0000000000000000)[*]
+  learn vs symbolic: Some -> V|44|
+== var + 4
+  v: &(loc(V|28|.ptr), (0x0000000000000004 + ofs(V|28|.ptr)))[*]
+  ty: (TExtension TThinPtr)
+  vars: |28|:(TExtension TThinPtr) |28|:(TExtension TThinPtr) |28|:(TExtension TThinPtr) |28|:(TExtension TThinPtr)
+  cost: 100000
+  eval: &(0x0000000000000000, 0x0000000000000008)[*]
+  evalf: &(0x0000000000000000, 0x0000000000000008)[*]
+  subst: &(loc(V|100028|.ptr), (0x0000000000000004 + ofs(V|100028|.ptr)))[*]
+  smt: (|@mk-thin-ptr<64>| (|@mk-ptr<64>| (|@ptr<64>.loc| (|@thin-ptr<64>.ptr| |28|)) (bvadd #x0000000000000004 (|@ptr<64>.ofs| (|@thin-ptr<64>.ptr| |28|)))) (|@thin-ptr<64>.size| |28|) (|@thin-ptr<64>.align| |28|))  decls=[|@thin-ptr<64>|,|@thin-ptr<64>|,|@thin-ptr<64>|,|@thin-ptr<64>|,|@thin-ptr<64>|]
+  learn vs concrete: None
+  learn vs symbolic: None
+== tagged + 4 + 4
+  v: &(0x0000000000000003, 0x0000000000000010)[‖2‖]
+  ty: (TExtension TThinPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000003 #x0000000000000010) #x0000000000000020 #x0000000000000004)  decls=[|@thin-ptr<64>|]
+  learn vs concrete: Some -> &(0x0000000000000003, 0x0000000000000010)[‖2‖]
+  learn vs symbolic: Some -> &(0x0000000000000003, 0x0000000000000010)[‖2‖]
+== of_raw
+  v: &(0x0000000000000000, 0x0000000000000000)[‖3‖]
+  ty: (TExtension TThinPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000000 #x0000000000000000) #x0000000000000001 #x0000000000000001)  decls=[|@thin-ptr<64>|]
+  loc: 0x0000000000000000
+  ofs: 0x0000000000000000
+  decompose: 0x0000000000000000 , 0x0000000000000000
+  size_of: 0x0000000000000001
+  align_of: 0x0000000000000001
+  allocation_info: 0x0000000000000001 , 0x0000000000000001
+  tag_of: Some ‖3‖
+  is_null: true
+  is_at_null_loc: true
+  has_provenance: false
+  in_bound: true
+  as_id: 0x0000000000000000
+  add_ofs 4: &(0x0000000000000000, 0x0000000000000004)[‖3‖]
+  set_ofs 12: &(0x0000000000000000, 0x000000000000000c)[‖3‖]
+  with_tag zero: &(0x0000000000000000, 0x0000000000000000)[‖0‖]
+  with_tag none: &(0x0000000000000000, 0x0000000000000000)[*]
+  same_prov self: true
+  of_ptr_t: Ptr(&(0x0000000000000000, 0x0000000000000000)[‖3‖], ())
+  cast_ptr_t: &(0x0000000000000000, 0x0000000000000000)[‖3‖]
+  cast_ptr_f (wrong kind): EXN Cast error: expected (TExtension TFullPtr), got (TExtension TThinPtr) for value &(0x0000000000000000, 0x0000000000000000)[‖3‖]
+  learn vs concrete: Some -> &(0x0000000000000000, 0x0000000000000000)[‖3‖]
+  learn vs symbolic: Some -> &(0x0000000000000000, 0x0000000000000000)[‖3‖]
+  same object twice: true
+  same object different tag: false
+  equal tag A / tag A: true
+  equal tag A / tag B: false
+  equal none / tag zero: false
+  sem_eq tag A / tag B: (&(0x0000000000000003, 0x0000000000000008)[‖2‖] == &(0x0000000000000003, 0x0000000000000008)[‖3‖])
+  sem_eq none / tag A: (&(0x0000000000000003, 0x0000000000000008)[‖2‖] == &(0x0000000000000003, 0x0000000000000008)[*])
+  sem_eq var / var: true
+  sem_eq var / conc: (&(0x0000000000000003, 0x0000000000000008)[*] == V|49|)
+  ite b p q: ((0x00 == V|50|) ? &(0x0000000000000003, 0x0000000000000008)[*] : &(0x0000000000000003, 0x0000000000000008)[‖2‖])
+
+##### full pointers and metadata
+== full, unit meta
+  v: Ptr(&(0x0000000000000002, 0x0000000000000000)[‖13‖], ())
+  ty: (TExtension TFullPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-full-ptr<64>| (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000002 #x0000000000000000) #x0000000000000018 #x0000000000000008) |@ptr-meta<64>::none|)  decls=[|@thin-ptr<64>|,|@thin-ptr<64>|,|@ptr-meta<64>|,|@full-ptr<64>|,|@thin-ptr<64>|]
+  ptr_of: &(0x0000000000000002, 0x0000000000000000)[‖13‖]
+  len_meta: EXN Failure ptr_meta_as: expected len but got unit
+  vtable_meta: EXN Failure ptr_meta_as: expected vtable but got unit
+  with_ptr null: Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ())
+  with_ptr self: Ptr(&(0x0000000000000002, 0x0000000000000000)[‖13‖], ())
+  cast_ptr_f: Ptr(&(0x0000000000000002, 0x0000000000000000)[‖13‖], ())
+  cast_ptr_t (wrong kind): EXN Cast error: expected (TExtension TThinPtr), got (TExtension TFullPtr) for value Ptr(&(0x0000000000000002, 0x0000000000000000)[‖13‖], ())
+  learn vs concrete: Some -> Ptr(&(0x0000000000000002, 0x0000000000000000)[‖13‖], ())
+  learn vs symbolic: Some -> Ptr(&(0x0000000000000002, 0x0000000000000000)[‖13‖], ())
+== full, unit meta (no tag)
+  v: Ptr(&(0x0000000000000002, 0x0000000000000000)[*], ())
+  ty: (TExtension TFullPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-full-ptr<64>| (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000002 #x0000000000000000) #x0000000000000018 #x0000000000000008) |@ptr-meta<64>::none|)  decls=[|@full-ptr<64>|,|@thin-ptr<64>|]
+  learn vs concrete: Some -> Ptr(&(0x0000000000000002, 0x0000000000000000)[*], ())
+  learn vs symbolic: Some -> Ptr(&(0x0000000000000002, 0x0000000000000000)[*], ())
+== full, len 3
+  v: Ptr(&(0x0000000000000002, 0x0000000000000000)[‖13‖], len(0x0000000000000003))
+  ty: (TExtension TFullPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-full-ptr<64>| (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000002 #x0000000000000000) #x0000000000000018 #x0000000000000008) (|@ptr-meta<64>::int| #x0000000000000003))  decls=[|@full-ptr<64>|,|@thin-ptr<64>|]
+  learn vs concrete: Some -> Ptr(&(0x0000000000000002, 0x0000000000000000)[‖13‖], len(0x0000000000000003))
+  learn vs symbolic: Some -> Ptr(&(0x0000000000000002, 0x0000000000000000)[‖13‖], len(0x0000000000000003))
+== full, len symbolic
+  v: Ptr(&(0x0000000000000002, 0x0000000000000000)[*], len(V|55|))
+  ty: (TExtension TFullPtr)
+  vars: |55|:(TBitVector 64)
+  cost: 100000
+  eval: =
+  evalf: =
+  subst: Ptr(&(0x0000000000000002, 0x0000000000000000)[*], len(V|100055|))
+  smt: (|@mk-full-ptr<64>| (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000002 #x0000000000000000) #x0000000000000018 #x0000000000000008) (|@ptr-meta<64>::int| |55|))  decls=[|@full-ptr<64>|,|@thin-ptr<64>|]
+  ptr_of: &(0x0000000000000002, 0x0000000000000000)[*]
+  len_meta: V|55|
+  vtable_meta: EXN Failure ptr_meta_as: expected vtable but got len
+  with_ptr null: Ptr(&(0x0000000000000000, 0x0000000000000000)[*], len(V|55|))
+  with_ptr self: Ptr(&(0x0000000000000002, 0x0000000000000000)[*], len(V|55|))
+  cast_ptr_f: Ptr(&(0x0000000000000002, 0x0000000000000000)[*], len(V|55|))
+  cast_ptr_t (wrong kind): EXN Cast error: expected (TExtension TThinPtr), got (TExtension TFullPtr) for value Ptr(&(0x0000000000000002, 0x0000000000000000)[*], len(V|55|))
+  learn vs concrete: None
+  learn vs symbolic: None
+== full, vtable
+  v: Ptr(&(0x0000000000000002, 0x0000000000000000)[‖13‖], vtable(&(0x0000000000000002, 0x0000000000000000)[*]))
+  ty: (TExtension TFullPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-full-ptr<64>| (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000002 #x0000000000000000) #x0000000000000018 #x0000000000000008) (|@ptr-meta<64>::ptr| (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000002 #x0000000000000000) #x0000000000000018 #x0000000000000008)))  decls=[|@full-ptr<64>|,|@thin-ptr<64>|,|@thin-ptr<64>|]
+  learn vs concrete: Some -> Ptr(&(0x0000000000000002, 0x0000000000000000)[‖13‖], vtable(&(0x0000000000000002, 0x0000000000000000)[*]))
+  learn vs symbolic: Some -> Ptr(&(0x0000000000000002, 0x0000000000000000)[‖13‖], vtable(&(0x0000000000000002, 0x0000000000000000)[*]))
+== full, vtable symbolic
+  v: Ptr(&(0x0000000000000002, 0x0000000000000000)[‖13‖], vtable(V|54|))
+  ty: (TExtension TFullPtr)
+  vars: |54|:(TExtension TThinPtr)
+  cost: 100000
+  eval: Ptr(&(0x0000000000000002, 0x0000000000000000)[‖13‖], vtable(&(0x0000000000000002, 0x0000000000000000)[*]))
+  evalf: Ptr(&(0x0000000000000002, 0x0000000000000000)[‖13‖], vtable(&(0x0000000000000002, 0x0000000000000000)[*]))
+  subst: Ptr(&(0x0000000000000002, 0x0000000000000000)[‖13‖], vtable(&(0x0000000000000002, 0x0000000000000000)[*]))
+  smt: (|@mk-full-ptr<64>| (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000002 #x0000000000000000) #x0000000000000018 #x0000000000000008) (|@ptr-meta<64>::ptr| |54|))  decls=[|@full-ptr<64>|,|@thin-ptr<64>|]
+  learn vs concrete: None
+  learn vs symbolic: None
+== full opt None
+  v: Ptr(&(0x0000000000000002, 0x0000000000000000)[‖13‖], ())
+  ty: (TExtension TFullPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-full-ptr<64>| (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000002 #x0000000000000000) #x0000000000000018 #x0000000000000008) |@ptr-meta<64>::none|)  decls=[|@full-ptr<64>|,|@thin-ptr<64>|]
+  ptr_of: &(0x0000000000000002, 0x0000000000000000)[‖13‖]
+  len_meta: EXN Failure ptr_meta_as: expected len but got unit
+  vtable_meta: EXN Failure ptr_meta_as: expected vtable but got unit
+  with_ptr null: Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ())
+  with_ptr self: Ptr(&(0x0000000000000002, 0x0000000000000000)[‖13‖], ())
+  cast_ptr_f: Ptr(&(0x0000000000000002, 0x0000000000000000)[‖13‖], ())
+  cast_ptr_t (wrong kind): EXN Cast error: expected (TExtension TThinPtr), got (TExtension TFullPtr) for value Ptr(&(0x0000000000000002, 0x0000000000000000)[‖13‖], ())
+  learn vs concrete: Some -> Ptr(&(0x0000000000000002, 0x0000000000000000)[‖13‖], ())
+  learn vs symbolic: Some -> Ptr(&(0x0000000000000002, 0x0000000000000000)[‖13‖], ())
+== full opt Some len
+  v: Ptr(&(0x0000000000000002, 0x0000000000000000)[‖13‖], len(0x0000000000000003))
+  ty: (TExtension TFullPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-full-ptr<64>| (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000002 #x0000000000000000) #x0000000000000018 #x0000000000000008) (|@ptr-meta<64>::int| #x0000000000000003))  decls=[|@full-ptr<64>|,|@thin-ptr<64>|]
+  learn vs concrete: Some -> Ptr(&(0x0000000000000002, 0x0000000000000000)[‖13‖], len(0x0000000000000003))
+  learn vs symbolic: Some -> Ptr(&(0x0000000000000002, 0x0000000000000000)[‖13‖], len(0x0000000000000003))
+== full, symbolic thin, len
+  v: Ptr(V|53|, len(0x0000000000000003))
+  ty: (TExtension TFullPtr)
+  vars: |53|:(TExtension TThinPtr)
+  cost: 100000
+  eval: =
+  evalf: =
+  subst: Ptr(V|100053|, len(0x0000000000000003))
+  smt: (|@mk-full-ptr<64>| |53| (|@ptr-meta<64>::int| #x0000000000000003))  decls=[|@full-ptr<64>|]
+  learn vs concrete: None
+  learn vs symbolic: None
+== full var
+  v: V|52|
+  ty: (TExtension TFullPtr)
+  vars: |52|:(TExtension TFullPtr)
+  cost: 3
+  eval: Ptr(&(0x0000000000000000, 0x0000000000000008)[‖0‖], ())
+  evalf: Ptr(&(0x0000000000000000, 0x0000000000000008)[‖0‖], ())
+  subst: V|100052|
+  smt: |52|  decls=[]
+  ptr_of: thin(V|52|)
+  len_meta: meta(V|52|).as<len>
+  vtable_meta: meta(V|52|).as<vtable>
+  with_ptr null: Ptr(&(0x0000000000000000, 0x0000000000000000)[*], meta(V|52|))
+  with_ptr self: Ptr(thin(V|52|), meta(V|52|))
+  cast_ptr_f: V|52|
+  cast_ptr_t (wrong kind): EXN Cast error: expected (TExtension TThinPtr), got (TExtension TFullPtr) for value V|52|
+  learn vs concrete: Some -> Ptr(&(0x0000000000000002, 0x0000000000000008)[‖0‖], len(0x0000000000000000))
+  learn vs symbolic: Some -> V|65|
+== null_f
+  v: Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ())
+  ty: (TExtension TFullPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-full-ptr<64>| (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000000 #x0000000000000000) #x0000000000000000 #x0000000000000001) |@ptr-meta<64>::none|)  decls=[|@full-ptr<64>|,|@thin-ptr<64>|]
+  learn vs concrete: Some -> Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ())
+  learn vs symbolic: Some -> Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ())
+== of_address_f 32
+  v: Ptr(&(0x0000000000000000, 0x0000000000000020)[*], ())
+  ty: (TExtension TFullPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-full-ptr<64>| (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000000 #x0000000000000020) #x0000000000000000 #x0000000000000001) |@ptr-meta<64>::none|)  decls=[|@full-ptr<64>|,|@thin-ptr<64>|]
+  learn vs concrete: Some -> Ptr(&(0x0000000000000000, 0x0000000000000020)[*], ())
+  learn vs symbolic: Some -> Ptr(&(0x0000000000000000, 0x0000000000000020)[*], ())
+== with_ptr (len 3) null
+  v: Ptr(&(0x0000000000000000, 0x0000000000000000)[*], len(0x0000000000000003))
+  ty: (TExtension TFullPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-full-ptr<64>| (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000000 #x0000000000000000) #x0000000000000000 #x0000000000000001) (|@ptr-meta<64>::int| #x0000000000000003))  decls=[|@full-ptr<64>|,|@thin-ptr<64>|]
+  ptr_of: &(0x0000000000000000, 0x0000000000000000)[*]
+  len_meta: 0x0000000000000003
+  vtable_meta: EXN Failure ptr_meta_as: expected vtable but got len
+  with_ptr null: Ptr(&(0x0000000000000000, 0x0000000000000000)[*], len(0x0000000000000003))
+  with_ptr self: Ptr(&(0x0000000000000000, 0x0000000000000000)[*], len(0x0000000000000003))
+  cast_ptr_f: Ptr(&(0x0000000000000000, 0x0000000000000000)[*], len(0x0000000000000003))
+  cast_ptr_t (wrong kind): EXN Cast error: expected (TExtension TThinPtr), got (TExtension TFullPtr) for value Ptr(&(0x0000000000000000, 0x0000000000000000)[*], len(0x0000000000000003))
+  learn vs concrete: Some -> Ptr(&(0x0000000000000000, 0x0000000000000000)[*], len(0x0000000000000003))
+  learn vs symbolic: Some -> Ptr(&(0x0000000000000000, 0x0000000000000000)[*], len(0x0000000000000003))
+== with_ptr var thin
+  v: Ptr(&(0x0000000000000002, 0x0000000000000000)[‖13‖], meta(V|51|))
+  ty: (TExtension TFullPtr)
+  vars: |51|:(TExtension TFullPtr)
+  cost: 100000
+  eval: =
+  evalf: =
+  subst: Ptr(&(0x0000000000000002, 0x0000000000000000)[‖13‖], ())
+  smt: (|@mk-full-ptr<64>| (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000002 #x0000000000000000) #x0000000000000018 #x0000000000000008) (|@full-ptr<64>.meta| |51|))  decls=[|@full-ptr<64>|,|@ptr-meta<64>|,|@thin-ptr<64>|]
+  learn vs concrete: None
+  learn vs symbolic: None
+  unit: len_meta: EXN Failure ptr_meta_as: expected len but got unit
+  unit: vtable_meta: EXN Failure ptr_meta_as: expected vtable but got unit
+  len: len_meta: 0x0000000000000003
+  len: vtable_meta: EXN Failure ptr_meta_as: expected vtable but got len
+  vtable: len_meta: EXN Failure ptr_meta_as: expected len but got vtable
+  vtable: vtable_meta: &(0x0000000000000002, 0x0000000000000000)[*]
+  mk_ptr_f with bool meta (invalid): Ptr(&(0x0000000000000002, 0x0000000000000000)[‖13‖], len(V|70|))
+  mk_ptr_f len 8-bit meta: Ptr(&(0x0000000000000002, 0x0000000000000000)[‖13‖], len(0x03))
+  mk_ptr_f_opt on symbolic with meta var: Ptr(V|72|, vtable(V|71|))
+  same object twice: true
+  sem_eq len3 / len4: (Ptr(&(0x0000000000000002, 0x0000000000000000)[‖13‖], len(0x0000000000000003)) == Ptr(&(0x0000000000000002, 0x0000000000000000)[‖13‖], len(0x0000000000000004)))
+
+##### tuples
+== unit
+  v: ()
+  ty: (TExtension [])
+  cost: 100000
+  evalf: =
+  smt: |@mk-tuple<>|  decls=[|@tuple<>|]
+  as_tuple: []
+  field_of 0 (out of range): EXN Failure nth
+  set_field -1 (out of range): EXN Invalid_argument List.update_at
+  as_tuple1 (wrong arity): EXN Cast error: expected (TExtension [(TBitVector 1)]), got (TExtension []) for value ()
+  cast_tuple: ()
+  cast_array (wrong kind): EXN Cast error: expected (TExtension [(TBitVector 1); 0]), got (TExtension []) for value ()
+  learn vs concrete: Some -> ()
+  learn vs symbolic: Some -> ()
+== (u32)
+  v: (0x00000001)
+  ty: (TExtension [(TBitVector 32)])
+  cost: 100000
+  evalf: =
+  smt: (|@mk-tuple<(_ BitVec 32)>| #x00000001)  decls=[|@tuple<(_ BitVec 32)>|]
+  as_tuple: [0x00000001]
+  field_of 0: 0x00000001
+  set_field 0: (0x00000007)
+  update_field 0 (fun x -> x): (0x00000001)
+  field_of 1 (out of range): EXN Failure nth
+  set_field -1 (out of range): EXN Invalid_argument List.update_at
+  as_tuple1: 0x00000001
+  cast_tuple: (0x00000001)
+  cast_array (wrong kind): EXN Cast error: expected (TExtension [(TBitVector 1); 0]), got (TExtension [(TBitVector 32)]) for value (0x00000001)
+  learn vs concrete: Some -> (0x00000001)
+  learn vs symbolic: Some -> (0x00000001)
+== (u8, u32, usize)
+  v: (0x01, 0x00000002, 0x0000000000000003)
+  ty: (TExtension [(TBitVector 8); (TBitVector 32); (TBitVector 64)])
+  cost: 100000
+  evalf: =
+  smt: (|@mk-tuple<(_ BitVec 8), (_ BitVec 32), (_ BitVec 64)>| #x01 #x00000002 #x0000000000000003)  decls=[|@tuple<(_ BitVec 8), (_ BitVec 32), (_ BitVec 64)>|]
+  as_tuple: [0x01; 0x00000002; 0x0000000000000003]
+  field_of 0: 0x01
+  set_field 0: (0x40, 0x00000002, 0x0000000000000003)
+  update_field 0 (fun x -> x): (0x01, 0x00000002, 0x0000000000000003)
+  field_of 1: 0x00000002
+  set_field 1: (0x01, 0x00000000, 0x0000000000000003)
+  field_of 2: 0x0000000000000003
+  set_field 2: (0x01, 0x00000002, 0x00000000000f4240)
+  field_of 3 (out of range): EXN Failure nth
+  set_field -1 (out of range): EXN Invalid_argument List.update_at
+  as_tuple3: 0x01 , 0x00000002 , 0x0000000000000003
+  cast_tuple: (0x01, 0x00000002, 0x0000000000000003)
+  cast_array (wrong kind): EXN Cast error: expected (TExtension [(TBitVector 1); 0]), got (TExtension [(TBitVector 8); (TBitVector 32); (TBitVector 64)]) for value (0x01, 0x00000002, 0x0000000000000003)
+  learn vs concrete: Some -> (0x01, 0x00000002, 0x0000000000000003)
+  learn vs symbolic: Some -> (0x01, 0x00000002, 0x0000000000000003)
+== (u32, f32, thin)
+  v: (0x00000009, 1.5f, &(0x0000000000000000, 0x0000000000000000)[*])
+  ty: (TExtension [(TBitVector 32); (TFloat F32); (TExtension TThinPtr)])
+  cost: 100000
+  evalf: =
+  smt: (|@mk-tuple<(_ BitVec 32), Float32, !@thin-ptr<64>!>| #x00000009 ((_ to_fp 8 24) #x3fc00000) (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000000 #x0000000000000000) #x0000000000000000 #x0000000000000001))  decls=[|@thin-ptr<64>|,|@tuple<(_ BitVec 32), Float32, !@thin-ptr<64>!>|,|@thin-ptr<64>|]
+  as_tuple: [0x00000009; 1.5f; &(0x0000000000000000, 0x0000000000000000)[*]]
+  field_of 0: 0x00000009
+  set_field 0: (0x0000007f, 1.5f, &(0x0000000000000000, 0x0000000000000000)[*])
+  update_field 0 (fun x -> x): (0x00000009, 1.5f, &(0x0000000000000000, 0x0000000000000000)[*])
+  field_of 1: 1.5f
+  set_field 1: (0x00000009, 0f, &(0x0000000000000000, 0x0000000000000000)[*])
+  field_of 2: &(0x0000000000000000, 0x0000000000000000)[*]
+  set_field 2: (0x00000009, 1.5f, &(0x0000000000000001, 0x0000000000000000)[‖0‖])
+  field_of 3 (out of range): EXN Failure nth
+  set_field -1 (out of range): EXN Invalid_argument List.update_at
+  as_tuple3: 0x00000009 , 1.5f , &(0x0000000000000000, 0x0000000000000000)[*]
+  cast_tuple: (0x00000009, 1.5f, &(0x0000000000000000, 0x0000000000000000)[*])
+  cast_array (wrong kind): EXN Cast error: expected (TExtension [(TBitVector 1); 0]), got (TExtension [(TBitVector 32); (TFloat F32); (TExtension TThinPtr)]) for value (0x00000009, 1.5f, &(0x0000000000000000, 0x0000000000000000)[*])
+  learn vs concrete: Some -> (0x00000009, 1.5f, &(0x0000000000000000, 0x0000000000000000)[*])
+  learn vs symbolic: Some -> (0x00000009, 1.5f, &(0x0000000000000000, 0x0000000000000000)[*])
+== (full, f64, bool)
+  v: (Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()), -2.25f, 0x01)
+  ty: (TExtension [(TExtension TFullPtr); (TFloat F64); (TBitVector 8)])
+  cost: 100000
+  evalf: =
+  smt: (|@mk-tuple<!@full-ptr<64>!, Float64, (_ BitVec 8)>| (|@mk-full-ptr<64>| (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000000 #x0000000000000000) #x0000000000000000 #x0000000000000001) |@ptr-meta<64>::none|) ((_ to_fp 11 53) #xc002000000000000) #x01)  decls=[|@full-ptr<64>|,|@tuple<!@full-ptr<64>!, Float64, (_ BitVec 8)>|,|@full-ptr<64>|,|@thin-ptr<64>|]
+  as_tuple: [Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()); -2.25f; 0x01]
+  field_of 0: Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ())
+  set_field 0: (Ptr(&(0x0000000000000000, 0x0000000000000004)[‖29‖], ()), -2.25f, 0x01)
+  update_field 0 (fun x -> x): (Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()), -2.25f, 0x01)
+  field_of 1: -2.25f
+  set_field 1: (Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()), 1f, 0x01)
+  field_of 2: 0x01
+  set_field 2: (Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()), -2.25f, 0x64)
+  field_of 3 (out of range): EXN Failure nth
+  set_field -1 (out of range): EXN Invalid_argument List.update_at
+  as_tuple3: Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()) , -2.25f , 0x01
+  cast_tuple: (Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()), -2.25f, 0x01)
+  cast_array (wrong kind): EXN Cast error: expected (TExtension [(TBitVector 1); 0]), got (TExtension [(TExtension TFullPtr); (TFloat F64); (TBitVector 8)]) for value (Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()), -2.25f, 0x01)
+  learn vs concrete: Some -> (Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()), -2.25f, 0x01)
+  learn vs symbolic: Some -> (Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()), -2.25f, 0x01)
+== ((u8,u8),(u32,(f32,full)))
+  v: ((0x01, 0x02), (0x00000003, (0.5f, Ptr(&(0x0000000000000000, 0x0000000000000008)[*], ()))))
+  ty: (TExtension [(TExtension [(TBitVector 8); (TBitVector 8)]); (TExtension [(TBitVector 32); (TExtension [(TFloat F32); (TExtension TFullPtr)])])])
+  cost: 100000
+  evalf: =
+  smt: (|@mk-tuple<!@tuple<(_ BitVec 8), (_ BitVec 8)>!, !@tuple<(_ BitVec 32), !@tuple<Float32, !@full-ptr<64>!>!>!>| (|@mk-tuple<(_ BitVec 8), (_ BitVec 8)>| #x01 #x02) (|@mk-tuple<(_ BitVec 32), !@tuple<Float32, !@full-ptr<64>!>!>| #x00000003 (|@mk-tuple<Float32, !@full-ptr<64>!>| ((_ to_fp 8 24) #x3f000000) (|@mk-full-ptr<64>| (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000000 #x0000000000000008) #x0000000000000000 #x0000000000000001) |@ptr-meta<64>::none|))))  decls=[|@tuple<(_ BitVec 8), (_ BitVec 8)>|,|@full-ptr<64>|,|@tuple<Float32, !@full-ptr<64>!>|,|@tuple<(_ BitVec 32), !@tuple<Float32, !@full-ptr<64>!>!>|,|@tuple<!@tuple<(_ BitVec 8), (_ BitVec 8)>!, !@tuple<(_ BitVec 32), !@tuple<Float32, !@full-ptr<64>!>!>!>|,|@tuple<(_ BitVec 8), (_ BitVec 8)>|,|@full-ptr<64>|,|@tuple<Float32, !@full-ptr<64>!>|,|@tuple<(_ BitVec 32), !@tuple<Float32, !@full-ptr<64>!>!>|,|@full-ptr<64>|,|@tuple<Float32, !@full-ptr<64>!>|,|@full-ptr<64>|,|@thin-ptr<64>|]
+  as_tuple: [(0x01, 0x02); (0x00000003, (0.5f, Ptr(&(0x0000000000000000, 0x0000000000000008)[*], ())))]
+  field_of 0: (0x01, 0x02)
+  set_field 0: ((0x7f, 0xfe), (0x00000003, (0.5f, Ptr(&(0x0000000000000000, 0x0000000000000008)[*], ()))))
+  update_field 0 (fun x -> x): ((0x01, 0x02), (0x00000003, (0.5f, Ptr(&(0x0000000000000000, 0x0000000000000008)[*], ()))))
+  field_of 1: (0x00000003, (0.5f, Ptr(&(0x0000000000000000, 0x0000000000000008)[*], ())))
+  set_field 1: ((0x01, 0x02), (0x0000007f, (-0.5f, Ptr(&(0x0000000000000002, 0x0000000000000000)[‖0‖], ()))))
+  field_of 2 (out of range): EXN Failure nth
+  set_field -1 (out of range): EXN Invalid_argument List.update_at
+  as_tuple2: (0x01, 0x02) , (0x00000003, (0.5f, Ptr(&(0x0000000000000000, 0x0000000000000008)[*], ())))
+  cast_tuple: ((0x01, 0x02), (0x00000003, (0.5f, Ptr(&(0x0000000000000000, 0x0000000000000008)[*], ()))))
+  cast_array (wrong kind): EXN Cast error: expected (TExtension [(TBitVector 1); 0]), got (TExtension [(TExtension [(TBitVector 8); (TBitVector 8)]); (TExtension [(TBitVector 32); (TExtension [( TFloat F32); (TExtension TFullPtr)])])]) for value ((0x01, 0x02), (0x00000003, (0.5f, Ptr(&(0x0000000000000000, 0x0000000000000008)[*], ()))))
+  learn vs concrete: Some -> ((0x01, 0x02), (0x00000003, (0.5f, Ptr(&(0x0000000000000000, 0x0000000000000008)[*], ()))))
+  learn vs symbolic: Some -> ((0x01, 0x02), (0x00000003, (0.5f, Ptr(&(0x0000000000000000, 0x0000000000000008)[*], ()))))
+== (var, var + 1)
+  v: (V|73|, (0x00000001 + V|73|))
+  ty: (TExtension [(TBitVector 32); (TBitVector 32)])
+  vars: |73|:(TBitVector 32) |73|:(TBitVector 32)
+  cost: 100000
+  eval: =
+  evalf: =
+  subst: (V|100073|, (0x00000001 + V|100073|))
+  smt: (|@mk-tuple<(_ BitVec 32), (_ BitVec 32)>| |73| (bvadd #x00000001 |73|))  decls=[|@tuple<(_ BitVec 32), (_ BitVec 32)>|]
+  as_tuple: [V|73|; (0x00000001 + V|73|)]
+  field_of 0: V|73|
+  set_field 0: (0xffffffff, (0x00000001 + V|73|))
+  update_field 0 (fun x -> x): (V|73|, (0x00000001 + V|73|))
+  field_of 1: (0x00000001 + V|73|)
+  set_field 1: (V|73|, 0x000000ff)
+  field_of 2 (out of range): EXN Failure nth
+  set_field -1 (out of range): EXN Invalid_argument List.update_at
+  as_tuple2: V|73| , (0x00000001 + V|73|)
+  cast_tuple: (V|73|, (0x00000001 + V|73|))
+  cast_array (wrong kind): EXN Cast error: expected (TExtension [(TBitVector 1); 0]), got (TExtension [(TBitVector 32); (TBitVector 32)]) for value (V|73|, (0x00000001 + V|73|))
+  learn vs concrete: Some -> (0x00000100, 0x00000101)
+  learn vs symbolic: Some -> (V|80|.0, (0x00000001 + V|80|.0))
+== (poly, u8)
+  v: (PolyVal(0), 0x01)
+  ty: (TExtension [(TExtension TPolyType); (TBitVector 8)])
+  cost: 100000
+  evalf: =
+  smt: EXN Failure Cannot encode type TPolyType to SMT-LIB
+  as_tuple: [PolyVal(0); 0x01]
+  field_of 0: PolyVal(0)
+  set_field 0: (PolyVal(0), 0x01)
+  update_field 0 (fun x -> x): (PolyVal(0), 0x01)
+  field_of 1: 0x01
+  set_field 1: (PolyVal(0), 0x80)
+  field_of 2 (out of range): EXN Failure nth
+  set_field -1 (out of range): EXN Invalid_argument List.update_at
+  as_tuple2: PolyVal(0) , 0x01
+  cast_tuple: (PolyVal(0), 0x01)
+  cast_array (wrong kind): EXN Cast error: expected (TExtension [(TBitVector 1); 0]), got (TExtension [(TExtension TPolyType); (TBitVector 8)]) for value (PolyVal(0), 0x01)
+  learn vs concrete: Some -> (PolyVal(0), 0x01)
+  learn vs symbolic: Some -> (PolyVal(0), 0x01)
+== var (u32)
+  v: V|82|
+  ty: (TExtension [(TBitVector 32)])
+  vars: |82|:(TExtension [(TBitVector 32)])
+  cost: 3
+  eval: (0x00000064)
+  evalf: (0x00000064)
+  subst: V|100082|
+  smt: |82|  decls=[]
+  as_tuple: [V|82|.0]
+  field_of 0: V|82|.0
+  set_field 0: (0x00000080)
+  update_field 0 (fun x -> x): (V|82|.0)
+  field_of 1 (out of range): EXN Failure nth
+  set_field -1 (out of range): EXN Invalid_argument List.update_at
+  as_tuple1: V|82|.0
+  cast_tuple: V|82|
+  cast_array (wrong kind): EXN Cast error: expected (TExtension [(TBitVector 1); 0]), got (TExtension [(TBitVector 32)]) for value V|82|
+  learn vs concrete: Some -> (0x00000100)
+  learn vs symbolic: Some -> V|83|
+== var (u8, u32, usize)
+  v: V|84|
+  ty: (TExtension [(TBitVector 8); (TBitVector 32); (TBitVector 64)])
+  vars: |84|:(TExtension [(TBitVector 8); (TBitVector 32); (TBitVector 64)])
+  cost: 3
+  eval: (0xff, 0x0000007f, 0x000000000000002a)
+  evalf: (0xff, 0x0000007f, 0x000000000000002a)
+  subst: (0xff, 0x0000007f, 0x000000000000002a)
+  smt: |84|  decls=[]
+  as_tuple: [V|84|.0; V|84|.1; V|84|.2]
+  field_of 0: V|84|.0
+  set_field 0: (0x2a, V|84|.1, V|84|.2)
+  update_field 0 (fun x -> x): (V|84|.0, V|84|.1, V|84|.2)
+  field_of 1: V|84|.1
+  set_field 1: (V|84|.0, 0x00000080, V|84|.2)
+  field_of 2: V|84|.2
+  set_field 2: (V|84|.0, V|84|.1, 0x0000000000000000)
+  field_of 3 (out of range): EXN Failure nth
+  set_field -1 (out of range): EXN Invalid_argument List.update_at
+  as_tuple3: V|84|.0 , V|84|.1 , V|84|.2
+  cast_tuple: V|84|
+  cast_array (wrong kind): EXN Cast error: expected (TExtension [(TBitVector 1); 0]), got (TExtension [(TBitVector 8); (TBitVector 32); (TBitVector 64)]) for value V|84|
+  learn vs concrete: Some -> (0xff, 0xfffffffe, 0x00000000000f4240)
+  learn vs symbolic: Some -> V|85|
+== var (f64, full)
+  v: V|86|
+  ty: (TExtension [(TFloat F64); (TExtension TFullPtr)])
+  vars: |86|:(TExtension [(TFloat F64); (TExtension TFullPtr)])
+  cost: 3
+  eval: (1f, Ptr(&(0x0000000000000003, 0x0000000000000008)[*], ()))
+  evalf: (1f, Ptr(&(0x0000000000000003, 0x0000000000000008)[*], ()))
+  subst: V|100086|
+  smt: |86|  decls=[]
+  as_tuple: [V|86|.0; V|86|.1]
+  field_of 0: V|86|.0
+  set_field 0: (1f, V|86|.1)
+  update_field 0 (fun x -> x): (V|86|.0, V|86|.1)
+  field_of 1: V|86|.1
+  set_field 1: (V|86|.0, Ptr(&(0x0000000000000004, 0x0000000000000000)[‖34‖], vtable(&(0x0000000000000004, 0x0000000000000004)[*])))
+  field_of 2 (out of range): EXN Failure nth
+  set_field -1 (out of range): EXN Invalid_argument List.update_at
+  as_tuple2: V|86|.0 , V|86|.1
+  cast_tuple: V|86|
+  cast_array (wrong kind): EXN Cast error: expected (TExtension [(TBitVector 1); 0]), got (TExtension [(TFloat F64); (TExtension TFullPtr)]) for value V|86|
+  learn vs concrete: Some -> (1f, Ptr(&(0x0000000000000003, 0x0000000000000008)[‖35‖], ()))
+  learn vs symbolic: Some -> V|87|
+== var ((u8,u8),(u32,u32))
+  v: V|88|
+  ty: (TExtension [(TExtension [(TBitVector 8); (TBitVector 8)]); (TExtension [(TBitVector 32); (TBitVector 32)])])
+  vars: |88|:(TExtension [(TExtension [(TBitVector 8); (TBitVector 8)]); (TExtension [(TBitVector 32); (TBitVector 32)])])
+  cost: 3
+  eval: ((0x40, 0x00), (0x0000ffff, 0x000f4240))
+  evalf: ((0x40, 0x00), (0x0000ffff, 0x000f4240))
+  subst: V|100088|
+  smt: |88|  decls=[]
+  as_tuple: [V|88|.0; V|88|.1]
+  field_of 0: V|88|.0
+  set_field 0: ((0x00, 0x2a), V|88|.1)
+  update_field 0 (fun x -> x): (V|88|.0, V|88|.1)
+  field_of 1: V|88|.1
+  set_field 1: (V|88|.0, (0xffffff80, 0x0000ffff))
+  field_of 2 (out of range): EXN Failure nth
+  set_field -1 (out of range): EXN Invalid_argument List.update_at
+  as_tuple2: V|88|.0 , V|88|.1
+  cast_tuple: V|88|
+  cast_array (wrong kind): EXN Cast error: expected (TExtension [(TBitVector 1); 0]), got (TExtension [(TExtension [(TBitVector 8); (TBitVector 8)]); (TExtension [(TBitVector 32); (TBitVector 32)])]) for value V|88|
+  learn vs concrete: Some -> ((0x00, 0x2a), (0x00000064, 0x00000007))
+  learn vs symbolic: Some -> V|89|
+== var (thin, thin)
+  v: V|90|
+  ty: (TExtension [(TExtension TThinPtr); (TExtension TThinPtr)])
+  vars: |90|:(TExtension [(TExtension TThinPtr); (TExtension TThinPtr)])
+  cost: 3
+  eval: (&(0x0000000000000004, 0x0000000000000004)[‖37‖], &(0x0000000000000000, 0x0000000000000008)[‖38‖])
+  evalf: (&(0x0000000000000004, 0x0000000000000004)[‖37‖], &(0x0000000000000000, 0x0000000000000008)[‖38‖])
+  subst: (&(0x0000000000000004, 0x0000000000000004)[‖37‖], &(0x0000000000000000, 0x0000000000000008)[‖38‖])
+  smt: |90|  decls=[]
+  as_tuple: [V|90|.0; V|90|.1]
+  field_of 0: V|90|.0
+  set_field 0: (&(0x0000000000000001, 0x0000000000000000)[‖0‖], V|90|.1)
+  update_field 0 (fun x -> x): (V|90|.0, V|90|.1)
+  field_of 1: V|90|.1
+  set_field 1: (V|90|.0, &(0x0000000000000004, 0x0000000000000008)[*])
+  field_of 2 (out of range): EXN Failure nth
+  set_field -1 (out of range): EXN Invalid_argument List.update_at
+  as_tuple2: V|90|.0 , V|90|.1
+  cast_tuple: V|90|
+  cast_array (wrong kind): EXN Cast error: expected (TExtension [(TBitVector 1); 0]), got (TExtension [(TExtension TThinPtr); (TExtension TThinPtr)]) for value V|90|
+  learn vs concrete: Some -> (&(0x0000000000000003, 0x0000000000000000)[*], &(0x0000000000000002, 0x0000000000000008)[‖0‖])
+  learn vs symbolic: Some -> V|91|
+== var ()
+  v: V|92|
+  ty: (TExtension [])
+  vars: |92|:(TExtension [])
+  cost: 3
+  eval: ()
+  evalf: ()
+  subst: V|100092|
+  smt: |92|  decls=[]
+  as_tuple: []
+  field_of 0 (out of range): EXN Failure nth
+  set_field -1 (out of range): EXN Invalid_argument List.update_at
+  as_tuple1 (wrong arity): EXN Cast error: expected (TExtension [(TBitVector 1)]), got (TExtension []) for value V|92|
+  cast_tuple: V|92|
+  cast_array (wrong kind): EXN Cast error: expected (TExtension [(TBitVector 1); 0]), got (TExtension []) for value V|92|
+  learn vs concrete: Some -> ()
+  learn vs symbolic: Some -> V|93|
+  mk_tuple of as_tuple is physically equal: true
+  mk_tuple of as_tuple of a variable: (V|94|.0, V|94|.1)
+  field_of 1 (set_field 1 y x): 0x05
+  field_of 0 (set_field 1 y x): V|94|.0
+  sem_eq tuples (conc): ((0x01, 0x02) == (0x01, 0x03))
+  sem_eq tuple vars: true
+  sem_eq tuple var / tuple: ((0x01, 0x02) == V|96|)
+  ite on tuples: ((0x00 == V|97|) ? (0x03, 0x04) : (0x01, 0x02))
+  field_of 0 (ite b t1 t2): ((0x00 == V|98|) ? (0x03, 0x04) : (0x01, 0x02)).0
+
+##### arrays
+== [] : u8
+  v: []
+  ty: (TExtension [(TBitVector 8); 0])
+  cost: 100000
+  evalf: =
+  smt: (as seq.empty (Seq (_ BitVec 8)))  decls=[]
+  as_array: []
+  array_field_of 0 (out of range): EXN Invalid_argument index out of bounds
+  set_array_field out of range: EXN Invalid_argument index out of bounds
+  update_array_field 0: EXN Invalid_argument index out of bounds
+  cast_array: []
+  cast_tuple: EXN Cast error: expected (TExtension []), got (TExtension [(TBitVector 8); 0]) for value []
+  learn vs concrete: Some -> []
+  learn vs symbolic: Some -> []
+== [1; 2; 3] : u8
+  v: [0x01, 0x02, 0x03]
+  ty: (TExtension [(TBitVector 8); 3])
+  cost: 100000
+  evalf: =
+  smt: (seq.++ (seq.unit #x01) (seq.unit #x02) (seq.unit #x03))  decls=[]
+  as_array: [0x01; 0x02; 0x03]
+  array_field_of 0: 0x01
+  set_array_field 0: [0x01, 0x02, 0x03]
+  array_field_of 1: 0x02
+  set_array_field 1: [0x01, 0x64, 0x03]
+  array_field_of 2: 0x03
+  set_array_field 2: [0x01, 0x02, 0x80]
+  array_field_of 3 (out of range): EXN Invalid_argument index out of bounds
+  set_array_field out of range: EXN Invalid_argument index out of bounds
+  update_array_field 0: [0x01, 0x02, 0x03]
+  cast_array: [0x01, 0x02, 0x03]
+  cast_tuple: EXN Cast error: expected (TExtension []), got (TExtension [(TBitVector 8); 3]) for value [0x01, 0x02, 0x03]
+  learn vs concrete: Some -> [0x01, 0x02, 0x03]
+  learn vs symbolic: Some -> [0x01, 0x02, 0x03]
+== [var; var+1] : u32
+  v: [V|101|, (0x00000001 + V|101|)]
+  ty: (TExtension [(TBitVector 32); 2])
+  vars: |101|:(TBitVector 32) |101|:(TBitVector 32)
+  cost: 100000
+  eval: =
+  evalf: =
+  subst: [V|100101|, (0x00000001 + V|100101|)]
+  smt: (seq.++ (seq.unit |101|) (seq.unit (bvadd #x00000001 |101|)))  decls=[]
+  as_array: [V|101|; (0x00000001 + V|101|)]
+  array_field_of 0: V|101|
+  set_array_field 0: [0x0000ffff, (0x00000001 + V|101|)]
+  array_field_of 1: (0x00000001 + V|101|)
+  set_array_field 1: [V|101|, 0x0000ffff]
+  array_field_of 2 (out of range): EXN Invalid_argument index out of bounds
+  set_array_field out of range: EXN Invalid_argument index out of bounds
+  update_array_field 0: [V|101|, (0x00000001 + V|101|)]
+  cast_array: [V|101|, (0x00000001 + V|101|)]
+  cast_tuple: EXN Cast error: expected (TExtension []), got (TExtension [(TBitVector 32); 2]) for value [V|101|, (0x00000001 + V|101|)]
+  learn vs concrete: None
+  learn vs symbolic: None
+== [(1,2.5); (3,4.5)]
+  v: [(0x00000001, 2.5f), (0x00000003, 4.5f)]
+  ty: (TExtension [(TExtension [(TBitVector 32); (TFloat F32)]); 2])
+  cost: 100000
+  evalf: =
+  smt: (seq.++ (seq.unit (|@mk-tuple<(_ BitVec 32), Float32>| #x00000001 ((_ to_fp 8 24) #x40200000))) (seq.unit (|@mk-tuple<(_ BitVec 32), Float32>| #x00000003 ((_ to_fp 8 24) #x40900000))))  decls=[|@tuple<(_ BitVec 32), Float32>|,|@tuple<(_ BitVec 32), Float32>|]
+  as_array: [(0x00000001, 2.5f); (0x00000003, 4.5f)]
+  array_field_of 0: (0x00000001, 2.5f)
+  set_array_field 0: [(0x0000002a, -0.5f), (0x00000003, 4.5f)]
+  array_field_of 1: (0x00000003, 4.5f)
+  set_array_field 1: [(0x00000001, 2.5f), (0x00000001, 1f)]
+  array_field_of 2 (out of range): EXN Invalid_argument index out of bounds
+  set_array_field out of range: EXN Invalid_argument index out of bounds
+  update_array_field 0: [(0x00000001, 2.5f), (0x00000003, 4.5f)]
+  cast_array: [(0x00000001, 2.5f), (0x00000003, 4.5f)]
+  cast_tuple: EXN Cast error: expected (TExtension []), got (TExtension [(TExtension [(TBitVector 32); (TFloat F32)]); 2]) for value [(0x00000001, 2.5f), (0x00000003, 4.5f)]
+  learn vs concrete: Some -> [(0x00000001, 2.5f), (0x00000003, 4.5f)]
+  learn vs symbolic: Some -> [(0x00000001, 2.5f), (0x00000003, 4.5f)]
+== [(var,var); (1, 2.5)]
+  v: [(V|100|, V|99|), (0x00000001, 2.5f)]
+  ty: (TExtension [(TExtension [(TBitVector 32); (TFloat F32)]); 2])
+  vars: |100|:(TBitVector 32) |99|:(TFloat F32)
+  cost: 100000
+  eval: [(0xffffff80, V|99|), (0x00000001, 2.5f)]
+  evalf: [(0xffffff80, V|99|), (0x00000001, 2.5f)]
+  subst: [(V|100100|, -0.5f), (0x00000001, 2.5f)]
+  smt: (seq.++ (seq.unit (|@mk-tuple<(_ BitVec 32), Float32>| |100| |99|)) (seq.unit (|@mk-tuple<(_ BitVec 32), Float32>| #x00000001 ((_ to_fp 8 24) #x40200000))))  decls=[|@tuple<(_ BitVec 32), Float32>|,|@tuple<(_ BitVec 32), Float32>|]
+  as_array: [(V|100|, V|99|); (0x00000001, 2.5f)]
+  array_field_of 0: (V|100|, V|99|)
+  set_array_field 0: [(0x00000000, 1.5f), (0x00000001, 2.5f)]
+  array_field_of 1: (0x00000001, 2.5f)
+  set_array_field 1: [(V|100|, V|99|), (0x0000ffff, -0.5f)]
+  array_field_of 2 (out of range): EXN Invalid_argument index out of bounds
+  set_array_field out of range: EXN Invalid_argument index out of bounds
+  update_array_field 0: [(V|100|, V|99|), (0x00000001, 2.5f)]
+  cast_array: [(V|100|, V|99|), (0x00000001, 2.5f)]
+  cast_tuple: EXN Cast error: expected (TExtension []), got (TExtension [(TExtension [(TBitVector 32); (TFloat F32)]); 2]) for value [(V|100|, V|99|), (0x00000001, 2.5f)]
+  learn vs concrete: None
+  learn vs symbolic: None
+== [full; full]
+  v: [Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()), Ptr(&(0x0000000000000000, 0x0000000000000004)[*], ())]
+  ty: (TExtension [(TExtension TFullPtr); 2])
+  cost: 100000
+  evalf: =
+  smt: (seq.++ (seq.unit (|@mk-full-ptr<64>| (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000000 #x0000000000000000) #x0000000000000000 #x0000000000000001) |@ptr-meta<64>::none|)) (seq.unit (|@mk-full-ptr<64>| (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000000 #x0000000000000004) #x0000000000000000 #x0000000000000001) |@ptr-meta<64>::none|)))  decls=[|@full-ptr<64>|,|@thin-ptr<64>|,|@full-ptr<64>|,|@thin-ptr<64>|]
+  as_array: [Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()); Ptr(&(0x0000000000000000, 0x0000000000000004)[*], ())]
+  array_field_of 0: Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ())
+  set_array_field 0: [Ptr(&(0x0000000000000002, 0x0000000000000008)[‖0‖], ()), Ptr(&(0x0000000000000000, 0x0000000000000004)[*], ())]
+  array_field_of 1: Ptr(&(0x0000000000000000, 0x0000000000000004)[*], ())
+  set_array_field 1: [Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()), Ptr(&(0x0000000000000000, 0x0000000000000004)[‖41‖], ())]
+  array_field_of 2 (out of range): EXN Invalid_argument index out of bounds
+  set_array_field out of range: EXN Invalid_argument index out of bounds
+  update_array_field 0: [Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()), Ptr(&(0x0000000000000000, 0x0000000000000004)[*], ())]
+  cast_array: [Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()), Ptr(&(0x0000000000000000, 0x0000000000000004)[*], ())]
+  cast_tuple: EXN Cast error: expected (TExtension []), got (TExtension [(TExtension TFullPtr); 2]) for value [Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()), Ptr(&(0x0000000000000000, 0x0000000000000004)[*], ())]
+  learn vs concrete: Some -> [Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()), Ptr(&(0x0000000000000000, 0x0000000000000004)[*], ())]
+  learn vs symbolic: Some -> [Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()), Ptr(&(0x0000000000000000, 0x0000000000000004)[*], ())]
+== [[1;2];[3;4]]
+  v: [[0x01, 0x02], [0x03, 0x04]]
+  ty: (TExtension [(TExtension [(TBitVector 8); 2]); 2])
+  cost: 100000
+  evalf: =
+  smt: (seq.++ (seq.unit (seq.++ (seq.unit #x01) (seq.unit #x02))) (seq.unit (seq.++ (seq.unit #x03) (seq.unit #x04))))  decls=[]
+  as_array: [[0x01, 0x02]; [0x03, 0x04]]
+  array_field_of 0: [0x01, 0x02]
+  set_array_field 0: [[0x03, 0x07], [0x03, 0x04]]
+  array_field_of 1: [0x03, 0x04]
+  set_array_field 1: [[0x01, 0x02], [0x40, 0x00]]
+  array_field_of 2 (out of range): EXN Invalid_argument index out of bounds
+  set_array_field out of range: EXN Invalid_argument index out of bounds
+  update_array_field 0: [[0x01, 0x02], [0x03, 0x04]]
+  cast_array: [[0x01, 0x02], [0x03, 0x04]]
+  cast_tuple: EXN Cast error: expected (TExtension []), got (TExtension [(TExtension [(TBitVector 8); 2]); 2]) for value [[0x01, 0x02], [0x03, 0x04]]
+  learn vs concrete: Some -> [[0x01, 0x02], [0x03, 0x04]]
+  learn vs symbolic: Some -> [[0x01, 0x02], [0x03, 0x04]]
+== [thin; thin]
+  v: [&(0x0000000000000000, 0x0000000000000000)[*], &(0x0000000000000000, 0x0000000000000004)[*]]
+  ty: (TExtension [(TExtension TThinPtr); 2])
+  cost: 100000
+  evalf: =
+  smt: (seq.++ (seq.unit (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000000 #x0000000000000000) #x0000000000000000 #x0000000000000001)) (seq.unit (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000000 #x0000000000000004) #x0000000000000000 #x0000000000000001)))  decls=[|@thin-ptr<64>|,|@thin-ptr<64>|]
+  as_array: [&(0x0000000000000000, 0x0000000000000000)[*]; &(0x0000000000000000, 0x0000000000000004)[*]]
+  array_field_of 0: &(0x0000000000000000, 0x0000000000000000)[*]
+  set_array_field 0: [&(0x0000000000000000, 0x0000000000000004)[‖43‖], &(0x0000000000000000, 0x0000000000000004)[*]]
+  array_field_of 1: &(0x0000000000000000, 0x0000000000000004)[*]
+  set_array_field 1: [&(0x0000000000000000, 0x0000000000000000)[*], &(0x0000000000000003, 0x0000000000000004)[*]]
+  array_field_of 2 (out of range): EXN Invalid_argument index out of bounds
+  set_array_field out of range: EXN Invalid_argument index out of bounds
+  update_array_field 0: [&(0x0000000000000000, 0x0000000000000000)[*], &(0x0000000000000000, 0x0000000000000004)[*]]
+  cast_array: [&(0x0000000000000000, 0x0000000000000000)[*], &(0x0000000000000000, 0x0000000000000004)[*]]
+  cast_tuple: EXN Cast error: expected (TExtension []), got (TExtension [(TExtension TThinPtr); 2]) for value [&(0x0000000000000000, 0x0000000000000000)[*], &(0x0000000000000000, 0x0000000000000004)[*]]
+  learn vs concrete: Some -> [&(0x0000000000000000, 0x0000000000000000)[*], &(0x0000000000000000, 0x0000000000000004)[*]]
+  learn vs symbolic: Some -> [&(0x0000000000000000, 0x0000000000000000)[*], &(0x0000000000000000, 0x0000000000000004)[*]]
+== var [u8; 3]
+  v: V|110|
+  ty: (TExtension [(TBitVector 8); 3])
+  vars: |110|:(TExtension [(TBitVector 8); 3])
+  cost: 3
+  eval: [0x64, 0x80, 0xff]
+  evalf: [0x64, 0x80, 0xff]
+  subst: V|100110|
+  smt: |110|  decls=[]
+  as_array: [V|110|[0]; V|110|[1]; V|110|[2]]
+  array_field_of 0: V|110|[0]
+  set_array_field 0: [0xff, V|110|[1], V|110|[2]]
+  array_field_of 1: V|110|[1]
+  set_array_field 1: [V|110|[0], 0xfe, V|110|[2]]
+  array_field_of 2: V|110|[2]
+  set_array_field 2: [V|110|[0], V|110|[1], 0x01]
+  array_field_of 3 (out of range): V|110|[3]
+  set_array_field out of range: EXN Invalid_argument index out of bounds
+  update_array_field 0: [V|110|[0], V|110|[1], V|110|[2]]
+  cast_array: V|110|
+  cast_tuple: EXN Cast error: expected (TExtension []), got (TExtension [(TBitVector 8); 3]) for value V|110|
+  learn vs concrete: Some -> [0xff, 0xff, 0x40]
+  learn vs symbolic: Some -> V|111|
+== var [u32; 0]
+  v: V|112|
+  ty: (TExtension [(TBitVector 32); 0])
+  vars: |112|:(TExtension [(TBitVector 32); 0])
+  cost: 3
+  eval: []
+  evalf: []
+  subst: V|100112|
+  smt: |112|  decls=[]
+  as_array: []
+  array_field_of 0 (out of range): V|112|[0]
+  set_array_field out of range: EXN Invalid_argument index out of bounds
+  update_array_field 0: EXN Invalid_argument index out of bounds
+  cast_array: V|112|
+  cast_tuple: EXN Cast error: expected (TExtension []), got (TExtension [(TBitVector 32); 0]) for value V|112|
+  learn vs concrete: Some -> []
+  learn vs symbolic: Some -> V|113|
+== var [(u32, f32); 2]
+  v: V|114|
+  ty: (TExtension [(TExtension [(TBitVector 32); (TFloat F32)]); 2])
+  vars: |114|:(TExtension [(TExtension [(TBitVector 32); (TFloat F32)]); 2])
+  cost: 3
+  eval: [(0x00000002, 0.100000001f), (0x00000001, 3.0000001E+10f)]
+  evalf: [(0x00000002, 0.100000001f), (0x00000001, 3.0000001E+10f)]
+  subst: [(0x00000002, 0.100000001f), (0x00000001, 3.0000001E+10f)]
+  smt: |114|  decls=[]
+  as_array: [V|114|[0]; V|114|[1]]
+  array_field_of 0: V|114|[0]
+  set_array_field 0: [(0x0000002a, -2.25f), V|114|[1]]
+  array_field_of 1: V|114|[1]
+  set_array_field 1: [V|114|[0], (0x0000ffff, 0f)]
+  array_field_of 2 (out of range): V|114|[2]
+  set_array_field out of range: EXN Invalid_argument index out of bounds
+  update_array_field 0: [V|114|[0], V|114|[1]]
+  cast_array: V|114|
+  cast_tuple: EXN Cast error: expected (TExtension []), got (TExtension [(TExtension [(TBitVector 32); (TFloat F32)]); 2]) for value V|114|
+  learn vs concrete: Some -> [(0x000000ff, -2.25f), (0x00000100, 0f)]
+  learn vs symbolic: Some -> V|115|
+== var [full; 1]
+  v: V|116|
+  ty: (TExtension [(TExtension TFullPtr); 1])
+  vars: |116|:(TExtension [(TExtension TFullPtr); 1])
+  cost: 3
+  eval: [Ptr(&(0x0000000000000002, 0x0000000000000004)[*], len(0x000000000000000a))]
+  evalf: [Ptr(&(0x0000000000000002, 0x0000000000000004)[*], len(0x000000000000000a))]
+  subst: V|100116|
+  smt: |116|  decls=[]
+  as_array: [V|116|[0]]
+  array_field_of 0: V|116|[0]
+  set_array_field 0: [Ptr(&(0x0000000000000003, 0x0000000000000004)[‖46‖], ())]
+  array_field_of 1 (out of range): V|116|[1]
+  set_array_field out of range: EXN Invalid_argument index out of bounds
+  update_array_field 0: [V|116|[0]]
+  cast_array: V|116|
+  cast_tuple: EXN Cast error: expected (TExtension []), got (TExtension [(TExtension TFullPtr); 1]) for value V|116|
+  learn vs concrete: Some -> [Ptr(&(0x0000000000000003, 0x0000000000000004)[‖48‖], len(0x0000000000000003))]
+  learn vs symbolic: Some -> V|117|
+== var [[u8; 2]; 2]
+  v: V|118|
+  ty: (TExtension [(TExtension [(TBitVector 8); 2]); 2])
+  vars: |118|:(TExtension [(TExtension [(TBitVector 8); 2]); 2])
+  cost: 3
+  eval: [[0x80, 0x07], [0x2a, 0xfe]]
+  evalf: [[0x80, 0x07], [0x2a, 0xfe]]
+  subst: V|100118|
+  smt: |118|  decls=[]
+  as_array: [V|118|[0]; V|118|[1]]
+  array_field_of 0: V|118|[0]
+  set_array_field 0: [[0x7f, 0x80], V|118|[1]]
+  array_field_of 1: V|118|[1]
+  set_array_field 1: [V|118|[0], [0xff, 0xff]]
+  array_field_of 2 (out of range): V|118|[2]
+  set_array_field out of range: EXN Invalid_argument index out of bounds
+  update_array_field 0: [V|118|[0], V|118|[1]]
+  cast_array: V|118|
+  cast_tuple: EXN Cast error: expected (TExtension []), got (TExtension [(TExtension [(TBitVector 8); 2]); 2]) for value V|118|
+  learn vs concrete: Some -> [[0x07, 0xfe], [0x00, 0xe8]]
+  learn vs symbolic: Some -> V|119|
+  as_array of a 40-element variable (length): 40
+  array_field_of 39 var: V|120|[39]
+  set_array_field 39 then field 39: 0x07
+  set_array_field 39 then field 38: V|120|[38]
+  mk_array of as_array of a var: [V|121|[0], V|121|[1], V|121|[2]]
+
+##### poly values
+== poly 0
+  v: PolyVal(0)
+  ty: (TExtension TPolyType)
+  cost: 100000
+  evalf: =
+  smt: EXN Failure Cannot encode polymorphic values to SMT-LIB
+  as_type_var: 0
+== poly 1
+  v: PolyVal(1)
+  ty: (TExtension TPolyType)
+  cost: 100000
+  evalf: =
+  smt: EXN Failure Cannot encode polymorphic values to SMT-LIB
+  as_type_var: 1
+== poly 5
+  v: PolyVal(5)
+  ty: (TExtension TPolyType)
+  cost: 100000
+  evalf: =
+  smt: EXN Failure Cannot encode polymorphic values to SMT-LIB
+  as_type_var: 5
+  poly twice is physically equal: true
+  poly sem_eq: (PolyVal(1) == PolyVal(2))
+
+##### random (no crate)
+== random (no crate) #1
+  v: ([0x000000ff, 0x0000ffff])
+  ty: (TExtension [(TExtension [(TBitVector 32); 2])])
+  cost: 100000
+  evalf: =
+  smt: (|@mk-tuple<(Seq (_ BitVec 32))>| (seq.++ (seq.unit #x000000ff) (seq.unit #x0000ffff)))  decls=[|@tuple<(Seq (_ BitVec 32))>|]
+  as_tuple: [[0x000000ff, 0x0000ffff]]
+  field_of 0: [0x000000ff, 0x0000ffff]
+  set_field 0: ([0x00000002, 0x000003e8])
+  update_field 0 (fun x -> x): ([0x000000ff, 0x0000ffff])
+  field_of 1 (out of range): EXN Failure nth
+  set_field -1 (out of range): EXN Invalid_argument List.update_at
+  as_tuple1: [0x000000ff, 0x0000ffff]
+  cast_tuple: ([0x000000ff, 0x0000ffff])
+  cast_array (wrong kind): EXN Cast error: expected (TExtension [(TBitVector 1); 0]), got (TExtension [(TExtension [(TBitVector 32); 2])]) for value ([0x000000ff, 0x0000ffff])
+  learn vs concrete: Some -> ([0x000000ff, 0x0000ffff])
+  learn vs symbolic: Some -> ([0x000000ff, 0x0000ffff])
+== random (no crate) #2
+  v: [(Ptr(V|123|, ()), [0x00000001], (0xffffff80 *ck V|124|))]
+  ty: (TExtension [(TExtension [(TExtension TFullPtr); (TExtension [(TBitVector 32); 1]); (TBitVector 32)]); 1])
+  vars: |123|:(TExtension TThinPtr) |124|:(TBitVector 32)
+  cost: 100000
+  eval: [(Ptr(V|123|, ()), [0x00000001], 0x00004000)]
+  evalf: [(Ptr(V|123|, ()), [0x00000001], 0x00004000)]
+  subst: [(Ptr(&(0x0000000000000001, 0x0000000000000004)[*], ()), [0x00000001], (0xffffff80 *ck V|100124|))]
+  smt: (seq.++ (seq.unit (|@mk-tuple<!@full-ptr<64>!, (Seq (_ BitVec 32)), (_ BitVec 32)>| (|@mk-full-ptr<64>| |123| |@ptr-meta<64>::none|) (seq.++ (seq.unit #x00000001)) (bvmul #xffffff80 |124|))))  decls=[|@full-ptr<64>|,|@tuple<!@full-ptr<64>!, (Seq (_ BitVec 32)), (_ BitVec 32)>|,|@full-ptr<64>|]
+  as_array: [(Ptr(V|123|, ()), [0x00000001], (0xffffff80 *ck V|124|))]
+  array_field_of 0: (Ptr(V|123|, ()), [0x00000001], (0xffffff80 *ck V|124|))
+  set_array_field 0: [(Ptr(&(0x0000000000000001, 0x0000000000000008)[‖51‖], len(0x0000000000000000)), [0x000f4240], 0x0000ffff)]
+  array_field_of 1 (out of range): EXN Invalid_argument index out of bounds
+  set_array_field out of range: EXN Invalid_argument index out of bounds
+  update_array_field 0: [(Ptr(V|123|, ()), [0x00000001], (0xffffff80 *ck V|124|))]
+  cast_array: [(Ptr(V|123|, ()), [0x00000001], (0xffffff80 *ck V|124|))]
+  cast_tuple: EXN Cast error: expected (TExtension []), got (TExtension [(TExtension [(TExtension TFullPtr); (TExtension [(TBitVector 32); 1]); (TBitVector 32)]); 1]) for value [(Ptr(V|123|, ()), [0x00000001], (0xffffff80 *ck V|124|))]
+  learn vs concrete: None
+  learn vs symbolic: None
+== random (no crate) #3
+  v: -2.25f
+  ty: (TFloat F16)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 5 11) #xc080)  decls=[]
+== random (no crate) #4
+  v: ((V|126| +. 1f), (0x000f4240 *ck V|127|), V|128|)
+  ty: (TExtension [(TFloat F128); (TBitVector 32); (TBitVector 8)])
+  vars: |126|:(TFloat F128) |127|:(TBitVector 32) |128|:(TBitVector 8)
+  cost: 100000
+  eval: (2.5f, (0x000f4240 *ck V|127|), 0x2a)
+  evalf: (2.5f, (0x000f4240 *ck V|127|), 0x2a)
+  subst: (2.5f, (0x000f4240 *ck V|100127|), V|100128|)
+  smt: (|@mk-tuple<Float128, (_ BitVec 32), (_ BitVec 8)>| (fp.add RNE |126| ((_ to_fp 15 113) #x3fff0000000000000000000000000000)) (bvmul #x000f4240 |127|) |128|)  decls=[|@tuple<Float128, (_ BitVec 32), (_ BitVec 8)>|]
+  as_tuple: [(V|126| +. 1f); (0x000f4240 *ck V|127|); V|128|]
+  field_of 0: (V|126| +. 1f)
+  set_field 0: (-0.5f, (0x000f4240 *ck V|127|), V|128|)
+  update_field 0 (fun x -> x): ((V|126| +. 1f), (0x000f4240 *ck V|127|), V|128|)
+  field_of 1: (0x000f4240 *ck V|127|)
+  set_field 1: ((V|126| +. 1f), 0x00000002, V|128|)
+  field_of 2: V|128|
+  set_field 2: ((V|126| +. 1f), (0x000f4240 *ck V|127|), 0x7f)
+  field_of 3 (out of range): EXN Failure nth
+  set_field -1 (out of range): EXN Invalid_argument List.update_at
+  as_tuple3: (V|126| +. 1f) , (0x000f4240 *ck V|127|) , V|128|
+  cast_tuple: ((V|126| +. 1f), (0x000f4240 *ck V|127|), V|128|)
+  cast_array (wrong kind): EXN Cast error: expected (TExtension [(TBitVector 1); 0]), got (TExtension [(TFloat F128); (TBitVector 32); (TBitVector 8)]) for value ((V|126| +. 1f), (0x000f4240 *ck V|127|), V|128|)
+  learn vs concrete: None
+  learn vs symbolic: None
+== random (no crate) #5
+  v: PolyVal(1)
+  ty: (TExtension TPolyType)
+  cost: 100000
+  evalf: =
+  smt: EXN Failure Cannot encode polymorphic values to SMT-LIB
+  as_type_var: 1
+== random (no crate) #6
+  v: [[(+Inff), (1f), (-2.25f)], [(1.5f), (neg.(V|130|)), (0f)], [(1.5f), (V|131|), (0.099976f)]]
+  ty: (TExtension [(TExtension [(TExtension [(TFloat F16)]); 3]); 3])
+  vars: |130|:(TFloat F16) |131|:(TFloat F16)
+  cost: 100000
+  eval: [[(+Inff), (1f), (-2.25f)], [(1.5f), (-0f), (0f)], [(1.5f), (V|131|), (0.099976f)]]
+  evalf: [[(+Inff), (1f), (-2.25f)], [(1.5f), (-0f), (0f)], [(1.5f), (V|131|), (0.099976f)]]
+  subst: [[(+Inff), (1f), (-2.25f)], [(1.5f), (neg.(V|100130|)), (0f)], [(1.5f), (V|100131|), (0.099976f)]]
+  smt: (seq.++ (seq.unit (seq.++ (seq.unit (|@mk-tuple<Float16>| ((_ to_fp 5 11) #x7c00))) (seq.unit (|@mk-tuple<Float16>| ((_ to_fp 5 11) #x3c00))) (seq.unit (|@mk-tuple<Float16>| ((_ to_fp 5 11) #xc080))))) (seq.unit (seq.++ (seq.unit (|@mk-tuple<Float16>| ((_ to_fp 5 11) #x3e00))) (seq.unit (|@mk-tuple<Float16>| (fp.neg |130|))) (seq.unit (|@mk-tuple<Float16>| ((_ to_fp 5 11) #x0000))))) (seq.unit (seq.++ (seq.unit (|@mk-tuple<Float16>| ((_ to_fp 5 11) #x3e00))) (seq.unit (|@mk-tuple<Float16>| |131|)) (seq.unit (|@mk-tuple<Float16>| ((_ to_fp 5 11) #x2e66))))))  decls=[|@tuple<Float16>|,|@tuple<Float16>|,|@tuple<Float16>|,|@tuple<Float16>|,|@tuple<Float16>|,|@tuple<Float16>|,|@tuple<Float16>|,|@tuple<Float16>|,|@tuple<Float16>|]
+  as_array: [[(+Inff), (1f), (-2.25f)]; [(1.5f), (neg.(V|130|)), (0f)]; [(1.5f), (V|131|), (0.099976f)]]
+  array_field_of 0: [(+Inff), (1f), (-2.25f)]
+  set_array_field 0: [[(0.099976f), (0.099976f), (0f)], [(1.5f), (neg.(V|130|)), (0f)], [(1.5f), (V|131|), (0.099976f)]]
+  array_field_of 1: [(1.5f), (neg.(V|130|)), (0f)]
+  set_array_field 1: [[(+Inff), (1f), (-2.25f)], [(-0.5f), (1.5f), (1.5f)], [(1.5f), (V|131|), (0.099976f)]]
+  array_field_of 2: [(1.5f), (V|131|), (0.099976f)]
+  set_array_field 2: [[(+Inff), (1f), (-2.25f)], [(1.5f), (neg.(V|130|)), (0f)], [(-0.5f), (+Inff), (+Inff)]]
+  array_field_of 3 (out of range): EXN Invalid_argument index out of bounds
+  set_array_field out of range: EXN Invalid_argument index out of bounds
+  update_array_field 0: [[(+Inff), (1f), (-2.25f)], [(1.5f), (neg.(V|130|)), (0f)], [(1.5f), (V|131|), (0.099976f)]]
+  cast_array: [[(+Inff), (1f), (-2.25f)], [(1.5f), (neg.(V|130|)), (0f)], [(1.5f), (V|131|), (0.099976f)]]
+  cast_tuple: EXN Cast error: expected (TExtension []), got (TExtension [(TExtension [(TExtension [(TFloat F16)]); 3]); 3]) for value [[(+Inff), (1f), (-2.25f)], [(1.5f), (neg.(V|130|)), (0f)], [(1.5f), (V|131|), (0.099976f)]]
+  learn vs concrete: None
+  learn vs symbolic: None
+== random (no crate) #7
+  v: (&(0x0000000000000001, V|133|)[‖53‖])
+  ty: (TExtension [(TExtension TThinPtr)])
+  vars: |133|:(TBitVector 64)
+  cost: 100000
+  eval: =
+  evalf: =
+  subst: (&(0x0000000000000001, V|100133|)[‖53‖])
+  smt: (|@mk-tuple<!@thin-ptr<64>!>| (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000001 |133|) #x0000000000000010 #x0000000000000004))  decls=[|@thin-ptr<64>|,|@tuple<!@thin-ptr<64>!>|,|@thin-ptr<64>|]
+  as_tuple: [&(0x0000000000000001, V|133|)[‖53‖]]
+  field_of 0: &(0x0000000000000001, V|133|)[‖53‖]
+  set_field 0: (&(0x0000000000000002, 0x0000000000000000)[*])
+  update_field 0 (fun x -> x): (&(0x0000000000000001, V|133|)[‖53‖])
+  field_of 1 (out of range): EXN Failure nth
+  set_field -1 (out of range): EXN Invalid_argument List.update_at
+  as_tuple1: &(0x0000000000000001, V|133|)[‖53‖]
+  cast_tuple: (&(0x0000000000000001, V|133|)[‖53‖])
+  cast_array (wrong kind): EXN Cast error: expected (TExtension [(TBitVector 1); 0]), got (TExtension [(TExtension TThinPtr)]) for value (&(0x0000000000000001, V|133|)[‖53‖])
+  learn vs concrete: None
+  learn vs symbolic: None
+== random (no crate) #8
+  v: PolyVal(0)
+  ty: (TExtension TPolyType)
+  cost: 100000
+  evalf: =
+  smt: EXN Failure Cannot encode polymorphic values to SMT-LIB
+  as_type_var: 0
+== random (no crate) #9
+  v: ()
+  ty: (TExtension [])
+  cost: 100000
+  evalf: =
+  smt: |@mk-tuple<>|  decls=[|@tuple<>|]
+  as_tuple: []
+  field_of 0 (out of range): EXN Failure nth
+  set_field -1 (out of range): EXN Invalid_argument List.update_at
+  as_tuple1 (wrong arity): EXN Cast error: expected (TExtension [(TBitVector 1)]), got (TExtension []) for value ()
+  cast_tuple: ()
+  cast_array (wrong kind): EXN Cast error: expected (TExtension [(TBitVector 1); 0]), got (TExtension []) for value ()
+  learn vs concrete: Some -> ()
+  learn vs symbolic: Some -> ()
+== random (no crate) #10
+  v: [0x2a, 0x40, V|136|]
+  ty: (TExtension [(TBitVector 8); 3])
+  vars: |136|:(TBitVector 8)
+  cost: 100000
+  eval: [0x2a, 0x40, 0x64]
+  evalf: [0x2a, 0x40, 0x64]
+  subst: [0x2a, 0x40, V|100136|]
+  smt: (seq.++ (seq.unit #x2a) (seq.unit #x40) (seq.unit |136|))  decls=[]
+  as_array: [0x2a; 0x40; V|136|]
+  array_field_of 0: 0x2a
+  set_array_field 0: [0x03, 0x40, V|136|]
+  array_field_of 1: 0x40
+  set_array_field 1: [0x2a, 0x00, V|136|]
+  array_field_of 2: V|136|
+  set_array_field 2: [0x2a, 0x40, 0xe8]
+  array_field_of 3 (out of range): EXN Invalid_argument index out of bounds
+  set_array_field out of range: EXN Invalid_argument index out of bounds
+  update_array_field 0: [0x2a, 0x40, V|136|]
+  cast_array: [0x2a, 0x40, V|136|]
+  cast_tuple: EXN Cast error: expected (TExtension []), got (TExtension [(TBitVector 8); 3]) for value [0x2a, 0x40, V|136|]
+  learn vs concrete: None
+  learn vs symbolic: None
+== random (no crate) #11
+  v: (PolyVal(2), [PolyVal(0)])
+  ty: (TExtension [(TExtension TPolyType); (TExtension [(TExtension TPolyType); 1])])
+  cost: 100000
+  evalf: =
+  smt: EXN Failure Cannot encode type TPolyType to SMT-LIB
+  as_tuple: [PolyVal(2); [PolyVal(0)]]
+  field_of 0: PolyVal(2)
+  set_field 0: (PolyVal(2), [PolyVal(0)])
+  update_field 0 (fun x -> x): (PolyVal(2), [PolyVal(0)])
+  field_of 1: [PolyVal(0)]
+  set_field 1: (PolyVal(2), [PolyVal(0)])
+  field_of 2 (out of range): EXN Failure nth
+  set_field -1 (out of range): EXN Invalid_argument List.update_at
+  as_tuple2: PolyVal(2) , [PolyVal(0)]
+  cast_tuple: (PolyVal(2), [PolyVal(0)])
+  cast_array (wrong kind): EXN Cast error: expected (TExtension [(TBitVector 1); 0]), got (TExtension [(TExtension TPolyType); (TExtension [(TExtension TPolyType); 1])]) for value (PolyVal(2), [PolyVal(0)])
+  learn vs concrete: Some -> (PolyVal(2), [PolyVal(0)])
+  learn vs symbolic: Some -> (PolyVal(2), [PolyVal(0)])
+== random (no crate) #12
+  v: &(0x0000000000000002, 0x0000000000000008)[‖0‖]
+  ty: (TExtension TThinPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000002 #x0000000000000008) #x0000000000000040 #x0000000000000002)  decls=[|@thin-ptr<64>|]
+  loc: 0x0000000000000002
+  ofs: 0x0000000000000008
+  decompose: 0x0000000000000002 , 0x0000000000000008
+  size_of: 0x0000000000000040
+  align_of: 0x0000000000000002
+  allocation_info: 0x0000000000000040 , 0x0000000000000002
+  tag_of: Some ‖0‖
+  is_null: false
+  is_at_null_loc: false
+  has_provenance: true
+  in_bound: true
+  as_id: 0x0000000000000002
+  add_ofs 4: &(0x0000000000000002, 0x000000000000000c)[‖0‖]
+  set_ofs 12: &(0x0000000000000002, 0x000000000000000c)[‖0‖]
+  with_tag zero: &(0x0000000000000002, 0x0000000000000008)[‖0‖]
+  with_tag none: &(0x0000000000000002, 0x0000000000000008)[*]
+  same_prov self: true
+  of_ptr_t: Ptr(&(0x0000000000000002, 0x0000000000000008)[‖0‖], ())
+  cast_ptr_t: &(0x0000000000000002, 0x0000000000000008)[‖0‖]
+  cast_ptr_f (wrong kind): EXN Cast error: expected (TExtension TFullPtr), got (TExtension TThinPtr) for value &(0x0000000000000002, 0x0000000000000008)[‖0‖]
+  learn vs concrete: Some -> &(0x0000000000000002, 0x0000000000000008)[‖0‖]
+  learn vs symbolic: Some -> &(0x0000000000000002, 0x0000000000000008)[‖0‖]
+== random (no crate) #13
+  v: PolyVal(0)
+  ty: (TExtension TPolyType)
+  cost: 100000
+  evalf: =
+  smt: EXN Failure Cannot encode polymorphic values to SMT-LIB
+  as_type_var: 0
+== random (no crate) #14
+  v: (0x0000000000000001 + V|140|)
+  ty: (TBitVector 64)
+  vars: |140|:(TBitVector 64)
+  cost: 79
+  eval: 0xffffffffffffffff
+  evalf: 0xffffffffffffffff
+  subst: (0x0000000000000001 + V|100140|)
+  smt: (bvadd #x0000000000000001 |140|)  decls=[]
+== random (no crate) #15
+  v: Ptr(&(0x0000000000000000, 0x0000000000000008)[*], ())
+  ty: (TExtension TFullPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-full-ptr<64>| (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000000 #x0000000000000008) #x0000000000000010 #x0000000000000004) |@ptr-meta<64>::none|)  decls=[|@full-ptr<64>|,|@thin-ptr<64>|]
+  ptr_of: &(0x0000000000000000, 0x0000000000000008)[*]
+  len_meta: EXN Failure ptr_meta_as: expected len but got unit
+  vtable_meta: EXN Failure ptr_meta_as: expected vtable but got unit
+  with_ptr null: Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ())
+  with_ptr self: Ptr(&(0x0000000000000000, 0x0000000000000008)[*], ())
+  cast_ptr_f: Ptr(&(0x0000000000000000, 0x0000000000000008)[*], ())
+  cast_ptr_t (wrong kind): EXN Cast error: expected (TExtension TThinPtr), got (TExtension TFullPtr) for value Ptr(&(0x0000000000000000, 0x0000000000000008)[*], ())
+  learn vs concrete: Some -> Ptr(&(0x0000000000000000, 0x0000000000000008)[*], ())
+  learn vs symbolic: Some -> Ptr(&(0x0000000000000000, 0x0000000000000008)[*], ())
+== random (no crate) #16
+  v: -0.5f
+  ty: (TFloat F32)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 8 24) #xbf000000)  decls=[]
+== random (no crate) #17
+  v: 0x0000000000000001
+  ty: (TBitVector 64)
+  cost: 1
+  evalf: =
+  smt: #x0000000000000001  decls=[]
+== random (no crate) #18
+  v: PolyVal(0)
+  ty: (TExtension TPolyType)
+  cost: 100000
+  evalf: =
+  smt: EXN Failure Cannot encode polymorphic values to SMT-LIB
+  as_type_var: 0
+== random (no crate) #19
+  v: (PolyVal(2), [PolyVal(0), PolyVal(0), PolyVal(0)], V|142|)
+  ty: (TExtension [(TExtension TPolyType); (TExtension [(TExtension TPolyType); 3]); (TExtension [(TExtension TPolyType); 3])])
+  vars: |142|:(TExtension [(TExtension TPolyType); 3])
+  cost: 100000
+  eval: (PolyVal(2), [PolyVal(0), PolyVal(0), PolyVal(0)], [PolyVal(0), PolyVal(0), PolyVal(0)])
+  evalf: (PolyVal(2), [PolyVal(0), PolyVal(0), PolyVal(0)], [PolyVal(0), PolyVal(0), PolyVal(0)])
+  subst: (PolyVal(2), [PolyVal(0), PolyVal(0), PolyVal(0)], V|100142|)
+  smt: EXN Failure Cannot encode type TPolyType to SMT-LIB
+  as_tuple: [PolyVal(2); [PolyVal(0), PolyVal(0), PolyVal(0)]; V|142|]
+  field_of 0: PolyVal(2)
+  set_field 0: (PolyVal(2), [PolyVal(0), PolyVal(0), PolyVal(0)], V|142|)
+  update_field 0 (fun x -> x): (PolyVal(2), [PolyVal(0), PolyVal(0), PolyVal(0)], V|142|)
+  field_of 1: [PolyVal(0), PolyVal(0), PolyVal(0)]
+  set_field 1: (PolyVal(2), [PolyVal(0), PolyVal(0), PolyVal(0)], V|142|)
+  field_of 2: V|142|
+  set_field 2: (PolyVal(2), [PolyVal(0), PolyVal(0), PolyVal(0)], [PolyVal(0), PolyVal(0), PolyVal(0)])
+  field_of 3 (out of range): EXN Failure nth
+  set_field -1 (out of range): EXN Invalid_argument List.update_at
+  as_tuple3: PolyVal(2) , [PolyVal(0), PolyVal(0), PolyVal(0)] , V|142|
+  cast_tuple: (PolyVal(2), [PolyVal(0), PolyVal(0), PolyVal(0)], V|142|)
+  cast_array (wrong kind): EXN Cast error: expected (TExtension [(TBitVector 1); 0]), got (TExtension [(TExtension TPolyType); (TExtension [(TExtension TPolyType); 3]); (TExtension [(TExtension TPolyType); 3])]) for value (PolyVal(2), [PolyVal(0), PolyVal(0), PolyVal(0)], V|142|)
+  learn vs concrete: Some -> (PolyVal(2), [PolyVal(0), PolyVal(0), PolyVal(0)], [PolyVal(0), PolyVal(0), PolyVal(0)])
+  learn vs symbolic: Some -> (PolyVal(2), [PolyVal(0), PolyVal(0), PolyVal(0)], V|143|.2)
+== random (no crate) #20
+  v: Ptr(&(loc(V|144|.ptr), (0x0000000000000004 + ofs(V|144|.ptr)))[*], vtable(&(0x0000000000000001, V|145|)[‖0‖]))
+  ty: (TExtension TFullPtr)
+  vars: |144|:(TExtension TThinPtr) |144|:(TExtension TThinPtr) |144|:(TExtension TThinPtr) |144|:(TExtension TThinPtr) |145|:(TBitVector 64)
+  cost: 100000
+  eval: Ptr(&(0x0000000000000002, 0x000000000000000c)[*], vtable(&(0x0000000000000001, V|145|)[‖0‖]))
+  evalf: Ptr(&(0x0000000000000002, 0x000000000000000c)[*], vtable(&(0x0000000000000001, V|145|)[‖0‖]))
+  subst: Ptr(&(0x0000000000000002, 0x000000000000000c)[*], vtable(&(0x0000000000000001, V|100145|)[‖0‖]))
+  smt: (|@mk-full-ptr<64>| (|@mk-thin-ptr<64>| (|@mk-ptr<64>| (|@ptr<64>.loc| (|@thin-ptr<64>.ptr| |144|)) (bvadd #x0000000000000004 (|@ptr<64>.ofs| (|@thin-ptr<64>.ptr| |144|)))) (|@thin-ptr<64>.size| |144|) (|@thin-ptr<64>.align| |144|)) (|@ptr-meta<64>::ptr| (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000001 |145|) #x0000000000000010 #x0000000000000004)))  decls=[|@full-ptr<64>|,|@thin-ptr<64>|,|@thin-ptr<64>|,|@thin-ptr<64>|,|@thin-ptr<64>|,|@thin-ptr<64>|,|@thin-ptr<64>|]
+  ptr_of: &(loc(V|144|.ptr), (0x0000000000000004 + ofs(V|144|.ptr)))[*]
+  len_meta: EXN Failure ptr_meta_as: expected len but got vtable
+  vtable_meta: &(0x0000000000000001, V|145|)[‖0‖]
+  with_ptr null: Ptr(&(0x0000000000000000, 0x0000000000000000)[*], vtable(&(0x0000000000000001, V|145|)[‖0‖]))
+  with_ptr self: Ptr(&(loc(V|144|.ptr), (0x0000000000000004 + ofs(V|144|.ptr)))[*], vtable(&(0x0000000000000001, V|145|)[‖0‖]))
+  cast_ptr_f: Ptr(&(loc(V|144|.ptr), (0x0000000000000004 + ofs(V|144|.ptr)))[*], vtable(&(0x0000000000000001, V|145|)[‖0‖]))
+  cast_ptr_t (wrong kind): EXN Cast error: expected (TExtension TThinPtr), got (TExtension TFullPtr) for value Ptr(&(loc(V|144|.ptr), (0x0000000000000004 + ofs(V|144|.ptr)))[*], vtable(&(0x0000000000000001, V|145|)[‖0‖]))
+  learn vs concrete: None
+  learn vs symbolic: None
+
+##### PASS B: synthetic crate, 8-byte pointers
+
+##### unions (synthetic crate)
+== union U0 [u32@0]
+  v: Union((0x0000000000000000: 0x00000001-0x0000000000000004))
+  ty: (TExtension U0)
+  cost: 100000
+  evalf: =
+  smt: EXN Failure Cannot encode union values to SMT-LIB
+  as_union: [(0x0000000000000000: 0x00000001-0x0000000000000004)]
+  cast_union ~adt: Union((0x0000000000000000: 0x00000001-0x0000000000000004))
+  cast_enum (wrong kind): EXN Cast error: expected (TExtension TypeDecl@0), got (TExtension U0) for value Union((0x0000000000000000: 0x00000001-0x0000000000000004))
+== union U0 [f32@0]
+  v: Union((0x0000000000000000: 1.5f-0x0000000000000004))
+  ty: (TExtension U0)
+  cost: 100000
+  evalf: =
+  smt: EXN Failure Cannot encode union values to SMT-LIB
+  as_union: [(0x0000000000000000: 1.5f-0x0000000000000004)]
+  cast_union ~adt: Union((0x0000000000000000: 1.5f-0x0000000000000004))
+  cast_enum (wrong kind): EXN Cast error: expected (TExtension TypeDecl@0), got (TExtension U0) for value Union((0x0000000000000000: 1.5f-0x0000000000000004))
+== union U0 [u32@0; f32@4]
+  v: Union((0x0000000000000000: 0x00000001-0x0000000000000004), (0x0000000000000004: 2.5f-0x0000000000000004))
+  ty: (TExtension U0)
+  cost: 100000
+  evalf: =
+  smt: EXN Failure Cannot encode union values to SMT-LIB
+  as_union: [(0x0000000000000000: 0x00000001-0x0000000000000004); (0x0000000000000004: 2.5f-0x0000000000000004)]
+  cast_union ~adt: Union((0x0000000000000000: 0x00000001-0x0000000000000004), (0x0000000000000004: 2.5f-0x0000000000000004))
+  cast_enum (wrong kind): EXN Cast error: expected (TExtension TypeDecl@0), got (TExtension U0) for value Union((0x0000000000000000: 0x00000001-0x0000000000000004), (0x0000000000000004: 2.5f-0x0000000000000004))
+== union U0 [var@0]
+  v: Union((0x0000000000000000: V|149|-0x0000000000000004))
+  ty: (TExtension U0)
+  vars: |149|:(TBitVector 32)
+  cost: 100000
+  eval: =
+  evalf: =
+  subst: Union((0x0000000000000000: V|100149|-0x0000000000000004))
+  smt: EXN Failure Cannot encode union values to SMT-LIB
+  as_union: [(0x0000000000000000: V|149|-0x0000000000000004)]
+  cast_union ~adt: Union((0x0000000000000000: V|149|-0x0000000000000004))
+  cast_enum (wrong kind): EXN Cast error: expected (TExtension TypeDecl@0), got (TExtension U0) for value Union((0x0000000000000000: V|149|-0x0000000000000004))
+== union U0 [var@var]
+  v: Union((V|147|: V|148|-0x0000000000000004))
+  ty: (TExtension U0)
+  vars: |148|:(TBitVector 32) |147|:(TBitVector 64)
+  cost: 100000
+  eval: Union((V|147|: 0x0000ffff-0x0000000000000004))
+  evalf: Union((V|147|: 0x0000ffff-0x0000000000000004))
+  subst: Union((0x0000000000000007: V|100148|-0x0000000000000004))
+  smt: EXN Failure Cannot encode union values to SMT-LIB
+  as_union: [(V|147|: V|148|-0x0000000000000004)]
+  cast_union ~adt: Union((V|147|: V|148|-0x0000000000000004))
+  cast_enum (wrong kind): EXN Cast error: expected (TExtension TypeDecl@0), got (TExtension U0) for value Union((V|147|: V|148|-0x0000000000000004))
+== union U0 []
+  v: Union()
+  ty: (TExtension U0)
+  cost: 100000
+  evalf: =
+  smt: EXN Failure Cannot encode union values to SMT-LIB
+  as_union: []
+  cast_union ~adt: Union()
+  cast_enum (wrong kind): EXN Cast error: expected (TExtension TypeDecl@0), got (TExtension U0) for value Union()
+== union U1 [agg]
+  v: Union((0x0000000000000000: (0x00000001, Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()), 0x01) : ( Generated_Types.TAdt { Generated_Types.id = 12; generics = { Generated_Types.regions = []; types = []; const_generics = []; trait_refs = [] }; builtin = None })-0x0000000000000010))
+  ty: (TExtension U1)
+  cost: 100000
+  evalf: =
+  smt: EXN Failure Cannot encode union values to SMT-LIB
+  as_union: [(0x0000000000000000: (0x00000001, Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()), 0x01) : ( Generated_Types.TAdt { Generated_Types.id = 12; generics = { Generated_Types.regions = []; types = []; const_generics = []; trait_refs = [] }; builtin = None })-0x0000000000000010)]
+  cast_union ~adt: Union((0x0000000000000000: (0x00000001, Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()), 0x01) : ( Generated_Types.TAdt { Generated_Types.id = 12; generics = { Generated_Types.regions = []; types = []; const_generics = []; trait_refs = [] }; builtin = None })-0x0000000000000010))
+  cast_enum (wrong kind): EXN Cast error: expected (TExtension TypeDecl@0), got (TExtension U1) for value Union((0x0000000000000000: (0x00000001, Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()), 0x01) : ( Generated_Types.TAdt { Generated_Types.id = 12; generics = { Generated_Types.regions = []; types = []; const_generics = []; trait_refs = [] }; builtin = None })-0x0000000000000010))
+== union U1 [u8; agg]
+  v: Union((0x0000000000000000: 0x03-0x0000000000000001), (0x0000000000000008: (0x00000001, Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()), 0x01) : ( Generated_Types.TAdt { Generated_Types.id = 12; generics = { Generated_Types.regions = []; types = []; const_generics = []; trait_refs = [] }; builtin = None })-0x0000000000000010))
+  ty: (TExtension U1)
+  cost: 100000
+  evalf: =
+  smt: EXN Failure Cannot encode union values to SMT-LIB
+  as_union: [(0x0000000000000000: 0x03-0x0000000000000001); (0x0000000000000008: (0x00000001, Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()), 0x01) : ( Generated_Types.TAdt { Generated_Types.id = 12; generics = { Generated_Types.regions = []; types = []; const_generics = []; trait_refs = [] }; builtin = None })-0x0000000000000010)]
+  cast_union ~adt: Union((0x0000000000000000: 0x03-0x0000000000000001), (0x0000000000000008: (0x00000001, Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()), 0x01) : ( Generated_Types.TAdt { Generated_Types.id = 12; generics = { Generated_Types.regions = []; types = []; const_generics = []; trait_refs = [] }; builtin = None })-0x0000000000000010))
+  cast_enum (wrong kind): EXN Cast error: expected (TExtension TypeDecl@0), got (TExtension U1) for value Union((0x0000000000000000: 0x03-0x0000000000000001), (0x0000000000000008: (0x00000001, Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()), 0x01) : ( Generated_Types.TAdt { Generated_Types.id = 12; generics = { Generated_Types.regions = []; types = []; const_generics = []; trait_refs = [] }; builtin = None })-0x0000000000000010))
+
+##### enums (synthetic crate)
+== Opt::None
+  v: Enum(0: )
+  ty: (TExtension Opt)
+  cost: 100000
+  evalf: =
+  smt: |@enum<Opt>::None|  decls=[|@full-ptr<64>|,|@enum<Opt>|]
+  is_variant 0: true
+  as_enum_of_variant 0: []
+  is_variant 1: false
+  as_enum_of_variant 1: EXN Assert_failure
+  field_of_variant 1 0: EXN Assert_failure
+  set_field_of_variant 1 0: EXN Assert_failure
+  is_variant 2: false
+  as_enum_of_variant 2: EXN Assert_failure
+  field_of_variant 2 0: EXN Assert_failure
+  set_field_of_variant 2 0: EXN Assert_failure
+  field_of_variant 2 1: EXN Assert_failure
+  set_field_of_variant 2 1: EXN Assert_failure
+  discriminant_of: 0x00000000
+  cast_enum: Enum(0: )
+  cast_enum ~adt: Enum(0: )
+  cast_enum ~adt (wrong adt): EXN Cast error: expected (TExtension Shape), got (TExtension Opt) for value Enum(0: )
+  cast_union (wrong kind): EXN Cast error: expected (TExtension TypeDecl@0), got (TExtension Opt) for value Enum(0: )
+  learn vs concrete: Some -> Enum(0: )
+  learn vs symbolic: Some -> Enum(0: )
+== Opt::Some(5)
+  v: Enum(1: 0x00000005)
+  ty: (TExtension Opt)
+  cost: 100000
+  evalf: =
+  smt: (|@enum<Opt>::Some| #x00000005)  decls=[|@enum<Opt>|]
+  is_variant 0: false
+  as_enum_of_variant 0: EXN Assert_failure
+  is_variant 1: true
+  as_enum_of_variant 1: [0x00000005]
+  field_of_variant 1 0: 0x00000005
+  set_field_of_variant 1 0: Enum(1: 0x000f4240)
+  is_variant 2: false
+  as_enum_of_variant 2: EXN Assert_failure
+  field_of_variant 2 0: EXN Assert_failure
+  set_field_of_variant 2 0: EXN Assert_failure
+  field_of_variant 2 1: EXN Assert_failure
+  set_field_of_variant 2 1: EXN Assert_failure
+  discriminant_of: 0x00000007
+  cast_enum: Enum(1: 0x00000005)
+  cast_enum ~adt: Enum(1: 0x00000005)
+  cast_enum ~adt (wrong adt): EXN Cast error: expected (TExtension Shape), got (TExtension Opt) for value Enum(1: 0x00000005)
+  cast_union (wrong kind): EXN Cast error: expected (TExtension TypeDecl@0), got (TExtension Opt) for value Enum(1: 0x00000005)
+  learn vs concrete: Some -> Enum(1: 0x00000005)
+  learn vs symbolic: Some -> Enum(1: 0x00000005)
+== Opt::Some(var)
+  v: Enum(1: V|151|)
+  ty: (TExtension Opt)
+  vars: |151|:(TBitVector 32)
+  cost: 100000
+  eval: =
+  evalf: =
+  subst: Enum(1: V|100151|)
+  smt: (|@enum<Opt>::Some| |151|)  decls=[|@enum<Opt>|]
+  is_variant 0: false
+  as_enum_of_variant 0: EXN Assert_failure
+  is_variant 1: true
+  as_enum_of_variant 1: [V|151|]
+  field_of_variant 1 0: V|151|
+  set_field_of_variant 1 0: Enum(1: 0x0000002a)
+  is_variant 2: false
+  as_enum_of_variant 2: EXN Assert_failure
+  field_of_variant 2 0: EXN Assert_failure
+  set_field_of_variant 2 0: EXN Assert_failure
+  field_of_variant 2 1: EXN Assert_failure
+  set_field_of_variant 2 1: EXN Assert_failure
+  discriminant_of: 0x00000007
+  cast_enum: Enum(1: V|151|)
+  cast_enum ~adt: Enum(1: V|151|)
+  cast_enum ~adt (wrong adt): EXN Cast error: expected (TExtension Shape), got (TExtension Opt) for value Enum(1: V|151|)
+  cast_union (wrong kind): EXN Cast error: expected (TExtension TypeDecl@0), got (TExtension Opt) for value Enum(1: V|151|)
+  learn vs concrete: None
+  learn vs symbolic: None
+== Opt::Pair(1, null)
+  v: Enum(2: 0x01, Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()))
+  ty: (TExtension Opt)
+  cost: 100000
+  evalf: =
+  smt: (|@enum<Opt>::Pair| #x01 (|@mk-full-ptr<64>| (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000000 #x0000000000000000) #x0000000000000000 #x0000000000000001) |@ptr-meta<64>::none|))  decls=[|@enum<Opt>|,|@full-ptr<64>|,|@thin-ptr<64>|]
+  is_variant 0: false
+  as_enum_of_variant 0: EXN Assert_failure
+  is_variant 1: false
+  as_enum_of_variant 1: EXN Assert_failure
+  field_of_variant 1 0: EXN Assert_failure
+  set_field_of_variant 1 0: EXN Assert_failure
+  is_variant 2: true
+  as_enum_of_variant 2: [0x01; Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ())]
+  field_of_variant 2 0: 0x01
+  set_field_of_variant 2 0: Enum(2: 0xff, Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()))
+  field_of_variant 2 1: Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ())
+  set_field_of_variant 2 1: Enum(2: 0x01, Ptr(&(0x0000000000000000, 0x0000000000000004)[‖64‖], ()))
+  discriminant_of: 0x0000000e
+  cast_enum: Enum(2: 0x01, Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()))
+  cast_enum ~adt: Enum(2: 0x01, Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()))
+  cast_enum ~adt (wrong adt): EXN Cast error: expected (TExtension Shape), got (TExtension Opt) for value Enum(2: 0x01, Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()))
+  cast_union (wrong kind): EXN Cast error: expected (TExtension TypeDecl@0), got (TExtension Opt) for value Enum(2: 0x01, Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()))
+  learn vs concrete: Some -> Enum(2: 0x01, Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()))
+  learn vs symbolic: Some -> Enum(2: 0x01, Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ()))
+== Shape::Circle(1.5)
+  v: Enum(0: 1.5f)
+  ty: (TExtension Shape)
+  cost: 100000
+  evalf: =
+  smt: (|@enum<Shape>::Circle| ((_ to_fp 8 24) #x3fc00000))  decls=[|@tuple<(_ BitVec 8), Float64>|,|@enum<Shape>|]
+  is_variant 0: true
+  as_enum_of_variant 0: [1.5f]
+  field_of_variant 0 0: 1.5f
+  set_field_of_variant 0 0: Enum(0: 1f)
+  is_variant 1: false
+  as_enum_of_variant 1: EXN Assert_failure
+  field_of_variant 1 0: EXN Assert_failure
+  set_field_of_variant 1 0: EXN Assert_failure
+  field_of_variant 1 1: EXN Assert_failure
+  set_field_of_variant 1 1: EXN Assert_failure
+  is_variant 2: false
+  as_enum_of_variant 2: EXN Assert_failure
+  field_of_variant 2 0: EXN Assert_failure
+  set_field_of_variant 2 0: EXN Assert_failure
+  is_variant 3: false
+  as_enum_of_variant 3: EXN Assert_failure
+  field_of_variant 3 0: EXN Assert_failure
+  set_field_of_variant 3 0: EXN Assert_failure
+  discriminant_of: 0xffffffffffffffff
+  cast_enum: Enum(0: 1.5f)
+  cast_enum ~adt: Enum(0: 1.5f)
+  cast_enum ~adt (wrong adt): EXN Cast error: expected (TExtension Unit), got (TExtension Shape) for value Enum(0: 1.5f)
+  cast_union (wrong kind): EXN Cast error: expected (TExtension TypeDecl@0), got (TExtension Shape) for value Enum(0: 1.5f)
+  learn vs concrete: Some -> Enum(0: 1.5f)
+  learn vs symbolic: Some -> Enum(0: 1.5f)
+== Shape::Rect(2,3)
+  v: Enum(1: 0x00000002, 0x00000003)
+  ty: (TExtension Shape)
+  cost: 100000
+  evalf: =
+  smt: (|@enum<Shape>::Rect| #x00000002 #x00000003)  decls=[|@enum<Shape>|]
+  is_variant 0: false
+  as_enum_of_variant 0: EXN Assert_failure
+  field_of_variant 0 0: EXN Assert_failure
+  set_field_of_variant 0 0: EXN Assert_failure
+  is_variant 1: true
+  as_enum_of_variant 1: [0x00000002; 0x00000003]
+  field_of_variant 1 0: 0x00000002
+  set_field_of_variant 1 0: Enum(1: 0x00000100, 0x00000003)
+  field_of_variant 1 1: 0x00000003
+  set_field_of_variant 1 1: Enum(1: 0x00000002, 0xfffffffe)
+  is_variant 2: false
+  as_enum_of_variant 2: EXN Assert_failure
+  field_of_variant 2 0: EXN Assert_failure
+  set_field_of_variant 2 0: EXN Assert_failure
+  is_variant 3: false
+  as_enum_of_variant 3: EXN Assert_failure
+  field_of_variant 3 0: EXN Assert_failure
+  set_field_of_variant 3 0: EXN Assert_failure
+  discriminant_of: 0x0000000000000002
+  cast_enum: Enum(1: 0x00000002, 0x00000003)
+  cast_enum ~adt: Enum(1: 0x00000002, 0x00000003)
+  cast_enum ~adt (wrong adt): EXN Cast error: expected (TExtension Unit), got (TExtension Shape) for value Enum(1: 0x00000002, 0x00000003)
+  cast_union (wrong kind): EXN Cast error: expected (TExtension TypeDecl@0), got (TExtension Shape) for value Enum(1: 0x00000002, 0x00000003)
+  learn vs concrete: Some -> Enum(1: 0x00000002, 0x00000003)
+  learn vs symbolic: Some -> Enum(1: 0x00000002, 0x00000003)
+== Shape::Nest((1, 2.5))
+  v: Enum(2: (0x01, 2.5f))
+  ty: (TExtension Shape)
+  cost: 100000
+  evalf: =
+  smt: (|@enum<Shape>::Nest| (|@mk-tuple<(_ BitVec 8), Float64>| #x01 ((_ to_fp 11 53) #x4004000000000000)))  decls=[|@enum<Shape>|,|@tuple<(_ BitVec 8), Float64>|]
+  is_variant 0: false
+  as_enum_of_variant 0: EXN Assert_failure
+  field_of_variant 0 0: EXN Assert_failure
+  set_field_of_variant 0 0: EXN Assert_failure
+  is_variant 1: false
+  as_enum_of_variant 1: EXN Assert_failure
+  field_of_variant 1 0: EXN Assert_failure
+  set_field_of_variant 1 0: EXN Assert_failure
+  field_of_variant 1 1: EXN Assert_failure
+  set_field_of_variant 1 1: EXN Assert_failure
+  is_variant 2: true
+  as_enum_of_variant 2: [(0x01, 2.5f)]
+  field_of_variant 2 0: (0x01, 2.5f)
+  set_field_of_variant 2 0: Enum(2: (0xff, -2.25f))
+  is_variant 3: false
+  as_enum_of_variant 3: EXN Assert_failure
+  field_of_variant 3 0: EXN Assert_failure
+  set_field_of_variant 3 0: EXN Assert_failure
+  discriminant_of: 0x0000000000000005
+  cast_enum: Enum(2: (0x01, 2.5f))
+  cast_enum ~adt: Enum(2: (0x01, 2.5f))
+  cast_enum ~adt (wrong adt): EXN Cast error: expected (TExtension Unit), got (TExtension Shape) for value Enum(2: (0x01, 2.5f))
+  cast_union (wrong kind): EXN Cast error: expected (TExtension TypeDecl@0), got (TExtension Shape) for value Enum(2: (0x01, 2.5f))
+  learn vs concrete: Some -> Enum(2: (0x01, 2.5f))
+  learn vs symbolic: Some -> Enum(2: (0x01, 2.5f))
+== Shape::Arr([1,2,3])
+  v: Enum(3: [0x01, 0x02, 0x03])
+  ty: (TExtension Shape)
+  cost: 100000
+  evalf: =
+  smt: (|@enum<Shape>::Arr| (seq.++ (seq.unit #x01) (seq.unit #x02) (seq.unit #x03)))  decls=[|@enum<Shape>|]
+  is_variant 0: false
+  as_enum_of_variant 0: EXN Assert_failure
+  field_of_variant 0 0: EXN Assert_failure
+  set_field_of_variant 0 0: EXN Assert_failure
+  is_variant 1: false
+  as_enum_of_variant 1: EXN Assert_failure
+  field_of_variant 1 0: EXN Assert_failure
+  set_field_of_variant 1 0: EXN Assert_failure
+  field_of_variant 1 1: EXN Assert_failure
+  set_field_of_variant 1 1: EXN Assert_failure
+  is_variant 2: false
+  as_enum_of_variant 2: EXN Assert_failure
+  field_of_variant 2 0: EXN Assert_failure
+  set_field_of_variant 2 0: EXN Assert_failure
+  is_variant 3: true
+  as_enum_of_variant 3: [[0x01, 0x02, 0x03]]
+  field_of_variant 3 0: [0x01, 0x02, 0x03]
+  set_field_of_variant 3 0: Enum(3: [0x40, 0x03, 0x2a])
+  discriminant_of: 0x0000000000000008
+  cast_enum: Enum(3: [0x01, 0x02, 0x03])
+  cast_enum ~adt: Enum(3: [0x01, 0x02, 0x03])
+  cast_enum ~adt (wrong adt): EXN Cast error: expected (TExtension Unit), got (TExtension Shape) for value Enum(3: [0x01, 0x02, 0x03])
+  cast_union (wrong kind): EXN Cast error: expected (TExtension TypeDecl@0), got (TExtension Shape) for value Enum(3: [0x01, 0x02, 0x03])
+  learn vs concrete: Some -> Enum(3: [0x01, 0x02, 0x03])
+  learn vs symbolic: Some -> Enum(3: [0x01, 0x02, 0x03])
+== Unit::B
+  v: Enum(1: )
+  ty: (TExtension Unit)
+  cost: 100000
+  evalf: =
+  smt: |@enum<Unit>::B|  decls=[|@enum<Unit>|]
+  is_variant 0: false
+  as_enum_of_variant 0: EXN Assert_failure
+  is_variant 1: true
+  as_enum_of_variant 1: []
+  is_variant 2: false
+  as_enum_of_variant 2: EXN Assert_failure
+  discriminant_of: 0x00000007
+  cast_enum: Enum(1: )
+  cast_enum ~adt: Enum(1: )
+  cast_enum ~adt (wrong adt): EXN Cast error: expected (TExtension Outer), got (TExtension Unit) for value Enum(1: )
+  cast_union (wrong kind): EXN Cast error: expected (TExtension TypeDecl@0), got (TExtension Unit) for value Enum(1: )
+  learn vs concrete: Some -> Enum(1: )
+  learn vs symbolic: Some -> Enum(1: )
+== Outer::Wrap(Opt::Some(1))
+  v: Enum(0: Enum(1: 0x00000001))
+  ty: (TExtension Outer)
+  cost: 100000
+  evalf: =
+  smt: (|@enum<Outer>::Wrap| (|@enum<Opt>::Some| #x00000001))  decls=[|@enum<Opt>|,|@enum<Outer>|,|@enum<Opt>|]
+  is_variant 0: true
+  as_enum_of_variant 0: [Enum(1: 0x00000001)]
+  field_of_variant 0 0: Enum(1: 0x00000001)
+  set_field_of_variant 0 0: Enum(0: Enum(1: 0xffffffff))
+  is_variant 1: false
+  as_enum_of_variant 1: EXN Assert_failure
+  field_of_variant 1 0: EXN Assert_failure
+  set_field_of_variant 1 0: EXN Assert_failure
+  field_of_variant 1 1: EXN Assert_failure
+  set_field_of_variant 1 1: EXN Assert_failure
+  discriminant_of: 0xffffffffffffffff
+  cast_enum: Enum(0: Enum(1: 0x00000001))
+  cast_enum ~adt: Enum(0: Enum(1: 0x00000001))
+  cast_enum ~adt (wrong adt): EXN Cast error: expected (TExtension Opt), got (TExtension Outer) for value Enum(0: Enum(1: 0x00000001))
+  cast_union (wrong kind): EXN Cast error: expected (TExtension TypeDecl@0), got (TExtension Outer) for value Enum(0: Enum(1: 0x00000001))
+  learn vs concrete: Some -> Enum(0: Enum(1: 0x00000001))
+  learn vs symbolic: Some -> Enum(0: Enum(1: 0x00000001))
+== Outer::Wrap(var)
+  v: Enum(0: V|150|)
+  ty: (TExtension Outer)
+  vars: |150|:(TExtension Opt)
+  cost: 100000
+  eval: Enum(0: Enum(1: 0x00000003))
+  evalf: Enum(0: Enum(1: 0x00000003))
+  subst: Enum(0: Enum(1: 0x00000003))
+  smt: (|@enum<Outer>::Wrap| |150|)  decls=[|@enum<Outer>|]
+  is_variant 0: true
+  as_enum_of_variant 0: [V|150|]
+  field_of_variant 0 0: V|150|
+  set_field_of_variant 0 0: Enum(0: Enum(0: ))
+  is_variant 1: false
+  as_enum_of_variant 1: EXN Assert_failure
+  field_of_variant 1 0: EXN Assert_failure
+  set_field_of_variant 1 0: EXN Assert_failure
+  field_of_variant 1 1: EXN Assert_failure
+  set_field_of_variant 1 1: EXN Assert_failure
+  discriminant_of: 0xffffffffffffffff
+  cast_enum: Enum(0: V|150|)
+  cast_enum ~adt: Enum(0: V|150|)
+  cast_enum ~adt (wrong adt): EXN Cast error: expected (TExtension Opt), got (TExtension Outer) for value Enum(0: V|150|)
+  cast_union (wrong kind): EXN Cast error: expected (TExtension TypeDecl@0), got (TExtension Outer) for value Enum(0: V|150|)
+  learn vs concrete: None
+  learn vs symbolic: None
+== Outer::Bare(true, -1)
+  v: Enum(1: 0x01, 0xffffffffffffffff)
+  ty: (TExtension Outer)
+  cost: 100000
+  evalf: =
+  smt: (|@enum<Outer>::Bare| #x01 #xffffffffffffffff)  decls=[|@enum<Outer>|]
+  is_variant 0: false
+  as_enum_of_variant 0: EXN Assert_failure
+  field_of_variant 0 0: EXN Assert_failure
+  set_field_of_variant 0 0: EXN Assert_failure
+  is_variant 1: true
+  as_enum_of_variant 1: [0x01; 0xffffffffffffffff]
+  field_of_variant 1 0: 0x01
+  set_field_of_variant 1 0: Enum(1: 0xe8, 0xffffffffffffffff)
+  field_of_variant 1 1: 0xffffffffffffffff
+  set_field_of_variant 1 1: Enum(1: 0x01, 0x0000000000000080)
+  discriminant_of: 0x0000000000000002
+  cast_enum: Enum(1: 0x01, 0xffffffffffffffff)
+  cast_enum ~adt: Enum(1: 0x01, 0xffffffffffffffff)
+  cast_enum ~adt (wrong adt): EXN Cast error: expected (TExtension Opt), got (TExtension Outer) for value Enum(1: 0x01, 0xffffffffffffffff)
+  cast_union (wrong kind): EXN Cast error: expected (TExtension TypeDecl@0), got (TExtension Outer) for value Enum(1: 0x01, 0xffffffffffffffff)
+  learn vs concrete: Some -> Enum(1: 0x01, 0xffffffffffffffff)
+  learn vs symbolic: Some -> Enum(1: 0x01, 0xffffffffffffffff)
+== var enum 0
+  v: V|164|
+  ty: (TExtension Opt)
+  vars: |164|:(TExtension Opt)
+  cost: 3
+  eval: Enum(0: )
+  evalf: Enum(0: )
+  subst: V|100164|
+  smt: |164|  decls=[]
+  is_variant 0: V|164|.is<0>
+  as_enum_of_variant 0: []
+  is_variant 1: V|164|.is<1>
+  as_enum_of_variant 1: [V|164|.as<1>.0]
+  field_of_variant 1 0: V|164|.as<1>.0
+  set_field_of_variant 1 0: Enum(1: 0x00000007)
+  is_variant 2: V|164|.is<2>
+  as_enum_of_variant 2: [V|164|.as<2>.0; V|164|.as<2>.1]
+  field_of_variant 2 0: V|164|.as<2>.0
+  set_field_of_variant 2 0: Enum(2: 0x40, V|164|.as<2>.1)
+  field_of_variant 2 1: V|164|.as<2>.1
+  set_field_of_variant 2 1: Enum(2: V|164|.as<2>.0, Ptr(&(0x0000000000000003, 0x0000000000000000)[‖65‖], vtable(&(0x0000000000000002, 0x0000000000000008)[*])))
+  discriminant_of: (V|164|.is<0> ? 0x00000000 : (V|164|.is<1> ? 0x00000007 : 0x0000000e))
+  cast_enum: V|164|
+  cast_enum ~adt: V|164|
+  cast_enum ~adt (wrong adt): EXN Cast error: expected (TExtension Shape), got (TExtension Opt) for value V|164|
+  cast_union (wrong kind): EXN Cast error: expected (TExtension TypeDecl@0), got (TExtension Opt) for value V|164|
+  learn vs concrete: Some -> Enum(0: )
+  learn vs symbolic: Some -> V|165|
+== var enum 1
+  v: V|166|
+  ty: (TExtension Shape)
+  vars: |166|:(TExtension Shape)
+  cost: 3
+  eval: Enum(3: [0xff, 0x03, 0x64])
+  evalf: Enum(3: [0xff, 0x03, 0x64])
+  subst: V|100166|
+  smt: |166|  decls=[]
+  is_variant 0: V|166|.is<0>
+  as_enum_of_variant 0: [V|166|.as<0>.0]
+  field_of_variant 0 0: V|166|.as<0>.0
+  set_field_of_variant 0 0: Enum(0: 1f)
+  is_variant 1: V|166|.is<1>
+  as_enum_of_variant 1: [V|166|.as<1>.0; V|166|.as<1>.1]
+  field_of_variant 1 0: V|166|.as<1>.0
+  set_field_of_variant 1 0: Enum(1: 0x00000100, V|166|.as<1>.1)
+  field_of_variant 1 1: V|166|.as<1>.1
+  set_field_of_variant 1 1: Enum(1: V|166|.as<1>.0, 0x00000100)
+  is_variant 2: V|166|.is<2>
+  as_enum_of_variant 2: [V|166|.as<2>.0]
+  field_of_variant 2 0: V|166|.as<2>.0
+  set_field_of_variant 2 0: Enum(2: (0x40, 1f))
+  is_variant 3: V|166|.is<3>
+  as_enum_of_variant 3: [V|166|.as<3>.0]
+  field_of_variant 3 0: V|166|.as<3>.0
+  set_field_of_variant 3 0: Enum(3: [0xff, 0x2a, 0xe8])
+  discriminant_of: (V|166|.is<0> ? 0xffffffffffffffff : (V|166|.is<1> ? 0x0000000000000002 : (V|166|.is<2> ? 0x0000000000000005 : 0x0000000000000008)))
+  cast_enum: V|166|
+  cast_enum ~adt: V|166|
+  cast_enum ~adt (wrong adt): EXN Cast error: expected (TExtension Unit), got (TExtension Shape) for value V|166|
+  cast_union (wrong kind): EXN Cast error: expected (TExtension TypeDecl@0), got (TExtension Shape) for value V|166|
+  learn vs concrete: Some -> Enum(1: 0x00000003, 0x00000001)
+  learn vs symbolic: Some -> V|167|
+== var enum 2
+  v: V|168|
+  ty: (TExtension Unit)
+  vars: |168|:(TExtension Unit)
+  cost: 3
+  eval: Enum(1: )
+  evalf: Enum(1: )
+  subst: Enum(1: )
+  smt: |168|  decls=[]
+  is_variant 0: V|168|.is<0>
+  as_enum_of_variant 0: []
+  is_variant 1: V|168|.is<1>
+  as_enum_of_variant 1: []
+  is_variant 2: V|168|.is<2>
+  as_enum_of_variant 2: []
+  discriminant_of: (V|168|.is<0> ? 0x00000000 : (V|168|.is<1> ? 0x00000007 : 0x0000000e))
+  cast_enum: V|168|
+  cast_enum ~adt: V|168|
+  cast_enum ~adt (wrong adt): EXN Cast error: expected (TExtension Outer), got (TExtension Unit) for value V|168|
+  cast_union (wrong kind): EXN Cast error: expected (TExtension TypeDecl@0), got (TExtension Unit) for value V|168|
+  learn vs concrete: Some -> Enum(0: )
+  learn vs symbolic: Some -> V|169|
+== var enum 3
+  v: V|170|
+  ty: (TExtension Outer)
+  vars: |170|:(TExtension Outer)
+  cost: 3
+  eval: Enum(0: Enum(2: 0x7f, Ptr(&(0x0000000000000002, 0x0000000000000004)[‖0‖], len(0x0000000000000000))))
+  evalf: Enum(0: Enum(2: 0x7f, Ptr(&(0x0000000000000002, 0x0000000000000004)[‖0‖], len(0x0000000000000000))))
+  subst: V|100170|
+  smt: |170|  decls=[]
+  is_variant 0: V|170|.is<0>
+  as_enum_of_variant 0: [V|170|.as<0>.0]
+  field_of_variant 0 0: V|170|.as<0>.0
+  set_field_of_variant 0 0: Enum(0: Enum(0: ))
+  is_variant 1: V|170|.is<1>
+  as_enum_of_variant 1: [V|170|.as<1>.0; V|170|.as<1>.1]
+  field_of_variant 1 0: V|170|.as<1>.0
+  set_field_of_variant 1 0: Enum(1: 0x80, V|170|.as<1>.1)
+  field_of_variant 1 1: V|170|.as<1>.1
+  set_field_of_variant 1 1: Enum(1: V|170|.as<1>.0, 0x0000000000000001)
+  discriminant_of: (V|170|.is<0> ? 0xffffffffffffffff : 0x0000000000000002)
+  cast_enum: V|170|
+  cast_enum ~adt: V|170|
+  cast_enum ~adt (wrong adt): EXN Cast error: expected (TExtension Opt), got (TExtension Outer) for value V|170|
+  cast_union (wrong kind): EXN Cast error: expected (TExtension TypeDecl@0), got (TExtension Outer) for value V|170|
+  learn vs concrete: Some -> Enum(0: Enum(2: 0xff, Ptr(&(0x0000000000000004, 0x0000000000000008)[*], ())))
+  learn vs symbolic: Some -> V|171|
+  Checked.mk_enum Opt Some: Enum(1: 0x00000001)
+  Checked.mk_enum Opt Nope: EXN Not_found
+  Checked.mk_enum Opt Some (wrong arity): EXN Assert_failure
+  t_enum Opt: (TExtension Opt)
+  mk_enum twice is physically equal: true
+  is_variant 1 (set_field_of_variant 1 0 5 e): true
+  sem_eq e e: true
+  sem_eq Some(1) Some(2): (Enum(1: 0x00000001) == Enum(1: 0x00000002))
+  sem_eq None Some(2): (Enum(0: ) == Enum(1: 0x00000002))
+  ite b None Some: ((0x00 == V|173|) ? Enum(1: 0x00000002) : Enum(0: ))
+  update_field_of_variant: Enum(1: V|172|.as<1>.0)
+
+##### random (crate)
+== random (crate) #1
+  v: &(0x0000000000000003, 0x0000000000000004)[*]
+  ty: (TExtension TThinPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000003 #x0000000000000004) #x0000000000000040 #x0000000000000001)  decls=[|@thin-ptr<64>|]
+  loc: 0x0000000000000003
+  ofs: 0x0000000000000004
+  decompose: 0x0000000000000003 , 0x0000000000000004
+  size_of: 0x0000000000000040
+  align_of: 0x0000000000000001
+  allocation_info: 0x0000000000000040 , 0x0000000000000001
+  tag_of: None
+  is_null: false
+  is_at_null_loc: false
+  has_provenance: true
+  in_bound: true
+  as_id: 0x0000000000000003
+  add_ofs 4: &(0x0000000000000003, 0x0000000000000008)[*]
+  set_ofs 12: &(0x0000000000000003, 0x000000000000000c)[*]
+  with_tag zero: &(0x0000000000000003, 0x0000000000000004)[‖0‖]
+  with_tag none: &(0x0000000000000003, 0x0000000000000004)[*]
+  same_prov self: true
+  of_ptr_t: Ptr(&(0x0000000000000003, 0x0000000000000004)[*], ())
+  cast_ptr_t: &(0x0000000000000003, 0x0000000000000004)[*]
+  cast_ptr_f (wrong kind): EXN Cast error: expected (TExtension TFullPtr), got (TExtension TThinPtr) for value &(0x0000000000000003, 0x0000000000000004)[*]
+  learn vs concrete: Some -> &(0x0000000000000003, 0x0000000000000004)[*]
+  learn vs symbolic: Some -> &(0x0000000000000003, 0x0000000000000004)[*]
+== random (crate) #2
+  v: Union((0x0000000000000000: 0x00000000-0x0000000000000004), (0x0000000000000004: 1f-0x0000000000000008))
+  ty: (TExtension U0)
+  cost: 100000
+  evalf: =
+  smt: EXN Failure Cannot encode union values to SMT-LIB
+  as_union: [(0x0000000000000000: 0x00000000-0x0000000000000004); (0x0000000000000004: 1f-0x0000000000000008)]
+  cast_union ~adt: Union((0x0000000000000000: 0x00000000-0x0000000000000004), (0x0000000000000004: 1f-0x0000000000000008))
+  cast_enum (wrong kind): EXN Cast error: expected (TExtension TypeDecl@0), got (TExtension U0) for value Union((0x0000000000000000: 0x00000000-0x0000000000000004), (0x0000000000000004: 1f-0x0000000000000008))
+== random (crate) #3
+  v: PolyVal(0)
+  ty: (TExtension TPolyType)
+  cost: 100000
+  evalf: =
+  smt: EXN Failure Cannot encode polymorphic values to SMT-LIB
+  as_type_var: 0
+== random (crate) #4
+  v: Ptr(&(0x0000000000000002, 0x0000000000000000)[*], ())
+  ty: (TExtension TFullPtr)
+  vars: |176|:(TBitVector 64)
+  cost: 100000
+  eval: Ptr(&(0x0000000000000002, 0x0000000000000000)[*], ())
+  evalf: Ptr(&(0x0000000000000002, 0x0000000000000000)[*], ())
+  subst: Ptr(&(0x0000000000000002, 0x0000000000000000)[*], ())
+  smt: (|@mk-full-ptr<64>| (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000002 #x0000000000000000) |176| #x0000000000000008) |@ptr-meta<64>::none|)  decls=[|@full-ptr<64>|,|@thin-ptr<64>|]
+  ptr_of: &(0x0000000000000002, 0x0000000000000000)[*]
+  len_meta: EXN Failure ptr_meta_as: expected len but got unit
+  vtable_meta: EXN Failure ptr_meta_as: expected vtable but got unit
+  with_ptr null: Ptr(&(0x0000000000000000, 0x0000000000000000)[*], ())
+  with_ptr self: Ptr(&(0x0000000000000002, 0x0000000000000000)[*], ())
+  cast_ptr_f: Ptr(&(0x0000000000000002, 0x0000000000000000)[*], ())
+  cast_ptr_t (wrong kind): EXN Cast error: expected (TExtension TThinPtr), got (TExtension TFullPtr) for value Ptr(&(0x0000000000000002, 0x0000000000000000)[*], ())
+  learn vs concrete: None
+  learn vs symbolic: None
+== random (crate) #5
+  v: Enum(2: 0x00, Ptr(&(0x0000000000000003, 0x0000000000000004)[*], ()))
+  ty: (TExtension Opt)
+  cost: 100000
+  evalf: =
+  smt: (|@enum<Opt>::Pair| #x00 (|@mk-full-ptr<64>| (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000003 #x0000000000000004) #x0000000000000008 #x0000000000000001) |@ptr-meta<64>::none|))  decls=[|@enum<Opt>|,|@full-ptr<64>|,|@thin-ptr<64>|]
+  is_variant 0: false
+  as_enum_of_variant 0: EXN Assert_failure
+  is_variant 1: false
+  as_enum_of_variant 1: EXN Assert_failure
+  field_of_variant 1 0: EXN Assert_failure
+  set_field_of_variant 1 0: EXN Assert_failure
+  is_variant 2: true
+  as_enum_of_variant 2: [0x00; Ptr(&(0x0000000000000003, 0x0000000000000004)[*], ())]
+  field_of_variant 2 0: 0x00
+  set_field_of_variant 2 0: Enum(2: 0x80, Ptr(&(0x0000000000000003, 0x0000000000000004)[*], ()))
+  field_of_variant 2 1: Ptr(&(0x0000000000000003, 0x0000000000000004)[*], ())
+  set_field_of_variant 2 1: Enum(2: 0x00, Ptr(&(0x0000000000000000, 0x0000000000000000)[*], len(0x0000000000000000)))
+  discriminant_of: 0x0000000e
+  cast_enum: Enum(2: 0x00, Ptr(&(0x0000000000000003, 0x0000000000000004)[*], ()))
+  cast_enum ~adt: Enum(2: 0x00, Ptr(&(0x0000000000000003, 0x0000000000000004)[*], ()))
+  cast_enum ~adt (wrong adt): EXN Cast error: expected (TExtension Shape), got (TExtension Opt) for value Enum(2: 0x00, Ptr(&(0x0000000000000003, 0x0000000000000004)[*], ()))
+  cast_union (wrong kind): EXN Cast error: expected (TExtension TypeDecl@0), got (TExtension Opt) for value Enum(2: 0x00, Ptr(&(0x0000000000000003, 0x0000000000000004)[*], ()))
+  learn vs concrete: Some -> Enum(2: 0x00, Ptr(&(0x0000000000000003, 0x0000000000000004)[*], ()))
+  learn vs symbolic: Some -> Enum(2: 0x00, Ptr(&(0x0000000000000003, 0x0000000000000004)[*], ()))
+== random (crate) #6
+  v: [([(V|179| +. 1f), 3.0000001E+10f, V|180|], (neg.(V|181|)), [0x00000001, 0x0000ffff, 0x0000007f])]
+  ty: (TExtension [(TExtension [(TExtension [(TFloat F32); 3]); (TExtension [(TFloat F64)]); (TExtension [(TBitVector 32); 3])]); 1])
+  vars: |179|:(TFloat F32) |180|:(TFloat F32) |181|:(TFloat F64)
+  cost: 100000
+  eval: [([(V|179| +. 1f), 3.0000001E+10f, -0.5f], (neg.(V|181|)), [0x00000001, 0x0000ffff, 0x0000007f])]
+  evalf: [([(V|179| +. 1f), 3.0000001E+10f, -0.5f], (neg.(V|181|)), [0x00000001, 0x0000ffff, 0x0000007f])]
+  subst: [([(V|100179| +. 1f), 3.0000001E+10f, -0.5f], (neg.(V|100181|)), [0x00000001, 0x0000ffff, 0x0000007f])]
+  smt: (seq.++ (seq.unit (|@mk-tuple<(Seq Float32), !@tuple<Float64>!, (Seq (_ BitVec 32))>| (seq.++ (seq.unit (fp.add RNE |179| ((_ to_fp 8 24) #x3f800000))) (seq.unit ((_ to_fp 8 24) #x50df8476)) (seq.unit |180|)) (|@mk-tuple<Float64>| (fp.neg |181|)) (seq.++ (seq.unit #x00000001) (seq.unit #x0000ffff) (seq.unit #x0000007f)))))  decls=[|@tuple<Float64>|,|@tuple<(Seq Float32), !@tuple<Float64>!, (Seq (_ BitVec 32))>|,|@tuple<Float64>|]
+  as_array: [([(V|179| +. 1f), 3.0000001E+10f, V|180|], (neg.(V|181|)), [0x00000001, 0x0000ffff, 0x0000007f])]
+  array_field_of 0: ([(V|179| +. 1f), 3.0000001E+10f, V|180|], (neg.(V|181|)), [0x00000001, 0x0000ffff, 0x0000007f])
+  set_array_field 0: [([0.100000001f, 1f, -2.25f], (-0.5f), [0x00000000, 0x000003e8, 0xfffffffe])]
+  array_field_of 1 (out of range): EXN Invalid_argument index out of bounds
+  set_array_field out of range: EXN Invalid_argument index out of bounds
+  update_array_field 0: [([(V|179| +. 1f), 3.0000001E+10f, V|180|], (neg.(V|181|)), [0x00000001, 0x0000ffff, 0x0000007f])]
+  cast_array: [([(V|179| +. 1f), 3.0000001E+10f, V|180|], (neg.(V|181|)), [0x00000001, 0x0000ffff, 0x0000007f])]
+  cast_tuple: EXN Cast error: expected (TExtension []), got (TExtension [(TExtension [(TExtension [(TFloat F32); 3]); (TExtension [(TFloat F64)]); (TExtension [(TBitVector 32); 3])]); 1]) for value [([(V|179| +. 1f), 3.0000001E+10f, V|180|], (neg.(V|181|)), [0x00000001, 0x0000ffff, 0x0000007f])]
+  learn vs concrete: None
+  learn vs symbolic: None
+== random (crate) #7
+  v: Enum(2: V|183|, Ptr(&(0x0000000000000002, 0x0000000000000000)[*], len((0x0000000000000100 *ck V|185|))))
+  ty: (TExtension Opt)
+  vars: |183|:(TBitVector 8) |184|:(TBitVector 64) |185|:(TBitVector 64)
+  cost: 100000
+  eval: Enum(2: V|183|, Ptr(&(0x0000000000000002, 0x0000000000000000)[*], len((0x0000000000000100 *ck V|185|))))
+  evalf: Enum(2: V|183|, Ptr(&(0x0000000000000002, 0x0000000000000000)[*], len((0x0000000000000100 *ck V|185|))))
+  subst: Enum(2: 0xfe, Ptr(&(0x0000000000000002, 0x0000000000000000)[*], len((0x0000000000000100 *ck V|100185|))))
+  smt: (|@enum<Opt>::Pair| |183| (|@mk-full-ptr<64>| (|@mk-thin-ptr<64>| (|@mk-ptr<64>| #x0000000000000002 #x0000000000000000) |184| #x0000000000000008) (|@ptr-meta<64>::int| (bvmul #x0000000000000100 |185|))))  decls=[|@enum<Opt>|,|@full-ptr<64>|,|@thin-ptr<64>|]
+  is_variant 0: false
+  as_enum_of_variant 0: EXN Assert_failure
+  is_variant 1: false
+  as_enum_of_variant 1: EXN Assert_failure
+  field_of_variant 1 0: EXN Assert_failure
+  set_field_of_variant 1 0: EXN Assert_failure
+  is_variant 2: true
+  as_enum_of_variant 2: [V|183|; Ptr(&(0x0000000000000002, 0x0000000000000000)[*], len((0x0000000000000100 *ck V|185|)))]
+  field_of_variant 2 0: V|183|
+  set_field_of_variant 2 0: Enum(2: 0xe8, Ptr(&(0x0000000000000002, 0x0000000000000000)[*], len((0x0000000000000100 *ck V|185|))))
+  field_of_variant 2 1: Ptr(&(0x0000000000000002, 0x0000000000000000)[*], len((0x0000000000000100 *ck V|185|)))
+  set_field_of_variant 2 1: Enum(2: V|183|, Ptr(&(0x0000000000000004, 0x0000000000000008)[*], vtable(&(0x0000000000000004, 0x0000000000000008)[‖68‖])))
+  discriminant_of: 0x0000000e
+  cast_enum: Enum(2: V|183|, Ptr(&(0x0000000000000002, 0x0000000000000000)[*], len((0x0000000000000100 *ck V|185|))))
+  cast_enum ~adt: Enum(2: V|183|, Ptr(&(0x0000000000000002, 0x0000000000000000)[*], len((0x0000000000000100 *ck V|185|))))
+  cast_enum ~adt (wrong adt): EXN Cast error: expected (TExtension Shape), got (TExtension Opt) for value Enum(2: V|183|, Ptr(&(0x0000000000000002, 0x0000000000000000)[*], len((0x0000000000000100 *ck V|185|))))
+  cast_union (wrong kind): EXN Cast error: expected (TExtension TypeDecl@0), got (TExtension Opt) for value Enum(2: V|183|, Ptr(&(0x0000000000000002, 0x0000000000000000)[*], len((0x0000000000000100 *ck V|185|))))
+  learn vs concrete: None
+  learn vs symbolic: None
+== random (crate) #8
+  v: PolyVal(0)
+  ty: (TExtension TPolyType)
+  cost: 100000
+  evalf: =
+  smt: EXN Failure Cannot encode polymorphic values to SMT-LIB
+  as_type_var: 0
+== random (crate) #9
+  v: Union((0x0000000000000000: (0x00000003 *ck V|187|)-0x0000000000000004), (0x0000000000000004: 1.5f-0x0000000000000008))
+  ty: (TExtension U0)
+  vars: |187|:(TBitVector 32)
+  cost: 100000
+  eval: =
+  evalf: =
+  subst: Union((0x0000000000000000: (0x00000003 *ck V|100187|)-0x0000000000000004), (0x0000000000000004: 1.5f-0x0000000000000008))
+  smt: EXN Failure Cannot encode union values to SMT-LIB
+  as_union: [(0x0000000000000000: (0x00000003 *ck V|187|)-0x0000000000000004); (0x0000000000000004: 1.5f-0x0000000000000008)]
+  cast_union ~adt: Union((0x0000000000000000: (0x00000003 *ck V|187|)-0x0000000000000004), (0x0000000000000004: 1.5f-0x0000000000000008))
+  cast_enum (wrong kind): EXN Cast error: expected (TExtension TypeDecl@0), got (TExtension U0) for value Union((0x0000000000000000: (0x00000003 *ck V|187|)-0x0000000000000004), (0x0000000000000004: 1.5f-0x0000000000000008))
+== random (crate) #10
+  v: PolyVal(0)
+  ty: (TExtension TPolyType)
+  cost: 100000
+  evalf: =
+  smt: EXN Failure Cannot encode polymorphic values to SMT-LIB
+  as_type_var: 0
+== random (crate) #11
+  v: 3.0E+10f
+  ty: (TFloat F64)
+  cost: 2
+  evalf: =
+  smt: ((_ to_fp 11 53) #x421bf08eb0000000)  decls=[]
+== random (crate) #12
+  v: Enum(1: )
+  ty: (TExtension Unit)
+  cost: 100000
+  evalf: =
+  smt: |@enum<Unit>::B|  decls=[|@enum<Unit>|]
+  is_variant 0: false
+  as_enum_of_variant 0: EXN Assert_failure
+  is_variant 1: true
+  as_enum_of_variant 1: []
+  is_variant 2: false
+  as_enum_of_variant 2: EXN Assert_failure
+  discriminant_of: 0x00000007
+  cast_enum: Enum(1: )
+  cast_enum ~adt: Enum(1: )
+  cast_enum ~adt (wrong adt): EXN Cast error: expected (TExtension Outer), got (TExtension Unit) for value Enum(1: )
+  cast_union (wrong kind): EXN Cast error: expected (TExtension TypeDecl@0), got (TExtension Unit) for value Enum(1: )
+  learn vs concrete: Some -> Enum(1: )
+  learn vs symbolic: Some -> Enum(1: )
+
+##### PASS C: synthetic crate, 4-byte pointers
+
+##### thin pointers
+tags: ‖69‖ ‖70‖ ‖0‖ (zero)
+== no tag
+  v: &(0x00000003, 0x00000008)[*]
+  ty: (TExtension TThinPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-thin-ptr<32>| (|@mk-ptr<32>| #x00000003 #x00000008) #x00000020 #x00000004)  decls=[|@ptr<32>|,|@thin-ptr<32>|]
+  learn vs concrete: Some -> &(0x00000003, 0x00000008)[*]
+  learn vs symbolic: Some -> &(0x00000003, 0x00000008)[*]
+== tag A
+  v: &(0x00000003, 0x00000008)[‖69‖]
+  ty: (TExtension TThinPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-thin-ptr<32>| (|@mk-ptr<32>| #x00000003 #x00000008) #x00000020 #x00000004)  decls=[|@thin-ptr<32>|]
+  learn vs concrete: Some -> &(0x00000003, 0x00000008)[‖69‖]
+  learn vs symbolic: Some -> &(0x00000003, 0x00000008)[‖69‖]
+== tag B
+  v: &(0x00000003, 0x00000008)[‖70‖]
+  ty: (TExtension TThinPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-thin-ptr<32>| (|@mk-ptr<32>| #x00000003 #x00000008) #x00000020 #x00000004)  decls=[|@thin-ptr<32>|]
+  learn vs concrete: Some -> &(0x00000003, 0x00000008)[‖70‖]
+  learn vs symbolic: Some -> &(0x00000003, 0x00000008)[‖70‖]
+== tag zero
+  v: &(0x00000003, 0x00000008)[‖0‖]
+  ty: (TExtension TThinPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-thin-ptr<32>| (|@mk-ptr<32>| #x00000003 #x00000008) #x00000020 #x00000004)  decls=[|@thin-ptr<32>|]
+  learn vs concrete: Some -> &(0x00000003, 0x00000008)[‖0‖]
+  learn vs symbolic: Some -> &(0x00000003, 0x00000008)[‖0‖]
+== null
+  v: &(0x00000000, 0x00000000)[*]
+  ty: (TExtension TThinPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-thin-ptr<32>| (|@mk-ptr<32>| #x00000000 #x00000000) #x00000000 #x00000001)  decls=[|@thin-ptr<32>|]
+  learn vs concrete: Some -> &(0x00000000, 0x00000000)[*]
+  learn vs symbolic: Some -> &(0x00000000, 0x00000000)[*]
+== of_address 16
+  v: &(0x00000000, 0x00000010)[*]
+  ty: (TExtension TThinPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-thin-ptr<32>| (|@mk-ptr<32>| #x00000000 #x00000010) #x00000000 #x00000001)  decls=[|@thin-ptr<32>|]
+  learn vs concrete: Some -> &(0x00000000, 0x00000010)[*]
+  learn vs symbolic: Some -> &(0x00000000, 0x00000010)[*]
+== null_loc ptr
+  v: &(0x00000000, 0x00000008)[*]
+  ty: (TExtension TThinPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-thin-ptr<32>| (|@mk-ptr<32>| #x00000000 #x00000008) #x00000020 #x00000004)  decls=[|@thin-ptr<32>|]
+  learn vs concrete: Some -> &(0x00000000, 0x00000008)[*]
+  learn vs symbolic: Some -> &(0x00000000, 0x00000008)[*]
+== symbolic ofs
+  v: &(0x00000003, V|194|)[‖69‖]
+  ty: (TExtension TThinPtr)
+  vars: |194|:(TBitVector 32)
+  cost: 100000
+  eval: &(0x00000003, 0x0000ffff)[‖69‖]
+  evalf: &(0x00000003, 0x0000ffff)[‖69‖]
+  subst: &(0x00000003, V|100194|)[‖69‖]
+  smt: (|@mk-thin-ptr<32>| (|@mk-ptr<32>| #x00000003 |194|) #x00000020 #x00000004)  decls=[|@thin-ptr<32>|]
+  learn vs concrete: None
+  learn vs symbolic: None
+== symbolic loc
+  v: &(V|193|, 0x00000008)[*]
+  ty: (TExtension TThinPtr)
+  vars: |193|:(TBitVector 32)
+  cost: 100000
+  eval: =
+  evalf: =
+  subst: &(V|100193|, 0x00000008)[*]
+  smt: (|@mk-thin-ptr<32>| (|@mk-ptr<32>| |193| #x00000008) #x00000020 #x00000004)  decls=[|@thin-ptr<32>|]
+  learn vs concrete: None
+  learn vs symbolic: None
+== symbolic size+align
+  v: &(0x00000003, 0x00000008)[*]
+  ty: (TExtension TThinPtr)
+  vars: |192|:(TBitVector 32) |191|:(TBitVector 32)
+  cost: 100000
+  eval: &(0x00000003, 0x00000008)[*]
+  evalf: &(0x00000003, 0x00000008)[*]
+  subst: &(0x00000003, 0x00000008)[*]
+  smt: (|@mk-thin-ptr<32>| (|@mk-ptr<32>| #x00000003 #x00000008) |192| |191|)  decls=[|@thin-ptr<32>|]
+  learn vs concrete: None
+  learn vs symbolic: None
+== var
+  v: V|190|
+  ty: (TExtension TThinPtr)
+  vars: |190|:(TExtension TThinPtr)
+  cost: 3
+  eval: &(0x00000001, 0x00000000)[‖72‖]
+  evalf: &(0x00000001, 0x00000000)[‖72‖]
+  subst: V|100190|
+  smt: |190|  decls=[]
+  learn vs concrete: Some -> &(0x00000004, 0x00000004)[‖0‖]
+  learn vs symbolic: Some -> V|205|
+== var + 4
+  v: &(loc(V|189|.ptr), (0x00000004 + ofs(V|189|.ptr)))[*]
+  ty: (TExtension TThinPtr)
+  vars: |189|:(TExtension TThinPtr) |189|:(TExtension TThinPtr) |189|:(TExtension TThinPtr) |189|:(TExtension TThinPtr)
+  cost: 100000
+  eval: =
+  evalf: =
+  subst: &(0x00000001, 0x00000008)[*]
+  smt: (|@mk-thin-ptr<32>| (|@mk-ptr<32>| (|@ptr<32>.loc| (|@thin-ptr<32>.ptr| |189|)) (bvadd #x00000004 (|@ptr<32>.ofs| (|@thin-ptr<32>.ptr| |189|)))) (|@thin-ptr<32>.size| |189|) (|@thin-ptr<32>.align| |189|))  decls=[|@thin-ptr<32>|,|@thin-ptr<32>|,|@thin-ptr<32>|,|@thin-ptr<32>|,|@thin-ptr<32>|]
+  learn vs concrete: None
+  learn vs symbolic: None
+== tagged + 4 + 4
+  v: &(0x00000003, 0x00000010)[‖69‖]
+  ty: (TExtension TThinPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-thin-ptr<32>| (|@mk-ptr<32>| #x00000003 #x00000010) #x00000020 #x00000004)  decls=[|@thin-ptr<32>|]
+  learn vs concrete: Some -> &(0x00000003, 0x00000010)[‖69‖]
+  learn vs symbolic: Some -> &(0x00000003, 0x00000010)[‖69‖]
+== of_raw
+  v: &(0x00000000, 0x00000000)[‖70‖]
+  ty: (TExtension TThinPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-thin-ptr<32>| (|@mk-ptr<32>| #x00000000 #x00000000) #x00000001 #x00000001)  decls=[|@thin-ptr<32>|]
+  learn vs concrete: Some -> &(0x00000000, 0x00000000)[‖70‖]
+  learn vs symbolic: Some -> &(0x00000000, 0x00000000)[‖70‖]
+  same object twice: true
+  same object different tag: false
+  equal tag A / tag A: true
+  equal tag A / tag B: false
+  equal none / tag zero: false
+  sem_eq tag A / tag B: (&(0x00000003, 0x00000008)[‖69‖] == &(0x00000003, 0x00000008)[‖70‖])
+  sem_eq none / tag A: (&(0x00000003, 0x00000008)[‖69‖] == &(0x00000003, 0x00000008)[*])
+  sem_eq var / var: true
+  sem_eq var / conc: (&(0x00000003, 0x00000008)[*] == V|210|)
+  ite b p q: ((0x00 == V|211|) ? &(0x00000003, 0x00000008)[*] : &(0x00000003, 0x00000008)[‖69‖])
+
+##### full pointers and metadata
+== full, unit meta
+  v: Ptr(&(0x00000002, 0x00000000)[‖77‖], ())
+  ty: (TExtension TFullPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-full-ptr<32>| (|@mk-thin-ptr<32>| (|@mk-ptr<32>| #x00000002 #x00000000) #x00000018 #x00000008) |@ptr-meta<64>::none|)  decls=[|@thin-ptr<32>|,|@thin-ptr<32>|,|@ptr-meta<32>|,|@full-ptr<32>|,|@thin-ptr<32>|]
+  learn vs concrete: Some -> Ptr(&(0x00000002, 0x00000000)[‖77‖], ())
+  learn vs symbolic: Some -> Ptr(&(0x00000002, 0x00000000)[‖77‖], ())
+== full, unit meta (no tag)
+  v: Ptr(&(0x00000002, 0x00000000)[*], ())
+  ty: (TExtension TFullPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-full-ptr<32>| (|@mk-thin-ptr<32>| (|@mk-ptr<32>| #x00000002 #x00000000) #x00000018 #x00000008) |@ptr-meta<64>::none|)  decls=[|@full-ptr<32>|,|@thin-ptr<32>|]
+  learn vs concrete: Some -> Ptr(&(0x00000002, 0x00000000)[*], ())
+  learn vs symbolic: Some -> Ptr(&(0x00000002, 0x00000000)[*], ())
+== full, len 3
+  v: Ptr(&(0x00000002, 0x00000000)[‖77‖], len(0x00000003))
+  ty: (TExtension TFullPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-full-ptr<32>| (|@mk-thin-ptr<32>| (|@mk-ptr<32>| #x00000002 #x00000000) #x00000018 #x00000008) (|@ptr-meta<32>::int| #x00000003))  decls=[|@full-ptr<32>|,|@thin-ptr<32>|]
+  learn vs concrete: Some -> Ptr(&(0x00000002, 0x00000000)[‖77‖], len(0x00000003))
+  learn vs symbolic: Some -> Ptr(&(0x00000002, 0x00000000)[‖77‖], len(0x00000003))
+== full, len symbolic
+  v: Ptr(&(0x00000002, 0x00000000)[*], len(V|216|))
+  ty: (TExtension TFullPtr)
+  vars: |216|:(TBitVector 32)
+  cost: 100000
+  eval: Ptr(&(0x00000002, 0x00000000)[*], len(0xffffffff))
+  evalf: Ptr(&(0x00000002, 0x00000000)[*], len(0xffffffff))
+  subst: Ptr(&(0x00000002, 0x00000000)[*], len(0xffffffff))
+  smt: (|@mk-full-ptr<32>| (|@mk-thin-ptr<32>| (|@mk-ptr<32>| #x00000002 #x00000000) #x00000018 #x00000008) (|@ptr-meta<32>::int| |216|))  decls=[|@full-ptr<32>|,|@thin-ptr<32>|]
+  learn vs concrete: None
+  learn vs symbolic: None
+== full, vtable
+  v: Ptr(&(0x00000002, 0x00000000)[‖77‖], vtable(&(0x00000002, 0x00000000)[*]))
+  ty: (TExtension TFullPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-full-ptr<32>| (|@mk-thin-ptr<32>| (|@mk-ptr<32>| #x00000002 #x00000000) #x00000018 #x00000008) (|@ptr-meta<32>::ptr| (|@mk-thin-ptr<32>| (|@mk-ptr<32>| #x00000002 #x00000000) #x00000018 #x00000008)))  decls=[|@full-ptr<32>|,|@thin-ptr<32>|,|@thin-ptr<32>|]
+  learn vs concrete: Some -> Ptr(&(0x00000002, 0x00000000)[‖77‖], vtable(&(0x00000002, 0x00000000)[*]))
+  learn vs symbolic: Some -> Ptr(&(0x00000002, 0x00000000)[‖77‖], vtable(&(0x00000002, 0x00000000)[*]))
+== full, vtable symbolic
+  v: Ptr(&(0x00000002, 0x00000000)[‖77‖], vtable(V|215|))
+  ty: (TExtension TFullPtr)
+  vars: |215|:(TExtension TThinPtr)
+  cost: 100000
+  eval: =
+  evalf: =
+  subst: Ptr(&(0x00000002, 0x00000000)[‖77‖], vtable(V|100215|))
+  smt: (|@mk-full-ptr<32>| (|@mk-thin-ptr<32>| (|@mk-ptr<32>| #x00000002 #x00000000) #x00000018 #x00000008) (|@ptr-meta<32>::ptr| |215|))  decls=[|@full-ptr<32>|,|@thin-ptr<32>|]
+  learn vs concrete: None
+  learn vs symbolic: None
+== full opt None
+  v: Ptr(&(0x00000002, 0x00000000)[‖77‖], ())
+  ty: (TExtension TFullPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-full-ptr<32>| (|@mk-thin-ptr<32>| (|@mk-ptr<32>| #x00000002 #x00000000) #x00000018 #x00000008) |@ptr-meta<64>::none|)  decls=[|@full-ptr<32>|,|@thin-ptr<32>|]
+  learn vs concrete: Some -> Ptr(&(0x00000002, 0x00000000)[‖77‖], ())
+  learn vs symbolic: Some -> Ptr(&(0x00000002, 0x00000000)[‖77‖], ())
+== full opt Some len
+  v: Ptr(&(0x00000002, 0x00000000)[‖77‖], len(0x00000003))
+  ty: (TExtension TFullPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-full-ptr<32>| (|@mk-thin-ptr<32>| (|@mk-ptr<32>| #x00000002 #x00000000) #x00000018 #x00000008) (|@ptr-meta<32>::int| #x00000003))  decls=[|@full-ptr<32>|,|@thin-ptr<32>|]
+  learn vs concrete: Some -> Ptr(&(0x00000002, 0x00000000)[‖77‖], len(0x00000003))
+  learn vs symbolic: Some -> Ptr(&(0x00000002, 0x00000000)[‖77‖], len(0x00000003))
+== full, symbolic thin, len
+  v: Ptr(V|214|, len(0x00000003))
+  ty: (TExtension TFullPtr)
+  vars: |214|:(TExtension TThinPtr)
+  cost: 100000
+  eval: Ptr(&(0x00000000, 0x00000004)[‖0‖], len(0x00000003))
+  evalf: Ptr(&(0x00000000, 0x00000004)[‖0‖], len(0x00000003))
+  subst: Ptr(V|100214|, len(0x00000003))
+  smt: (|@mk-full-ptr<32>| |214| (|@ptr-meta<32>::int| #x00000003))  decls=[|@full-ptr<32>|]
+  learn vs concrete: None
+  learn vs symbolic: None
+== full var
+  v: V|213|
+  ty: (TExtension TFullPtr)
+  vars: |213|:(TExtension TFullPtr)
+  cost: 3
+  eval: =
+  evalf: =
+  subst: Ptr(&(0x00000000, 0x00000008)[*], len(0x00000000))
+  smt: |213|  decls=[]
+  learn vs concrete: Some -> Ptr(&(0x00000003, 0x00000008)[*], len(0x0000000a))
+  learn vs symbolic: Some -> V|226|
+== null_f
+  v: Ptr(&(0x00000000, 0x00000000)[*], ())
+  ty: (TExtension TFullPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-full-ptr<32>| (|@mk-thin-ptr<32>| (|@mk-ptr<32>| #x00000000 #x00000000) #x00000000 #x00000001) |@ptr-meta<64>::none|)  decls=[|@full-ptr<32>|,|@thin-ptr<32>|]
+  learn vs concrete: Some -> Ptr(&(0x00000000, 0x00000000)[*], ())
+  learn vs symbolic: Some -> Ptr(&(0x00000000, 0x00000000)[*], ())
+== of_address_f 32
+  v: Ptr(&(0x00000000, 0x00000020)[*], ())
+  ty: (TExtension TFullPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-full-ptr<32>| (|@mk-thin-ptr<32>| (|@mk-ptr<32>| #x00000000 #x00000020) #x00000000 #x00000001) |@ptr-meta<64>::none|)  decls=[|@full-ptr<32>|,|@thin-ptr<32>|]
+  learn vs concrete: Some -> Ptr(&(0x00000000, 0x00000020)[*], ())
+  learn vs symbolic: Some -> Ptr(&(0x00000000, 0x00000020)[*], ())
+== with_ptr (len 3) null
+  v: Ptr(&(0x00000000, 0x00000000)[*], len(0x00000003))
+  ty: (TExtension TFullPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-full-ptr<32>| (|@mk-thin-ptr<32>| (|@mk-ptr<32>| #x00000000 #x00000000) #x00000000 #x00000001) (|@ptr-meta<32>::int| #x00000003))  decls=[|@full-ptr<32>|,|@thin-ptr<32>|]
+  learn vs concrete: Some -> Ptr(&(0x00000000, 0x00000000)[*], len(0x00000003))
+  learn vs symbolic: Some -> Ptr(&(0x00000000, 0x00000000)[*], len(0x00000003))
+== with_ptr var thin
+  v: Ptr(&(0x00000002, 0x00000000)[‖77‖], meta(V|212|))
+  ty: (TExtension TFullPtr)
+  vars: |212|:(TExtension TFullPtr)
+  cost: 100000
+  eval: Ptr(&(0x00000002, 0x00000000)[‖77‖], vtable(&(0x00000003, 0x00000000)[‖78‖]))
+  evalf: Ptr(&(0x00000002, 0x00000000)[‖77‖], vtable(&(0x00000003, 0x00000000)[‖78‖]))
+  subst: Ptr(&(0x00000002, 0x00000000)[‖77‖], meta(V|100212|))
+  smt: (|@mk-full-ptr<32>| (|@mk-thin-ptr<32>| (|@mk-ptr<32>| #x00000002 #x00000000) #x00000018 #x00000008) (|@full-ptr<32>.meta| |212|))  decls=[|@full-ptr<32>|,|@ptr-meta<32>|,|@thin-ptr<32>|]
+  learn vs concrete: None
+  learn vs symbolic: None
+  unit: len_meta: EXN Failure ptr_meta_as: expected len but got unit
+  unit: vtable_meta: EXN Failure ptr_meta_as: expected vtable but got unit
+  len: len_meta: 0x00000003
+  len: vtable_meta: EXN Failure ptr_meta_as: expected vtable but got len
+  vtable: len_meta: EXN Failure ptr_meta_as: expected len but got vtable
+  vtable: vtable_meta: &(0x00000002, 0x00000000)[*]
+  mk_ptr_f with bool meta (invalid): Ptr(&(0x00000002, 0x00000000)[‖77‖], len(V|231|))
+  mk_ptr_f len 8-bit meta: Ptr(&(0x00000002, 0x00000000)[‖77‖], len(0x03))
+  mk_ptr_f_opt on symbolic with meta var: Ptr(V|233|, vtable(V|232|))
+  same object twice: true
+  sem_eq len3 / len4: (Ptr(&(0x00000002, 0x00000000)[‖77‖], len(0x00000003)) == Ptr(&(0x00000002, 0x00000000)[‖77‖], len(0x00000004)))
+
+##### tuples
+== unit
+  v: ()
+  ty: (TExtension [])
+  cost: 100000
+  evalf: =
+  smt: |@mk-tuple<>|  decls=[|@tuple<>|]
+  learn vs concrete: Some -> ()
+  learn vs symbolic: Some -> ()
+== (u32)
+  v: (0x00000001)
+  ty: (TExtension [(TBitVector 32)])
+  cost: 100000
+  evalf: =
+  smt: (|@mk-tuple<(_ BitVec 32)>| #x00000001)  decls=[|@tuple<(_ BitVec 32)>|]
+  learn vs concrete: Some -> (0x00000001)
+  learn vs symbolic: Some -> (0x00000001)
+== (u8, u32, usize)
+  v: (0x01, 0x00000002, 0x00000003)
+  ty: (TExtension [(TBitVector 8); (TBitVector 32); (TBitVector 32)])
+  cost: 100000
+  evalf: =
+  smt: (|@mk-tuple<(_ BitVec 8), (_ BitVec 32), (_ BitVec 32)>| #x01 #x00000002 #x00000003)  decls=[|@tuple<(_ BitVec 8), (_ BitVec 32), (_ BitVec 32)>|]
+  learn vs concrete: Some -> (0x01, 0x00000002, 0x00000003)
+  learn vs symbolic: Some -> (0x01, 0x00000002, 0x00000003)
+== (u32, f32, thin)
+  v: (0x00000009, 1.5f, &(0x00000000, 0x00000000)[*])
+  ty: (TExtension [(TBitVector 32); (TFloat F32); (TExtension TThinPtr)])
+  cost: 100000
+  evalf: =
+  smt: (|@mk-tuple<(_ BitVec 32), Float32, !@thin-ptr<32>!>| #x00000009 ((_ to_fp 8 24) #x3fc00000) (|@mk-thin-ptr<32>| (|@mk-ptr<32>| #x00000000 #x00000000) #x00000000 #x00000001))  decls=[|@thin-ptr<32>|,|@tuple<(_ BitVec 32), Float32, !@thin-ptr<32>!>|,|@thin-ptr<32>|]
+  learn vs concrete: Some -> (0x00000009, 1.5f, &(0x00000000, 0x00000000)[*])
+  learn vs symbolic: Some -> (0x00000009, 1.5f, &(0x00000000, 0x00000000)[*])
+== (full, f64, bool)
+  v: (Ptr(&(0x00000000, 0x00000000)[*], ()), -2.25f, 0x01)
+  ty: (TExtension [(TExtension TFullPtr); (TFloat F64); (TBitVector 8)])
+  cost: 100000
+  evalf: =
+  smt: (|@mk-tuple<!@full-ptr<32>!, Float64, (_ BitVec 8)>| (|@mk-full-ptr<32>| (|@mk-thin-ptr<32>| (|@mk-ptr<32>| #x00000000 #x00000000) #x00000000 #x00000001) |@ptr-meta<64>::none|) ((_ to_fp 11 53) #xc002000000000000) #x01)  decls=[|@full-ptr<32>|,|@tuple<!@full-ptr<32>!, Float64, (_ BitVec 8)>|,|@full-ptr<32>|,|@thin-ptr<32>|]
+  learn vs concrete: Some -> (Ptr(&(0x00000000, 0x00000000)[*], ()), -2.25f, 0x01)
+  learn vs symbolic: Some -> (Ptr(&(0x00000000, 0x00000000)[*], ()), -2.25f, 0x01)
+== ((u8,u8),(u32,(f32,full)))
+  v: ((0x01, 0x02), (0x00000003, (0.5f, Ptr(&(0x00000000, 0x00000008)[*], ()))))
+  ty: (TExtension [(TExtension [(TBitVector 8); (TBitVector 8)]); (TExtension [(TBitVector 32); (TExtension [(TFloat F32); (TExtension TFullPtr)])])])
+  cost: 100000
+  evalf: =
+  smt: (|@mk-tuple<!@tuple<(_ BitVec 8), (_ BitVec 8)>!, !@tuple<(_ BitVec 32), !@tuple<Float32, !@full-ptr<32>!>!>!>| (|@mk-tuple<(_ BitVec 8), (_ BitVec 8)>| #x01 #x02) (|@mk-tuple<(_ BitVec 32), !@tuple<Float32, !@full-ptr<32>!>!>| #x00000003 (|@mk-tuple<Float32, !@full-ptr<32>!>| ((_ to_fp 8 24) #x3f000000) (|@mk-full-ptr<32>| (|@mk-thin-ptr<32>| (|@mk-ptr<32>| #x00000000 #x00000008) #x00000000 #x00000001) |@ptr-meta<64>::none|))))  decls=[|@tuple<(_ BitVec 8), (_ BitVec 8)>|,|@full-ptr<32>|,|@tuple<Float32, !@full-ptr<32>!>|,|@tuple<(_ BitVec 32), !@tuple<Float32, !@full-ptr<32>!>!>|,|@tuple<!@tuple<(_ BitVec 8), (_ BitVec 8)>!, !@tuple<(_ BitVec 32), !@tuple<Float32, !@full-ptr<32>!>!>!>|,|@tuple<(_ BitVec 8), (_ BitVec 8)>|,|@full-ptr<32>|,|@tuple<Float32, !@full-ptr<32>!>|,|@tuple<(_ BitVec 32), !@tuple<Float32, !@full-ptr<32>!>!>|,|@full-ptr<32>|,|@tuple<Float32, !@full-ptr<32>!>|,|@full-ptr<32>|,|@thin-ptr<32>|]
+  learn vs concrete: Some -> ((0x01, 0x02), (0x00000003, (0.5f, Ptr(&(0x00000000, 0x00000008)[*], ()))))
+  learn vs symbolic: Some -> ((0x01, 0x02), (0x00000003, (0.5f, Ptr(&(0x00000000, 0x00000008)[*], ()))))
+== (var, var + 1)
+  v: (V|234|, (0x00000001 + V|234|))
+  ty: (TExtension [(TBitVector 32); (TBitVector 32)])
+  vars: |234|:(TBitVector 32) |234|:(TBitVector 32)
+  cost: 100000
+  eval: (0x00000000, 0x00000001)
+  evalf: (0x00000000, 0x00000001)
+  subst: (0x00000000, 0x00000001)
+  smt: (|@mk-tuple<(_ BitVec 32), (_ BitVec 32)>| |234| (bvadd #x00000001 |234|))  decls=[|@tuple<(_ BitVec 32), (_ BitVec 32)>|]
+  learn vs concrete: Some -> (0x0000ffff, 0x00010000)
+  learn vs symbolic: Some -> (V|241|.0, (0x00000001 + V|241|.0))
+== (poly, u8)
+  v: (PolyVal(0), 0x01)
+  ty: (TExtension [(TExtension TPolyType); (TBitVector 8)])
+  cost: 100000
+  evalf: =
+  smt: EXN Failure Cannot encode type TPolyType to SMT-LIB
+  learn vs concrete: Some -> (PolyVal(0), 0x01)
+  learn vs symbolic: Some -> (PolyVal(0), 0x01)
+== var (u32)
+  v: V|243|
+  ty: (TExtension [(TBitVector 32)])
+  vars: |243|:(TExtension [(TBitVector 32)])
+  cost: 3
+  eval: =
+  evalf: =
+  subst: (0x000003e8)
+  smt: |243|  decls=[]
+  learn vs concrete: Some -> (0x000000ff)
+  learn vs symbolic: Some -> V|244|
+== var (u8, u32, usize)
+  v: V|245|
+  ty: (TExtension [(TBitVector 8); (TBitVector 32); (TBitVector 32)])
+  vars: |245|:(TExtension [(TBitVector 8); (TBitVector 32); (TBitVector 32)])
+  cost: 3
+  eval: =
+  evalf: =
+  subst: V|100245|
+  smt: |245|  decls=[]
+  learn vs concrete: Some -> (0x07, 0x00000064, 0x0000002a)
+  learn vs symbolic: Some -> V|246|
+== var (f64, full)
+  v: V|247|
+  ty: (TExtension [(TFloat F64); (TExtension TFullPtr)])
+  vars: |247|:(TExtension [(TFloat F64); (TExtension TFullPtr)])
+  cost: 3
+  eval: =
+  evalf: =
+  subst: V|100247|
+  smt: |247|  decls=[]
+  learn vs concrete: Some -> (0f, Ptr(&(0x00000004, 0x00000004)[‖0‖], len(0x0000000a)))
+  learn vs symbolic: Some -> V|248|
+== var ((u8,u8),(u32,u32))
+  v: V|249|
+  ty: (TExtension [(TExtension [(TBitVector 8); (TBitVector 8)]); (TExtension [(TBitVector 32); (TBitVector 32)])])
+  vars: |249|:(TExtension [(TExtension [(TBitVector 8); (TBitVector 8)]); (TExtension [(TBitVector 32); (TBitVector 32)])])
+  cost: 3
+  eval: =
+  evalf: =
+  subst: ((0x00, 0xe8), (0xffffff80, 0x000f4240))
+  smt: |249|  decls=[]
+  learn vs concrete: Some -> ((0x40, 0x64), (0x000003e8, 0xfffffffe))
+  learn vs symbolic: Some -> V|250|
+== var (thin, thin)
+  v: V|251|
+  ty: (TExtension [(TExtension TThinPtr); (TExtension TThinPtr)])
+  vars: |251|:(TExtension [(TExtension TThinPtr); (TExtension TThinPtr)])
+  cost: 3
+  eval: =
+  evalf: =
+  subst: V|100251|
+  smt: |251|  decls=[]
+  learn vs concrete: Some -> (&(0x00000003, 0x00000004)[‖0‖], &(0x00000000, 0x00000004)[*])
+  learn vs symbolic: Some -> V|252|
+== var ()
+  v: V|253|
+  ty: (TExtension [])
+  vars: |253|:(TExtension [])
+  cost: 3
+  eval: =
+  evalf: =
+  subst: V|100253|
+  smt: |253|  decls=[]
+  learn vs concrete: Some -> ()
+  learn vs symbolic: Some -> V|254|
+  mk_tuple of as_tuple is physically equal: true
+  mk_tuple of as_tuple of a variable: (V|255|.0, V|255|.1)
+  field_of 1 (set_field 1 y x): 0x05
+  field_of 0 (set_field 1 y x): V|255|.0
+  sem_eq tuples (conc): ((0x01, 0x02) == (0x01, 0x03))
+  sem_eq tuple vars: true
+  sem_eq tuple var / tuple: ((0x01, 0x02) == V|257|)
+  ite on tuples: ((0x00 == V|258|) ? (0x03, 0x04) : (0x01, 0x02))
+  field_of 0 (ite b t1 t2): ((0x00 == V|259|) ? (0x03, 0x04) : (0x01, 0x02)).0
+
+##### enums (synthetic crate)
+== Opt::None
+  v: Enum(0: )
+  ty: (TExtension Opt)
+  cost: 100000
+  evalf: =
+  smt: |@enum<Opt>::None|  decls=[|@enum<Opt>|]
+  learn vs concrete: Some -> Enum(0: )
+  learn vs symbolic: Some -> Enum(0: )
+== Opt::Some(5)
+  v: Enum(1: 0x00000005)
+  ty: (TExtension Opt)
+  cost: 100000
+  evalf: =
+  smt: (|@enum<Opt>::Some| #x00000005)  decls=[|@enum<Opt>|]
+  learn vs concrete: Some -> Enum(1: 0x00000005)
+  learn vs symbolic: Some -> Enum(1: 0x00000005)
+== Opt::Some(var)
+  v: Enum(1: V|261|)
+  ty: (TExtension Opt)
+  vars: |261|:(TBitVector 32)
+  cost: 100000
+  eval: =
+  evalf: =
+  subst: Enum(1: 0x00000080)
+  smt: (|@enum<Opt>::Some| |261|)  decls=[|@enum<Opt>|]
+  learn vs concrete: None
+  learn vs symbolic: None
+== Opt::Pair(1, null)
+  v: Enum(2: 0x01, Ptr(&(0x00000000, 0x00000000)[*], ()))
+  ty: (TExtension Opt)
+  cost: 100000
+  evalf: =
+  smt: (|@enum<Opt>::Pair| #x01 (|@mk-full-ptr<32>| (|@mk-thin-ptr<32>| (|@mk-ptr<32>| #x00000000 #x00000000) #x00000000 #x00000001) |@ptr-meta<64>::none|))  decls=[|@enum<Opt>|,|@full-ptr<32>|,|@thin-ptr<32>|]
+  learn vs concrete: Some -> Enum(2: 0x01, Ptr(&(0x00000000, 0x00000000)[*], ()))
+  learn vs symbolic: Some -> Enum(2: 0x01, Ptr(&(0x00000000, 0x00000000)[*], ()))
+== Shape::Circle(1.5)
+  v: Enum(0: 1.5f)
+  ty: (TExtension Shape)
+  cost: 100000
+  evalf: =
+  smt: (|@enum<Shape>::Circle| ((_ to_fp 8 24) #x3fc00000))  decls=[|@enum<Shape>|]
+  learn vs concrete: Some -> Enum(0: 1.5f)
+  learn vs symbolic: Some -> Enum(0: 1.5f)
+== Shape::Rect(2,3)
+  v: Enum(1: 0x00000002, 0x00000003)
+  ty: (TExtension Shape)
+  cost: 100000
+  evalf: =
+  smt: (|@enum<Shape>::Rect| #x00000002 #x00000003)  decls=[|@enum<Shape>|]
+  learn vs concrete: Some -> Enum(1: 0x00000002, 0x00000003)
+  learn vs symbolic: Some -> Enum(1: 0x00000002, 0x00000003)
+== Shape::Nest((1, 2.5))
+  v: Enum(2: (0x01, 2.5f))
+  ty: (TExtension Shape)
+  cost: 100000
+  evalf: =
+  smt: (|@enum<Shape>::Nest| (|@mk-tuple<(_ BitVec 8), Float64>| #x01 ((_ to_fp 11 53) #x4004000000000000)))  decls=[|@enum<Shape>|,|@tuple<(_ BitVec 8), Float64>|]
+  learn vs concrete: Some -> Enum(2: (0x01, 2.5f))
+  learn vs symbolic: Some -> Enum(2: (0x01, 2.5f))
+== Shape::Arr([1,2,3])
+  v: Enum(3: [0x01, 0x02, 0x03])
+  ty: (TExtension Shape)
+  cost: 100000
+  evalf: =
+  smt: (|@enum<Shape>::Arr| (seq.++ (seq.unit #x01) (seq.unit #x02) (seq.unit #x03)))  decls=[|@enum<Shape>|]
+  learn vs concrete: Some -> Enum(3: [0x01, 0x02, 0x03])
+  learn vs symbolic: Some -> Enum(3: [0x01, 0x02, 0x03])
+== Unit::B
+  v: Enum(1: )
+  ty: (TExtension Unit)
+  cost: 100000
+  evalf: =
+  smt: |@enum<Unit>::B|  decls=[|@enum<Unit>|]
+  learn vs concrete: Some -> Enum(1: )
+  learn vs symbolic: Some -> Enum(1: )
+== Outer::Wrap(Opt::Some(1))
+  v: Enum(0: Enum(1: 0x00000001))
+  ty: (TExtension Outer)
+  cost: 100000
+  evalf: =
+  smt: (|@enum<Outer>::Wrap| (|@enum<Opt>::Some| #x00000001))  decls=[|@enum<Outer>|,|@enum<Opt>|]
+  learn vs concrete: Some -> Enum(0: Enum(1: 0x00000001))
+  learn vs symbolic: Some -> Enum(0: Enum(1: 0x00000001))
+== Outer::Wrap(var)
+  v: Enum(0: V|260|)
+  ty: (TExtension Outer)
+  vars: |260|:(TExtension Opt)
+  cost: 100000
+  eval: Enum(0: Enum(0: ))
+  evalf: Enum(0: Enum(0: ))
+  subst: Enum(0: V|100260|)
+  smt: (|@enum<Outer>::Wrap| |260|)  decls=[|@enum<Outer>|]
+  learn vs concrete: None
+  learn vs symbolic: None
+== Outer::Bare(true, -1)
+  v: Enum(1: 0x01, 0xffffffffffffffff)
+  ty: (TExtension Outer)
+  cost: 100000
+  evalf: =
+  smt: (|@enum<Outer>::Bare| #x01 #xffffffffffffffff)  decls=[|@enum<Outer>|]
+  learn vs concrete: Some -> Enum(1: 0x01, 0xffffffffffffffff)
+  learn vs symbolic: Some -> Enum(1: 0x01, 0xffffffffffffffff)
+== var enum 0
+  v: V|274|
+  ty: (TExtension Opt)
+  vars: |274|:(TExtension Opt)
+  cost: 3
+  eval: Enum(0: )
+  evalf: Enum(0: )
+  subst: V|100274|
+  smt: |274|  decls=[]
+  learn vs concrete: Some -> Enum(1: 0x00000003)
+  learn vs symbolic: Some -> V|275|
+== var enum 1
+  v: V|276|
+  ty: (TExtension Shape)
+  vars: |276|:(TExtension Shape)
+  cost: 3
+  eval: Enum(3: [0x07, 0x64, 0x02])
+  evalf: Enum(3: [0x07, 0x64, 0x02])
+  subst: Enum(3: [0x07, 0x64, 0x02])
+  smt: |276|  decls=[]
+  learn vs concrete: Some -> Enum(0: -2.25f)
+  learn vs symbolic: Some -> V|277|
+== var enum 2
+  v: V|278|
+  ty: (TExtension Unit)
+  vars: |278|:(TExtension Unit)
+  cost: 3
+  eval: Enum(1: )
+  evalf: Enum(1: )
+  subst: V|100278|
+  smt: |278|  decls=[]
+  learn vs concrete: Some -> Enum(0: )
+  learn vs symbolic: Some -> V|279|
+== var enum 3
+  v: V|280|
+  ty: (TExtension Outer)
+  vars: |280|:(TExtension Outer)
+  cost: 3
+  eval: Enum(1: 0x02, 0x000000000000007f)
+  evalf: Enum(1: 0x02, 0x000000000000007f)
+  subst: V|100280|
+  smt: |280|  decls=[]
+  learn vs concrete: Some -> Enum(1: 0xfe, 0x0000000000000080)
+  learn vs symbolic: Some -> V|281|
+  Checked.mk_enum Opt Some: Enum(1: 0x00000001)
+  Checked.mk_enum Opt Nope: EXN Not_found
+  Checked.mk_enum Opt Some (wrong arity): EXN Assert_failure
+  t_enum Opt: (TExtension Opt)
+  mk_enum twice is physically equal: true
+  is_variant 1 (set_field_of_variant 1 0 5 e): true
+  sem_eq e e: true
+  sem_eq Some(1) Some(2): (Enum(1: 0x00000001) == Enum(1: 0x00000002))
+  sem_eq None Some(2): (Enum(0: ) == Enum(1: 0x00000002))
+  ite b None Some: ((0x00 == V|283|) ? Enum(1: 0x00000002) : Enum(0: ))
+  update_field_of_variant: Enum(1: V|282|.as<1>.0)
+
+##### random (crate32)
+== random (crate32) #1
+  v: [(V|284|, Ptr(&(0x00000001, 0x00000004)[*], vtable(&(0x00000002, 0x00000000)[*])), 0f)]
+  ty: (TExtension [(TExtension [(TExtension TThinPtr); (TExtension TFullPtr); (TFloat F16)]); 1])
+  vars: |284|:(TExtension TThinPtr) |285|:(TBitVector 32)
+  cost: 100000
+  eval: [(&(0x00000003, 0x00000004)[‖0‖], Ptr(&(0x00000001, 0x00000004)[*], vtable(&(0x00000002, 0x00000000)[*])), 0f)]
+  evalf: [(&(0x00000003, 0x00000004)[‖0‖], Ptr(&(0x00000001, 0x00000004)[*], vtable(&(0x00000002, 0x00000000)[*])), 0f)]
+  subst: [(V|100284|, Ptr(&(0x00000001, 0x00000004)[*], vtable(&(0x00000002, 0x00000000)[*])), 0f)]
+  smt: (seq.++ (seq.unit (|@mk-tuple<!@thin-ptr<32>!, !@full-ptr<32>!, Float16>| |284| (|@mk-full-ptr<32>| (|@mk-thin-ptr<32>| (|@mk-ptr<32>| #x00000001 #x00000004) #x00000040 #x00000001) (|@ptr-meta<32>::ptr| (|@mk-thin-ptr<32>| (|@mk-ptr<32>| #x00000002 #x00000000) |285| #x00000008))) ((_ to_fp 5 11) #x0000))))  decls=[|@thin-ptr<32>|,|@full-ptr<32>|,|@tuple<!@thin-ptr<32>!, !@full-ptr<32>!, Float16>|,|@full-ptr<32>|,|@thin-ptr<32>|,|@thin-ptr<32>|]
+  as_array: [(V|284|, Ptr(&(0x00000001, 0x00000004)[*], vtable(&(0x00000002, 0x00000000)[*])), 0f)]
+  array_field_of 0: (V|284|, Ptr(&(0x00000001, 0x00000004)[*], vtable(&(0x00000002, 0x00000000)[*])), 0f)
+  set_array_field 0: [(&(0x00000002, 0x00000000)[*], Ptr(&(0x00000000, 0x00000008)[‖0‖], ()), 1.5f)]
+  array_field_of 1 (out of range): EXN Invalid_argument index out of bounds
+  set_array_field out of range: EXN Invalid_argument index out of bounds
+  update_array_field 0: [(V|284|, Ptr(&(0x00000001, 0x00000004)[*], vtable(&(0x00000002, 0x00000000)[*])), 0f)]
+  cast_array: [(V|284|, Ptr(&(0x00000001, 0x00000004)[*], vtable(&(0x00000002, 0x00000000)[*])), 0f)]
+  cast_tuple: EXN Cast error: expected (TExtension []), got (TExtension [(TExtension [(TExtension TThinPtr); (TExtension TFullPtr); (TFloat F16)]); 1]) for value [(V|284|, Ptr(&(0x00000001, 0x00000004)[*], vtable(&(0x00000002, 0x00000000)[*])), 0f)]
+  learn vs concrete: None
+  learn vs symbolic: None
+== random (crate32) #2
+  v: neg.(V|287|)
+  ty: (TFloat F16)
+  vars: |287|:(TFloat F16)
+  cost: 7
+  eval: =
+  evalf: =
+  subst: neg.(V|100287|)
+  smt: (fp.neg |287|)  decls=[]
+== random (crate32) #3
+  v: [Enum(1: 0x00000001), Enum(2: V|288|, Ptr(&(0x00000002, 0x00000000)[*], len(0x00000000)))]
+  ty: (TExtension [(TExtension Opt); 2])
+  vars: |288|:(TBitVector 8) |289|:(TBitVector 32)
+  cost: 100000
+  eval: [Enum(1: 0x00000001), Enum(2: 0x03, Ptr(&(0x00000002, 0x00000000)[*], len(0x00000000)))]
+  evalf: [Enum(1: 0x00000001), Enum(2: 0x03, Ptr(&(0x00000002, 0x00000000)[*], len(0x00000000)))]
+  subst: [Enum(1: 0x00000001), Enum(2: 0x03, Ptr(&(0x00000002, 0x00000000)[*], len(0x00000000)))]
+  smt: (seq.++ (seq.unit (|@enum<Opt>::Some| #x00000001)) (seq.unit (|@enum<Opt>::Pair| |288| (|@mk-full-ptr<32>| (|@mk-thin-ptr<32>| (|@mk-ptr<32>| #x00000002 #x00000000) |289| #x00000008) (|@ptr-meta<32>::int| #x00000000)))))  decls=[|@enum<Opt>|,|@enum<Opt>|,|@full-ptr<32>|,|@thin-ptr<32>|]
+  as_array: [Enum(1: 0x00000001); Enum(2: V|288|, Ptr(&(0x00000002, 0x00000000)[*], len(0x00000000)))]
+  array_field_of 0: Enum(1: 0x00000001)
+  set_array_field 0: [Enum(0: ), Enum(2: V|288|, Ptr(&(0x00000002, 0x00000000)[*], len(0x00000000)))]
+  array_field_of 1: Enum(2: V|288|, Ptr(&(0x00000002, 0x00000000)[*], len(0x00000000)))
+  set_array_field 1: [Enum(1: 0x00000001), Enum(1: 0x00000080)]
+  array_field_of 2 (out of range): EXN Invalid_argument index out of bounds
+  set_array_field out of range: EXN Invalid_argument index out of bounds
+  update_array_field 0: [Enum(1: 0x00000001), Enum(2: V|288|, Ptr(&(0x00000002, 0x00000000)[*], len(0x00000000)))]
+  cast_array: [Enum(1: 0x00000001), Enum(2: V|288|, Ptr(&(0x00000002, 0x00000000)[*], len(0x00000000)))]
+  cast_tuple: EXN Cast error: expected (TExtension []), got (TExtension [(TExtension Opt); 2]) for value [Enum(1: 0x00000001), Enum(2: V|288|, Ptr(&(0x00000002, 0x00000000)[*], len(0x00000000)))]
+  learn vs concrete: None
+  learn vs symbolic: None
+== random (crate32) #4
+  v: Union((0x00000000: 0x01-0x00000004), (0x00000004: (0x00000007, Ptr(&(0x00000002, 0x00000000)[‖103‖], vtable(&(0x00000000, 0x00000008)[*])), 0x2a) : ( Generated_Types.TAdt { Generated_Types.id = 12; generics = { Generated_Types.regions = []; types = []; const_generics = []; trait_refs = [] }; builtin = None })-0x00000008))
+  ty: (TExtension U1)
+  cost: 100000
+  evalf: =
+  smt: EXN Failure Cannot encode union values to SMT-LIB
+  as_union: [(0x00000000: 0x01-0x00000004); (0x00000004: (0x00000007, Ptr(&(0x00000002, 0x00000000)[‖103‖], vtable(&(0x00000000, 0x00000008)[*])), 0x2a) : ( Generated_Types.TAdt { Generated_Types.id = 12; generics = { Generated_Types.regions = []; types = []; const_generics = []; trait_refs = [] }; builtin = None })-0x00000008)]
+  cast_union ~adt: Union((0x00000000: 0x01-0x00000004), (0x00000004: (0x00000007, Ptr(&(0x00000002, 0x00000000)[‖103‖], vtable(&(0x00000000, 0x00000008)[*])), 0x2a) : ( Generated_Types.TAdt { Generated_Types.id = 12; generics = { Generated_Types.regions = []; types = []; const_generics = []; trait_refs = [] }; builtin = None })-0x00000008))
+  cast_enum (wrong kind): EXN Cast error: expected (TExtension TypeDecl@0), got (TExtension U1) for value Union((0x00000000: 0x01-0x00000004), (0x00000004: (0x00000007, Ptr(&(0x00000002, 0x00000000)[‖103‖], vtable(&(0x00000000, 0x00000008)[*])), 0x2a) : ( Generated_Types.TAdt { Generated_Types.id = 12; generics = { Generated_Types.regions = []; types = []; const_generics = []; trait_refs = [] }; builtin = None })-0x00000008))
+== random (crate32) #5
+  v: PolyVal(1)
+  ty: (TExtension TPolyType)
+  cost: 100000
+  evalf: =
+  smt: EXN Failure Cannot encode polymorphic values to SMT-LIB
+  as_type_var: 1
+== random (crate32) #6
+  v: Union((0x00000000: (0x00000003 & V|291|)-0x00000004), (0x00000004: 0f-0x00000008))
+  ty: (TExtension U0)
+  vars: |291|:(TBitVector 32)
+  cost: 100000
+  eval: =
+  evalf: =
+  subst: Union((0x00000000: 0x00000003-0x00000004), (0x00000004: 0f-0x00000008))
+  smt: EXN Failure Cannot encode union values to SMT-LIB
+  as_union: [(0x00000000: (0x00000003 & V|291|)-0x00000004); (0x00000004: 0f-0x00000008)]
+  cast_union ~adt: Union((0x00000000: (0x00000003 & V|291|)-0x00000004), (0x00000004: 0f-0x00000008))
+  cast_enum (wrong kind): EXN Cast error: expected (TExtension TypeDecl@0), got (TExtension U0) for value Union((0x00000000: (0x00000003 & V|291|)-0x00000004), (0x00000004: 0f-0x00000008))
+== random (crate32) #7
+  v: Ptr(&(0x00000002, 0x00000004)[*], ())
+  ty: (TExtension TFullPtr)
+  cost: 100000
+  evalf: =
+  smt: (|@mk-full-ptr<32>| (|@mk-thin-ptr<32>| (|@mk-ptr<32>| #x00000002 #x00000004) #x00000040 #x00000004) |@ptr-meta<64>::none|)  decls=[|@full-ptr<32>|,|@thin-ptr<32>|]
+  ptr_of: &(0x00000002, 0x00000004)[*]
+  len_meta: EXN Failure ptr_meta_as: expected len but got unit
+  vtable_meta: EXN Failure ptr_meta_as: expected vtable but got unit
+  with_ptr null: Ptr(&(0x00000000, 0x00000000)[*], ())
+  with_ptr self: Ptr(&(0x00000002, 0x00000004)[*], ())
+  cast_ptr_f: Ptr(&(0x00000002, 0x00000004)[*], ())
+  cast_ptr_t (wrong kind): EXN Cast error: expected (TExtension TThinPtr), got (TExtension TFullPtr) for value Ptr(&(0x00000002, 0x00000004)[*], ())
+  learn vs concrete: Some -> Ptr(&(0x00000002, 0x00000004)[*], ())
+  learn vs symbolic: Some -> Ptr(&(0x00000002, 0x00000004)[*], ())
+== random (crate32) #8
+  v: PolyVal(2)
+  ty: (TExtension TPolyType)
+  cost: 100000
+  evalf: =
+  smt: EXN Failure Cannot encode polymorphic values to SMT-LIB
+  as_type_var: 2
+
+##### declarations (first-seen order)
+decl |@tuple<(_ BitVec 32), Bool>|
+  (declare-datatype |@tuple<(_ BitVec 32), Bool>| ((|@mk-tuple<(_ BitVec 32), Bool>| (|@tuple<(_ BitVec 32), Bool>.0| (_ BitVec 32)) (|@tuple<(_ BitVec 32), Bool>.1| Bool))))
+decl |@ptr<64>|
+  (declare-datatype |@ptr<64>| ((|@mk-ptr<64>| (|@ptr<64>.loc| (_ BitVec 64)) (|@ptr<64>.ofs| (_ BitVec 64)))))
+decl |@thin-ptr<64>|
+  (declare-datatype |@thin-ptr<64>| ((|@mk-thin-ptr<64>| (|@thin-ptr<64>.ptr| |@ptr<64>|) (|@thin-ptr<64>.size| (_ BitVec 64)) (|@thin-ptr<64>.align| (_ BitVec 64)))))
+decl |@ptr-meta<64>|
+  (declare-datatype |@ptr-meta<64>| ((|@ptr-meta<64>::none|) (|@ptr-meta<64>::int| (|@ptr-meta<64>::int.0| (_ BitVec 64))) (|@ptr-meta<64>::ptr| (|@ptr-meta<64>::ptr.0| |@thin-ptr<64>|))))
+decl |@full-ptr<64>|
+  (declare-datatype |@full-ptr<64>| ((|@mk-full-ptr<64>| (|@full-ptr<64>.ptr| |@thin-ptr<64>|) (|@full-ptr<64>.meta| |@ptr-meta<64>|))))
+decl |@tuple<>|
+  (declare-datatype |@tuple<>| ((|@mk-tuple<>|)))
+decl |@tuple<(_ BitVec 32)>|
+  (declare-datatype |@tuple<(_ BitVec 32)>| ((|@mk-tuple<(_ BitVec 32)>| (|@tuple<(_ BitVec 32)>.0| (_ BitVec 32)))))
+decl |@tuple<(_ BitVec 8), (_ BitVec 32), (_ BitVec 64)>|
+  (declare-datatype |@tuple<(_ BitVec 8), (_ BitVec 32), (_ BitVec 64)>| ((|@mk-tuple<(_ BitVec 8), (_ BitVec 32), (_ BitVec 64)>| (|@tuple<(_ BitVec 8), (_ BitVec 32), (_ BitVec 64)>.0| (_ BitVec 8)) (|@tuple<(_ BitVec 8), (_ BitVec 32), (_ BitVec 64)>.1| (_ BitVec 32)) (|@tuple<(_ BitVec 8), (_ BitVec 32), (_ BitVec 64)>.2| (_ BitVec 64)))))
+decl |@tuple<(_ BitVec 32), Float32, !@thin-ptr<64>!>|
+  (declare-datatype |@tuple<(_ BitVec 32), Float32, !@thin-ptr<64>!>| ((|@mk-tuple<(_ BitVec 32), Float32, !@thin-ptr<64>!>| (|@tuple<(_ BitVec 32), Float32, !@thin-ptr<64>!>.0| (_ BitVec 32)) (|@tuple<(_ BitVec 32), Float32, !@thin-ptr<64>!>.1| Float32) (|@tuple<(_ BitVec 32), Float32, !@thin-ptr<64>!>.2| |@thin-ptr<64>|))))
+decl |@tuple<!@full-ptr<64>!, Float64, (_ BitVec 8)>|
+  (declare-datatype |@tuple<!@full-ptr<64>!, Float64, (_ BitVec 8)>| ((|@mk-tuple<!@full-ptr<64>!, Float64, (_ BitVec 8)>| (|@tuple<!@full-ptr<64>!, Float64, (_ BitVec 8)>.0| |@full-ptr<64>|) (|@tuple<!@full-ptr<64>!, Float64, (_ BitVec 8)>.1| Float64) (|@tuple<!@full-ptr<64>!, Float64, (_ BitVec 8)>.2| (_ BitVec 8)))))
+decl |@tuple<(_ BitVec 8), (_ BitVec 8)>|
+  (declare-datatype |@tuple<(_ BitVec 8), (_ BitVec 8)>| ((|@mk-tuple<(_ BitVec 8), (_ BitVec 8)>| (|@tuple<(_ BitVec 8), (_ BitVec 8)>.0| (_ BitVec 8)) (|@tuple<(_ BitVec 8), (_ BitVec 8)>.1| (_ BitVec 8)))))
+decl |@tuple<Float32, !@full-ptr<64>!>|
+  (declare-datatype |@tuple<Float32, !@full-ptr<64>!>| ((|@mk-tuple<Float32, !@full-ptr<64>!>| (|@tuple<Float32, !@full-ptr<64>!>.0| Float32) (|@tuple<Float32, !@full-ptr<64>!>.1| |@full-ptr<64>|))))
+decl |@tuple<(_ BitVec 32), !@tuple<Float32, !@full-ptr<64>!>!>|
+  (declare-datatype |@tuple<(_ BitVec 32), !@tuple<Float32, !@full-ptr<64>!>!>| ((|@mk-tuple<(_ BitVec 32), !@tuple<Float32, !@full-ptr<64>!>!>| (|@tuple<(_ BitVec 32), !@tuple<Float32, !@full-ptr<64>!>!>.0| (_ BitVec 32)) (|@tuple<(_ BitVec 32), !@tuple<Float32, !@full-ptr<64>!>!>.1| |@tuple<Float32, !@full-ptr<64>!>|))))
+decl |@tuple<!@tuple<(_ BitVec 8), (_ BitVec 8)>!, !@tuple<(_ BitVec 32), !@tuple<Float32, !@full-ptr<64>!>!>!>|
+  (declare-datatype |@tuple<!@tuple<(_ BitVec 8), (_ BitVec 8)>!, !@tuple<(_ BitVec 32), !@tuple<Float32, !@full-ptr<64>!>!>!>| ((|@mk-tuple<!@tuple<(_ BitVec 8), (_ BitVec 8)>!, !@tuple<(_ BitVec 32), !@tuple<Float32, !@full-ptr<64>!>!>!>| (|@tuple<!@tuple<(_ BitVec 8), (_ BitVec 8)>!, !@tuple<(_ BitVec 32), !@tuple<Float32, !@full-ptr<64>!>!>!>.0| |@tuple<(_ BitVec 8), (_ BitVec 8)>|) (|@tuple<!@tuple<(_ BitVec 8), (_ BitVec 8)>!, !@tuple<(_ BitVec 32), !@tuple<Float32, !@full-ptr<64>!>!>!>.1| |@tuple<(_ BitVec 32), !@tuple<Float32, !@full-ptr<64>!>!>|))))
+decl |@tuple<(_ BitVec 32), (_ BitVec 32)>|
+  (declare-datatype |@tuple<(_ BitVec 32), (_ BitVec 32)>| ((|@mk-tuple<(_ BitVec 32), (_ BitVec 32)>| (|@tuple<(_ BitVec 32), (_ BitVec 32)>.0| (_ BitVec 32)) (|@tuple<(_ BitVec 32), (_ BitVec 32)>.1| (_ BitVec 32)))))
+decl |@tuple<(_ BitVec 32), Float32>|
+  (declare-datatype |@tuple<(_ BitVec 32), Float32>| ((|@mk-tuple<(_ BitVec 32), Float32>| (|@tuple<(_ BitVec 32), Float32>.0| (_ BitVec 32)) (|@tuple<(_ BitVec 32), Float32>.1| Float32))))
+decl |@tuple<(Seq (_ BitVec 32))>|
+  (declare-datatype |@tuple<(Seq (_ BitVec 32))>| ((|@mk-tuple<(Seq (_ BitVec 32))>| (|@tuple<(Seq (_ BitVec 32))>.0| (Seq (_ BitVec 32))))))
+decl |@tuple<!@full-ptr<64>!, (Seq (_ BitVec 32)), (_ BitVec 32)>|
+  (declare-datatype |@tuple<!@full-ptr<64>!, (Seq (_ BitVec 32)), (_ BitVec 32)>| ((|@mk-tuple<!@full-ptr<64>!, (Seq (_ BitVec 32)), (_ BitVec 32)>| (|@tuple<!@full-ptr<64>!, (Seq (_ BitVec 32)), (_ BitVec 32)>.0| |@full-ptr<64>|) (|@tuple<!@full-ptr<64>!, (Seq (_ BitVec 32)), (_ BitVec 32)>.1| (Seq (_ BitVec 32))) (|@tuple<!@full-ptr<64>!, (Seq (_ BitVec 32)), (_ BitVec 32)>.2| (_ BitVec 32)))))
+decl |@tuple<Float128, (_ BitVec 32), (_ BitVec 8)>|
+  (declare-datatype |@tuple<Float128, (_ BitVec 32), (_ BitVec 8)>| ((|@mk-tuple<Float128, (_ BitVec 32), (_ BitVec 8)>| (|@tuple<Float128, (_ BitVec 32), (_ BitVec 8)>.0| Float128) (|@tuple<Float128, (_ BitVec 32), (_ BitVec 8)>.1| (_ BitVec 32)) (|@tuple<Float128, (_ BitVec 32), (_ BitVec 8)>.2| (_ BitVec 8)))))
+decl |@tuple<Float16>|
+  (declare-datatype |@tuple<Float16>| ((|@mk-tuple<Float16>| (|@tuple<Float16>.0| Float16))))
+decl |@tuple<!@thin-ptr<64>!>|
+  (declare-datatype |@tuple<!@thin-ptr<64>!>| ((|@mk-tuple<!@thin-ptr<64>!>| (|@tuple<!@thin-ptr<64>!>.0| |@thin-ptr<64>|))))
+decl |@enum<Opt>|
+  (declare-datatype |@enum<Opt>| ((|@enum<Opt>::None|) (|@enum<Opt>::Some| (|@enum<Opt>::Some.0| (_ BitVec 32))) (|@enum<Opt>::Pair| (|@enum<Opt>::Pair.0| (_ BitVec 8)) (|@enum<Opt>::Pair.1| |@full-ptr<64>|))))
+decl |@tuple<(_ BitVec 8), Float64>|
+  (declare-datatype |@tuple<(_ BitVec 8), Float64>| ((|@mk-tuple<(_ BitVec 8), Float64>| (|@tuple<(_ BitVec 8), Float64>.0| (_ BitVec 8)) (|@tuple<(_ BitVec 8), Float64>.1| Float64))))
+decl |@enum<Shape>|
+  (declare-datatype |@enum<Shape>| ((|@enum<Shape>::Circle| (|@enum<Shape>::Circle.0| Float32)) (|@enum<Shape>::Rect| (|@enum<Shape>::Rect.0| (_ BitVec 32)) (|@enum<Shape>::Rect.1| (_ BitVec 32))) (|@enum<Shape>::Nest| (|@enum<Shape>::Nest.0| |@tuple<(_ BitVec 8), Float64>|)) (|@enum<Shape>::Arr| (|@enum<Shape>::Arr.0| (Seq (_ BitVec 8))))))
+decl |@enum<Unit>|
+  (declare-datatype |@enum<Unit>| ((|@enum<Unit>::A|) (|@enum<Unit>::B|) (|@enum<Unit>::C|)))
+decl |@enum<Outer>|
+  (declare-datatype |@enum<Outer>| ((|@enum<Outer>::Wrap| (|@enum<Outer>::Wrap.0| |@enum<Opt>|)) (|@enum<Outer>::Bare| (|@enum<Outer>::Bare.0| (_ BitVec 8)) (|@enum<Outer>::Bare.1| (_ BitVec 64)))))
+decl |@tuple<Float64>|
+  (declare-datatype |@tuple<Float64>| ((|@mk-tuple<Float64>| (|@tuple<Float64>.0| Float64))))
+decl |@tuple<(Seq Float32), !@tuple<Float64>!, (Seq (_ BitVec 32))>|
+  (declare-datatype |@tuple<(Seq Float32), !@tuple<Float64>!, (Seq (_ BitVec 32))>| ((|@mk-tuple<(Seq Float32), !@tuple<Float64>!, (Seq (_ BitVec 32))>| (|@tuple<(Seq Float32), !@tuple<Float64>!, (Seq (_ BitVec 32))>.0| (Seq Float32)) (|@tuple<(Seq Float32), !@tuple<Float64>!, (Seq (_ BitVec 32))>.1| |@tuple<Float64>|) (|@tuple<(Seq Float32), !@tuple<Float64>!, (Seq (_ BitVec 32))>.2| (Seq (_ BitVec 32))))))
+decl |@ptr<32>|
+  (declare-datatype |@ptr<32>| ((|@mk-ptr<32>| (|@ptr<32>.loc| (_ BitVec 32)) (|@ptr<32>.ofs| (_ BitVec 32)))))
+decl |@thin-ptr<32>|
+  (declare-datatype |@thin-ptr<32>| ((|@mk-thin-ptr<32>| (|@thin-ptr<32>.ptr| |@ptr<32>|) (|@thin-ptr<32>.size| (_ BitVec 32)) (|@thin-ptr<32>.align| (_ BitVec 32)))))
+decl |@ptr-meta<32>|
+  (declare-datatype |@ptr-meta<32>| ((|@ptr-meta<32>::none|) (|@ptr-meta<32>::int| (|@ptr-meta<32>::int.0| (_ BitVec 32))) (|@ptr-meta<32>::ptr| (|@ptr-meta<32>::ptr.0| |@thin-ptr<32>|))))
+decl |@full-ptr<32>|
+  (declare-datatype |@full-ptr<32>| ((|@mk-full-ptr<32>| (|@full-ptr<32>.ptr| |@thin-ptr<32>|) (|@full-ptr<32>.meta| |@ptr-meta<32>|))))
+decl |@tuple<(_ BitVec 8), (_ BitVec 32), (_ BitVec 32)>|
+  (declare-datatype |@tuple<(_ BitVec 8), (_ BitVec 32), (_ BitVec 32)>| ((|@mk-tuple<(_ BitVec 8), (_ BitVec 32), (_ BitVec 32)>| (|@tuple<(_ BitVec 8), (_ BitVec 32), (_ BitVec 32)>.0| (_ BitVec 8)) (|@tuple<(_ BitVec 8), (_ BitVec 32), (_ BitVec 32)>.1| (_ BitVec 32)) (|@tuple<(_ BitVec 8), (_ BitVec 32), (_ BitVec 32)>.2| (_ BitVec 32)))))
+decl |@tuple<(_ BitVec 32), Float32, !@thin-ptr<32>!>|
+  (declare-datatype |@tuple<(_ BitVec 32), Float32, !@thin-ptr<32>!>| ((|@mk-tuple<(_ BitVec 32), Float32, !@thin-ptr<32>!>| (|@tuple<(_ BitVec 32), Float32, !@thin-ptr<32>!>.0| (_ BitVec 32)) (|@tuple<(_ BitVec 32), Float32, !@thin-ptr<32>!>.1| Float32) (|@tuple<(_ BitVec 32), Float32, !@thin-ptr<32>!>.2| |@thin-ptr<32>|))))
+decl |@tuple<!@full-ptr<32>!, Float64, (_ BitVec 8)>|
+  (declare-datatype |@tuple<!@full-ptr<32>!, Float64, (_ BitVec 8)>| ((|@mk-tuple<!@full-ptr<32>!, Float64, (_ BitVec 8)>| (|@tuple<!@full-ptr<32>!, Float64, (_ BitVec 8)>.0| |@full-ptr<32>|) (|@tuple<!@full-ptr<32>!, Float64, (_ BitVec 8)>.1| Float64) (|@tuple<!@full-ptr<32>!, Float64, (_ BitVec 8)>.2| (_ BitVec 8)))))
+decl |@tuple<Float32, !@full-ptr<32>!>|
+  (declare-datatype |@tuple<Float32, !@full-ptr<32>!>| ((|@mk-tuple<Float32, !@full-ptr<32>!>| (|@tuple<Float32, !@full-ptr<32>!>.0| Float32) (|@tuple<Float32, !@full-ptr<32>!>.1| |@full-ptr<32>|))))
+decl |@tuple<(_ BitVec 32), !@tuple<Float32, !@full-ptr<32>!>!>|
+  (declare-datatype |@tuple<(_ BitVec 32), !@tuple<Float32, !@full-ptr<32>!>!>| ((|@mk-tuple<(_ BitVec 32), !@tuple<Float32, !@full-ptr<32>!>!>| (|@tuple<(_ BitVec 32), !@tuple<Float32, !@full-ptr<32>!>!>.0| (_ BitVec 32)) (|@tuple<(_ BitVec 32), !@tuple<Float32, !@full-ptr<32>!>!>.1| |@tuple<Float32, !@full-ptr<32>!>|))))
+decl |@tuple<!@tuple<(_ BitVec 8), (_ BitVec 8)>!, !@tuple<(_ BitVec 32), !@tuple<Float32, !@full-ptr<32>!>!>!>|
+  (declare-datatype |@tuple<!@tuple<(_ BitVec 8), (_ BitVec 8)>!, !@tuple<(_ BitVec 32), !@tuple<Float32, !@full-ptr<32>!>!>!>| ((|@mk-tuple<!@tuple<(_ BitVec 8), (_ BitVec 8)>!, !@tuple<(_ BitVec 32), !@tuple<Float32, !@full-ptr<32>!>!>!>| (|@tuple<!@tuple<(_ BitVec 8), (_ BitVec 8)>!, !@tuple<(_ BitVec 32), !@tuple<Float32, !@full-ptr<32>!>!>!>.0| |@tuple<(_ BitVec 8), (_ BitVec 8)>|) (|@tuple<!@tuple<(_ BitVec 8), (_ BitVec 8)>!, !@tuple<(_ BitVec 32), !@tuple<Float32, !@full-ptr<32>!>!>!>.1| |@tuple<(_ BitVec 32), !@tuple<Float32, !@full-ptr<32>!>!>|))))
+decl |@tuple<!@thin-ptr<32>!, !@full-ptr<32>!, Float16>|
+  (declare-datatype |@tuple<!@thin-ptr<32>!, !@full-ptr<32>!, Float16>| ((|@mk-tuple<!@thin-ptr<32>!, !@full-ptr<32>!, Float16>| (|@tuple<!@thin-ptr<32>!, !@full-ptr<32>!, Float16>.0| |@thin-ptr<32>|) (|@tuple<!@thin-ptr<32>!, !@full-ptr<32>!, Float16>.1| |@full-ptr<32>|) (|@tuple<!@thin-ptr<32>!, !@full-ptr<32>!, Float16>.2| Float16))))

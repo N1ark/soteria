@@ -1,0 +1,16 @@
+(executable
+ (name golden)
+ (libraries soteria soteria-rust charon fmt iter zarith))
+
+(rule
+ (targets golden.actual)
+ (action
+  (with-stdout-to
+   golden.actual
+   (run ./golden.exe))))
+
+(rule
+ (alias runtest)
+ (package soteria-rust)
+ (action
+  (diff golden.expected golden.actual)))

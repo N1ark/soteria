@@ -1,0 +1,85 @@
+(* The solver module: what the generic solver layer (Solver_lang.S of soteria)
+   needs of a value language that uses the bool, bitvec, float and ptr modules,
+   as plain helpers ([fn]s, no rules) in solver.kn. This file declares the
+   first-order data those helpers return in place of OCaml callbacks. In these
+   types, [nat] is an OCaml [int] (a width, an index) and [int] a [Z.t]. *)
+
+(* The side of a range, see [as_range]. These are not [Pos] and [Neg] because
+   [Neg] is a node of the bitvec module: constructor names are global. *)
+type sign = Inside | Outside
+
+(* The head of the SMT encoding of a sort: what to apply to the encodings of
+   its components (see [sort_head]) *)
+type smt_sort =
+  | SoBool
+  | SoBits of nat
+  | SoFloat of fp
+  | SoSeq of ty
+  | SoPtr of nat
+  | SoExt of ext_ty
+
+(* The head of the SMT encoding of a term: the SMT operator, with the
+   parameters that it takes from the term (see [encode_head]), to apply to the
+   encodings of the operands of the term, in the order of [operands] *)
+type smt_head =
+  | HVar of var
+  | HFloat of fp * int
+  | HBool of bool
+  | HBits of nat * int
+  | HPtr of nat
+  | HSeq
+  | HExists of (var * ty) list
+  | HExt of ext * ty
+  | HDistinct
+  | HNot
+  | HFAbs
+  | HFNeg
+  | HFSqrt
+  | HPtrLoc of nat
+  | HPtrOfs of nat
+  | HBvOfBool of nat
+  | HBvOfFloat of rm * bool * nat
+  | HFloatOfBv of rm * bool * fp
+  | HFloatOfBvRaw of fp
+  | HFloatOfFloat of rm * fp
+  | HBvExtract of nat * nat
+  | HBvExtend of bool * nat
+  | HBvNot
+  | HNeg
+  | HFIs of fc
+  | HFIsNeg
+  | HFIsPos
+  | HFRound of rm
+  | HEq
+  | HAnd
+  | HOr
+  | HFEq
+  | HFLeq
+  | HFLt
+  | HFAdd
+  | HFSub
+  | HFMul
+  | HFDiv
+  | HFRem
+  | HFMin
+  | HFMax
+  | HBitAnd
+  | HBitOr
+  | HBitXor
+  | HShl
+  | HLShr
+  | HAShr
+  | HAdd
+  | HSub
+  | HMul
+  | HDiv of bool
+  | HRem of bool
+  | HMod
+  | HAddOvf of bool
+  | HSubOvf of bool
+  | HMulOvf of bool
+  | HLt of bool
+  | HLeq of bool
+  | HBvConcat
+  | HFma
+  | HIte

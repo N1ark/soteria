@@ -1,0 +1,27 @@
+{"plugins": [],
+ "package": "kanon_tiny_values",
+ "options": {},
+ "name": "Tiny.Model",
+ "isModule": false,
+ "importArts":
+ {"Tiny.Types":
+  [["/home/user/stack/soteria/lib/tiny_values/lean/.lake/build/lib/lean/Tiny/Types.olean"]],
+  "Tiny.Syntax":
+  [["/home/user/stack/soteria/lib/tiny_values/lean/.lake/build/lib/lean/Tiny/Syntax.olean"]],
+  "Tiny.Signatures":
+  [["/home/user/stack/soteria/lib/tiny_values/lean/.lake/build/lib/lean/Tiny/Signatures.olean"]],
+  "Tiny.Prims":
+  [["/home/user/stack/soteria/lib/tiny_values/lean/.lake/build/lib/lean/Tiny/Prims.olean"]],
+  "Tiny.Abstract":
+  [["/home/user/stack/soteria/lib/tiny_values/lean/.lake/build/lib/lean/Tiny/Abstract.olean"]],
+  "KanonCore.Tactics":
+  [["/home/user/stack/soteria/lib/tiny_values/lean/.lake/packages/kanon/lean/.lake/build/lib/lean/KanonCore/Tactics.olean"]],
+  "KanonCore.Refinement":
+  [["/home/user/stack/soteria/lib/tiny_values/lean/.lake/packages/kanon/lean/.lake/build/lib/lean/KanonCore/Refinement.olean"]],
+  "KanonCore.Option":
+  [["/home/user/stack/soteria/lib/tiny_values/lean/.lake/packages/kanon/lean/.lake/build/lib/lean/KanonCore/Option.olean"]],
+  "KanonCore.Attr":
+  [["/home/user/stack/soteria/lib/tiny_values/lean/.lake/packages/kanon/lean/.lake/build/lib/lean/KanonCore/Attr.olean"]],
+  "KanonCore":
+  [["/home/user/stack/soteria/lib/tiny_values/lean/.lake/packages/kanon/lean/.lake/build/lib/lean/KanonCore.olean"]]},
+ "dynlibs": []}

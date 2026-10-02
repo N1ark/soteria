@@ -187,6 +187,10 @@ fn as_range (v : t) : (var * int * (sign * (int * int))) option =
 
 (* {1 Operands and rebuilding} *)
 
+(* Like the traversals below and the cost model, [operands] and [rebuild] are
+   infrastructure for the solver, not simplifier rules: they are not part of
+   the soundness statement. *)
+
 (* The operands of a term, left to right: its children, whatever the operator.
    Leaves have none. A language that adds nodes with operands extends this. *)
 fn operands (v : t) : t list =
@@ -276,34 +280,101 @@ fn rebuild (v : t) (cs : t list) : t =
 
 (* {1 Variables} *)
 
-fn append_vars (l r : (var * ty) list) : (var * ty) list =
-  match l with [] -> r | x :: rest -> x :: append_vars rest r
+(* The traversals of this section are the only places that know what a variable
+   and a binder are, and they are not part of the soundness statement: they are
+   infrastructure for the solver, not simplifier rules. Each is extensible: a
+   language that adds nodes adds its cases with [extend fn] (a node that binds
+   variables adds its [free_vars] and [eval] cases; the others only extend
+   [operands] and [rebuild]). *)
 
 fn is_bound (x : var) (bs : (var * ty) list) : bool =
   match bs with
   | [] -> false
   | (y, _) :: rest -> var_equal x y || is_bound x rest
 
-fn remove_bound (bs l : (var * ty) list) : (var * ty) list =
+(* [free_vars_acc v acc] is the free variables of [v] with their types, in the
+   order of a left to right traversal, with repetitions, followed by [acc]. *)
+fn free_vars_acc (v : t) (acc : (var * ty) list) : (var * ty) list =
+  match v with
+  | Var x -> (x, type_of v) :: acc
+  | Exists (bs, body) -> free_vars_bound bs (free_vars_acc body []) acc
+  | _ -> free_vars_list (operands v) acc
+
+fn free_vars_list (l : t list) (acc : (var * ty) list) : (var * ty) list =
   match l with
-  | [] -> []
+  | [] -> acc
+  | x :: rest -> free_vars_acc x (free_vars_list rest acc)
+
+(* [free_vars_bound bs l acc] is [l] without the variables of [bs], followed
+   by [acc] *)
+fn free_vars_bound (bs l acc : (var * ty) list) : (var * ty) list =
+  match l with
+  | [] -> acc
   | (x, s) :: rest ->
-      if is_bound x bs then remove_bound bs rest
-      else (x, s) :: remove_bound bs rest
+      if is_bound x bs then free_vars_bound bs rest acc
+      else (x, s) :: free_vars_bound bs rest acc
 
 (* The free variables of a value with their types, in the order of a left to
    right traversal, with repetitions. Stands for [Solver_lang.S.iter_vars],
    which takes a callback. *)
-fn free_vars (v : t) : (var * ty) list =
-  match v with
-  | Var x -> [ (x, type_of v) ]
-  | Exists (bs, body) -> remove_bound bs (free_vars body)
-  | _ -> free_vars_list (operands v)
+fn free_vars (v : t) : (var * ty) list = free_vars_acc v []
 
-fn free_vars_list (l : t list) : (var * ty) list =
+(* {1 Evaluation} *)
+
+fn lookup (x : var) (env : (var * t) list) : t option =
+  match env with
+  | [] -> None
+  | (y, r) :: rest -> if var_equal x y then Some r else lookup x rest
+
+(* [env] without the entries of the variables [bs] *)
+fn drop_bound (bs : (var * ty) list) (env : (var * t) list) : (var * t) list =
+  match env with
+  | [] -> []
+  | (y, r) :: rest ->
+      if is_bound y bs then drop_bound bs rest else (y, r) :: drop_bound bs rest
+
+fn same_terms (l r : t list) : bool =
+  match (l, r) with
+  | [], [] -> true
+  | x :: xs, y :: ys -> equal x y && same_terms xs ys
+  | _ -> false
+
+(* [eval env v] replaces the free variables of [v] by their value in [env] (the
+   variables that [env] does not bind stay) and re-simplifies, through
+   [rebuild]. The environment is data: a host that decides the value of a
+   variable with a closure collects [free_vars v], asks the closure for each,
+   and calls [eval] on the list. A bound variable is not replaced under its
+   binder. The branches of [Ite] that its guard rules out are not evaluated.
+   [v] itself is returned when nothing changed. A language that adds nodes
+   extends this only for the nodes that bind variables or that must not
+   evaluate all their operands; the others are handled through [operands] and
+   [rebuild]. Stands for [Solver_lang.S.eval], which takes a callback. *)
+fn eval (env : (var * t) list) (v : t) : t =
+  match v with
+  | Var x -> ( match lookup x env with Some r -> r | None -> v)
+  | Bool _ | BitVec _ | Float _ -> v
+  | Exists (bs, body) ->
+      let body' = eval (drop_bound bs env) body in
+      if equal body body' then v else b_mk_exists bs body'
+  | Ite (g, a, b) ->
+      let g' = eval env g in
+      if equal g' v_true then eval env a
+      else if equal g' v_false then eval env b
+      else
+        let a' = eval env a in
+        let b' = eval env b in
+        if equal g g' && equal a a' && equal b b' then v else b_ite g' a' b'
+  | _ ->
+      let cs = operands v in
+      let cs' = eval_list env cs in
+      if same_terms cs cs' then v else rebuild v cs'
+
+fn eval_list (env : (var * t) list) (l : t list) : t list =
   match l with
   | [] -> []
-  | x :: rest -> append_vars (free_vars x) (free_vars_list rest)
+  | x :: rest ->
+      let x' = eval env x in
+      x' :: eval_list env rest
 
 (* {1 Cost model} *)
 

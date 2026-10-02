@@ -26,6 +26,7 @@ end = struct
      mixing the results is a type error. *)
   module Svalue = Svalue.Make (V) ()
   module Eval = Eval.Make (V) (Svalue)
+  module Lang = Solver_lang.Make (V) (Svalue) (Eval)
   module Expr = Expr.Make (V) (Svalue)
   include Svalue
 

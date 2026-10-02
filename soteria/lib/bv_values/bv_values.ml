@@ -30,6 +30,7 @@ module Analyses = Analyses
 module Encoding = Encoding
 module Eval = Eval
 module Save_counter = Save_counter
+module Solver_lang = Solver_lang
 module Svalue = Svalue
 module Bv_solver = Bv_solver
 module Typed = Typed

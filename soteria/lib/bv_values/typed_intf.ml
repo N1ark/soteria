@@ -4,6 +4,7 @@ module type S = sig
   module Ext : Svalue.Value_ext
   module Svalue : module type of Svalue.Make (Ext) ()
   module Eval : module type of Eval.Make (Ext) (Svalue)
+  module Lang : Solver_lang.S with type t = Svalue.t and type ty = Svalue.ty
 
   (** {2 Phantom types} *)
 
@@ -497,6 +498,7 @@ module type Solver_value = sig
   module Ext : Svalue.Value_ext
   module Svalue : module type of Svalue.Make (Ext) ()
   module Eval : module type of Eval.Make (Ext) (Svalue)
+  module Lang : Solver_lang.S with type t = Svalue.t and type ty = Svalue.ty
 
   module T : sig
     type sint = [ `NonZero | `Zero ]

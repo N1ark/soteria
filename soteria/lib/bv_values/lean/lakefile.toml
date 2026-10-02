@@ -1,0 +1,14 @@
+name = "kanon_bv_values"
+defaultTargets = ["Kanon"]
+
+# The Lean library of Kanon, which the generated proofs build on
+# (run `lake update kanon` after changing the revision)
+# [versionsync: KANON_COMMIT_HASH=cbbccba57e2156777b29389287c128a79e6ee9f0]
+[[require]]
+name = "kanon"
+git = "https://github.com/N1ark/kanon"
+rev = "cbbccba57e2156777b29389287c128a79e6ee9f0"
+subDir = "lean"
+
+[[lean_lib]]
+name = "Kanon"

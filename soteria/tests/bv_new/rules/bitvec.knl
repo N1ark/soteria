@@ -1,0 +1,83 @@
+(* The bitvec module: bit-vectors, their arithmetic and bitwise operations, and
+   their comparisons. *)
+
+(* A bit-vector literal stores its value as an integer in [0, 2^n), whatever
+   its signedness. *)
+node BitVec of int : TBitVector n
+notation BitVec
+
+(* A location literal: the integer of a location of [n] bits. *)
+node LocLit of int : TLoc n
+
+node BvOfBool of nat (n) : TBool -> TBitVector n
+node BvExtract of nat * nat (from_, to_) : TBitVector n -> TBitVector (to_ - from_ + 1)
+    when 0 <= from_ && from_ <= to_ && to_ < n [@fold lit_extract]
+node BvExtend of bool * nat (_, k) : TBitVector n -> TBitVector (n + k)
+    when 0 <= k
+node BvNot : TBitVector n -> TBitVector n [@fold lit_not]
+node Neg of bool : TBitVector n -> TBitVector n
+    [@fold lit_neg] [@invol] [@ghost "sint" "sint_ovf"]
+node Add of checked : TBitVector n -> TBitVector n -> TBitVector n [@comm]
+    [@fold lit_add] [@ghost "sint" "sint" "sint_ovf"]
+node Sub of checked : TBitVector n -> TBitVector n -> TBitVector n
+    [@fold lit_sub] [@ghost "sint" "sint" "sint_ovf"]
+node Mul of checked : TBitVector n -> TBitVector n -> TBitVector n [@comm]
+    [@fold lit_mul] [@ghost "sint" "sint" "sint_ovf"]
+node Div of bool : TBitVector n -> TBitVector n -> TBitVector n
+    [@ghost "sint" "nonzero" "sint_ovf"]
+node Rem of bool : TBitVector n -> TBitVector n -> TBitVector n
+    [@ghost "sint" "nonzero" "sint_ovf"]
+node Mod : TBitVector n -> TBitVector n -> TBitVector n [@fold lit_smod]
+    [@ghost "sint" "sint" "sint_ovf"]
+node AddOvf of bool : TBitVector n -> TBitVector n -> TBool [@comm]
+    [@fold add_overflows]
+node SubOvf of bool : TBitVector n -> TBitVector n -> TBool
+    [@fold sub_overflows]
+node MulOvf of bool : TBitVector n -> TBitVector n -> TBool [@comm]
+    [@fold mul_overflows]
+node Lt of bool : TBitVector n -> TBitVector n -> TBool
+node Leq of bool : TBitVector n -> TBitVector n -> TBool
+node BvConcat : TBitVector n -> TBitVector m -> TBitVector (n + m)
+    [@fold lit_concat]
+node BitAnd : TBitVector n -> TBitVector n -> TBitVector n [@comm]
+    [@fold lit_and]
+node BitOr : TBitVector n -> TBitVector n -> TBitVector n [@comm]
+    [@fold lit_or]
+node BitXor : TBitVector n -> TBitVector n -> TBitVector n [@comm]
+    [@fold lit_xor]
+node Shl : TBitVector n -> TBitVector n -> TBitVector n [@fold lit_shl]
+node LShr : TBitVector n -> TBitVector n -> TBitVector n [@fold lit_lshr]
+node AShr : TBitVector n -> TBitVector n -> TBitVector n [@fold lit_ashr]
+sort TBitVector of nat [@get size] [@ghost sint]
+
+(* The laws [@unit] and [@zero] (and [@idem]) of the operators above, which
+   Kanon derives as the rules [unit_zero], [zero_zero], ..., are written by hand
+   in [bitvec.kn] with the names that the rules of the C and Rust tools have
+   always had ([zero], [one], [same]). *)
+
+(* Operators on terms: [a + b] is [bv_add unchecked a b] in expressions and
+   matches [Add (_, a, b)] in patterns, whatever its overflow check; on
+   integers, [land] and [lsl] are the integer operations [z_land] and [z_lsl]
+   (the bit-vector arithmetic on literals is [lit_add] etc., which take the
+   sorts of their operands). *)
+
+infix "+" = Add, bv_add unchecked
+infix "-" = Sub, bv_sub unchecked
+infix "*" = Mul, bv_mul unchecked
+infix "land" = BitAnd, bv_and, z_land
+infix "lor" = BitOr, bv_or
+infix "lxor" = BitXor, bv_xor
+infix "lsl" = Shl, bv_shl, z_lsl
+infix "lsr" = LShr, bv_lshr
+infix "asr" = AShr, bv_ashr
+infix "++" = BvConcat, bv_concat
+(* the remainders: [urem] is unsigned, [srem] takes the sign of the dividend
+   and [mod] that of the divisor *)
+infix "urem" = Rem false, bv_rem false
+infix "srem" = Rem true, bv_rem true
+infix "mod" = Mod, bv_mod
+prefix "-" = Neg, bv_neg false
+prefix "~" = BvNot, bv_not
+
+constant "0" (v) = bv_zero (size v)
+constant "1" (v) = bv_one (size v)

@@ -1,9 +1,0 @@
-{"plugins": [],
- "package": "kanon_tiny_values",
- "options": {},
- "name": "Tiny.Abstract",
- "isModule": false,
- "importArts":
- {"Tiny.Types":
-  [["/home/user/stack/soteria/lib/tiny_values/lean/.lake/build/lib/lean/Tiny/Types.olean"]]},
- "dynlibs": []}

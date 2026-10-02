@@ -93,13 +93,19 @@ module Make (Ext : Value_ext) (V : module type of Svalue.Make (Ext) ()) = struct
         else eval_binop binop nv1 nv2
     | Triop (Ite, guard, then_, else_) ->
         (* eval this separately, to have lazy evaluation *)
+        let old_guard = guard in
         let guard = eval guard in
         if equal guard Bool.v_true then eval then_
         else if equal guard Bool.v_false then eval else_
         else
           let nthen = eval then_ in
           let nelse = eval else_ in
-          if (not force) && then_ == nthen && else_ == nelse then x
+          if
+            (not force)
+            && guard == old_guard
+            && then_ == nthen
+            && else_ == nelse
+          then x
           else Bool.ite guard nthen nelse
     | Triop (triop, a, b, c) ->
         let na = eval a in
@@ -116,7 +122,7 @@ module Make (Ext : Value_ext) (V : module type of Svalue.Make (Ext) ()) = struct
           else eval_var sv v ty
         in
         let nsv = eval' ~eval_var:eval_var' sv in
-        if (not force) && sv == nsv then x else Bool.mk_exists vs sv
+        if (not force) && sv == nsv then x else Bool.mk_exists vs nsv
     | Seq l ->
         let l, changed = List.map_changed eval l in
         if (not force) && not changed then x else SSeq.mk ~seq_ty:x.node.ty l

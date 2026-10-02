@@ -486,8 +486,8 @@ end
 
 (** The exact slice of {!S} that {!Bv_solver}'s functors (and the {!Encoding}
     and {!Analyses} they build on) actually consume — essentially {!Svalue},
-    {!Eval}, {!Ext}, and a handful of boolean/bitvector constructors, enough to
-    also be a {!Symex.Value.S}.
+    {!Eval}, {!Ext}, {!Lang} and the coercions to and from untyped values,
+    enough to also be a {!Symex.Value.S}.
 
     Solvers take this rather than the whole {!S} so that a downstream [Typed]
     that adds or overrides constructors — and therefore no longer matches {!S} —
@@ -509,27 +509,7 @@ module type Solver_value = sig
 
   (** {2 Extra operations beyond {!Symex.Value.S}} *)
 
-  open T
-
-  val t_int : int -> [> sint ] ty
   val untype_type : 'a ty -> Svalue.ty
-  val iter_vars : 'a t -> (Var.t * 'b ty -> unit) -> unit
   val type_ : Svalue.t -> 'a t
   val untyped : 'a t -> Svalue.t
-  val equal : 'a t -> 'a t -> bool
-  val sem_eq : 'a t -> 'b t -> sbool t
-  val v_true : [> sbool ] t
-  val v_false : [> sbool ] t
-  val and_ : [< sbool ] t -> [< sbool ] t -> [> sbool ] t
-  val split_ands : [< sbool ] t -> ([> sbool ] t -> unit) -> unit
-
-  module BitVec : sig
-    val mk : int -> Z.t -> [> sint ] t
-  end
-
-  module Infix : sig
-    val ( ==@ ) : 'a t -> 'a t -> [> sbool ] t
-    val ( <=@ ) : [< sint ] t -> [< sint ] t -> [> sbool ] t
-    val ( &&@ ) : [< sbool ] t -> [< sbool ] t -> [> sbool ] t
-  end
 end

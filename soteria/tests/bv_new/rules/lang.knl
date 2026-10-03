@@ -70,3 +70,4 @@ type fc [@ocaml "Soteria.Bv_values.Svalue.FloatClass.t"] =
   | Zero
   | Infinite
   | NaN
+use "view"

@@ -232,3 +232,7 @@ let f_of_int rounding signed fp size z =
   match Soteria.Bv_values.Svalue.int_size_of_size (Z.to_int size) with
   | Some int_size -> Some (F.int2float z int_size fp rounding ~signed)
   | None -> None
+
+(* The primitives of the view functions ([rules/view.kn]): the generated rules
+   call and check all of them here *)
+include View_prims

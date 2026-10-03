@@ -1,0 +1,48 @@
+; WP3a: tests of the view functions generated from rules/view.kn.
+;
+; - [view_check]: every view function of the generated language ([Kanon_gen])
+;   against the hand-written reference [Kanon_ref], on random terms of the
+;   corpus of [iface/check] and on raw terms of every node kind and, for the
+;   functions that create nodes, the number and the order of the nodes
+;   created.
+; - [check_gen]: the tests of [iface/check/check.ml] (generic layers against
+;   the old stack) with the generated view in place of [Kanon_ref].
+
+(copy_files# ../iface/check/gen.ml)
+
+(copy_files# ../iface/check/kanon_ref.ml)
+
+(copy_files# ../iface/check/conv.ml)
+
+(rule
+ (targets check_gen.ml)
+ (deps ../iface/check/check.ml)
+ (action
+  (system
+   "sed 's/^  Kanon_ref$/  Kanon_gen/' ../iface/check/check.ml > check_gen.ml && grep -q '^  Kanon_gen$' check_gen.ml")))
+
+(executables
+ (names view_check check_gen)
+ (modules kanon_gen kanon_ref conv gen check_gen view_check)
+ (libraries bv_iface bv_new soteria floatml zarith iter fmt alcotest)
+ (flags
+  (:standard -w +a-4-9-26-27-32..42-44-45-48-70)))
+
+(rule
+ (alias runtest)
+ (action
+  (run ./check_gen.exe)))
+
+; the corpus is smaller than the default of 200000 terms, for [dune test]; run
+; [VIEW_CHECK_TERMS=200000 view_check.exe] for the full check
+
+(rule
+ (alias runtest)
+ (action
+  (setenv
+   VIEW_CHECK_TERMS
+   20000
+   (setenv
+    VIEW_CHECK_TRIALS
+    3000
+    (run ./view_check.exe)))))

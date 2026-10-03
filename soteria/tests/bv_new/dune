@@ -10,8 +10,11 @@
 
 (library
  (name bv_new)
- (modules bv_new bv_types bv_prims bv_rules)
- (libraries soteria floatml iter zarith))
+ (modules bv_new bv_types bv_prims view_prims bv_rules)
+ (libraries bv_iface soteria floatml iter zarith fmt)
+ ; the generated types mention [View_host] (see rules/view.knl)
+ (flags
+  (:standard -open Bv_iface)))
 
 (test
  (name test_bv_new)

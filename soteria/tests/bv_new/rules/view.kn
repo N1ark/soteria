@@ -1,0 +1,763 @@
+(* The view functions, see view.knl: per-node knowledge for the generic host
+   code, as plain [fn]s (no rules). All of them are [@no_lean]. The ones that
+   must have a case for every node are [@total]: a language that adds nodes
+   adds its cases with [extend fn]. *)
+
+(* {1 Primitives of the view} *)
+
+(* The terms that no function of Kanon builds: a pointer (no simplification;
+   the sizes of its operands must be equal), a sequence at a given sort, and
+   the failure of [rebuild] on the wrong number of operands *)
+prim mk_ptr : t -> t -> t [@no_lean]
+prim mk_seq : ty -> t list -> t [@no_lean]
+prim bad_operands : t -> t [@no_lean]
+
+(* The variables of a list of terms, if they all are variables, as the least
+   and the greatest of their numbers when these form a contiguous range *)
+prim distinct_range : t list -> (int * int) option [@no_lean]
+
+(* {2 Heads of the pretty-printer} *)
+
+prim ph_var : var -> pphead [@no_lean]
+prim ph_bool : bool -> pphead [@no_lean]
+prim ph_float : float -> pphead [@no_lean]
+(* a bit-vector or location literal of the sort: hexadecimal when its size is
+   a multiple of 4, binary otherwise *)
+prim ph_bv : ty -> int -> pphead [@no_lean]
+prim ph_exists : (var * ty) list -> pphead [@no_lean]
+prim ph_lparen : pphead [@no_lean]
+prim ph_rparen : pphead [@no_lean]
+prim ph_neq : pphead [@no_lean]
+prim ph_distinct : pphead [@no_lean]
+prim ph_distinct_range : int -> int -> pphead [@no_lean]
+
+prim ph_not : pphead [@no_lean]
+prim ph_fabs : pphead [@no_lean]
+prim ph_fneg : pphead [@no_lean]
+prim ph_fsqrt : pphead [@no_lean]
+prim ph_ptr_loc : pphead [@no_lean]
+prim ph_ptr_ofs : pphead [@no_lean]
+prim ph_bv_of_bool : int -> pphead [@no_lean]
+prim ph_bv_of_float : rm -> bool -> int -> pphead [@no_lean]
+prim ph_float_of_bv : rm -> bool -> fp -> pphead [@no_lean]
+prim ph_float_of_bv_raw : fp -> pphead [@no_lean]
+prim ph_float_of_float : rm -> fp -> pphead [@no_lean]
+prim ph_bv_extract : int -> int -> pphead [@no_lean]
+prim ph_bv_extend : bool -> int -> pphead [@no_lean]
+prim ph_bv_not : pphead [@no_lean]
+prim ph_neg : bool -> pphead [@no_lean]
+prim ph_fis : fc -> pphead [@no_lean]
+prim ph_fisneg : pphead [@no_lean]
+prim ph_fispos : pphead [@no_lean]
+prim ph_fround : rm -> pphead [@no_lean]
+
+prim ph_ptr : pphead [@no_lean]
+prim ph_and : pphead [@no_lean]
+prim ph_or : pphead [@no_lean]
+prim ph_eq : pphead [@no_lean]
+prim ph_feq : pphead [@no_lean]
+prim ph_fleq : pphead [@no_lean]
+prim ph_flt : pphead [@no_lean]
+prim ph_fadd : pphead [@no_lean]
+prim ph_fsub : pphead [@no_lean]
+prim ph_fmul : pphead [@no_lean]
+prim ph_fdiv : pphead [@no_lean]
+prim ph_frem : pphead [@no_lean]
+prim ph_fmin : pphead [@no_lean]
+prim ph_fmax : pphead [@no_lean]
+prim ph_add : checked -> pphead [@no_lean]
+prim ph_sub : checked -> pphead [@no_lean]
+prim ph_mul : checked -> pphead [@no_lean]
+prim ph_div : bool -> pphead [@no_lean]
+prim ph_rem : bool -> pphead [@no_lean]
+prim ph_mod : pphead [@no_lean]
+prim ph_add_ovf : bool -> pphead [@no_lean]
+prim ph_sub_ovf : bool -> pphead [@no_lean]
+prim ph_mul_ovf : bool -> pphead [@no_lean]
+prim ph_lt : bool -> pphead [@no_lean]
+prim ph_leq : bool -> pphead [@no_lean]
+prim ph_concat : pphead [@no_lean]
+prim ph_bit_and : pphead [@no_lean]
+prim ph_bit_or : pphead [@no_lean]
+prim ph_bit_xor : pphead [@no_lean]
+prim ph_shl : pphead [@no_lean]
+prim ph_lshr : pphead [@no_lean]
+prim ph_ashr : pphead [@no_lean]
+prim ph_fma : pphead [@no_lean]
+
+(* {2 SMT operators}
+
+   Each applies to the encodings of the operands, and encodes them in the
+   order of the code that it replaces: binary operators left then right,
+   [Ite], [Fma] and [Ptr] right to left, [Exists] its body and then the sorts
+   of its binders, [Seq] and [Distinct] left to right. *)
+
+prim h_var : var -> smt_op [@no_lean]
+prim h_float : ty -> float -> smt_op [@no_lean]
+prim h_bool : bool -> smt_op [@no_lean]
+prim h_bits : ty -> int -> smt_op [@no_lean]
+prim h_ptr : ty -> smt_op [@no_lean]
+(* fails when applied to the empty sequence: its sort is needed *)
+prim h_seq : smt_op [@no_lean]
+prim h_exists : (var * ty) list -> smt_op [@no_lean]
+prim h_distinct : smt_op [@no_lean]
+
+prim h_not : smt_op [@no_lean]
+prim h_fabs : smt_op [@no_lean]
+prim h_fneg : smt_op [@no_lean]
+prim h_fsqrt : smt_op [@no_lean]
+prim h_ptr_loc : smt_op [@no_lean]
+prim h_ptr_ofs : smt_op [@no_lean]
+prim h_bv_of_bool : int -> smt_op [@no_lean]
+prim h_bv_of_float : rm -> bool -> int -> smt_op [@no_lean]
+prim h_float_of_bv : rm -> bool -> fp -> smt_op [@no_lean]
+prim h_float_of_bv_raw : fp -> smt_op [@no_lean]
+prim h_float_of_float : rm -> fp -> smt_op [@no_lean]
+prim h_bv_extract : int -> int -> smt_op [@no_lean]
+prim h_bv_extend : bool -> int -> smt_op [@no_lean]
+prim h_bv_not : smt_op [@no_lean]
+prim h_neg : smt_op [@no_lean]
+prim h_fis : fc -> smt_op [@no_lean]
+prim h_fisneg : smt_op [@no_lean]
+prim h_fispos : smt_op [@no_lean]
+prim h_fround : rm -> smt_op [@no_lean]
+
+prim h_and : smt_op [@no_lean]
+prim h_or : smt_op [@no_lean]
+prim h_eq : smt_op [@no_lean]
+prim h_feq : smt_op [@no_lean]
+prim h_fleq : smt_op [@no_lean]
+prim h_flt : smt_op [@no_lean]
+prim h_fadd : smt_op [@no_lean]
+prim h_fsub : smt_op [@no_lean]
+prim h_fmul : smt_op [@no_lean]
+prim h_fdiv : smt_op [@no_lean]
+prim h_frem : smt_op [@no_lean]
+prim h_fmin : smt_op [@no_lean]
+prim h_fmax : smt_op [@no_lean]
+prim h_add : smt_op [@no_lean]
+prim h_sub : smt_op [@no_lean]
+prim h_mul : smt_op [@no_lean]
+prim h_div : bool -> smt_op [@no_lean]
+prim h_rem : bool -> smt_op [@no_lean]
+prim h_mod : smt_op [@no_lean]
+prim h_add_ovf : bool -> smt_op [@no_lean]
+prim h_sub_ovf : bool -> smt_op [@no_lean]
+prim h_mul_ovf : bool -> smt_op [@no_lean]
+prim h_lt : bool -> smt_op [@no_lean]
+prim h_leq : bool -> smt_op [@no_lean]
+prim h_concat : smt_op [@no_lean]
+prim h_bit_and : smt_op [@no_lean]
+prim h_bit_or : smt_op [@no_lean]
+prim h_bit_xor : smt_op [@no_lean]
+prim h_shl : smt_op [@no_lean]
+prim h_lshr : smt_op [@no_lean]
+prim h_ashr : smt_op [@no_lean]
+prim h_fma : smt_op [@no_lean]
+prim h_ite : smt_op [@no_lean]
+
+(* The SMT encoding of the sorts *)
+prim so_bool : smt_sort_op [@no_lean]
+prim so_bits : int -> smt_sort_op [@no_lean]
+prim so_float : fp -> smt_sort_op [@no_lean]
+prim so_ptr : int -> smt_sort_op [@no_lean]
+(* the sort of the sequences of its one component *)
+prim so_seq : smt_sort_op [@no_lean]
+
+(* {1 Sorts} *)
+
+fn t_bool : ty [@no_lean] = TBool
+fn t_bv (n : int) : ty [@no_lean] = TBitVector n
+fn t_loc (n : int) : ty [@no_lean] = TLoc n
+fn t_ptr (n : int) : ty [@no_lean] = TPointer n
+fn t_float (p : fp) : ty [@no_lean] = TFloat p
+fn t_seq (s : ty) : ty [@no_lean] = TSeq s
+
+(* The size of a bit-vector, a pointer and a location sort *)
+fn sized_ty (s : ty) : int option [@no_lean] =
+  match s with
+  | TBitVector n | TPointer n | TLoc n -> Some n
+  | _ -> None
+
+(* Only bit-vectors: not locations or pointers *)
+fn as_bv_ty (s : ty) : int option [@no_lean] =
+  match s with TBitVector n -> Some n | _ -> None
+
+fn as_float_ty (s : ty) : fp option [@no_lean] =
+  match s with TFloat p -> Some p | _ -> None
+
+fn as_seq_ty (s : ty) : ty option [@no_lean] =
+  match s with TSeq e -> Some e | _ -> None
+
+fn is_bool_ty (s : ty) : bool [@no_lean] =
+  match s with TBool -> true | _ -> false
+
+(* {1 Recognisers} *)
+
+(* The flags of the operators are ignored *)
+
+fn is_literal (v : t) : bool [@no_lean] =
+  match v with Bool _ | BitVec _ | LocLit _ | Float _ -> true | _ -> false
+
+fn as_var (v : t) : (var * ty) option [@no_lean] =
+  match v with Var x -> Some (x, type_of v) | _ -> None
+
+fn as_not (v : t) : t option [@no_lean] =
+  match v with Not x -> Some x | _ -> None
+
+fn as_eq (v : t) : (t * t) option [@no_lean] =
+  match v with Eq (l, r) -> Some (l, r) | _ -> None
+
+fn as_and (v : t) : (t * t) option [@no_lean] =
+  match v with And (l, r) -> Some (l, r) | _ -> None
+
+fn as_or (v : t) : (t * t) option [@no_lean] =
+  match v with Or (l, r) -> Some (l, r) | _ -> None
+
+fn as_ite (v : t) : (t * t * t) option [@no_lean] =
+  match v with Ite (g, a, b) -> Some (g, a, b) | _ -> None
+
+fn as_lt (v : t) : (t * t) option [@no_lean] =
+  match v with Lt (_, l, r) -> Some (l, r) | _ -> None
+
+fn as_leq (v : t) : (t * t) option [@no_lean] =
+  match v with Leq (_, l, r) -> Some (l, r) | _ -> None
+
+fn as_distinct (v : t) : t list option [@no_lean] =
+  match v with Distinct l -> Some l | _ -> None
+
+fn as_exists (v : t) : ((var * ty) list * t) option [@no_lean] =
+  match v with Exists (bs, b) -> Some (bs, b) | _ -> None
+
+(* Only the node [Ptr] *)
+fn as_ptr (v : t) : (t * t) option [@no_lean] =
+  match v with Ptr (l, o) -> Some (l, o) | _ -> None
+
+(* Only [BitVec]: a location literal is [as_loc_lit] *)
+fn as_bv_lit (v : t) : int option [@no_lean] =
+  match v with BitVec z -> Some z | _ -> None
+
+fn as_loc_lit (v : t) : int option [@no_lean] =
+  match v with LocLit z -> Some z | _ -> None
+
+fn as_float_lit (v : t) : float option [@no_lean] =
+  match v with Float f -> Some f | _ -> None
+
+fn append (l r : t list) : t list [@no_lean] =
+  match l with [] -> r | x :: rest -> x :: append rest r
+
+(* [A && B && C] as the list [A; B; C]: the nested conjunctions are flattened,
+   left to right *)
+fn conjuncts (v : t) : t list [@no_lean] =
+  match v with And (a, b) -> append (conjuncts a) (conjuncts b) | _ -> [ v ]
+
+(* [implies_or_contradicts q neg_q pc] is [Some true] if the path condition
+   conjunct [pc] implies [q], [Some false] if it implies [neg_q] (the negation
+   of [q]), and [None] otherwise *)
+fn implies_or_contradicts (q neg_q pc : t) : bool option [@no_lean] =
+  if q = pc then Some true
+  else if neg_q = pc then Some false
+  else
+    match (q, pc) with
+    (* [a < b] in PC implies [a <= b] *)
+    | Leq (qs, qa, qb), Lt (ps, pa, pb)
+      when qs = ps && qa = pa && qb = pb ->
+        Some true
+    (* [a < b] in PC implies ~[b <= a] and ~[b < a] *)
+    | (Lt (qs, qa, qb) | Leq (qs, qa, qb)), Lt (ps, pa, pb)
+      when qs = ps && qa = pb && qb = pa ->
+        Some false
+    (* [a <= b] in PC implies ~[b < a] *)
+    | Lt (qs, qa, qb), Leq (ps, pa, pb)
+      when qs = ps && qa = pb && qb = pa ->
+        Some false
+    (* [a < b] (either direction) in PC implies ~[a = b] *)
+    | Eq (qa, qb), Lt (_, pa, pb)
+      when (qa = pa && qb = pb) || (qa = pb && qb = pa) ->
+        Some false
+    (* [a < b] (either direction) in PC implies [~(a = b)] *)
+    | Not (Eq (qa, qb)), Lt (_, pa, pb)
+      when (qa = pa && qb = pb) || (qa = pb && qb = pa) ->
+        Some true
+    | _ -> None
+
+(* {1 Intervals}
+
+   See https://ceur-ws.org/Vol-1617/paper8.pdf *)
+
+(* [x mod 2^n], for [x] possibly negative *)
+fn to_bv (n x : int) : int [@no_lean] = x land ((1 lsl n) - 1)
+
+(* [2^n - x] *)
+fn neg_mod (n x : int) : int [@no_lean] = (1 lsl n) - x
+
+(* [Var x], [Var x + c] and [c + Var x], as [x] and the constant [c] (0 for the
+   first) *)
+fn var_plus_const (v : t) : (var * int) option [@no_lean] =
+  match v with
+  | Var x -> Some (x, 0)
+  | Add (_, Var x, BitVec c) -> Some (x, c)
+  | Add (_, BitVec c, Var x) -> Some (x, c)
+  | _ -> None
+
+(* [c1 <u rhs] or [c1 <=u rhs] with [rhs = x + c2], on [sz] bits (case 2):
+   c1 < c2 => ~[ -c2; c1 - c2 - 1 ] and c1 >= c2 => [ c1 - c2; -c2 - 1 ] *)
+fn range_const_ult (strict : bool) (sz c1 : int) (rhs : t) :
+    (var * int * (range_sign * (int * int))) option [@no_lean] =
+  match var_plus_const rhs with
+  | None -> None
+  | Some (x, c2) ->
+      let c1 = if strict then c1 + 1 else c1 in
+      if c1 < c2 then
+        Some (x, sz, (Outside, (neg_mod sz c2, to_bv sz (c1 - c2 - 1))))
+      else Some (x, sz, (Inside, (c1 - c2, to_bv sz (neg_mod sz c2 - 1))))
+
+(* [lhs <u c2] or [lhs <=u c2] with [lhs = x + c1] (case 3):
+   c1 <= c2 => ~[ c2 - c1 + 1; -1 ] and c1 > c2 => [ -c1; -c1 + c2 ] *)
+fn range_ult_const (strict : bool) (sz c2 : int) (lhs : t) :
+    (var * int * (range_sign * (int * int))) option [@no_lean] =
+  match var_plus_const lhs with
+  | None -> None
+  | Some (x, c1) ->
+      let c2 = if strict then c2 - 1 else c2 in
+      if c1 <= c2 then Some (x, sz, (Outside, (c2 - c1 + 1, neg_mod sz 1)))
+      else Some (x, sz, (Inside, (neg_mod sz c1, neg_mod sz c1 + c2)))
+
+(* [x <=s c1] (case 4):
+   c1 < 2^{n-1} => ~[ c1 + 1; 2^{n-1} - 1 ] and c1 >= 2^{n-1} => [ 2^{n-1}; c1 ] *)
+fn range_var_slt (sz : int) (x : var) (c1 : int) :
+    (var * int * (range_sign * (int * int))) option [@no_lean] =
+  let mid = 1 lsl (sz - 1) in
+  if c1 < mid then Some (x, sz, (Outside, (c1 + 1, mid - 1)))
+  else Some (x, sz, (Inside, (mid, c1)))
+
+(* [c1 <=s x] (case 5):
+   c1 < 2^{n-1} => [ c1; 2^{n-1} - 1 ] and c1 >= 2^{n-1} => ~[ 2^{n-1}; c1 - 1 ] *)
+fn range_slt_var (sz : int) (c1 : int) (x : var) :
+    (var * int * (range_sign * (int * int))) option [@no_lean] =
+  let mid = 1 lsl (sz - 1) in
+  if c1 < mid then Some (x, sz, (Inside, (c1, mid - 1)))
+  else Some (x, sz, (Outside, (mid, c1 - 1)))
+
+fn flip (s : range_sign) : range_sign [@no_lean] =
+  match s with Inside -> Outside | Outside -> Inside
+
+(* [as_range v = Some (x, size, (side, (lo, hi)))] iff [v] states that the
+   [size]-bit variable [x] is [Inside] or [Outside] the inclusive range
+   [[lo, hi]]. The constants are the unsigned integers that the literals hold. *)
+fn as_range (v : t) : (var * int * (range_sign * (int * int))) option [@no_lean] =
+  match v with
+  | Lt (false, (BitVec c1 as l), r) -> range_const_ult true (size l) c1 r
+  | Leq (false, (BitVec c1 as l), r) -> range_const_ult false (size l) c1 r
+  | Lt (false, l, (BitVec c2 as r)) -> range_ult_const true (size r) c2 l
+  | Leq (false, l, (BitVec c2 as r)) -> range_ult_const false (size r) c2 l
+  | Lt (true, Var x, (BitVec c1 as r)) -> range_var_slt (size r) x (c1 - 1)
+  | Leq (true, Var x, (BitVec c1 as r)) -> range_var_slt (size r) x c1
+  | Lt (true, (BitVec c1 as l), Var x) -> range_slt_var (size l) (c1 + 1) x
+  | Leq (true, (BitVec c1 as l), Var x) -> range_slt_var (size l) c1 x
+  | Eq ((BitVec c as l), Var x) -> Some (x, size l, (Inside, (c, c)))
+  (* This only works for a single fact; we can't apply this to [!(A && B)],
+     since that's a disjunction! *)
+  | Not x -> (
+      match as_range x with
+      | Some (y, sz, (s, r)) -> Some (y, sz, (flip s, r))
+      | None -> None)
+  | _ -> None
+
+(* {1 Operands and rebuilding} *)
+
+(* The operands of a term, left to right: [Seq] its elements, [Distinct] its
+   list, [Exists] its body and [Ptr] its location and offset. None for a leaf. *)
+fn operands (v : t) : t list [@no_lean] [@total] =
+  match v with
+  | Var _ | Bool _ | BitVec _ | LocLit _ | Float _ -> []
+  | Seq l -> l
+  | Exists (_, a) -> [ a ]
+  | Not a | FAbs a | FNeg a | FSqrt a | GetPtrLoc a | GetPtrOfs a
+  | BvOfBool (_, a) | BvOfFloat (_, _, _, a) | FloatOfBv (_, _, _, a)
+  | FloatOfBvRaw (_, a) | FloatOfFloat (_, _, a) | BvExtract (_, _, a)
+  | BvExtend (_, _, a) | BvNot a | Neg (_, a) | FIs (_, a) | FIsNeg a
+  | FIsPos a | FRound (_, a) ->
+      [ a ]
+  | Ptr (a, b) | Eq (a, b) | And (a, b) | Or (a, b) | FEq (a, b) | FLeq (a, b)
+  | FLt (a, b) | FAdd (a, b) | FSub (a, b) | FMul (a, b) | FDiv (a, b)
+  | FRem (a, b) | FMin (a, b) | FMax (a, b) | BitAnd (a, b) | BitOr (a, b)
+  | BitXor (a, b) | Shl (a, b) | LShr (a, b) | AShr (a, b) | Add (_, a, b)
+  | Sub (_, a, b) | Mul (_, a, b) | Div (_, a, b) | Rem (_, a, b) | Mod (a, b)
+  | AddOvf (_, a, b) | SubOvf (_, a, b) | MulOvf (_, a, b) | Lt (_, a, b)
+  | Leq (_, a, b) | BvConcat (a, b) ->
+      [ a; b ]
+  | Fma (a, b, c) | Ite (a, b, c) -> [ a; b; c ]
+  | Distinct l -> l
+
+(* [rebuild v cs] is [v] with its operands replaced by [cs], rebuilt with the
+   same operator through its smart constructor ([Ptr] with [mk_ptr], which does
+   not simplify). A leaf gives [v]. The wrong number of operands fails. *)
+fn rebuild (v : t) (cs : t list) : t [@no_lean] [@total] =
+  match v with
+  | Var _ | Bool _ | BitVec _ | LocLit _ | Float _ -> (
+      match cs with [] -> v | _ -> bad_operands v)
+  | Seq _ -> mk_seq (type_of v) cs
+  | Exists (bs, _) -> (
+      match cs with [ a ] -> b_mk_exists bs a | _ -> bad_operands v)
+  | Not _ -> ( match cs with [ a ] -> b_not a | _ -> bad_operands v)
+  | FAbs _ -> ( match cs with [ a ] -> float_abs a | _ -> bad_operands v)
+  | FNeg _ -> ( match cs with [ a ] -> float_neg a | _ -> bad_operands v)
+  | FSqrt _ -> ( match cs with [ a ] -> float_sqrt a | _ -> bad_operands v)
+  | GetPtrLoc _ -> ( match cs with [ a ] -> ptr_loc a | _ -> bad_operands v)
+  | GetPtrOfs _ -> ( match cs with [ a ] -> ptr_ofs a | _ -> bad_operands v)
+  | BvOfBool (n, _) -> (
+      match cs with [ a ] -> bv_of_bool n a | _ -> bad_operands v)
+  | BvOfFloat (rm, s, n, _) -> (
+      match cs with [ a ] -> bv_of_float rm s n a | _ -> bad_operands v)
+  | FloatOfBv (rm, s, p, _) -> (
+      match cs with [ a ] -> bv_to_float rm s p a | _ -> bad_operands v)
+  | FloatOfBvRaw _ -> (
+      match cs with [ a ] -> bv_to_float_raw a | _ -> bad_operands v)
+  | FloatOfFloat (rm, p, _) -> (
+      match cs with [ a ] -> float_cast rm p a | _ -> bad_operands v)
+  | BvExtract (f, t, _) -> (
+      match cs with [ a ] -> bv_extract f t a | _ -> bad_operands v)
+  | BvExtend (s, k, _) -> (
+      match cs with [ a ] -> bv_extend s k a | _ -> bad_operands v)
+  | BvNot _ -> ( match cs with [ a ] -> bv_not a | _ -> bad_operands v)
+  | Neg (c, _) -> ( match cs with [ a ] -> bv_neg c a | _ -> bad_operands v)
+  | FIs (fc, _) -> (
+      match cs with [ a ] -> float_is_floatclass fc a | _ -> bad_operands v)
+  | FIsNeg _ -> (
+      match cs with [ a ] -> float_is_negative a | _ -> bad_operands v)
+  | FIsPos _ -> (
+      match cs with [ a ] -> float_is_positive a | _ -> bad_operands v)
+  | FRound (rm, _) -> (
+      match cs with [ a ] -> float_round rm a | _ -> bad_operands v)
+  | And _ -> ( match cs with [ a; b ] -> b_and a b | _ -> bad_operands v)
+  | Or _ -> ( match cs with [ a; b ] -> b_or a b | _ -> bad_operands v)
+  | Eq _ -> ( match cs with [ a; b ] -> sem_eq a b | _ -> bad_operands v)
+  | Add (c, _, _) -> (
+      match cs with [ a; b ] -> bv_add c a b | _ -> bad_operands v)
+  | Sub (c, _, _) -> (
+      match cs with [ a; b ] -> bv_sub c a b | _ -> bad_operands v)
+  | Mul (c, _, _) -> (
+      match cs with [ a; b ] -> bv_mul c a b | _ -> bad_operands v)
+  | Div (s, _, _) -> (
+      match cs with [ a; b ] -> bv_div s a b | _ -> bad_operands v)
+  | Rem (s, _, _) -> (
+      match cs with [ a; b ] -> bv_rem s a b | _ -> bad_operands v)
+  | Mod _ -> ( match cs with [ a; b ] -> bv_mod a b | _ -> bad_operands v)
+  | AddOvf (s, _, _) -> (
+      match cs with [ a; b ] -> bv_add_overflows s a b | _ -> bad_operands v)
+  | SubOvf (s, _, _) -> (
+      match cs with [ a; b ] -> bv_sub_overflows s a b | _ -> bad_operands v)
+  | MulOvf (s, _, _) -> (
+      match cs with [ a; b ] -> bv_mul_overflows s a b | _ -> bad_operands v)
+  | Lt (s, _, _) -> (
+      match cs with [ a; b ] -> bv_lt s a b | _ -> bad_operands v)
+  | Leq (s, _, _) -> (
+      match cs with [ a; b ] -> bv_leq s a b | _ -> bad_operands v)
+  | BvConcat _ -> (
+      match cs with [ a; b ] -> bv_concat a b | _ -> bad_operands v)
+  | BitAnd _ -> ( match cs with [ a; b ] -> bv_and a b | _ -> bad_operands v)
+  | BitOr _ -> ( match cs with [ a; b ] -> bv_or a b | _ -> bad_operands v)
+  | BitXor _ -> ( match cs with [ a; b ] -> bv_xor a b | _ -> bad_operands v)
+  | Shl _ -> ( match cs with [ a; b ] -> bv_shl a b | _ -> bad_operands v)
+  | LShr _ -> ( match cs with [ a; b ] -> bv_lshr a b | _ -> bad_operands v)
+  | AShr _ -> ( match cs with [ a; b ] -> bv_ashr a b | _ -> bad_operands v)
+  | FEq _ -> ( match cs with [ a; b ] -> float_eq a b | _ -> bad_operands v)
+  | FLeq _ -> ( match cs with [ a; b ] -> float_leq a b | _ -> bad_operands v)
+  | FLt _ -> ( match cs with [ a; b ] -> float_lt a b | _ -> bad_operands v)
+  | FAdd _ -> ( match cs with [ a; b ] -> float_add a b | _ -> bad_operands v)
+  | FSub _ -> ( match cs with [ a; b ] -> float_sub a b | _ -> bad_operands v)
+  | FMul _ -> ( match cs with [ a; b ] -> float_mul a b | _ -> bad_operands v)
+  | FDiv _ -> ( match cs with [ a; b ] -> float_div a b | _ -> bad_operands v)
+  | FRem _ -> ( match cs with [ a; b ] -> float_rem a b | _ -> bad_operands v)
+  | FMin _ -> ( match cs with [ a; b ] -> float_min a b | _ -> bad_operands v)
+  | FMax _ -> ( match cs with [ a; b ] -> float_max a b | _ -> bad_operands v)
+  | Ptr _ -> ( match cs with [ a; b ] -> mk_ptr a b | _ -> bad_operands v)
+  | Ite _ -> (
+      match cs with [ a; b; c ] -> b_ite a b c | _ -> bad_operands v)
+  | Fma _ -> (
+      match cs with [ a; b; c ] -> float_fma a b c | _ -> bad_operands v)
+  | Distinct _ -> b_distinct cs
+
+(* Whether [map_operands] of the solver maps over the operands: the unary and
+   binary operators, but not [Ptr]. A language that adds nodes extends this. *)
+fn maps_operands (v : t) : bool [@no_lean] =
+  match v with
+  | Ptr _ -> false
+  | Not _ | FAbs _ | FNeg _ | FSqrt _ | GetPtrLoc _ | GetPtrOfs _ | BvOfBool _
+  | BvOfFloat _ | FloatOfBv _ | FloatOfBvRaw _ | FloatOfFloat _ | BvExtract _
+  | BvExtend _ | BvNot _ | Neg _ | FIs _ | FIsNeg _ | FIsPos _ | FRound _
+  | Eq _ | And _ | Or _ | FEq _ | FLeq _ | FLt _ | FAdd _ | FSub _ | FMul _
+  | FDiv _ | FRem _ | FMin _ | FMax _ | BitAnd _ | BitOr _ | BitXor _ | Shl _
+  | LShr _ | AShr _ | Add _ | Sub _ | Mul _ | Div _ | Rem _ | Mod _ | AddOvf _
+  | SubOvf _ | MulOvf _ | Lt _ | Leq _ | BvConcat _ ->
+      true
+  | _ -> false
+
+(* {1 Cost} *)
+
+(* The cost of the head of a term, without its operands. One unit is roughly a
+   thousand bytes of Z3's bit-blasted encoding of the operator, measured at 32
+   bits with [(then simplify fpa2bv simplify bit-blast)]. *)
+fn node_cost (v : t) : int [@no_lean] [@total] =
+  match v with
+  | FRem _ -> 12900
+  | Mod _ -> 12700
+  | Div (s, _, _) -> if s then 12700 else 3600
+  | Rem (s, _, _) -> if s then 12700 else 7100
+  | Mul _ -> 1900
+  | FDiv _ -> 1300
+  | FMul _ -> 345
+  | MulOvf _ -> 200
+  | FAdd _ | FSub _ -> 130
+  | Sub _ -> 97
+  | Add _ -> 75
+  | Shl _ | LShr _ | AShr _ -> 35
+  | FMin _ | FMax _ -> 24
+  | FLt _ | FLeq _ -> 12
+  | SubOvf (s, _, _) -> if s then 12 else 5
+  | AddOvf (s, _, _) -> if s then 9 else 5
+  | Lt _ | Leq _ -> 5
+  | FEq _ -> 3
+  | And _ | Or _ | Eq _ | BitAnd _ | BitOr _ | BitXor _ | BvConcat _ -> 1
+  | BvOfFloat _ -> 1400
+  | FSqrt _ -> 280
+  | FloatOfFloat _ -> 255
+  | FloatOfBv _ -> 78
+  | FRound _ -> 65
+  | Neg _ -> 10
+  | FAbs _ | FNeg _ | FloatOfBvRaw _ -> 4
+  | Not _ | GetPtrLoc _ | GetPtrOfs _ | BvNot _ | BvOfBool _ | BvExtend _
+  | BvExtract _ | FIs _ | FIsNeg _ | FIsPos _ ->
+      1
+  | Fma _ -> 400
+  | Ite _ -> 0
+  | Distinct _ -> 0
+  | Var _ -> 3
+  | Float _ -> 2
+  | Seq _ -> 0
+  (* quantifiers escape the bit-blasting that the costs above measure *)
+  | Exists _ -> 100000
+  | Ptr _ | Bool _ | BitVec _ | LocLit _ -> 1
+
+(* The estimated cost of bit-blasting a term. The operands of a pointer are
+   not counted: a pointer costs 1. *)
+fn cost (v : t) : int [@no_lean] =
+  match v with Ptr _ -> 1 | _ -> node_cost v + costs (operands v)
+
+fn costs (l : t list) : int [@no_lean] =
+  match l with [] -> 0 | x :: rest -> cost x + costs rest
+
+(* {1 Model search} *)
+
+(* The number of values that a uniform generator of the sort draws from, if
+   there is a generator *)
+fn random_bound (s : ty) : int option [@no_lean] =
+  match s with
+  | TLoc n | TBitVector n -> Some (1 lsl n)
+  | TBool -> Some 2
+  | TFloat p -> Some (1 lsl fp_size p)
+  | _ -> None
+
+(* [random_of_z s z] is the value of sort [s] numbered [z], for [z] in
+   [0, random_bound s) *)
+fn random_of_z (s : ty) (z : int) : t option [@no_lean] =
+  match s with
+  | TLoc n -> Some (LocLit z : TLoc n)
+  | TBitVector n -> Some (mk_bv n z)
+  | TBool -> Some (of_bool (z = 1))
+  | TFloat p -> Some (Float (f_of_bits p z))
+  | _ -> None
+
+(* {1 SMT encoding} *)
+
+(* The sorts that a sort is made of *)
+fn sort_operands (s : ty) : ty list [@no_lean] =
+  match s with TSeq e -> [ e ] | _ -> []
+
+fn encode_sort (s : ty) : smt_sort_op [@no_lean] =
+  match s with
+  | TBool -> so_bool
+  | TLoc n -> so_bits n
+  | TFloat p -> so_float p
+  | TSeq _ -> so_seq
+  | TPointer n -> so_ptr n
+  | TBitVector n -> so_bits n
+
+(* The SMT operator of the encoding of a term, to apply to the encodings of its
+   operands. The empty sequence has none (its sort is needed): its operator
+   fails when applied. *)
+fn encode_head (v : t) : smt_op [@no_lean] [@total] =
+  match v with
+  | Var x -> h_var x
+  | Float f -> h_float (type_of v) f
+  | Bool b -> h_bool b
+  | BitVec z -> h_bits (type_of v) z
+  | LocLit z -> h_bits (type_of v) z
+  | Ptr _ -> h_ptr (type_of v)
+  | Seq _ -> h_seq
+  | Exists (bs, _) -> h_exists bs
+  | Distinct _ -> h_distinct
+  | Not _ -> h_not
+  | FAbs _ -> h_fabs
+  | FNeg _ -> h_fneg
+  | FSqrt _ -> h_fsqrt
+  | GetPtrLoc _ -> h_ptr_loc
+  | GetPtrOfs _ -> h_ptr_ofs
+  | BvOfBool (n, _) -> h_bv_of_bool n
+  | BvOfFloat (rm, s, n, _) -> h_bv_of_float rm s n
+  | FloatOfBv (rm, s, p, _) -> h_float_of_bv rm s p
+  | FloatOfBvRaw (p, _) -> h_float_of_bv_raw p
+  | FloatOfFloat (rm, p, _) -> h_float_of_float rm p
+  | BvExtract (f, t, _) -> h_bv_extract f t
+  | BvExtend (s, k, _) -> h_bv_extend s k
+  | BvNot _ -> h_bv_not
+  | Neg _ -> h_neg
+  | FIs (fc, _) -> h_fis fc
+  | FIsNeg _ -> h_fisneg
+  | FIsPos _ -> h_fispos
+  | FRound (rm, _) -> h_fround rm
+  | Eq _ -> h_eq
+  | And _ -> h_and
+  | Or _ -> h_or
+  | FEq _ -> h_feq
+  | FLeq _ -> h_fleq
+  | FLt _ -> h_flt
+  | FAdd _ -> h_fadd
+  | FSub _ -> h_fsub
+  | FMul _ -> h_fmul
+  | FDiv _ -> h_fdiv
+  | FRem _ -> h_frem
+  | FMin _ -> h_fmin
+  | FMax _ -> h_fmax
+  | BitAnd _ -> h_bit_and
+  | BitOr _ -> h_bit_or
+  | BitXor _ -> h_bit_xor
+  | Shl _ -> h_shl
+  | LShr _ -> h_lshr
+  | AShr _ -> h_ashr
+  | Add _ -> h_add
+  | Sub _ -> h_sub
+  | Mul _ -> h_mul
+  | Div (s, _, _) -> h_div s
+  | Rem (s, _, _) -> h_rem s
+  | Mod _ -> h_mod
+  | AddOvf (s, _, _) -> h_add_ovf s
+  | SubOvf (s, _, _) -> h_sub_ovf s
+  | MulOvf (s, _, _) -> h_mul_ovf s
+  | Lt (s, _, _) -> h_lt s
+  | Leq (s, _, _) -> h_leq s
+  | BvConcat _ -> h_concat
+  | Fma _ -> h_fma
+  | Ite _ -> h_ite
+
+(* {1 Pretty-printing} *)
+
+(* How to print a term; the operands are printed by the generic printer *)
+fn pp_style (v : t) : pp_style [@no_lean] [@total] =
+  match v with
+  | Var x -> PAtom (ph_var x)
+  | Bool b -> PAtom (ph_bool b)
+  | Float f -> PAtom (ph_float f)
+  | BitVec z -> PAtom (ph_bv (type_of v) z)
+  | LocLit z -> PAtom (ph_bv (type_of v) z)
+  | Seq _ -> PBrackets
+  | Exists (bs, _) -> PSeq [ PText (ph_exists bs); PArg 0 ]
+  | Not (Eq (_, _)) ->
+      PSeq
+        [ PText ph_lparen; PArgOf (0, 0); PText ph_neq; PArgOf (0, 1);
+          PText ph_rparen ]
+  | Not _ -> PCall ph_not
+  | FAbs _ -> PCall ph_fabs
+  | FNeg _ -> PCall ph_fneg
+  | FSqrt _ -> PCall ph_fsqrt
+  | GetPtrLoc _ -> PCall ph_ptr_loc
+  | GetPtrOfs _ -> PCall ph_ptr_ofs
+  | BvOfBool (n, _) -> PCall (ph_bv_of_bool n)
+  | BvOfFloat (rm, s, n, _) -> PCall (ph_bv_of_float rm s n)
+  | FloatOfBv (rm, s, p, _) -> PCall (ph_float_of_bv rm s p)
+  | FloatOfBvRaw (p, _) -> PCall (ph_float_of_bv_raw p)
+  | FloatOfFloat (rm, p, _) -> PCall (ph_float_of_float rm p)
+  | BvExtract (f, t, _) -> PCall (ph_bv_extract f t)
+  | BvExtend (s, k, _) -> PCall (ph_bv_extend s k)
+  | BvNot _ -> PCall ph_bv_not
+  | Neg (c, _) -> PCall (ph_neg c)
+  | FIs (fc, _) -> PCall (ph_fis fc)
+  | FIsNeg _ -> PCall ph_fisneg
+  | FIsPos _ -> PCall ph_fispos
+  | FRound (rm, _) -> PCall (ph_fround rm)
+  | Ptr _ -> PCallPlain ph_ptr
+  | And _ -> PIn ph_and
+  | Or _ -> PIn ph_or
+  | Eq _ -> PIn ph_eq
+  | FEq _ -> PIn ph_feq
+  | FLeq _ -> PIn ph_fleq
+  | FLt _ -> PIn ph_flt
+  | FAdd _ -> PIn ph_fadd
+  | FSub _ -> PIn ph_fsub
+  | FMul _ -> PIn ph_fmul
+  | FDiv _ -> PIn ph_fdiv
+  | FRem _ -> PIn ph_frem
+  | FMin _ -> PIn ph_fmin
+  | FMax _ -> PIn ph_fmax
+  | Add (c, _, _) -> PIn (ph_add c)
+  | Sub (c, _, _) -> PIn (ph_sub c)
+  | Mul (c, _, _) -> PIn (ph_mul c)
+  | Div (s, _, _) -> PIn (ph_div s)
+  | Rem (s, _, _) -> PIn (ph_rem s)
+  | Mod _ -> PIn ph_mod
+  | AddOvf (s, _, _) -> PIn (ph_add_ovf s)
+  | SubOvf (s, _, _) -> PIn (ph_sub_ovf s)
+  | MulOvf (s, _, _) -> PIn (ph_mul_ovf s)
+  | Lt (s, _, _) -> PIn (ph_lt s)
+  | Leq (s, _, _) -> PIn (ph_leq s)
+  | BvConcat _ -> PIn ph_concat
+  | BitAnd _ -> PIn ph_bit_and
+  | BitOr _ -> PIn ph_bit_or
+  | BitXor _ -> PIn ph_bit_xor
+  | Shl _ -> PIn ph_shl
+  | LShr _ -> PIn ph_lshr
+  | AShr _ -> PIn ph_ashr
+  | Ite _ -> PIte
+  | Fma _ -> PCallPlain ph_fma
+  | Distinct l -> (
+      match distinct_range l with
+      | Some (lo, hi) -> PAtom (ph_distinct_range lo hi)
+      | None -> PCall ph_distinct)
+
+(* {1 Learning} *)
+
+(* How to learn the operands of a term from its value, see [View_host] *)
+fn learn_alts (v : t) : learn_plan [@no_lean] =
+  match v with
+  | Not _ | BvNot _ | Neg _ | BvExtend _ | BvOfBool _ -> LAll ([], [ 0 ])
+  | Add _ | Sub _ | BitXor _ -> LAlts [ (0, 1); (1, 0) ]
+  | BvConcat _ -> LAll ([ 1; 0 ], [ 0; 1 ])
+  | Ptr _ -> LAll ([], [ 0; 1 ])
+  | _ -> LNone
+
+(* [learn_value e i v] is the value that the [i]th operand of [e] takes when
+   [e = v], if any, computed when asked: it creates nodes at that moment *)
+fn learn_value (e : t) (i : int) (v : t) : t option [@no_lean] =
+  match (e, i) with
+  | Not _, 0 -> Some (b_not v)
+  | BvNot _, 0 -> Some (bv_not v)
+  | Neg _, 0 -> Some (bv_neg false v)
+  | BvExtend (_, _, e1), 0 -> Some (bv_extract 0 (size e1 - 1) v)
+  | BvOfBool _, 0 -> (
+      match v with
+      | BitVec 0 -> Some v_false
+      | BitVec 1 -> Some v_true
+      | _ -> None)
+  | Add (_, _, e2), 0 -> Some (bv_sub unchecked v e2)
+  | Add (_, e1, _), 1 -> Some (bv_sub unchecked v e1)
+  | Sub (_, _, e2), 0 -> Some (bv_add unchecked v e2)
+  | Sub (_, e1, _), 1 -> Some (bv_sub unchecked e1 v)
+  | BitXor (_, e2), 0 -> Some (bv_xor v e2)
+  | BitXor (e1, _), 1 -> Some (bv_xor v e1)
+  | BvConcat (_, e2), 1 -> Some (bv_extract 0 (size e2 - 1) v)
+  | BvConcat (e1, e2), 0 ->
+      Some (bv_extract (size e2) (size e2 + size e1 - 1) v)
+  | Ptr _, 0 -> Some (ptr_loc v)
+  | Ptr _, 1 -> Some (ptr_ofs v)
+  | _ -> None

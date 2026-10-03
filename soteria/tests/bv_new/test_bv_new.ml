@@ -10,6 +10,13 @@ module F = Floatml.AnyFloat
 (* The old stack is created first, so that its constants are its first nodes (it
    has its own table: the order of creation matters only inside a stack). *)
 
+(* the sorts of [Bv_new] (widths are [int]s), which [Rules] shadows with those
+   of the view functions ([Z.t]) *)
+module Sorts = struct
+  let t_bv = t_bv
+  let t_ptr = t_ptr
+end
+
 let term = Alcotest.testable pp equal
 let uc : checked = { signed = false; unsigned = false }
 let var i ty = mk_var (Soteria.Symex.Var.of_int i) ty
@@ -125,6 +132,7 @@ let floats () =
 
 let ptrs () =
   let open Rules in
+  let open Sorts in
   let l1 = mk_loc 64 (z 1) and l2 = mk_loc 64 (z 2) in
   let o = var 6 (t_bv 64) in
   let pt = mk_ptr l1 o in
@@ -148,6 +156,7 @@ let ptrs () =
 
 let exists () =
   let open Rules in
+  let open Sorts in
   let v1 = Soteria.Symex.Var.of_int 10 and v2 = Soteria.Symex.Var.of_int 11 in
   let a = var 10 (t_bv 8) in
   let body = sem_eq a x in

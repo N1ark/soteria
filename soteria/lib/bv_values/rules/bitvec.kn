@@ -936,13 +936,13 @@ rule bv_leq : Leq (signed, v1, v2) =
 fn signed_to_unsigned_cmp (is_leq c_on_left : bool) (c : int) (v1 v2 : t) : t =
   let bits = size v1 in
   let sign_bit = mk_bv bits (1 lsl (bits - 1)) in
-  let c_cmp = if is_leq then bv_leq false v1 v2 else bv_lt false v1 v2 in
+  let c_cmp = if is_leq then v1 <=u v2 else v1 <u v2 in
   let nonneg = bv_to_z true bits c >= 0 in
   if c_on_left then
-    let in_pos = bv_lt false v2 sign_bit in
+    let in_pos = v2 <u sign_bit in
     if nonneg then c_cmp && in_pos else in_pos || c_cmp
   else
-    let in_neg = bv_leq false sign_bit v1 in
+    let in_neg = sign_bit <=u v1 in
     if nonneg then c_cmp || in_neg else in_neg && c_cmp
 
 (* Overflow checks *)

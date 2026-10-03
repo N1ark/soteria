@@ -73,6 +73,11 @@ infix "++" = BvConcat, bv_concat
 infix "urem" = Rem false, bv_rem false
 infix "srem" = Rem true, bv_rem true
 infix "mod" = Mod, bv_mod
+(* the comparisons: [<u] and [<=u] are unsigned, [<s] and [<=s] signed *)
+infix "<u" = Lt false, bv_lt false
+infix "<s" = Lt true, bv_lt true
+infix "<=u" = Leq false, bv_leq false
+infix "<=s" = Leq true, bv_leq true
 prefix "-" = Neg, bv_neg false
 prefix "~" = BvNot, bv_not
 

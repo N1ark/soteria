@@ -238,14 +238,14 @@ fn flip (s : range_sign) : range_sign [@no_lean] =
    [[lo, hi]]. The constants are the unsigned integers that the literals hold. *)
 fn as_range (v : t) : (var * int * (range_sign * (int * int))) option [@no_lean] =
   match v with
-  | Lt (false, (BitVec c1 as l), r) -> range_const_ult true (size l) c1 r
-  | Leq (false, (BitVec c1 as l), r) -> range_const_ult false (size l) c1 r
-  | Lt (false, l, (BitVec c2 as r)) -> range_ult_const true (size r) c2 l
-  | Leq (false, l, (BitVec c2 as r)) -> range_ult_const false (size r) c2 l
-  | Lt (true, Var x, (BitVec c1 as r)) -> range_var_slt (size r) x (c1 - 1)
-  | Leq (true, Var x, (BitVec c1 as r)) -> range_var_slt (size r) x c1
-  | Lt (true, (BitVec c1 as l), Var x) -> range_slt_var (size l) (c1 + 1) x
-  | Leq (true, (BitVec c1 as l), Var x) -> range_slt_var (size l) c1 x
+  | (BitVec c1 as l) <u r -> range_const_ult true (size l) c1 r
+  | (BitVec c1 as l) <=u r -> range_const_ult false (size l) c1 r
+  | l <u (BitVec c2 as r) -> range_ult_const true (size r) c2 l
+  | l <=u (BitVec c2 as r) -> range_ult_const false (size r) c2 l
+  | Var x <s (BitVec c1 as r) -> range_var_slt (size r) x (c1 - 1)
+  | Var x <=s (BitVec c1 as r) -> range_var_slt (size r) x c1
+  | (BitVec c1 as l) <s Var x -> range_slt_var (size l) (c1 + 1) x
+  | (BitVec c1 as l) <=s Var x -> range_slt_var (size l) c1 x
   | Eq ((BitVec c as l), Var x) -> Some (x, size l, (Inside, (c, c)))
   (* This only works for a single fact; we can't apply this to [!(A && B)],
      since that's a disjunction! *)

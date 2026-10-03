@@ -25,20 +25,18 @@ end = struct
   include Svalue
 
   module T = struct
-    type sint = [ `NonZero | `Zero ]
-    type sint_ovf = [ `NonZero | `Zero | `Overflowed ]
-    type nonzero = [ `NonZero ]
-    type zero = [ `Zero ]
-    type sfloat = [ `Float ]
-    type sbool = [ `Bool ]
-    type sptr = [ `Ptr ]
-    type sloc = [ `Loc ]
+    type sint = Bv_typed.Tag.tbitvector
+    type nonzero = Bv_typed.Tag.tnonzero
+    type zero = Bv_typed.Tag.tzero
+    type sfloat = Bv_typed.Tag.tfloat
+    type sbool = Bv_typed.Tag.tbool
+    type sptr = Bv_typed.Tag.tpointer
+    type sloc = Bv_typed.Tag.tloc
     type 'a sseq = [ `List of 'a ]
     type cval = [ sint | sptr | sfloat ]
-    type any = [ sint_ovf | sfloat | sbool | sptr | sloc | any sseq ]
+    type any = [ sint | sfloat | sbool | sptr | sloc | any sseq ]
 
     let pp_sint _ _ = ()
-    let pp_sint_ovf _ _ = ()
     let pp_nonzero _ _ = ()
     let pp_zero _ _ = ()
     let pp_sfloat _ _ = ()
@@ -49,7 +47,6 @@ end = struct
     let pp_any _ _ = ()
     let pp_cval _ _ = ()
     let hash_sint _ = 0
-    let hash_sint_ovf _ = 0
     let hash_nonzero _ = 0
     let hash_zero _ = 0
     let hash_sfloat _ = 0
@@ -114,7 +111,6 @@ end = struct
       if i = 0 then L_logs.failwith "Zero value in mki_nonzero"
       else mki_masked n i
 
-    let no_ovf_unsafe x = x
     let cast_nonzero x = x
 
     let add_checked ~signed l r =

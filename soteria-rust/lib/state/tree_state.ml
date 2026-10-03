@@ -421,7 +421,7 @@ module Make (Borrows : Tree_borrows.T) = struct
     else if%sat size >$@ Usize.(0s) then check ptr (Typed.cast_nonzero size)
     else
       let**^ ptr' = Sptr.raw_offset ptr size in
-      check ptr' Typed.(cast_nonzero @@ BV.no_ovf_unsafe (BV.neg size))
+      check ptr' Typed.(cast_nonzero @@ BV.neg size)
 
   and check_non_dangling (ptr : Typed.([< T.sptr_f ] t)) (ty : Types.ty) =
     let**^ ty = Layout.normalise ty in

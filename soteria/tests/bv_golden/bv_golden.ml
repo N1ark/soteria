@@ -519,9 +519,7 @@ and bv_ops n _d g ite_ : v =
       in
       rec_ "bv_checked_val" (w (fst (f ~signed (a ()) (a ()))))
   | 12 -> rec_ "bv_neg_checked_val" (w (fst (BitVec.neg_checked (a ()))))
-  | 13 ->
-      rec_ "bv_no_ovf_unsafe"
-        (w (BitVec.no_ovf_unsafe (BitVec.add (a ()) (a ()))))
+  | 13 -> rec_ "bv_no_ovf_unsafe" (w (BitVec.add (a ()) (a ())))
   | 14 | 15 -> rec_ "bv_and" (w (BitVec.and_ (a ()) (a ())))
   | 16 | 17 -> rec_ "bv_or" (w (BitVec.or_ (a ()) (a ())))
   | 18 -> rec_ "bv_xor" (w (BitVec.xor (a ()) (a ())))

@@ -25,30 +25,28 @@ module type S = sig
   (** {2 Phantom types} *)
 
   module T : sig
-    (** A symbolic integer; can either be [`NonZero] if it is known to not be 0,
-        [`Zero] if it is 0. *)
-    type sint = [ `NonZero | `Zero ]
+    (** The tags of the sorts of the language, from the ghost-typed interface
+        that Kanon generates ({!Bv_typed.Tag}). A symbolic integer is a
+        bit-vector, whose subsorts are the integers known to be non-zero or to
+        be zero: the predicates [TNonzero] and [TZero] of the rules. *)
 
-    (** Any symbolic integer; it may be the result of an overflowing operation
-    *)
-    type sint_ovf = [ `NonZero | `Zero | `Overflowed ]
+    type sint = Bv_typed.Tag.tbitvector
 
     (** A symbolic integer known to be non-zero. *)
-    type nonzero = [ `NonZero ]
+    type nonzero = Bv_typed.Tag.tnonzero
 
     (** A symbolic integer known to be zero. *)
-    type zero = [ `Zero ]
+    type zero = Bv_typed.Tag.tzero
 
-    type sfloat = [ `Float ]
-    type sbool = [ `Bool ]
-    type sptr = [ `Ptr ]
-    type sloc = [ `Loc ]
+    type sfloat = Bv_typed.Tag.tfloat
+    type sbool = Bv_typed.Tag.tbool
+    type sptr = Bv_typed.Tag.tpointer
+    type sloc = Bv_typed.Tag.tloc
     type 'a sseq = [ `List of 'a ]
     type cval = [ sint | sptr | sfloat ]
-    type any = [ sint_ovf | sfloat | sbool | sptr | sloc | any sseq ]
+    type any = [ sint | sfloat | sbool | sptr | sloc | any sseq ]
 
     val pp_sint : Format.formatter -> sint -> unit
-    val pp_sint_ovf : Format.formatter -> sint_ovf -> unit
     val pp_nonzero : Format.formatter -> nonzero -> unit
     val pp_zero : Format.formatter -> zero -> unit
     val pp_sfloat : Format.formatter -> sfloat -> unit
@@ -62,7 +60,6 @@ module type S = sig
 
     val pp_any : Format.formatter -> any -> unit
     val hash_sint : sint -> int
-    val hash_sint_ovf : sint_ovf -> int
     val hash_nonzero : nonzero -> int
     val hash_zero : zero -> int
     val hash_sfloat : sfloat -> int
@@ -215,13 +212,13 @@ module type S = sig
     val cast_nonzero : [< T.sint ] t -> [> T.nonzero ] t
 
     (* arithmetic *)
-    val add : ?checked:checked -> [< sint ] t -> [< sint ] t -> [> sint_ovf ] t
-    val sub : ?checked:checked -> [< sint ] t -> [< sint ] t -> [> sint_ovf ] t
-    val mul : ?checked:checked -> [< sint ] t -> [< sint ] t -> [> sint_ovf ] t
-    val div : signed:bool -> [< sint ] t -> [< nonzero ] t -> [> sint_ovf ] t
-    val rem : signed:bool -> [< sint ] t -> [< nonzero ] t -> [> sint_ovf ] t
-    val mod_ : [< sint ] t -> [< sint ] t -> [> sint_ovf ] t
-    val neg : ?checked:bool -> [< sint ] t -> [> sint_ovf ] t
+    val add : ?checked:checked -> [< sint ] t -> [< sint ] t -> [> sint ] t
+    val sub : ?checked:checked -> [< sint ] t -> [< sint ] t -> [> sint ] t
+    val mul : ?checked:checked -> [< sint ] t -> [< sint ] t -> [> sint ] t
+    val div : signed:bool -> [< sint ] t -> [< nonzero ] t -> [> sint ] t
+    val rem : signed:bool -> [< sint ] t -> [< nonzero ] t -> [> sint ] t
+    val mod_ : [< sint ] t -> [< sint ] t -> [> sint ] t
+    val neg : ?checked:bool -> [< sint ] t -> [> sint ] t
 
     (* overflow checks *)
     val add_overflows :
@@ -246,9 +243,6 @@ module type S = sig
       signed:bool -> [< sint ] t -> [< sint ] t -> [> sint ] t * [> sbool ] t
 
     val neg_checked : [< sint ] t -> [> sint ] t * [> sbool ] t
-
-    (* Unsafe mark as not overflow *)
-    val no_ovf_unsafe : [< sint_ovf ] t -> [> sint ] t
 
     (* inequalities *)
     val lt : signed:bool -> [< sint ] t -> [< sint ] t -> [> sbool ] t
@@ -439,14 +433,14 @@ module type S = sig
     (* arithmetic -- [$] indicates signed unsigned division and remainder cannot
        overflow so we consider they always result in-bounds (can overflow for
        signed with [MIN / -1]) *)
-    val ( +@ ) : [< sint ] t -> [< sint ] t -> [> sint_ovf ] t
-    val ( -@ ) : [< sint ] t -> [< sint ] t -> [> sint_ovf ] t
-    val ( ~- ) : [< sint ] t -> [> sint_ovf ] t
-    val ( *@ ) : [< sint ] t -> [< sint ] t -> [> sint_ovf ] t
+    val ( +@ ) : [< sint ] t -> [< sint ] t -> [> sint ] t
+    val ( -@ ) : [< sint ] t -> [< sint ] t -> [> sint ] t
+    val ( ~- ) : [< sint ] t -> [> sint ] t
+    val ( *@ ) : [< sint ] t -> [< sint ] t -> [> sint ] t
     val ( /@ ) : [< sint ] t -> [< nonzero ] t -> [> sint ] t
-    val ( /$@ ) : [< sint ] t -> [< nonzero ] t -> [> sint_ovf ] t
+    val ( /$@ ) : [< sint ] t -> [< nonzero ] t -> [> sint ] t
     val ( %@ ) : [< sint ] t -> [< nonzero ] t -> [> sint ] t
-    val ( %$@ ) : [< sint ] t -> [< nonzero ] t -> [> sint_ovf ] t
+    val ( %$@ ) : [< sint ] t -> [< nonzero ] t -> [> sint ] t
 
     (* arithmetic operations with overflow ignored *)
     val ( +!@ ) : [< sint ] t -> [< sint ] t -> [> sint ] t
@@ -503,8 +497,8 @@ module type Solver_value = sig
   module Lang : Solver_lang.S
 
   module T : sig
-    type sint = [ `NonZero | `Zero ]
-    type sbool = [ `Bool ]
+    type sint = Bv_typed.Tag.tbitvector
+    type sbool = Bv_typed.Tag.tbool
   end
 
   include Symex.Value.S with type sbool = T.sbool

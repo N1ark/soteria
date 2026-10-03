@@ -9,9 +9,9 @@
     declarations and rules (see the README of this directory). The code that is
     generic over such a language is written once, as functors, over the
     generated types and a {!Kanon_fns} implementation: {!Value_lang} (the
-    contract of a language), {!Pp}, {!Eval}, {!Expr}, {!Svalue_sugar} (the
-    untyped layer), {!Typed} (a phantom "ghost" type tracking the {e kind} of
-    each value: integer, boolean, pointer, ...), assembled by {!Lang_make}.
+    contract of a language), {!Eval}, {!Expr}, {!Svalue_sugar} (the untyped
+    layer), {!Typed} (a phantom "ghost" type tracking the {e kind} of each
+    value: integer, boolean, pointer, ...), assembled by {!Lang_make}.
     {!Encoding} lowers values to SMT, {!Bv_solver} drives Z3, and {!Analyses}
     are the abstract domain analyses used along the way. {!Bv_base} has the host
     types that the generated types refer to.
@@ -47,7 +47,6 @@ module Expr = Expr
 module Kanon_fns = Kanon_fns
 module Lang = Lang
 module Lang_make = Lang_make
-module Pp = Pp
 module Save_counter = Save_counter
 module Solver_lang = Solver_lang
 module Svalue_sugar = Svalue_sugar

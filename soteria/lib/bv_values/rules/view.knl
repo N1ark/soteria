@@ -1,8 +1,7 @@
-(* The view of the value language: what the generic host code (pretty-printer,
-   SMT encoder, evaluator, substitution, solver) needs to know of each node and
-   sort, as functions in view.kn: the recognisers, the operands and the
-   rebuilding of a term, the printing, the cost, the SMT encoding and the
-   learning.
+(* The view of the value language: what the generic host code (SMT encoder,
+   evaluator, substitution, solver) needs to know of each node and sort, as
+   functions in view.kn: the recognisers, the operands and the rebuilding of a
+   term, the cost, the SMT encoding and the learning.
 
    Everything here is host infrastructure, not a simplification rule: every
    function and primitive is [@no_lean]. The host types are those of
@@ -13,9 +12,6 @@
    [Inside | Outside] and not the [Pos | Neg] of the solver ([Neg] is a node
    of bitvec). *)
 
-(* A piece of text of the pretty-printer, applied to the formatter *)
-type pphead [@ocaml "View_host.pphead"] [@noeq] [@lean "Unit"]
-
 (* The SMT operator of the encoding of a term and of a sort: they apply to the
    encoders and to the operands, and own the order of their calls (see
    View_host) *)
@@ -24,21 +20,6 @@ type smt_sort_op [@ocaml "ty View_host.smt_sort_op"] [@noeq]
 
 (* The side of a range, see [as_range] *)
 type range_sign [@ocaml "View_host.range_sign"] = Inside | Outside
-
-type ppiece [@ocaml "View_host.ppiece"] =
-  | PText of pphead
-  | PArg of int
-  | PArgOf of int * int
-  | PArgs of pphead
-
-type pp_style [@ocaml "View_host.pp_style"] =
-  | PAtom of pphead
-  | PCall of pphead
-  | PCallPlain of pphead
-  | PIn of pphead
-  | PIte
-  | PBrackets
-  | PSeq of ppiece list
 
 type learn_plan [@ocaml "View_host.learn_plan"] =
   | LNone

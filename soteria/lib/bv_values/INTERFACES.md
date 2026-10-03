@@ -13,9 +13,10 @@ Files (all in this directory, modules of `Soteria.Bv_values`):
 | file | content |
 |---|---|
 | `kanon_fns.ml` | module type `Kanon_fns`: every Kanon `fn` / glue function the host needs |
-| `view_host.ml` | the host types of the view (`pphead`, `smt_op`, `smt_sort_op`, `range_sign`, `ppiece`, `pp_style`, `learn_plan`) |
-| `value_lang.ml` | `Term` (concrete record), `Base`, `S` (= `Base` + `pp` + `eval`, a subtype of `Solver_lang.S`), `Make (T) (K)` |
-| `pp.ml`, `eval.ml`, `expr.ml`, `svalue_sugar.ml` | the generic functors over `Value_lang.Base` / `S` |
+| `view_host.ml` | the host types of the view (`smt_op`, `smt_sort_op`, `range_sign`, `learn_plan`) |
+| `value_lang.ml` | `Term` (concrete record), `Base`, `S` (= `Base` + `eval`, a subtype of `Solver_lang.S`), `Make (T) (K)` |
+| `eval.ml`, `expr.ml`, `svalue_sugar.ml` | the generic functors over `Value_lang.Base` / `S` |
+| `bv_pp.ml` | the pretty-printer of the C language, `K.pp`, written by hand over its generated types (soteria-rust has its own, `rust_pp.ml`) |
 | `lang_make.ml` | `Lang_make.Make (T) (K)`: composition (`V`, `Svalue`, `Eval`, `Expr`) |
 | `typed_intf.ml`, `typed.ml` | typed layer: `Language`, `S`, `Solver_value`, `Make`, `Make_transparent` |
 | `bv_base.ml` | the host types of the generated types (`[@ocaml "Bv_base.X"]` in `rules/lang.knl`): `FloatPrecision`, `FloatClass`, `RoundingMode`, `checked`, `F` |
@@ -33,18 +34,12 @@ is now `Soteria.Bv_values.Lang`, `bv_new` is `Lang`, `Bv_iface` is
 `Expr`, `Typed.Make`, `Solver_lang.Make`, deleted in stage S7, last at commit
 `fab3ed5`) is "the old stack". The generic modules had a `_v` suffix until then
 (`Pp_v`, `Eval_v`, `Expr_v`, `Svalue_sugar_v`, `Lang_v`, `Typed_v`,
-`Typed_intf_v`): they are now `Pp`, `Eval`, `Expr`, `Svalue_sugar`, `Lang_make`,
+`Typed_intf_v`): they are now `Eval`, `Expr`, `Svalue_sugar`, `Lang_make`,
 `Typed`, `Typed_intf`, and the host types that the generated types refer to are
 in `Bv_base`.
 
 ## 0. Deviations from design.md (with justification)
 
-1. **`pp_style` constructors.** Design 3.3.2: `PAtom | PCall | PIn | PPost | PIte | PBrackets | PParens | PWrap`.
-   Frozen: `PAtom | PCall | PCallPlain | PIn | PIte | PBrackets | PSeq of ppiece list`
-   (`ppiece = PText | PArg i | PArgOf (i, j) | PArgs sep`). Reason: byte-identical output needs the exact `Fmt`
-   break hints (`PCall` uses `Fmt.comma`, Fma and `&(..)` use `", "` without a break hint: `PCallPlain`),
-   `Exists` prints `∃ x. body`, `Not (Eq (a, b))` prints `(a != b)` (needs the operands of the operand: `PArgOf`).
-   No operator is printed postfix, so `PPost` was dropped; `PSeq` is the escape hatch for Rust.
 2. **`encode_head : t -> smt_op` is total, not an `option`** (design 3.3.1 said `option`). Terms with no encoding
    (`Seq []`) return an operator that fails when applied, as the old code failed at encoding time. Needed for `[@total]`.
    `smt_op` takes the operands too: `~sort_of_ty ~encode_child operands -> sexp`; the operator owns the order of the
@@ -65,15 +60,15 @@ in `Bv_base`.
    fn of a typed operator). Reason: `Lang` declares `Ptr` as a plain `Op2` built unsimplified by `Lang.mk_ptr`
    (assert equal sizes), and `rebuild` of `Ptr` must not simplify (old `Ptr.mk` did not). `mk_seq : ty -> t list -> t`
    takes the sort (needed for `[]`). With K1 these may become Kanon fns later without changing the signature.
-7. **`Value_lang.S` is two module types**: `Base` (consumed by the generic `Pp`/`Eval`, and exposing `K`) and
-   `S = Base + pp + eval` (what everything else consumes). Reason: `pp` and `eval` are produced by functors over `Base`
-   and cannot consume themselves. `S <: Solver_lang.S` is checked in `check/check.ml`, so `Analyses`, `Bv_solver`,
+7. **`Value_lang.S` is two module types**: `Base` (consumed by the generic `Eval`, and exposing `K`) and
+   `S = Base + eval` (what everything else consumes). Reason: `eval` is produced by a functor over `Base`
+   and cannot consume itself. `S <: Solver_lang.S` is checked in `check/check.ml`, so `Analyses`, `Bv_solver`,
    `Encoding`, `Ptr_sort` are untouched.
 8. **`Typed_intf.Language`** (new): `{V; Svalue; Eval; Expr}` is the input of `Typed.Make` (design said "over the
    view"). `Typed.S` loses `Ext`, `kind`; `Svalue`, `Eval` are the generic signatures; `FloatPrecision`, `FloatClass`,
    `RoundingMode` are re-exported at the top of `S` as before. `Solver_value` is `{Lang : Solver_lang.S; type_;
    untyped; untype_type; ...}` (no `Ext/Svalue/Eval`), as design 3.5.
-9. **View fns are `[@no_lean]`**; `[@total]` on `operands`, `rebuild`, `pp_style`, `encode_head`, `cost`
+9. **View fns are `[@no_lean]`**; `[@total]` on `operands`, `rebuild`, `encode_head`, `cost`
    (Kanon checks a case per node; a catch-all is rejected; a language that adds nodes adds cases with `extend fn`).
    Design said "K9 or property tests": the new Kanon already has `[@total]` (`check.ml:4276`), so both are used.
 10. **File names and arguments**: `Bv_types` mentions `View_host`, which must not depend on the generated types. The
@@ -91,7 +86,7 @@ generated Bv_types   (kind, ty, t = {kind; ty; tag}, node)        satisfies Valu
 generated Bv_rules   (smart constructors, sure_neq, VIEW fns)  \
 Bv_prims + glue      (HOST: constants, mk_*, pp_ty)            /  = one module K : Kanon_fns
 Value_lang.Make (T) (K)             : Value_lang.Base            no constructor is mentioned
-Pp.Make, Eval.Make              : pp, eval
+Eval.Make                      : eval
 Lang_make.Make (T) (K)                 : { V : Value_lang.S; Svalue; Eval; Expr }
 Typed.Make (L)                    : Typed_intf.S             (identity layer 'a t = t)
 Analyses / Bv_solver / Encoding     : unchanged functors over V (= Solver_lang.S)
@@ -121,8 +116,8 @@ functions (`tests/bv_values/view_check`, one comparison per function on the corp
 
 ## 3. The contract WP3a <-> WP3b: every `Kanon_fns` item
 
-Types: `t`, `ty` (generated), `pphead = Format.formatter -> unit`, `smt_op`, `smt_sort_op`, `View_host.range_sign`,
-`pp_style`, `learn_plan` (declared in `view_host.ml`; `view.knl` re-declares them `[@ocaml "View_host.X"]` with the same
+Types: `t`, `ty` (generated), `smt_op`, `smt_sort_op`, `View_host.range_sign`,
+`learn_plan` (declared in `view_host.ml`; `view.knl` re-declares them `[@ocaml "View_host.X"]` with the same
 constructors in the same order, `[@noeq]`, `[@no_lean]` where Kanon allows: K6 open, see section 8).
 
 ### 3.1 RULES (generated from bool/bitvec/float/ptr/exists; exist today in `Bv_rules`; not WP3a)
@@ -144,9 +139,7 @@ bv_xor bv_shl bv_lshr bv_ashr bv_not bv_of_bool bv_to_bool bv_not_bool bv_of_flo
 | `pp_ty` | `ty Fmt.t` | must reproduce `ppx_deriving show` (`(TBitVector 32)`) | svalue_ast.ml:248 |
 
 The prims used INSIDE view fns (written in `bv_prims.ml`, `[@no_lean]`): the `smt_op` builders (`h_add : checked -> smt_op`
-...: the code of `Enc.smt_of_unop/binop/triop`, solver_lang.ml:192-300), the `pphead` builders (`ph_bv : ty -> Z.t -> pphead`:
-hex when size mod 4 = 0 else binary, svalue.ml:107-112; `ph_distinct : t list -> pphead` looks at `as_var` of the operands for
-`distinct(V|a-b|)`; one per operator), `fail` (wrong operand count in `rebuild`), `min_signed` etc.
+...: the code of `Enc.smt_of_unop/binop/triop`, solver_lang.ml:192-300), `fail` (wrong operand count in `rebuild`), `min_signed` etc.
 
 ### 3.3 VIEW (Kanon fns in `view.kn`; the whole of WP3a). Unless said, `[@no_lean]`; `[@total]` marked T.
 Each row: name : type  -- old code replaced (and what it did).
@@ -185,10 +178,7 @@ Encoding
   function arguments, evaluated right to left); `Exists` encodes the body, then the sorts of the binders; `Seq`, `Distinct` left to right.
   The order of `encode_child` calls is the order of the emitted `Decls`: `check/` compares them (`Enc_log`).
 
-Pretty-printing and learning
-- T `pp_style : t -> pp_style`  -- svalue.ml:101-143 and the heads of `Unop.pp`/`Binop.pp` (svalue_ast.ml:64-246). `Not (Eq a b)` prints `(a != b)`;
-  `BitVec` and `LocLit` by `ph_bv`; `Distinct` of contiguous variables by `ph_distinct`. The generic renderer is `Pp`; the exact `Fmt` format of each
-  constructor is in `view_host.ml`.
+Learning
 - `learn_alts : t -> learn_plan` (default `LNone`) and `learn_value : t -> Z.t -> t -> t option`  -- expr.ml:140-198; the old values are listed in `kanon_fns.ml`.
   `learn_value` is lazy: it creates nodes exactly when the old code did.
 
@@ -209,7 +199,7 @@ or HOST prims.
    the first (`check/check.ml: corpora`), or commutative operands print swapped (a test artefact, not a bug).
 
 ## 6. Lean decision
-All view fns are `[@no_lean]`; `[@total]` is added on the per-node ones (`operands`, `rebuild`, `pp_style`, `encode_head`, `cost`). The types of
+All view fns are `[@no_lean]`; `[@total]` is added on the per-node ones (`operands`, `rebuild`, `encode_head`, `cost`). The types of
 `view_host.ml` are term-free (`t`/`ty` only as parameters of `smt_op`), so Lean has nothing to model for them (K6 open: confirm that Kanon does not emit
 Lean for `[@ocaml]`-abstract types used only by `[@no_lean]` items; if it does, add `R.Abstract` entries). The Lean project stays on the old pinned Kanon
 and a frozen copy of the old rules until S6; proofs do not cover the migrated rules.
@@ -217,7 +207,7 @@ and a frozen copy of the old rules until S6; proofs do not cover the migrated ru
 ## 7. Test strategy
 | what | test | oracle |
 |---|---|---|
-| view functions | `Kanon_ref` vs generated fns, every fn, on the `check/` corpus (3 x ~700 random terms + subterms, all node kinds: `coverage`); property `rebuild v (operands v) == v` for every node; `pp_style`, `encode_head`, `cost` never fall to a default (`[@total]` + a test per node kind); (`bv_diff`, which compared the simplifier with the old one on 2M random terms and 9M exhaustive cases with zero differences, was deleted with the old stack: see `f1e29af`) | `dune test soteria/tests/bv_values` |
+| view functions | `Kanon_ref` vs generated fns, every fn, on the `check/` corpus (3 x ~700 random terms + subterms, all node kinds: `coverage`); property `rebuild v (operands v) == v` for every node; `encode_head`, `cost` never fall to a default (`[@total]` + a test per node kind); (`bv_diff`, which compared the simplifier with the old one on 2M random terms and 9M exhaustive cases with zero differences, was deleted with the old stack: see `f1e29af`) | `dune test soteria/tests/bv_values` |
 | generic layers | `check/check.ml` part B: eval idempotent on normal forms, `rebuild (operands v) == v`, coverage of every node kind. (Until S7 it also compared pp, pp_ty, cost, encode (with Decls order), as_range, recognisers, iter_vars, implies_or_contradicts, sure_neq, eval (3 modes), Subst.apply and learn with the old stack on the converted term: all equal) | `dune test soteria/tests/bv_values` |
 | golden, fuzzers | golden dump of the new stack (`soteria/tests/bv_golden/golden.sh`, seed fixed) byte-identical to the S0 golden of the old stack (pp, cost, SMT with Decls, Subst, learn, as_range, implies, iter_vars, eval); `bv_fuzz` ported (`Direct` on raw nodes) passes with `QCHECK_TEST_COUNT=50000`; `test_eval` ported | `cmp` of two dumps; fuzz exit 0 |
 Order-sensitive output (pp of commutative nodes) is only comparable if both stacks create the same nodes in the same order: the golden generator must build terms through the public API in the same call order on both stacks.
@@ -227,7 +217,7 @@ There is no `Ext` any more (the `Value_ext` extension of the old stack, deleted 
 
 | old (`Ext`/`Ext_base`) | new |
 |---|---|
-| `Ext.pp` | `extend fn pp_style` (PSeq/PCall/..., heads by Rust prims); operands via `operands` |
+| `Ext.pp` | `Rust_pp.pp`, written by hand over the Rust types (`K.pp`) |
 | `Ext.iter_vars` | `extend fn operands` (generic `iter_vars` recurses) |
 | `Ext.mk` / `Ext.eval` | `extend fn rebuild`: the node's smart constructor (`Ext.mk` simplified once; `Ext.eval` rebuilt via `mk` only when a child changed: `rebuild` is only called then, `Value_lang.map_operands`/`Eval` check `equal`) |
 | `Ext.apply_subst` | same `rebuild`/`operands` (Subst driver) |
@@ -237,7 +227,7 @@ There is no `Ext` any more (the `Value_ext` extension of the old stack, deleted 
 | `TExtension X` | the sort `X` itself (design D4) |
 | `Typed.Make_transparent (Ext) ()` | `Typed.Make_transparent (Lang_make.Make (Types) (K))` |
 
-`[@total]` makes Kanon reject a Rust node with no case in `operands`/`rebuild`/`pp_style`/`encode_head`/`cost`. Rust-only host code (encoding.ml, typed.ml) matches the
+`[@total]` makes Kanon reject a Rust node with no case in `operands`/`rebuild`/`encode_head`/`cost`. Rust-only host code (encoding.ml, typed.ml) matches the
 generated Rust constructors directly.
 
 ## 9. Open points

@@ -10,7 +10,6 @@ open Rust_types
 
 type t = Types.t
 type ty = Types.ty
-type pphead = Iface.View_host.pphead
 type smt_op = (t, ty) Iface.View_host.smt_op
 type smt_sort_op = ty Iface.View_host.smt_sort_op
 
@@ -31,3 +30,4 @@ let mk_loc n z = node (LocLit z) (TLoc n)
 let mk_ptr = Prims.mk_ptr
 let mk_seq = Prims.mk_seq
 let pp_ty = Prims.pp_ty
+let pp = Rust_pp.pp

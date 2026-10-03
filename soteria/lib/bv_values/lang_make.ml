@@ -16,13 +16,11 @@ module Make
     (K : Kanon_fns.Kanon_fns with type t = T.t and type ty = T.ty) :
   Typed_intf.Language with type V.t = T.t and type V.ty = T.ty = struct
   module Base = Value_lang.Make (T) (K)
-  module Pp = Pp.Make (Base)
   module Eval = Eval.Make (Base)
 
   module V : Value_lang.S with type t = T.t and type ty = T.ty = struct
     include Base
 
-    let pp = Pp.pp
     let eval = Eval.eval
   end
 

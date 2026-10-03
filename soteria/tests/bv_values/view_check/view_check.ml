@@ -30,24 +30,6 @@ let lst f l = "[" ^ String.concat ";" (List.map f l) ^ "]"
 let pair f g (a, b) = "(" ^ f a ^ "," ^ g b ^ ")"
 let zs = Z.to_string
 let str pp x = Format.asprintf "%a" pp x
-let show_head (h : View_host.pphead) = Format.asprintf "%t" h
-
-let show_style : View_host.pp_style -> string = function
-  | PAtom h -> "PAtom " ^ show_head h
-  | PCall h -> "PCall " ^ show_head h
-  | PCallPlain h -> "PCallPlain " ^ show_head h
-  | PIn h -> "PIn " ^ show_head h
-  | PIte -> "PIte"
-  | PBrackets -> "PBrackets"
-  | PSeq l ->
-      "PSeq"
-      ^ lst
-          (function
-            | View_host.PText h -> "T" ^ show_head h
-            | PArg i -> "A" ^ zs i
-            | PArgOf (i, j) -> "A" ^ zs i ^ "." ^ zs j
-            | PArgs h -> "As" ^ show_head h)
-          l
 
 let show_plan : View_host.learn_plan -> string = function
   | LNone -> "LNone"
@@ -588,7 +570,6 @@ module Suite (K : K) = struct
           if r != v then "DIFFERENT " ^ nt r else "same");
       one "maps_operands" (fun () -> string_of_bool (K.maps_operands v));
       one "cost" (fun () -> zs (K.cost v));
-      one "pp_style" (fun () -> show_style (K.pp_style v));
       one "encode_head" (fun () ->
           apply_op ~pp_ty:sty (K.encode_head v) (K.operands v));
       one "learn_alts" (fun () -> show_plan (K.learn_alts v));

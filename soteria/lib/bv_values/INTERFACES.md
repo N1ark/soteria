@@ -25,8 +25,6 @@ Files (all in this directory, modules of `Soteria.Bv_values`):
 | `prim.ml` | `Prim.Make (V : Prim.Lang)`: the primitives of the rules and of the view functions (HOST), shared with soteria-rust |
 | `bv_prims.ml` | `Prim.Make` applied to the C language |
 | `lang.ml` | the glue of the language of the C tool: `Lang.K` (the `Kanon_fns` implementation), `Lang.L`, `Lang.Typed`... |
-| `../../tests/bv_values/check/` | test executable: compile checks + oracle tests; `kanon_ref.ml` = hand-written reference implementation of `Kanon_fns` over `Lang.Types` |
-| `../../tests/bv_values/view_check/` | the generated view functions against `kanon_ref.ml` |
 
 The sections below keep the wording of the design stage: "the standalone stack"
 is now `Soteria.Bv_values.Lang`, `bv_new` is `Lang`, `Bv_iface` is
@@ -208,14 +206,6 @@ All view fns are `[@no_lean]`; `[@total]` is added on the per-node ones (`operan
 `view_host.ml` are term-free (`t`/`ty` only as parameters of `smt_op`), so Lean has nothing to model for them (K6 open: confirm that Kanon does not emit
 Lean for `[@ocaml]`-abstract types used only by `[@no_lean]` items; if it does, add `R.Abstract` entries). The Lean project stays on the old pinned Kanon
 and a frozen copy of the old rules until S6; proofs do not cover the migrated rules.
-
-## 7. Test strategy
-| what | test | oracle |
-|---|---|---|
-| view functions | `Kanon_ref` vs generated fns, every fn, on the `check/` corpus (3 x ~700 random terms + subterms, all node kinds: `coverage`); property `rebuild v (operands v) == v` for every node; `encode_head`, `cost` never fall to a default (`[@total]` + a test per node kind); (`bv_diff`, which compared the simplifier with the old one on 2M random terms and 9M exhaustive cases with zero differences, was deleted with the old stack: see `f1e29af`) | `dune test soteria/tests/bv_values` |
-| generic layers | `check/check.ml` part B: eval idempotent on normal forms, `rebuild (operands v) == v`, coverage of every node kind. (Until S7 it also compared pp, pp_ty, cost, encode (with Decls order), as_range, recognisers, iter_vars, implies_or_contradicts, sure_neq, eval (3 modes), Subst.apply and learn with the old stack on the converted term: all equal) | `dune test soteria/tests/bv_values` |
-| golden, fuzzers | golden dump of the new stack (`soteria/tests/bv_golden/golden.sh`, seed fixed) byte-identical to the S0 golden of the old stack (pp, cost, SMT with Decls, Subst, learn, as_range, implies, iter_vars, eval); `bv_fuzz` ported (`Direct` on raw nodes) passes with `QCHECK_TEST_COUNT=50000`; `test_eval` ported | `cmp` of two dumps; fuzz exit 0 |
-Order-sensitive output (pp of commutative nodes) is only comparable if both stacks create the same nodes in the same order: the golden generator must build terms through the public API in the same call order on both stacks.
 
 ## 8. Rust: the equivalents of the Value_ext hooks
 There is no `Ext` any more (the `Value_ext` extension of the old stack, deleted in S7). Its members map to `extend fn` cases of the Rust language module (`rust.kn`, over the shared modules by relative `use`):

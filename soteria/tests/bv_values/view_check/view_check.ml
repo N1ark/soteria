@@ -242,7 +242,7 @@ let all_kinds =
   @ [ "op3:ite"; "op3:fma"; "opN:distinct" ]
 
 module Suite (K : K) = struct
-  module L = Lang_v.Make (Types) (K)
+  module L = Lang_make.Make (Types) (K)
   module G = Gen.Make (L.Svalue)
 
   (* the terms of the random generator, with their subterms *)

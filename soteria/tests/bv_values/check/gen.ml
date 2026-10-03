@@ -1,8 +1,8 @@
 (* A generator of well-typed terms through the sugar of
-   {!Soteria.Bv_values.Svalue_sugar_v} (so through the smart constructors), over
+   {!Soteria.Bv_values.Svalue_sugar} (so through the smart constructors), over
    every node family. *)
 
-module Make (S : Soteria.Bv_values.Svalue_sugar_v.S) = struct
+module Make (S : Soteria.Bv_values.Svalue_sugar.S) = struct
   open S
 
   type sort = B | V of int | F | L of int | P of int | Sq of sort

@@ -6,13 +6,11 @@
 ;   functions that create nodes, the number and the order of the nodes
 ;   created.
 ; - [check_gen]: the tests of [../check/check.ml] (generic layers against
-;   the old stack) with the generated view in place of [Kanon_ref].
+;   the generated language) with the generated view in place of [Kanon_ref].
 
 (copy_files# ../check/gen.ml)
 
 (copy_files# ../check/kanon_ref.ml)
-
-(copy_files# ../check/conv.ml)
 
 (rule
  (targets check_gen.ml)
@@ -23,7 +21,7 @@
 
 (executables
  (names view_check check_gen)
- (modules kanon_gen kanon_ref conv gen check_gen view_check)
+ (modules kanon_gen kanon_ref gen check_gen view_check)
  (libraries soteria floatml zarith iter fmt alcotest)
  (flags
   (:standard -w +a-4-9-26-27-32..42-44-45-48-70)))

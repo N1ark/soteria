@@ -1,15 +1,9 @@
-(* Sanity checks of the standalone stack ([Soteria.Bv_values.Lang]) on a handful
-   of terms; the comparison with the old simplifier is the job of the
-   differential harness. *)
+(* Sanity checks of the language of the C tool ([Soteria.Bv_values.Lang]) on a
+   handful of terms. *)
 
 open Soteria.Bv_values.Lang
 open Soteria.Bv_values.Lang.Types
-module Old = Soteria.Bv_values.Svalue
-module OS = Old.Make (Old.Dummy_ext) ()
 module F = Floatml.AnyFloat
-
-(* The old stack is created first, so that its constants are its first nodes (it
-   has its own table: the order of creation matters only inside a stack). *)
 
 (* the sorts of [Soteria.Bv_values.Lang] (widths are [int]s), which [Rules]
    shadows with those of the view functions ([Z.t]) *)
@@ -30,13 +24,14 @@ let z = Z.of_int
 let i = Z.of_int
 
 let init_order () =
-  (* the same tags as the old functor application: v_true, v_false, the zero
-     literals of 1 to 256 bits, then the one literals of 1 to 256 bits *)
-  Alcotest.(check int) "v_true" OS.v_true.tag v_true.tag;
-  Alcotest.(check int) "v_false" OS.v_false.tag v_false.tag;
+  (* the tags of the first generation of the value language, which pp output
+     depends on: v_true, v_false, the zero literals of 1 to 256 bits, then the
+     one literals of 1 to 256 bits *)
+  Alcotest.(check int) "v_true" 0 v_true.tag;
+  Alcotest.(check int) "v_false" 1 v_false.tag;
   for n = 1 to 256 do
-    Alcotest.(check int) "zero" (OS.BitVec.zero n).tag (bv_zero n).tag;
-    Alcotest.(check int) "one" (OS.BitVec.one n).tag (bv_one n).tag
+    Alcotest.(check int) "zero" (n + 1) (bv_zero n).tag;
+    Alcotest.(check int) "one" (n + 257) (bv_one n).tag
   done;
   Alcotest.(check (list int))
     "tags" [ 0; 1; 2; 3; 257; 258 ]

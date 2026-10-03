@@ -1,1 +1,1 @@
-module Ty = Rust_new.Rust_typed
+module Ty = Soteria_rust_lib.Svalue.Typed

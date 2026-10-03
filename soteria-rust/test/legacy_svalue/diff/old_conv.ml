@@ -3,9 +3,9 @@
    [Ext_base]. *)
 
 module Rust = Soteria_rust_lib
-module Ty = Rust.Svalue.Typed
+module Ty = Legacy_svalue.Typed
 module Sv = Soteria.Bv_values.Svalue
-module E = Rust.Svalue.Ext_base
+module E = Legacy_svalue.Ext_base
 module Ptr_tag = Rust.Svalue.Ptr_tag
 module Types = Charon.Types
 open Neutral

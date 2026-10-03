@@ -1,8 +1,7 @@
-(* The cost of the arrays, the one place where the new language is expected to
-   be slower: an array is an [Iarray] in the old one (O(1) access, O(1) length)
-   and a list in the new one (O(i) access, O(n) length, conversions at the
-   interface). Same code for both stacks ([Ty] is defined by the file that
-   precedes it). Returns [(operation, seconds per run)]. *)
+(* The cost of the arrays: an [Iarray] in the old values (O(1) access, O(1)
+   length) and in the new language (the host type [iarray] of rules/rust.knl).
+   Same code for both stacks ([Ty] is defined by the file that precedes it).
+   Returns [(operation, seconds per run)]. *)
 
 open Charon
 module Adt = Ty.Adt

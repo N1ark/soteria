@@ -1,1 +1,1 @@
-module Ty = Soteria_rust_lib.Svalue.Typed
+module Ty = Legacy_svalue.Typed

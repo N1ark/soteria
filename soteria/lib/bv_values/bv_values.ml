@@ -47,6 +47,7 @@ module Expr = Expr
 module Kanon_fns = Kanon_fns
 module Lang = Lang
 module Lang_make = Lang_make
+module Prim = Prim
 module Save_counter = Save_counter
 module Solver_lang = Solver_lang
 module Svalue_sugar = Svalue_sugar

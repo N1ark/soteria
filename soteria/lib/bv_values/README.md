@@ -36,8 +36,10 @@ Files (see `INTERFACES.md` for the contracts):
   modules are shared by the languages: soteria-rust's `lang.knl` `use`s them by
   relative path.
 - `bv_types.gen.ml` and `bv_rules.gen.ml` are generated from them (below).
-- `bv_prims.ml` and `view_prims.ml` are the primitives that the rules call
-  (literal arithmetic, the constants and the cache of literals, SMT builders...).
+- `prim.ml` is `Prim.Make`, the primitives that the rules of the C and Rust
+  languages call (literal arithmetic, the constants and the cache of literals,
+  SMT builders...), over the few sorts and nodes of a language. `bv_prims.ml`
+  applies it to the C language.
 - `lang.ml` is the glue of the language, `Bv_values.Lang`: `Lang.Types`,
   `Lang.Prims`, `Lang.Rules`, the implementation `Lang.K` of `Kanon_fns`, and
   the generic code instantiated on it: `Lang.Svalue`, `Lang.Eval`, `Lang.Expr`,

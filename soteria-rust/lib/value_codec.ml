@@ -324,7 +324,7 @@ struct
         let meta =
           match%ty meta with
           | TBitVector _ -> (meta :> Typed.(T.ptr_meta t))
-          | TExtension TFullPtr -> Typed.Ptr.ptr_of meta
+          | TFullPtr -> Typed.Ptr.ptr_of meta
           | _ -> L.failwith "read invalid meta?"
         in
         Typed.Ptr.mk_ptr_f ptr meta
@@ -705,17 +705,16 @@ let rec transmute_one ~(to_ty : Types.ty) (v : [< Typed.T.scalar ] Typed.t) :
   | TBitVector _, TLiteral (TInt _ | TUInt _ | TBool | TChar) ->
       return (Typed.as_any v)
   | TFloat _, TLiteral (TFloat _) -> return (Typed.as_any v)
-  | TExtension TFullPtr, (TRawPtr _ | TRef _ | TFnPtr _) ->
-      return (Typed.as_any v)
+  | TFullPtr, (TRawPtr _ | TRef _ | TFnPtr _) -> return (Typed.as_any v)
   | TBitVector _, TLiteral (TFloat _) -> return (BV.to_float_raw v)
-  | TExtension TFullPtr, TLiteral (TInt _ | TUInt _ | TBool | TChar) ->
+  | TFullPtr, TLiteral (TInt _ | TUInt _ | TBool | TChar) ->
       let ptr = Typed.Ptr.ptr_of v in
       Sptr.decay ptr
   | TFloat _, TLiteral (TInt _ | TUInt _ | TBool | TChar) -> float_to_bv_bits v
   | TBitVector _, (TRawPtr _ | TRef _ | TFnPtr _) ->
       return (Typed.Ptr.of_address_f v)
   | _, TPattern (inner_ty, _) -> transmute_one ~to_ty:inner_ty v
-  | TExtension TPolyType, TVar (Free type_var_id) ->
+  | TPolyType, TVar (Free type_var_id) ->
       let tid = Typed.Adt.as_type_var v in
       if Types.TypeVarId.equal_id type_var_id tid then return (Typed.as_any v)
       else

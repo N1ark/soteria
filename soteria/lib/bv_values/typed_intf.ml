@@ -1,37 +1,42 @@
-open Svalue
+(** The public interface of the typed layer. [Svalue] and [Eval] are the
+    signatures of the generic layers ({!Svalue_sugar.S}, {!Eval.S}); the
+    constructors of the terms are not exposed: a user matches on the terms with
+    the recognisers of {!Value_lang.Base} and [BitVec.to_z]. *)
+
+open Deps
 
 module type S = sig
-  module Ext : Svalue.Value_ext
-  module Svalue : module type of Svalue.Make (Ext) ()
-  module Eval : module type of Eval.Make (Ext) (Svalue)
+  module Svalue : Svalue_sugar.S
+  module Eval : Eval.S with type t = Svalue.t and type ty = Svalue.ty
+  module Lang : Solver_lang.S with type t = Svalue.t and type ty = Svalue.ty
+  module FloatPrecision = Svalue.FloatPrecision
+  module FloatClass = Svalue.FloatClass
+  module RoundingMode = Svalue.RoundingMode
 
   (** {2 Phantom types} *)
 
   module T : sig
-    (** A symbolic integer; can either be [`NonZero] if it is known to not be 0,
-        [`Zero] if it is 0. *)
-    type sint = [ `NonZero | `Zero ]
+    (** The tags of the sorts of the language, from the ghost-typed interface
+        that Kanon generates ({!Bv_typed.Tag}). A symbolic integer is a
+        bit-vector, whose subsorts are the integers known to be non-zero or to
+        be zero: the predicates [TNonzero] and [TZero] of the rules. *)
 
-    (** Any symbolic integer; it may be the result of an overflowing operation
-    *)
-    type sint_ovf = [ `NonZero | `Zero | `Overflowed ]
+    type sint = Bv_typed.Tag.tbitvector
 
     (** A symbolic integer known to be non-zero. *)
-    type nonzero = [ `NonZero ]
+    type nonzero = Bv_typed.Tag.tnonzero
 
     (** A symbolic integer known to be zero. *)
-    type zero = [ `Zero ]
+    type zero = Bv_typed.Tag.tzero
 
-    type sfloat = [ `Float ]
-    type sbool = [ `Bool ]
-    type sptr = [ `Ptr ]
-    type sloc = [ `Loc ]
-    type 'a sseq = [ `List of 'a ]
+    type sfloat = Bv_typed.Tag.tfloat
+    type sbool = Bv_typed.Tag.tbool
+    type sptr = Bv_typed.Tag.tpointer
+    type sloc = Bv_typed.Tag.tloc
     type cval = [ sint | sptr | sfloat ]
-    type any = [ sint_ovf | sfloat | sbool | sptr | sloc | any sseq ]
+    type any = [ sint | sfloat | sbool | sptr | sloc ]
 
     val pp_sint : Format.formatter -> sint -> unit
-    val pp_sint_ovf : Format.formatter -> sint_ovf -> unit
     val pp_nonzero : Format.formatter -> nonzero -> unit
     val pp_zero : Format.formatter -> zero -> unit
     val pp_sfloat : Format.formatter -> sfloat -> unit
@@ -39,13 +44,8 @@ module type S = sig
     val pp_sptr : Format.formatter -> sptr -> unit
     val pp_sloc : Format.formatter -> sloc -> unit
     val pp_cval : Format.formatter -> cval -> unit
-
-    val pp_sseq :
-      (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a sseq -> unit
-
     val pp_any : Format.formatter -> any -> unit
     val hash_sint : sint -> int
-    val hash_sint_ovf : sint_ovf -> int
     val hash_nonzero : nonzero -> int
     val hash_zero : zero -> int
     val hash_sfloat : sfloat -> int
@@ -53,7 +53,6 @@ module type S = sig
     val hash_sptr : sptr -> int
     val hash_sloc : sloc -> int
     val hash_cval : cval -> int
-    val hash_sseq : 'a sseq -> int
     val hash_any : any -> int
   end
 
@@ -71,7 +70,6 @@ module type S = sig
   val t_int : int -> [> sint ] ty
   val t_ptr : int -> [> sptr ] ty
   val t_loc : int -> [> sloc ] ty
-  val t_seq : ([< any ] as 'a) ty -> [> 'a sseq ] ty
   val t_f16 : [> sfloat ] ty
   val t_f32 : [> sfloat ] ty
   val t_f64 : [> sfloat ] ty
@@ -97,7 +95,6 @@ module type S = sig
   val get_ty : 'a t -> Svalue.ty
   val type_type : Svalue.ty -> 'a ty
   val untype_type : 'a ty -> Svalue.ty
-  val kind : 'a t -> Svalue.t_kind
   val mk_var : Var.t -> 'a ty -> 'a t
   val iter_vars : 'a t -> (Var.t * 'b ty -> unit) -> unit
   val type_ : Svalue.t -> 'a t
@@ -172,9 +169,6 @@ module type S = sig
   end
 
   include Bool_
-  module FloatPrecision = Svalue.FloatPrecision
-  module FloatClass = Svalue.FloatClass
-  module RoundingMode = Svalue.RoundingMode
 
   module Bool : sig
     include Bool_
@@ -202,13 +196,13 @@ module type S = sig
     val cast_nonzero : [< T.sint ] t -> [> T.nonzero ] t
 
     (* arithmetic *)
-    val add : ?checked:checked -> [< sint ] t -> [< sint ] t -> [> sint_ovf ] t
-    val sub : ?checked:checked -> [< sint ] t -> [< sint ] t -> [> sint_ovf ] t
-    val mul : ?checked:checked -> [< sint ] t -> [< sint ] t -> [> sint_ovf ] t
-    val div : signed:bool -> [< sint ] t -> [< nonzero ] t -> [> sint_ovf ] t
-    val rem : signed:bool -> [< sint ] t -> [< nonzero ] t -> [> sint_ovf ] t
-    val mod_ : [< sint ] t -> [< sint ] t -> [> sint_ovf ] t
-    val neg : ?checked:bool -> [< sint ] t -> [> sint_ovf ] t
+    val add : ?checked:checked -> [< sint ] t -> [< sint ] t -> [> sint ] t
+    val sub : ?checked:checked -> [< sint ] t -> [< sint ] t -> [> sint ] t
+    val mul : ?checked:checked -> [< sint ] t -> [< sint ] t -> [> sint ] t
+    val div : signed:bool -> [< sint ] t -> [< nonzero ] t -> [> sint ] t
+    val rem : signed:bool -> [< sint ] t -> [< nonzero ] t -> [> sint ] t
+    val mod_ : [< sint ] t -> [< sint ] t -> [> sint ] t
+    val neg : ?checked:bool -> [< sint ] t -> [> sint ] t
 
     (* overflow checks *)
     val add_overflows :
@@ -233,9 +227,6 @@ module type S = sig
       signed:bool -> [< sint ] t -> [< sint ] t -> [> sint ] t * [> sbool ] t
 
     val neg_checked : [< sint ] t -> [> sint ] t * [> sbool ] t
-
-    (* Unsafe mark as not overflow *)
-    val no_ovf_unsafe : [< sint_ovf ] t -> [> sint ] t
 
     (* inequalities *)
     val lt : signed:bool -> [< sint ] t -> [< sint ] t -> [> sbool ] t
@@ -400,10 +391,6 @@ module type S = sig
     val is_at_null_loc : [< sptr ] t -> [> sbool ] t
   end
 
-  module SSeq : sig
-    val mk : seq_ty:'a sseq ty -> 'a t list -> [> 'a sseq ] t
-  end
-
   module Infix : sig
     (* equality *)
     val ( ==@ ) : 'a t -> 'b t -> [> sbool ] t
@@ -426,14 +413,14 @@ module type S = sig
     (* arithmetic -- [$] indicates signed unsigned division and remainder cannot
        overflow so we consider they always result in-bounds (can overflow for
        signed with [MIN / -1]) *)
-    val ( +@ ) : [< sint ] t -> [< sint ] t -> [> sint_ovf ] t
-    val ( -@ ) : [< sint ] t -> [< sint ] t -> [> sint_ovf ] t
-    val ( ~- ) : [< sint ] t -> [> sint_ovf ] t
-    val ( *@ ) : [< sint ] t -> [< sint ] t -> [> sint_ovf ] t
+    val ( +@ ) : [< sint ] t -> [< sint ] t -> [> sint ] t
+    val ( -@ ) : [< sint ] t -> [< sint ] t -> [> sint ] t
+    val ( ~- ) : [< sint ] t -> [> sint ] t
+    val ( *@ ) : [< sint ] t -> [< sint ] t -> [> sint ] t
     val ( /@ ) : [< sint ] t -> [< nonzero ] t -> [> sint ] t
-    val ( /$@ ) : [< sint ] t -> [< nonzero ] t -> [> sint_ovf ] t
+    val ( /$@ ) : [< sint ] t -> [< nonzero ] t -> [> sint ] t
     val ( %@ ) : [< sint ] t -> [< nonzero ] t -> [> sint ] t
-    val ( %$@ ) : [< sint ] t -> [< nonzero ] t -> [> sint_ovf ] t
+    val ( %$@ ) : [< sint ] t -> [< nonzero ] t -> [> sint ] t
 
     (* arithmetic operations with overflow ignored *)
     val ( +!@ ) : [< sint ] t -> [< sint ] t -> [> sint ] t
@@ -483,51 +470,22 @@ module type S = sig
        and type t = Svalue.t
 end
 
-(** The exact slice of {!S} that {!Bv_solver}'s functors (and the {!Encoding}
-    and {!Analyses} they build on) actually consume — essentially {!Svalue},
-    {!Eval}, {!Ext}, and a handful of boolean/bitvector constructors, enough to
-    also be a {!Symex.Value.S}.
-
-    Solvers take this rather than the whole {!S} so that a downstream [Typed]
-    that adds or overrides constructors — and therefore no longer matches {!S} —
-    can still be passed to {!Bv_solver.Z3_solver} directly: the solver provably
-    never touches the overridden parts. Every module matching {!S} also matches
-    this, so it stays a strict subset. *)
+(** What {!Bv_solver}'s functors consume of a typed layer. Every module matching
+    {!S} matches it. It does not mention [Svalue] nor [Eval]: the solver never
+    uses them. *)
 module type Solver_value = sig
-  module Ext : Svalue.Value_ext
-  module Svalue : module type of Svalue.Make (Ext) ()
-  module Eval : module type of Eval.Make (Ext) (Svalue)
+  module Lang : Solver_lang.S
 
   module T : sig
-    type sint = [ `NonZero | `Zero ]
-    type sbool = [ `Bool ]
+    type sint = Bv_typed.Tag.tbitvector
+    type sbool = Bv_typed.Tag.tbool
   end
 
   include Symex.Value.S with type sbool = T.sbool
 
   (** {2 Extra operations beyond {!Symex.Value.S}} *)
 
-  open T
-
-  val t_int : int -> [> sint ] ty
-  val untype_type : 'a ty -> Svalue.ty
-  val iter_vars : 'a t -> (Var.t * 'b ty -> unit) -> unit
-  val type_ : Svalue.t -> 'a t
-  val untyped : 'a t -> Svalue.t
-  val equal : 'a t -> 'a t -> bool
-  val sem_eq : 'a t -> 'b t -> sbool t
-  val v_true : [> sbool ] t
-  val v_false : [> sbool ] t
-  val and_ : [< sbool ] t -> [< sbool ] t -> [> sbool ] t
-  val split_ands : [< sbool ] t -> ([> sbool ] t -> unit) -> unit
-
-  module BitVec : sig
-    val mk : int -> Z.t -> [> sint ] t
-  end
-
-  module Infix : sig
-    val ( ==@ ) : 'a t -> 'a t -> [> sbool ] t
-    val ( <=@ ) : [< sint ] t -> [< sint ] t -> [> sbool ] t
-    val ( &&@ ) : [< sbool ] t -> [< sbool ] t -> [> sbool ] t
-  end
+  val untype_type : 'a ty -> Lang.ty
+  val type_ : Lang.t -> 'a t
+  val untyped : 'a t -> Lang.t
 end

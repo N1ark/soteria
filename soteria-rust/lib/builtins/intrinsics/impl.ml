@@ -294,12 +294,8 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).Impl = struct
      *   => (2ⁿ-1) × (2ⁿ-1) + (2ⁿ-1) + (2ⁿ-1)
      *   => (2²ⁿ - 2ⁿ⁺¹ + 1) + (2ⁿ⁺¹ - 2)
      *   => 2²ⁿ - 1 *)
-    let ( *!@ ) l r =
-      BV.no_ovf_unsafe @@ BV.mul ~checked:(Typed.checked_of_signed false) l r
-    in
-    let ( +!@ ) l r =
-      BV.no_ovf_unsafe @@ BV.add ~checked:(Typed.checked_of_signed false) l r
-    in
+    let ( *!@ ) l r = BV.mul ~checked:(Typed.checked_of_signed false) l r in
+    let ( +!@ ) l r = BV.add ~checked:(Typed.checked_of_signed false) l r in
     let res = (multiplier *!@ multiplicand) +!@ addend +!@ carry in
     let res_l, res_h =
       ( BV.extract 0 ((size_t * 8) - 1) res,
@@ -437,10 +433,10 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).Impl = struct
         ]
     in
     (* wrapping is intended: this is bit arithmetic, not a Rust addition *)
-    let base = BV.no_ovf_unsafe (BV.add (BV.mk_masked word bias) c) in
+    let base = BV.add (BV.mk_masked word bias) c in
     let scaled =
       BV.to_float ~rounding:NearestTiesToEven ~signed:true ~fp
-        (BV.no_ovf_unsafe (BV.sub lead base))
+        (BV.sub lead base)
     in
     let mult = y *.@ scaled in
     (* the exponent field would overflow past this, so saturate as CBMC does *)
@@ -450,10 +446,9 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).Impl = struct
       else ok (Typed.Float.zero fp)
     else
       let res_lead =
-        BV.no_ovf_unsafe
-          (BV.add
-             (BV.of_float ~rounding:Truncate ~signed:true ~size:word mult)
-             base)
+        BV.add
+          (BV.of_float ~rounding:Truncate ~signed:true ~size:word mult)
+          base
       in
       let res_bits =
         if shift = 0 then res_lead else BV.concat res_lead (BV.zero shift)
@@ -998,8 +993,8 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).Impl = struct
         assert_ (off >=$@ zero)
           (`StdErr "core::intrinsics::offset_from_unsigned negative offset")
       in
-      BV.no_ovf_unsafe (off /$@ size)
-    else ok (BV.no_ovf_unsafe (off /$@ size))
+      off /$@ size
+    else ok (off /$@ size)
 
   let ptr_offset_from ~t ~ptr ~base =
     ptr_offset_from_ ~unsigned:false ~t ~ptr ~base
@@ -1049,7 +1044,7 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).Impl = struct
           if bits <= 32 then BV.extract 0 (bits - 1) shift
           else BV.extend ~signed:false (bits - 32) shift
         in
-        let shift = BV.no_ovf_unsafe @@ BV.rem ~signed:false shift bits' in
+        let shift = BV.rem ~signed:false shift bits' in
         let res =
           if side = `Left then x <<@ shift |@ (x >>@ bits' -!@ shift)
           else x >>@ shift |@ (x <<@ bits' -!@ shift)
@@ -1074,12 +1069,12 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).Impl = struct
             if signed then Typed.ite (a <$@ BV.mki_lit t 0) min max else max
           in
           let res = BV.add ~checked:(Typed.checked_of_signed signed) a b in
-          Typed.ite ovf if_ovf (BV.no_ovf_unsafe res)
+          Typed.ite ovf if_ovf res
       | Sub _ ->
           let ovf = BV.sub_overflows ~signed a b in
           let if_ovf = if signed then Typed.ite (a <$@ b) min max else min in
           let res = BV.sub ~checked:(Typed.checked_of_signed signed) a b in
-          Typed.ite ovf if_ovf (BV.no_ovf_unsafe res)
+          Typed.ite ovf if_ovf res
       | _ -> L.failwith "Unreachable: not add or sub?"
     in
     ok res
@@ -1247,7 +1242,7 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).Impl = struct
      value is [Tuple [ Tuple lanes ]]. *)
   let simd_lanes_with cast (lanes : Typed.([< T.any ] t)) =
     match%ty lanes with
-    | TExtension (TTuple [ TExtension (TArray _) ]) ->
+    | TTuple [ TArray _ ] ->
         let wrapper = Typed.Adt.as_tuple1 @@ lanes in
         let elems = Typed.Adt.as_array @@ Typed.cast_array wrapper in
         ok (Iarray.map cast elems)

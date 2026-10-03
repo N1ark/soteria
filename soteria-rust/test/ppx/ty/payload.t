@@ -17,7 +17,7 @@
             [@@warning "-unused-var"]
         in
         size + use_sint x
-    | TExtension (TEnum a) ->
+    | TEnum a ->
         let x =
           (Typed.cast x : [< Typed.T.enum ] Typed.t)
             [@@warning "-unused-var"]

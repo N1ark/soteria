@@ -46,8 +46,7 @@ module M (StateM : State.StateM.S) = struct
   let align_of_enum align =
     let discr =
       match%ty align with
-      | TExtension (TTuple _) ->
-          Typed.Adt.(discriminant_of (cast_enum (as_tuple1 align)))
+      | TTuple _ -> Typed.Adt.(discriminant_of (cast_enum (as_tuple1 align)))
       | TBitVector _ -> align
       | _ -> L.failwith "align_of_enum: expected enum or integer"
     in

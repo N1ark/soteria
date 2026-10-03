@@ -329,7 +329,7 @@ module Make (State : State_intf.S) = struct
         in
         Struct fields
     | ConstantFloating (str, _suff) ->
-        let precision : Svalue.FloatPrecision.t =
+        let precision : Bv_base.FloatPrecision.t =
           match ty with
           | Ctype.Ctype (_, Basic (Floating fty)) -> Layout.precision fty
           | _ ->
@@ -442,7 +442,7 @@ module Make (State : State_intf.S) = struct
         let*^ v2 = cast_basic ~old_ty:t2 ~new_ty:ty v2 in
         ok (v1 ==@ v2 |> BV.of_bool)
     | TPointer _, TPointer _ -> ok (v1 ==@ v2 |> BV.of_bool)
-    | TFloat fp1, TFloat fp2 when Svalue.FloatPrecision.equal fp1 fp2 ->
+    | TFloat fp1, TFloat fp2 when Bv_base.FloatPrecision.equal fp1 fp2 ->
         let v1 = Typed.cast v1 in
         let v2 = Typed.cast v2 in
         ok (v1 ==.@ v2 |> BV.of_bool)
@@ -664,7 +664,7 @@ module Make (State : State_intf.S) = struct
           let left = Typed.cast left in
           let right = Typed.cast right in
           ok (int_cmp_op left right)
-      | TFloat fp1, TFloat fp2 when Svalue.FloatPrecision.equal fp1 fp2 ->
+      | TFloat fp1, TFloat fp2 when Bv_base.FloatPrecision.equal fp1 fp2 ->
           let left = Typed.cast left in
           let right = Typed.cast right in
           ok (float_cmp_op left right |> BV.of_bool)

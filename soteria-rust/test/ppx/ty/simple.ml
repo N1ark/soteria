@@ -16,7 +16,7 @@ let test (x : [< Typed.T.any ] Typed.t) =
   | TBitVector _ -> use_sint x
   | TFloat _ -> use_sfloat x
   | TPointer _ -> use_sptr x
-  | TExtension TFullPtr -> use_sptr_f x
-  | TExtension TThinPtr -> use_sptr_t x
-  | TExtension (TEnum _) -> use_adt x
+  | TFullPtr -> use_sptr_f x
+  | TThinPtr -> use_sptr_t x
+  | TEnum _ -> use_adt x
   | _ -> ()

@@ -1,10 +1,8 @@
 open Charon
 
-type ('sc, 'ag) block_value_raw = ('sc, 'ag) Ext.block_value =
-  | Scalar of 'sc
-  | Aggregate of 'ag * Types.ty
+type ('sc, 'ag) block_value_raw = Scalar of 'sc | Aggregate of 'ag * Types.ty
 
-type ('sc, 'ag, 'ofs, 'sz) block_raw = ('sc, 'ag, 'ofs, 'sz) Ext.block = {
+type ('sc, 'ag, 'ofs, 'sz) block_raw = {
   value : ('sc, 'ag) block_value_raw;
   offset : 'ofs;
   size : 'sz;
@@ -13,21 +11,21 @@ type ('sc, 'ag, 'ofs, 'sz) block_raw = ('sc, 'ag, 'ofs, 'sz) Ext.block = {
 (* The extended ghost-typed interface, sharing [Solver_value]'s [t]/[ty] so
    values flow between the interpreter and the symex monad. *)
 include
-  Soteria.Bv_values.Typed.S
-    with type 'a Ext.t = 'a Ext.t
-     and type 'a Ext.ty = 'a Ext.ty
+  Iface.Typed_intf.S
+    with module Svalue = Rust_stack.L.Svalue
+     and module Eval = Rust_stack.L.Eval
 
 (* T *)
 
 module T : sig
   include module type of T
 
-  type sptr_f = [ `FullPtr ]
-  type sptr_t = [ `ThinPtr ]
-  type tuple = [ `Tuple ]
-  type enum = [ `Enum ]
-  type union = [ `Union ]
-  type poly = [ `Poly ]
+  type sptr_f = Rust_typed.Tag.tfullptr
+  type sptr_t = Rust_typed.Tag.tthinptr
+  type tuple = [ Rust_typed.Tag.ttuple | Rust_typed.Tag.tarray ]
+  type enum = Rust_typed.Tag.tenum
+  type union = Rust_typed.Tag.tunion
+  type poly = Rust_typed.Tag.tpolytype
   type ptr_meta = [ sptr_t | sint ]
 
   (** Values with a direct scalar representation: integers, floats and full

@@ -1,19 +1,13 @@
-open Logs.Import
 open Soteria_std
-open Svalue
+module Var = Symex.Var
 
-(** Syntactic analyses over a built typed layer [Typed] (from {!Typed.Make}):
-    the simplification knowledge base that records facts learned from the path
-    condition and uses them to simplify later constraints. Its [S] signature is
-    what the solvers in {!Bv_solver} consume; concrete instances are
-    {{!Make.None}[None]} (no-op), {{!Make.Interval}[Interval]},
-    {{!Make.Equality}[Equality]}, and {{!Make.Merge}[Merge]} to combine two of
-    them. *)
-module Make (Typed : Typed_intf.Solver_value) = struct
-  module Svalue = Typed.Svalue
-  module Eval = Typed.Eval
-  open Svalue.Infix
-
+(** Syntactic analyses over a symbolic value language [L]: the simplification
+    knowledge base that records facts learned from the path condition and uses
+    them to simplify later constraints. Its [S] signature is what the solvers in
+    {!Bv_solver} consume; concrete instances are {{!Make.None}[None]} (no-op),
+    {{!Make.Interval}[Interval]}, {{!Make.Equality}[Equality]}, and
+    {{!Make.Merge}[Merge]} to combine two of them. *)
+module Make (L : Solver_lang.S) = struct
   (* let log = Logs.L.warn *)
   let log _ = ()
 
@@ -22,19 +16,19 @@ module Make (Typed : Typed_intf.Solver_value) = struct
 
     (** Simplifies a constraints using the current knowledge base, without
         updating it. *)
-    val simplify : t -> Svalue.t -> Svalue.t
+    val simplify : t -> L.t -> L.t
 
     (** Adds a constraint to the current analysis, updating the currently
         tracked data. *)
-    val add_constraint : t -> Svalue.t -> Svalue.t * Var.Set.t
+    val add_constraint : t -> L.t -> L.t * Var.Set.t
 
     (** Filters the given iterator of symbolic values, keeping only those
         relevant to the given variable according to the analysis. *)
-    val filter : t -> Var.t -> Svalue.ty -> Svalue.t Iter.t -> Svalue.t Iter.t
+    val filter : t -> Var.t -> L.ty -> L.t Iter.t -> L.t Iter.t
 
     (** Encode all the information relevant to the given variables and conjuncts
         them with the given accumulator. *)
-    val encode : ?vars:Var.Hashset.t -> t -> Typed.sbool Typed.t Iter.t
+    val encode : ?vars:Var.Hashset.t -> t -> L.t Iter.t
   end
 
   module Merge (A1 : S) (A2 : S) : S = struct
@@ -50,7 +44,7 @@ module Make (Typed : Typed_intf.Solver_value) = struct
     let filter (a1, a2) var ty vs =
       vs |> A1.filter a1 var ty |> A2.filter a2 var ty
 
-    let encode ?vars (a1, a2) : Typed.sbool Typed.t Iter.t =
+    let encode ?vars (a1, a2) : L.t Iter.t =
       Iter.append (A1.encode ?vars a1) (A2.encode ?vars a2)
   end
 
@@ -73,30 +67,20 @@ module Make (Typed : Typed_intf.Solver_value) = struct
 
     (* we only include stuff from Z we want *)
     open struct
-      let one = Z.one
       let zero = Z.zero
       let pred = Z.pred
       let succ = Z.succ
-      let ( - ) = Z.sub
-      let ( + ) = Z.add
       let ( < ) = Z.lt
       let ( <= ) = Z.leq
       let ( >= ) = Z.geq
       let ( > ) = Z.gt
       let pow2 n = Z.shift_left Z.one n
-      let ( ~- ) size x = pow2 size - x
-
-      (** [to_bv size x] if [x < 0], returns the corresponding unsigned
-          bitvector representation of [x] with size [size]. E.g. for [size = 8],
-          [-1] would be represented as [255]. *)
-      let to_bv n x = Z.(x land pred (one lsl n))
     end
 
-    let mk_var n v : Svalue.t = Svalue.mk_var v (TBitVector n)
-    let mk_var_ty n v : Typed.T.sint Typed.t = Typed.mk_var v (Typed.t_int n)
+    let mk_var n v : L.t = L.mk_var v (L.t_bv n)
     let max_for n = Z.(pred (shift_left one n))
 
-    type sign = Pos | Neg
+    type sign = L.sign = Pos | Neg
 
     let pp_sign fmt = function
       | Pos -> Fmt.string fmt "+"
@@ -215,18 +199,18 @@ module Make (Typed : Typed_intf.Solver_value) = struct
       (** [iter_sval_equivalent v d] returns an iterator over the set of
           symbolic values to encode the data [d] for variable [v]. *)
       let iter_sval_equivalent v { pos = m, n; negs; size } f =
-        let open Typed.Infix in
-        let bv = Typed.BitVec.mk size in
-        let var = mk_var_ty size v in
-        if Z.equal m n then f (var ==@ bv m)
+        let bv = L.bv_mk size in
+        let var = mk_var size v in
+        if Z.equal m n then f (L.sem_eq var (bv m))
         else (
-          if not (Z.equal m Z.zero) then f (bv m <=@ var);
-          if not (Z.equal n (max_for size)) then f (var <=@ bv n);
+          if not (Z.equal m Z.zero) then f (L.bv_uleq (bv m) var);
+          if not (Z.equal n (max_for size)) then f (L.bv_uleq var (bv n));
 
           negs
           |> List.iter @@ fun (m, n) ->
-             if Z.equal m n then f (Typed.not (var ==@ bv m))
-             else f (Typed.not (bv m <=@ var &&@ (var <=@ bv n))))
+             if Z.equal m n then f (L.not_ (L.sem_eq var (bv m)))
+             else
+               f (L.not_ (L.and_ (L.bv_uleq (bv m) var) (L.bv_uleq var (bv n)))))
     end
 
     type st = Data.t Var.Map.t
@@ -261,7 +245,7 @@ module Make (Typed : Typed_intf.Solver_value) = struct
             m "Useless range  %a: %a %a = %a" Var.pp var Data.pp range Range.pps
               new_range Data.pp range');
         let is_ok = not (Data.is_empty range) in
-        (Svalue.Bool.of_bool is_ok, Var.Set.empty, st))
+        (L.of_bool is_ok, Var.Set.empty, st))
       else
         let st = Var.Map.add var range' st in
         log (fun m ->
@@ -270,143 +254,19 @@ module Make (Typed : Typed_intf.Solver_value) = struct
               new_range Data.pp range');
         if Data.is_singleton range' then
           (* We narrowed the range to one value! *)
-          let const = Svalue.BitVec.mk size (fst range'.pos) in
+          let const = L.bv_mk size (fst range'.pos) in
           let var = mk_var size var in
-          let eq = const ==@ var in
+          let eq = L.sem_eq const var in
           (eq, Var.Set.empty, st)
         else if Data.is_empty range' then
           (* The range is empty, so this cannot be true *)
-          (Svalue.Bool.v_false, Var.Set.empty, st)
+          (L.v_false, Var.Set.empty, st)
         else
           (* We could cleanly absorb the range, so the PC doesn't need to store
              it -- however we must mark this variable as dirty, as maybe the
              modified range still renders the branch infeasible, e.g. because of
              some additional PC assertions. *)
-          (Svalue.Bool.v_true, Var.Set.singleton var, st)
-
-    let rec as_range (v : Svalue.t) =
-      (* For the inequalities, see https://ceur-ws.org/Vol-1617/paper8.pdf *)
-      match v.node.kind with
-      (*
-       *  Case 2: c1 <=u c2 + x
-       *  • c1 < c2 => ~[ -c2; c1 - c2 - 1 ]
-       *  • c1 >= c2 => [ c1 - c2; -c2 - 1 ]
-       *)
-      | Binop
-          ( ((Lt false | Leq false) as bop),
-            { node = { kind = BitVec c1; ty = TBitVector size }; _ },
-            {
-              node =
-                {
-                  kind =
-                    ( Var v
-                    | Binop
-                        ( Add _,
-                          { node = { kind = Var v; _ }; _ },
-                          { node = { kind = BitVec _; _ }; _ } )
-                    | Binop
-                        ( Add _,
-                          { node = { kind = BitVec _; _ }; _ },
-                          { node = { kind = Var v; _ }; _ } ) ) as rhs;
-                  _;
-                };
-              _;
-            } ) ->
-          let c1 = if bop = Lt false then Z.succ c1 else c1 in
-          let c2 =
-            match rhs with
-            | Var _ -> Z.zero
-            | Binop (Add _, { node = { kind = BitVec c2; _ }; _ }, _)
-            | Binop (Add _, _, { node = { kind = BitVec c2; _ }; _ }) ->
-                c2
-            | _ -> L.failwith "unreachable"
-          in
-          (* We need to be careful and use [to_bv] to ensure we don't end up
-             with ranges with negative number (BAD!) *)
-          if c1 < c2 then
-            Some (v, size, (Neg, (~-size c2, to_bv size (c1 - c2 - one))))
-          else Some (v, size, (Pos, (c1 - c2, to_bv size (~-size c2 - one))))
-      (*
-       *  Case 3: c1 + x <=u c2
-       *  • c1 <= c2 => ~[ c2 - c1 + 1; -c1 - 1 ]
-       *  • c1 > c2 => [ -c1; -c1 + c2 ]
-       *)
-      | Binop
-          ( ((Lt false | Leq false) as bop),
-            {
-              node =
-                {
-                  kind =
-                    ( Var v
-                    | Binop
-                        ( Add _,
-                          { node = { kind = Var v; _ }; _ },
-                          { node = { kind = BitVec _; _ }; _ } )
-                    | Binop
-                        ( Add _,
-                          { node = { kind = BitVec _; _ }; _ },
-                          { node = { kind = Var v; _ }; _ } ) ) as lhs;
-                  _;
-                };
-              _;
-            },
-            { node = { kind = BitVec c2; ty = TBitVector size }; _ } ) ->
-          let c1 =
-            match lhs with
-            | Var _ -> Z.zero
-            | Binop (Add _, { node = { kind = BitVec c1; _ }; _ }, _)
-            | Binop (Add _, _, { node = { kind = BitVec c1; _ }; _ }) ->
-                c1
-            | _ -> L.failwith "unreachable"
-          in
-          let c2 = if bop = Lt false then Z.pred c2 else c2 in
-          if c1 <= c2 then Some (v, size, (Neg, (c2 - c1 + one, ~-size one)))
-          else Some (v, size, (Pos, (~-size c1, ~-size c1 + c2)))
-      (*
-       *  Case 4: x <=s c1
-       *  • c1 < 2^{n-1} => ~[ c1 + 1; 2^{n-1} - 1 ]
-       *  • c1 >= 2^{n-1} => [ 2^{n-1}; c1 ]
-       *)
-      | Binop
-          ( ((Lt true | Leq true) as binop),
-            { node = { kind = Var v; _ }; _ },
-            { node = { kind = BitVec c1; ty = TBitVector size }; _ } ) ->
-          let c1 = if binop = Lt true then Z.pred c1 else c1 in
-          let mid = pow2 Stdlib.(size - 1) in
-          if c1 < mid then Some (v, size, (Neg, (c1 + one, mid - one)))
-          else Some (v, size, (Pos, (mid, c1)))
-      (*
-       *  Case 5: c1 <=s x
-       *  • c1 < 2^{n-1} => [ c1; 2^{n-1} - 1 ]
-       *  • c1 >= 2^{n-1} => ~[ 2^{n-1}; c1 - 1 ]
-       *)
-      | Binop
-          ( ((Lt true | Leq true) as binop),
-            { node = { kind = BitVec c1; ty = TBitVector size }; _ },
-            { node = { kind = Var v; _ }; _ } ) ->
-          let c1 = if binop = Lt true then Z.succ c1 else c1 in
-          let mid = Z.shift_left Z.one Stdlib.(size - 1) in
-
-          if c1 < mid then Some (v, size, (Pos, (c1, mid - one)))
-          else Some (v, size, (Neg, (mid, c1 - one)))
-      (* Simple equality *)
-      | Binop
-          ( Eq,
-            { node = { kind = BitVec x; ty = TBitVector size }; _ },
-            { node = { kind = Var v; _ }; _ } )
-      | Binop
-          ( Eq,
-            { node = { kind = Var v; _ }; _ },
-            { node = { kind = BitVec x; ty = TBitVector size }; _ } ) ->
-          Some (v, size, (Pos, (x, x)))
-      (* This only works for a single fact; we can't apply this to [!(A && B)],
-         since that's a disjunction! *)
-      | Unop (Not, v) ->
-          Option.map
-            (fun (v1, size, (sign, range)) ->
-              (v1, size, ((if sign = Neg then Pos else Neg), range)))
-            (as_range v)
-      | _ -> None
+          (L.v_true, Var.Set.singleton var, st)
 
     (** [add_constraint ?sign v st] Adds a constraint [v] to the state [st].
         [sign] is the sign of the constraint (by default [Pos]; [Neg] indicates
@@ -417,78 +277,79 @@ module Make (Typed : Typed_intf.Solver_value) = struct
         if it was deemed unfeasible), [learnt] is additional facts learnt from
         the simplified formula, [dirty] is the set of variables whose ranges
         changed, and [st] is the updated state. *)
-    let rec add_constraint (v : Svalue.t) st :
-        Svalue.t * Svalue.t * Var.Set.t * st =
-      match (v.node.kind, lazy (as_range v)) with
-      | Binop (And, v1, v2), _ ->
+    let rec add_constraint (v : L.t) st : L.t * L.t * Var.Set.t * st =
+      match L.as_and v with
+      | Some (v1, v2) ->
           let v1', learnt1, vars1, st' = add_constraint v1 st in
           let v2', learnt2, vars2, st'' = add_constraint v2 st' in
 
           log (fun m ->
-              m "%a && %a => %a && %a" Svalue.pp v1 Svalue.pp v2 Svalue.pp v1'
-                Svalue.pp v2');
-          (v1' &&@ v2', learnt1 &&@ learnt2, Var.Set.union vars1 vars2, st'')
-      | _, (lazy (Some (var, size, srange))) ->
-          let learnt, vars, st' = update st var size srange in
-          (Svalue.Bool.v_true, learnt, vars, st')
-      | _, (lazy None) -> (v, Svalue.Bool.v_true, Var.Set.empty, st)
+              m "%a && %a => %a && %a" L.pp v1 L.pp v2 L.pp v1' L.pp v2');
+          ( L.and_ v1' v2',
+            L.and_ learnt1 learnt2,
+            Var.Set.union vars1 vars2,
+            st'' )
+      | None -> (
+          match L.as_range v with
+          | Some (var, size, srange) ->
+              let learnt, vars, st' = update st var size srange in
+              (L.v_true, learnt, vars, st')
+          | None -> (v, L.v_true, Var.Set.empty, st))
 
-    let rec simplify (v : Svalue.t) st =
-      match (v.node.kind, lazy (as_range v)) with
-      | Binop (Or, v1, v2), _ ->
+    let rec simplify (v : L.t) st =
+      match L.as_or v with
+      | Some (v1, v2) ->
           (* [v1 || v2] is valid under [st] iff [¬v1 && ¬v2] is infeasible
              there. Unlike the join of ranges (which over-approximates a union
              and would let us wrongly conclude e.g. [x != 0 || y != 0] is always
              true), intersecting ranges is exact, so [add_constraint] only
              reports infeasibility (a [false] learnt fact) when it genuinely
              holds. *)
-          let _, learnt1, _, st1 = add_constraint (Svalue.Bool.not v1) st in
-          let _, learnt2, _, _ = add_constraint (Svalue.Bool.not v2) st1 in
+          let _, learnt1, _, st1 = add_constraint (L.not_ v1) st in
+          let _, learnt2, _, _ = add_constraint (L.not_ v2) st1 in
           log (fun m ->
-              m "checking %a || %a:@.¬1. %a@.¬2. %a" Svalue.pp v1 Svalue.pp v2
-                Svalue.pp learnt1 Svalue.pp learnt2);
-          if
-            Svalue.equal learnt1 Svalue.Bool.v_false
-            || Svalue.equal learnt2 Svalue.Bool.v_false
-          then Svalue.Bool.v_true
+              m "checking %a || %a:@.¬1. %a@.¬2. %a" L.pp v1 L.pp v2 L.pp
+                learnt1 L.pp learnt2);
+          if L.equal learnt1 L.v_false || L.equal learnt2 L.v_false then
+            L.v_true
           else v
-      | ( Binop
-            ( Eq,
-              ({ node = { kind = Binop (Lt _, _, _); _ }; _ } as l),
-              ({ node = { kind = Binop (Lt _, _, _); _ }; _ } as r) ),
-          _ ) ->
-          let l' = simplify l st in
-          let r' = simplify r st in
-          if Svalue.equal l l' && Svalue.equal r r' then v
-          else Eval.eval_binop Eq l' r'
-      | _, (lazy (Some (var, size, srange))) ->
-          let range = get size var st in
-          log (fun m ->
-              m "Simplify range of %a: %a (curr %a) for %a" Svalue.pp v
-                Range.pps srange Data.pp range pp st);
-          let range', redundant = Data.add range srange in
-          log (fun m ->
-              m "Redundant? %b Empty? %b" redundant (Data.is_empty range'));
-          if redundant then Svalue.Bool.v_true
-          else if Data.is_empty range' then Svalue.Bool.v_false
-          else v
-      | _, (lazy None) -> v
+      | None -> (
+          let is_lt x = Option.is_some (L.as_lt x) in
+          match L.as_eq v with
+          | Some (l, r) when is_lt l && is_lt r ->
+              let l' = simplify l st in
+              let r' = simplify r st in
+              if L.equal l l' && L.equal r r' then v else L.sem_eq l' r'
+          | _ -> (
+              match L.as_range v with
+              | Some (var, size, srange) ->
+                  let range = get size var st in
+                  log (fun m ->
+                      m "Simplify range of %a: %a (curr %a) for %a" L.pp v
+                        Range.pps srange Data.pp range pp st);
+                  let range', redundant = Data.add range srange in
+                  log (fun m ->
+                      m "Redundant? %b Empty? %b" redundant
+                        (Data.is_empty range'));
+                  if redundant then L.v_true
+                  else if Data.is_empty range' then L.v_false
+                  else v
+              | None -> v))
 
     let add_constraint v st =
-      log (fun m -> m "Adding constraint: %a" Svalue.pp v);
+      log (fun m -> m "Adding constraint: %a" L.pp v);
       let v', learnt, vars, st' = add_constraint v st in
       if v <> v' || not (Var.Set.is_empty vars) then
         log (fun m ->
-            m "Change: %a -> %a + %a (%a)@." Svalue.pp v Svalue.pp v' Svalue.pp
-              learnt
+            m "Change: %a -> %a + %a (%a)@." L.pp v L.pp v' L.pp learnt
               Fmt.(list ~sep:(any ", ") Var.pp)
               (Var.Set.to_list vars))
       else log (fun m -> m "No change.@.");
-      ((v' &&@ learnt, vars), st')
+      ((L.and_ v' learnt, vars), st')
 
     let filter var ty vs st =
-      match ty with
-      | TBitVector n -> (
+      match L.as_bv_ty ty with
+      | Some n -> (
           let range_opt = Var.Map.find_opt var st in
           match range_opt with
           | None -> vs
@@ -499,7 +360,7 @@ module Make (Typed : Typed_intf.Solver_value) = struct
                  generate values ourselves. *)
               let l, h = range.Data.pos in
               let rec iter z f =
-                f (Svalue.BitVec.mk n z);
+                f (L.bv_mk n z);
                 (* if a negative range exists, update to next value *)
                 let z = Z.succ z in
                 let neg =
@@ -511,13 +372,13 @@ module Make (Typed : Typed_intf.Solver_value) = struct
                 if Z.Compare.(z' <= h) then iter z' f
               in
               iter l)
-      | _ -> vs
+      | None -> vs
 
     let simplify st v = wrap_read (simplify v) st
     let add_constraint st v = wrap (add_constraint v) st
     let filter st var ty vs = wrap_read (filter var ty vs) st
 
-    let encode ?vars st : Typed.sbool Typed.t Iter.t =
+    let encode ?vars st : L.t Iter.t =
       let to_check =
         Option.fold ~none:(fun _ -> true) ~some:Var.Hashset.mem vars
       in
@@ -533,73 +394,18 @@ module Make (Typed : Typed_intf.Solver_value) = struct
     module UnionFind = UnionFind.Make (UnionFind.StoreMap)
 
     module VMap = PatriciaTree.MakeMap (struct
-      type t = Svalue.t
+      type t = L.t
 
-      let to_int = Svalue.unique_tag
-      let pp = Svalue.pp
+      let to_int = L.unique_tag
+      let pp = L.pp
     end)
 
     include Reversible.Make_mutable (struct
-      type t = Svalue.t UnionFind.store * Svalue.t UnionFind.rref VMap.t
+      type t = L.t UnionFind.store * L.t UnionFind.rref VMap.t
 
       let default () = (UnionFind.new_store (), VMap.empty)
       let copy (uf, refs) = (UnionFind.copy uf, refs)
     end)
-
-    (** One unit is roughly a thousand bytes of Z3's bit-blasted encoding of the
-        operator, measured at 32 bits with
-        [(then simplify fpa2bv simplify bit-blast)] *)
-    let rec cost (v : Svalue.t) : int =
-      match v.node.kind with
-      | Binop (op, l, r) -> cost_binop op + cost l + cost r
-      | Unop (op, v) -> cost_unop op + cost v
-      | Triop (op, a, b, c) -> cost_triop op + cost a + cost b + cost c
-      | Nop (_, vs) -> costs vs
-      | Var _ -> 3
-      | Float _ -> 2
-      | Seq vs -> costs vs
-      | Exists (_, sv) ->
-          (* quantifiers escape the bit-blasting the costs below measure, so
-             they outrank every operator *)
-          cost sv + 100_000
-      | Ptr _ | Bool _ | BitVec _ -> 1
-      (* TODO: cost for extensions *)
-      | Extension _ -> 100_000
-
-    and costs vs = List.fold_left (fun acc v -> acc + cost v) 0 vs
-    and cost_triop : Svalue.Triop.t -> int = function Fma -> 400 | Ite -> 0
-
-    and cost_binop : Svalue.Binop.t -> int = function
-      | FRem -> 12900
-      | Div true | Rem true | Mod -> 12700
-      | Rem false -> 7100
-      | Div false -> 3600
-      | Mul _ -> 1900
-      | FDiv -> 1300
-      | FMul -> 345
-      | MulOvf _ -> 200
-      | FAdd | FSub -> 130
-      | Sub _ -> 97
-      | Add _ -> 75
-      | Shl | LShr | AShr -> 35
-      | FMin | FMax -> 24
-      | FLt | FLeq | SubOvf true -> 12
-      | AddOvf true -> 9
-      | AddOvf false | SubOvf false | Lt _ | Leq _ -> 5
-      | FEq -> 3
-      | And | Or | Eq | BitAnd | BitOr | BitXor | BvConcat -> 1
-
-    and cost_unop : Svalue.Unop.t -> int = function
-      | BvOfFloat _ -> 1400
-      | FSqrt -> 280
-      | FloatOfFloat _ -> 255
-      | FloatOfBv _ -> 78
-      | FRound _ -> 65
-      | Neg _ -> 10
-      | FAbs | FNeg | FloatOfBvRaw _ -> 4
-      | Not | GetPtrLoc | GetPtrOfs | BvNot | BvOfBool _ | BvExtend _
-      | BvExtract _ | FIs _ | FIsNeg | FIsPos ->
-          1
 
     let get_or_make v ((uf, refs) as st) =
       match VMap.find_opt v refs with
@@ -612,14 +418,14 @@ module Make (Typed : Typed_intf.Solver_value) = struct
     let merge v1 v2 (uf, _) =
       ignore
       @@ UnionFind.merge uf
-           (fun v1 v2 -> if cost v1 > cost v2 then v2 else v1)
+           (fun v1 v2 -> if L.cost v1 > L.cost v2 then v2 else v1)
            v1 v2
 
     let find_cheaper_opt v (uf, refs) =
       VMap.find_opt v refs
       |> Option.bind @@ fun r ->
          let v_repr = UnionFind.get uf r in
-         if Svalue.equal v v_repr then None else Some v_repr
+         if L.equal v v_repr then None else Some v_repr
 
     let known_eq v1 v2 (uf, refs) : bool =
       match (VMap.find_opt v1 refs, VMap.find_opt v2 refs) with
@@ -629,68 +435,65 @@ module Make (Typed : Typed_intf.Solver_value) = struct
     let eval_var (uf, refs) var _ _ =
       VMap.find_opt var refs |> Option.fold ~none:var ~some:(UnionFind.get uf)
 
-    let simplify (v : Svalue.t) st =
+    let simplify (v : L.t) st =
       let rec simplify ~fuel v =
         if fuel - 1 <= 0 then v
         else
           let simplify = simplify ~fuel:(fuel - 1) in
           match find_cheaper_opt v st with
           | Some v' -> v'
-          | None -> (
-              match v.node.kind with
-              | Binop ((Eq | Leq _), l, r) when known_eq l r st ->
-                  Svalue.Bool.v_true
-              | Binop (Lt _, l, r) when known_eq l r st -> Svalue.Bool.v_false
-              | Binop (op, l, r) ->
-                  let l' = simplify l in
-                  let r' = simplify r in
-                  if Svalue.equal l l' && Svalue.equal r r' then v
-                  else Eval.eval_binop op l' r'
-              | Unop (op, x) ->
-                  let x' = simplify x in
-                  if Svalue.equal x x' then v else Eval.eval_unop op x'
-              | _ -> v)
+          | None ->
+              let known_eq_opt = function
+                | Some (l, r) -> known_eq l r st
+                | None -> false
+              in
+              if known_eq_opt (L.as_eq v) || known_eq_opt (L.as_leq v) then
+                L.v_true
+              else if known_eq_opt (L.as_lt v) then L.v_false
+              else L.map_operands simplify v
       in
-      Eval.eval ~eval_var:(eval_var st) v |> simplify ~fuel:3
+      L.eval ~eval_var:(eval_var st) v |> simplify ~fuel:3
 
     let add_vars v s =
-      Svalue.iter_vars v |> Iter.fold (fun s (v, _) -> Var.Set.add v s) s
+      L.iter_vars v |> Iter.fold (fun s (v, _) -> Var.Set.add v s) s
 
-    let add_constraint (v : Svalue.t) st =
-      match v.node.kind with
-      | Binop (Eq, v1, v2) ->
+    let add_constraint (v : L.t) st =
+      match L.as_eq v with
+      | Some (v1, v2) ->
           let vars = Var.Set.empty |> add_vars v1 |> add_vars v2 in
           let v1, st = get_or_make v1 st in
           let v2, st = get_or_make v2 st in
           merge v1 v2 st;
-          ((Svalue.Bool.v_true, vars), st)
-      | Unop (Not, { node = { kind = Nop (Distinct, hd :: tl); _ }; _ }) ->
-          let vars = add_vars hd Var.Set.empty in
-          let v1, st = get_or_make hd st in
-          let rec aux vars st = function
-            | [] -> (vars, st)
-            | v2 :: rest ->
-                let vars = add_vars v2 vars in
-                let v2, st = get_or_make v2 st in
-                merge v1 v2 st;
-                aux vars st rest
-          in
-          let vars, st = aux vars st tl in
-          ((Svalue.Bool.v_true, vars), st)
-      | _ -> ((v, Var.Set.empty), st)
+          ((L.v_true, vars), st)
+      | None -> (
+          match Stdlib.Option.bind (L.as_not v) L.as_distinct with
+          | Some (hd :: tl) ->
+              let vars = add_vars hd Var.Set.empty in
+              let v1, st = get_or_make hd st in
+              let rec aux vars st = function
+                | [] -> (vars, st)
+                | v2 :: rest ->
+                    let vars = add_vars v2 vars in
+                    let v2, st = get_or_make v2 st in
+                    merge v1 v2 st;
+                    aux vars st rest
+              in
+              let vars, st = aux vars st tl in
+              ((L.v_true, vars), st)
+          | _ -> ((v, Var.Set.empty), st))
 
     (** In equality analysis we can be certain of the value of a variable, so we
         can entirely replace the set of possible values [vs] with the
         representative value (if any). *)
     let filter var ty vs st =
-      let v = Svalue.mk_var var ty in
+      let v = L.mk_var var ty in
       match find_cheaper_opt v st with
       | None -> vs
       | Some v_repr -> Iter.singleton v_repr
 
     let encode ?vars (uf, refs) f =
       let module URefTbl = Hashtbl.Make (struct
-        type t = Svalue.t UnionFind.rref
+        type t = L.t UnionFind.rref
 
         let equal r1 r2 = UnionFind.eq uf r1 r2
         let hash = Hashtbl.hash
@@ -700,7 +503,7 @@ module Make (Typed : Typed_intf.Solver_value) = struct
         | None -> fun _ -> true
         | Some vars ->
             fun v ->
-              Svalue.iter_vars v
+              L.iter_vars v
               |> Iter.exists (fun (v, _) -> Var.Hashset.mem vars v)
       in
       let relevant_refs = URefTbl.create 8 in
@@ -720,8 +523,8 @@ module Make (Typed : Typed_intf.Solver_value) = struct
           let ufref = UnionFind.find uf ufref in
           match URefTbl.find_opt relevant_refs ufref with
           | None -> ()
-          | Some repr when Svalue.equal v repr -> ()
-          | Some repr -> f (Typed.sem_eq (Typed.type_ v) (Typed.type_ repr)))
+          | Some repr when L.equal v repr -> ()
+          | Some repr -> f (L.sem_eq v repr))
         refs
 
     let simplify st v = wrap_read (simplify v) st

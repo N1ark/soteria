@@ -1,0 +1,432 @@
+(* The rust module: the smart constructors of the aggregates and of the pointers
+   of soteria-rust (the old [Ext_base], soteria-rust/lib/svalue/ext_base.ml),
+   and the cases that the nodes of rust.knl add to the view functions of the
+   shared [view] module.
+
+   NOTHING HERE HAS A LEAN SEMANTICS: the old Lean model took the extension as
+   opaque, so every function and primitive of this file is [@no_lean], and the
+   nodes are not modelled.
+
+   The functions build raw nodes at the sort that their node needs, like the
+   functions of ext_base.ml did with [( <| )]: no rule simplifies anything but
+   the reads of a part of a value of the same kind ([field_of (Tuple vs) i] is
+   the [i]th element, and so on). The order in which they create nodes is the
+   order of ext_base.ml, which decides the order of the operands of the
+   commutative nodes that use them: wherever an OCaml function of ext_base.ml
+   created several nodes in a [List.mapi], a [let] fixes that order here. *)
+
+(* {1 Primitives}
+
+   The ones that need the crate being analysed ([ty_of_rust], and what reads the
+   declaration of an enum), the size of a pointer, the exceptions of the old
+   code, and the lists. *)
+
+(* The sort of a type of Rust, [Ext_base.ty_of_rust]; reads the crate *)
+prim ty_of_rust : rty -> ty [@no_lean]
+
+(* The number of bits of a [usize], read in the crate *)
+prim usize_bits : unit -> int [@no_lean]
+
+(* The sort of the field [idx] of the variant [var] of the enum [adt], and the
+   number of its fields: read in the crate *)
+prim variant_field_ty : decl_ref -> variant_id -> int -> ty [@no_lean]
+prim variant_arity : decl_ref -> variant_id -> int [@no_lean]
+
+(* The failures of the old code, with its exceptions and messages. They return a
+   value of the expected type, to be well typed: they raise. *)
+prim fail_tuple_ty : ty -> ty list [@no_lean]
+prim fail_array_len : ty -> int [@no_lean]
+prim fail_array_elem : ty -> ty [@no_lean]
+prim fail_enum_ty : ty -> decl_ref [@no_lean]
+prim fail_union_ty : ty -> decl_ref [@no_lean]
+prim fail_meta : meta_part -> ptr_meta -> t [@no_lean]
+
+(* [List.nth] and [Soteria_std.List.set_nth] *)
+prim nth_term : t list -> int -> t [@no_lean]
+prim nth_ty : ty list -> int -> ty [@no_lean]
+prim set_nth : t list -> int -> t -> t list [@no_lean]
+
+(* The elements of an array: [Iarray.get] and [Iarray.copy_and_set] of the old
+   code, with their exceptions ([Invalid_argument "index out of bounds"]) *)
+prim iarray_get : t iarray -> int -> t [@no_lean]
+prim iarray_set : t iarray -> int -> t -> t iarray [@no_lean]
+prim iarray_length : t iarray -> int [@no_lean]
+prim iarray_to_list : t iarray -> t list [@no_lean]
+prim iarray_of_list : t list -> t iarray [@no_lean]
+prim list_length : t list -> int [@no_lean]
+
+(* The field [idx] of the values of a variant, which is [var] (an assertion, as
+   in the old code), and the values themselves *)
+prim enum_field : variant_id -> variant_id -> t list -> int -> t [@no_lean]
+prim enum_fields : variant_id -> variant_id -> t list -> t list [@no_lean]
+
+(* The blocks of a union, with the number of the operands of the rebuilt ones *)
+prim bad_blocks : t -> block list [@no_lean]
+
+(* {1 Sorts} *)
+
+(* The sorts of some terms *)
+fn types_of (vs : t list) : ty list [@no_lean] =
+  match vs with [] -> [] | v :: rest -> type_of v :: types_of rest
+
+(* The components of a sort. They fail on other sorts, as ext_base.ml did *)
+fn t_as_tuple (s : ty) : ty list [@no_lean] =
+  match s with TTuple tys -> tys | _ -> fail_tuple_ty s
+
+fn array_length (s : ty) : int [@no_lean] =
+  match s with TArray (_, n) -> n | _ -> fail_array_len s
+
+fn array_elem_ty (s : ty) : ty [@no_lean] =
+  match s with TArray (e, _) -> e | _ -> fail_array_elem s
+
+fn t_as_enum (s : ty) : decl_ref [@no_lean] =
+  match s with TEnum adt -> adt | _ -> fail_enum_ty s
+
+fn t_as_union (s : ty) : decl_ref [@no_lean] =
+  match s with TUnion adt -> adt | _ -> fail_union_ty s
+
+(* The sort of a part of a thin pointer, and of the metadata of a full one *)
+fn thin_part_ty (part : ptr_part) : ty [@no_lean] =
+  match part with
+  | PtrInner -> TPointer (usize_bits ())
+  | PtrSize -> TBitVector (usize_bits ())
+  | PtrAlign -> TBitVector (usize_bits ())
+
+fn meta_part_ty (part : meta_part) : ty [@no_lean] =
+  match part with
+  | PartLen -> TBitVector (usize_bits ())
+  | PartVTable -> TThinPtr
+
+(* {1 Thin pointers} *)
+
+fn mk_thin_ptr (p : thin) : t [@no_lean] = (ThinPtr p : TThinPtr)
+
+fn thin_ptr_part (part : ptr_part) (v : t) : t [@no_lean] =
+  match v with
+  | ThinPtr { ptr = p; psize = s; palign = a; _ } -> (
+      match part with PtrInner -> p | PtrSize -> s | PtrAlign -> a)
+  | _ -> (ThinPtrPart (part, v) : thin_part_ty part)
+
+(* {1 Full pointers} *)
+
+fn mk_full_ptr (p m : t) : t [@no_lean] = (FullPtr (p, m) : TFullPtr)
+fn mk_unit_meta (u : unit) : t [@no_lean] = (PtrMeta MetaUnit : TPtrMeta)
+fn mk_len_meta (len : t) : t [@no_lean] = (PtrMeta (MetaLen len) : TPtrMeta)
+
+fn mk_vtable_meta (vtable : t) : t [@no_lean] =
+  (PtrMeta (MetaVTable vtable) : TPtrMeta)
+
+fn full_ptr_inner (v : t) : t [@no_lean] =
+  match v with FullPtr (p, _) -> p | _ -> (FullPtrInner v : TThinPtr)
+
+fn of_thin_ptr (v : t) : t [@no_lean] = mk_full_ptr v (mk_unit_meta ())
+
+fn full_ptr_meta_raw (v : t) : t [@no_lean] =
+  match v with FullPtr (_, m) -> m | _ -> (FullPtrMeta v : TPtrMeta)
+
+fn ptr_meta_as (part : meta_part) (v : t) : t [@no_lean] =
+  match v with
+  | PtrMeta m -> (
+      match (part, m) with
+      | PartLen, MetaLen len -> len
+      | PartVTable, MetaVTable vtable -> vtable
+      | _, _ -> fail_meta part m)
+  | _ -> (PtrMetaAs (part, v) : meta_part_ty part)
+
+fn full_ptr_meta (part : meta_part) (v : t) : t [@no_lean] =
+  ptr_meta_as part (full_ptr_meta_raw v)
+
+fn full_ptr_set_inner (inner v : t) : t [@no_lean] =
+  mk_full_ptr inner (full_ptr_meta_raw v)
+
+(* {1 Tuples} *)
+
+fn mk_tuple (vs : t list) : t [@no_lean] = (Tuple vs : TTuple (types_of vs))
+
+fn field_of (idx : int) (v : t) : t [@no_lean] =
+  match v with
+  | Tuple vs -> nth_term vs idx
+  | _ -> (Field (idx, v) : nth_ty (t_as_tuple (type_of v)) idx)
+
+(* The fields [i], [i + 1]... of [v], one for each sort of [tys], in this order *)
+fn fields_from (i : int) (v : t) (tys : ty list) : t list [@no_lean] =
+  match tys with
+  | [] -> []
+  | _ :: rest ->
+      let f = field_of i v in
+      f :: fields_from (i + 1) v rest
+
+fn tuple_fields (v : t) : t list [@no_lean] =
+  match v with
+  | Tuple vs -> vs
+  | _ -> fields_from 0 v (t_as_tuple (type_of v))
+
+fn set_field (idx : int) (x v : t) : t [@no_lean] =
+  mk_tuple (set_nth (tuple_fields v) idx x)
+
+(* {1 Enums} *)
+
+fn mk_enum (adt : decl_ref) (var : variant_id) (vs : t list) : t [@no_lean] =
+  (Enum (var, vs) : TEnum adt)
+
+fn field_of_variant (var : variant_id) (idx : int) (v : t) : t [@no_lean] =
+  match v with
+  | Enum (cur, vs) -> enum_field cur var vs idx
+  | _ ->
+      (VariantField (var, idx, v)
+        : variant_field_ty (t_as_enum (type_of v)) var idx)
+
+(* The fields [i] to [n - 1] of the variant [var] of [v], in this order *)
+fn variant_fields_from (var : variant_id) (i n : int) (v : t) :
+    t list [@no_lean] =
+  if i >= n then []
+  else
+    let f = field_of_variant var i v in
+    f :: variant_fields_from var (i + 1) n v
+
+fn as_enum_of_variant (var : variant_id) (v : t) : t list [@no_lean] =
+  match v with
+  | Enum (cur, vs) -> enum_fields cur var vs
+  | _ ->
+      variant_fields_from var 0 (variant_arity (t_as_enum (type_of v)) var) v
+
+fn set_field_of_variant (var : variant_id) (idx : int) (x v : t) :
+    t [@no_lean] =
+  let vs = set_nth (as_enum_of_variant var v) idx x in
+  mk_enum (t_as_enum (type_of v)) var vs
+
+fn is_variant (var : variant_id) (v : t) : t [@no_lean] =
+  match v with
+  | Enum (cur, _) -> of_bool (var = cur)
+  | _ -> (IsVariant (var, v) : TBool)
+
+(* {1 Arrays} *)
+
+fn mk_array_of_svty (elem : ty) (vs : t iarray) : t [@no_lean] =
+  (Array vs : TArray (elem, iarray_length vs))
+
+(* The sort of the elements is that of the first, if any; otherwise the one of
+   the type of Rust *)
+fn mk_array (elem : rty) (vs : t iarray) : t [@no_lean] =
+  if iarray_length vs = 0 then mk_array_of_svty (ty_of_rust elem) vs
+  else mk_array_of_svty (type_of (iarray_get vs 0)) vs
+
+fn array_field_of (idx : int) (v : t) : t [@no_lean] =
+  match v with
+  | Array vs -> iarray_get vs idx
+  | _ -> (ArrayField (idx, v) : array_elem_ty (type_of v))
+
+(* The elements [i] to [n - 1] of [v], in this order *)
+fn array_fields_from (i n : int) (v : t) : t list [@no_lean] =
+  if i >= n then []
+  else
+    let f = array_field_of i v in
+    f :: array_fields_from (i + 1) n v
+
+fn array_elems (v : t) : t iarray [@no_lean] =
+  match v with
+  | Array vs -> vs
+  | _ -> iarray_of_list (array_fields_from 0 (array_length (type_of v)) v)
+
+fn set_array_field (idx : int) (x v : t) : t [@no_lean] =
+  let vs = array_elems v in
+  let vs2 = iarray_set vs idx x in
+  mk_array_of_svty (array_elem_ty (type_of v)) vs2
+
+(* {1 Unions and polymorphic values (limited support)} *)
+
+fn mk_union (adt : decl_ref) (blocks : block list) : t [@no_lean] =
+  (Union blocks : TUnion adt)
+
+fn mk_poly (id : tyvar_id) : t [@no_lean] = (PolyVal id : TPolyType)
+
+(* {1 The view}
+
+   The cases that the nodes of the module add to the view functions of the
+   shared module (see its view.kn): the old [iter_vars], [mk], [eval],
+   [apply_subst], [learn] and [encode_*]. [operands], [rebuild],
+   [encode_head] and [cost] are [@total]: a node of this file
+   without a case here is an error of Kanon. *)
+
+(* {2 Operands} *)
+
+fn meta_operands (m : ptr_meta) : t list [@no_lean] =
+  match m with MetaLen l -> [ l ] | MetaVTable l -> [ l ] | MetaUnit -> []
+
+fn block_value_term (b : block_value) : t [@no_lean] =
+  match b with Scalar x -> x | Aggregate (x, _) -> x
+
+(* The value, the offset and the size of each block, in this order *)
+fn block_operands (bs : block list) : t list [@no_lean] =
+  match bs with
+  | [] -> []
+  | { bvalue = bv; boffset = o; bsize = s } :: rest ->
+      block_value_term bv :: o :: s :: block_operands rest
+
+extend fn operands =
+  | ThinPtr { ptr = p; psize = s; palign = a; _ } -> [ p; s; a ]
+  | FullPtr (p, m) -> [ p; m ]
+  | PtrMeta m -> meta_operands m
+  | Enum (_, vs) | Tuple vs -> vs
+  | Array vs -> iarray_to_list vs
+  | Union bs -> block_operands bs
+  | PolyVal _ -> []
+  | ThinPtrPart (_, a) | FullPtrInner a | FullPtrMeta a | PtrMetaAs (_, a)
+  | Field (_, a) | VariantField (_, _, a) | IsVariant (_, a) | ArrayField (_, a)
+    ->
+      [ a ]
+
+(* {2 Rebuilding}
+
+   The smart constructor of the node, as [Ext.mk] did. The old [Ext.mk] of an
+   array took the sort of its elements from the sort of the old array, and that
+   of an enum or a union the declaration from it: so does [rebuild]. *)
+
+(* [Union bs] rebuilt with the operands [cs] of [operands v]: the value, the
+   offset and the size of each block *)
+fn rebuild_blocks (v : t) (bs : block list) (cs : t list) : block list
+    [@no_lean] =
+  match bs with
+  | [] -> ( match cs with [] -> [] | _ -> bad_blocks v)
+  | { bvalue = bv; _ } :: rest -> (
+      match cs with
+      | value :: o :: s :: cs_rest ->
+          let value2 =
+            match bv with
+            | Scalar _ -> Scalar value
+            | Aggregate (_, ty) -> Aggregate (value, ty)
+          in
+          { bvalue = value2; boffset = o; bsize = s }
+          :: rebuild_blocks v rest cs_rest
+      | _ -> bad_blocks v)
+
+extend fn rebuild =
+  | ThinPtr { ptag = g; _ } -> (
+      match cs with
+      | [ p; s; a ] ->
+          mk_thin_ptr { ptr = p; ptag = g; psize = s; palign = a }
+      | _ -> bad_operands v)
+  | FullPtr _ -> (
+      match cs with [ p; m ] -> mk_full_ptr p m | _ -> bad_operands v)
+  | PtrMeta m -> (
+      match m with
+      | MetaUnit -> ( match cs with [] -> mk_unit_meta () | _ -> bad_operands v)
+      | MetaLen _ -> (
+          match cs with [ l ] -> mk_len_meta l | _ -> bad_operands v)
+      | MetaVTable _ -> (
+          match cs with [ l ] -> mk_vtable_meta l | _ -> bad_operands v))
+  | Enum (var, _) -> mk_enum (t_as_enum (type_of v)) var cs
+  | Tuple _ -> mk_tuple cs
+  | Array _ -> mk_array_of_svty (array_elem_ty (type_of v)) (iarray_of_list cs)
+  | Union bs -> mk_union (t_as_union (type_of v)) (rebuild_blocks v bs cs)
+  | PolyVal id -> ( match cs with [] -> mk_poly id | _ -> bad_operands v)
+  | ThinPtrPart (part, _) -> (
+      match cs with [ a ] -> thin_ptr_part part a | _ -> bad_operands v)
+  | FullPtrInner _ -> (
+      match cs with [ a ] -> full_ptr_inner a | _ -> bad_operands v)
+  | FullPtrMeta _ -> (
+      match cs with [ a ] -> full_ptr_meta_raw a | _ -> bad_operands v)
+  | PtrMetaAs (part, _) -> (
+      match cs with [ a ] -> ptr_meta_as part a | _ -> bad_operands v)
+  | Field (i, _) -> ( match cs with [ a ] -> field_of i a | _ -> bad_operands v)
+  | VariantField (var, i, _) -> (
+      match cs with [ a ] -> field_of_variant var i a | _ -> bad_operands v)
+  | IsVariant (var, _) -> (
+      match cs with [ a ] -> is_variant var a | _ -> bad_operands v)
+  | ArrayField (i, _) -> (
+      match cs with [ a ] -> array_field_of i a | _ -> bad_operands v)
+
+(* {2 Cost}
+
+   Every node of this module costs 100_000, whatever its operands: the old code
+   did not count them ("TODO: cost for extensions") *)
+
+extend fn cost =
+  | ThinPtr _ | FullPtr _ | PtrMeta _ | Enum _ | Tuple _ | Array _ | Union _
+  | PolyVal _ | ThinPtrPart _ | FullPtrInner _ | FullPtrMeta _ | PtrMetaAs _
+  | Field _ | VariantField _ | IsVariant _ | ArrayField _ ->
+      100000
+
+(* {2 Learning}
+
+   Only a tuple is invertible: its fields are learned, in order, from the
+   [field_of i] of the value *)
+
+fn range_from (i n : int) : int list [@no_lean] =
+  if i >= n then [] else i :: range_from (i + 1) n
+
+extend fn learn_alts = | Tuple vs -> LAll ([], range_from 0 (list_length vs))
+extend fn learn_value = | Tuple _, k -> Some (field_of k v)
+
+(* {2 Sorts in the SMT encoding}
+
+   The declarations of the sorts, which are in encoding.ml, are reached through
+   these primitives *)
+
+prim so_tuple : smt_sort_op [@no_lean]
+prim so_enum : decl_ref -> smt_sort_op [@no_lean]
+prim so_thin_ptr : smt_sort_op [@no_lean]
+prim so_full_ptr : smt_sort_op [@no_lean]
+prim so_ptr_meta : smt_sort_op [@no_lean]
+prim so_union : decl_ref -> smt_sort_op [@no_lean]
+prim so_poly : smt_sort_op [@no_lean]
+
+extend fn sort_operands = | TTuple tys -> tys | TArray (e, _) -> [ e ]
+
+extend fn encode_sort =
+  | TTuple _ -> so_tuple
+  | TEnum adt -> so_enum adt
+  | TArray _ -> so_seq
+  | TThinPtr -> so_thin_ptr
+  | TFullPtr -> so_full_ptr
+  | TPtrMeta -> so_ptr_meta
+  | TUnion adt -> so_union adt
+  | TPolyType -> so_poly
+
+(* {2 SMT encoding}
+
+   The operators of encoding.ml. They apply to the encodings of the operands, in
+   the order that encoding.ml did, which is the order of the declarations that
+   they emit. The sort that a value needs is the sort of the node ([ty]) or of
+   its operand. *)
+
+prim h_thin_ptr : smt_op [@no_lean]
+prim h_full_ptr : smt_op [@no_lean]
+prim h_meta_none : smt_op [@no_lean]
+prim h_meta_int : smt_op [@no_lean]
+prim h_meta_ptr : smt_op [@no_lean]
+prim h_enum : ty -> variant_id -> smt_op [@no_lean]
+prim h_tuple : ty -> smt_op [@no_lean]
+prim h_array : ty -> smt_op [@no_lean]
+prim h_union : smt_op [@no_lean]
+prim h_poly : smt_op [@no_lean]
+prim h_thin_part : ptr_part -> smt_op [@no_lean]
+prim h_full_inner : smt_op [@no_lean]
+prim h_full_meta : smt_op [@no_lean]
+prim h_meta_as : meta_part -> smt_op [@no_lean]
+prim h_field : int -> smt_op [@no_lean]
+prim h_variant_field : variant_id -> int -> smt_op [@no_lean]
+prim h_is_variant : variant_id -> smt_op [@no_lean]
+prim h_array_field : int -> smt_op [@no_lean]
+
+extend fn encode_head =
+  | ThinPtr _ -> h_thin_ptr
+  | FullPtr _ -> h_full_ptr
+  | PtrMeta m -> (
+      match m with
+      | MetaUnit -> h_meta_none
+      | MetaLen _ -> h_meta_int
+      | MetaVTable _ -> h_meta_ptr)
+  | (Enum (var, _) as x) -> h_enum (type_of x) var
+  | (Tuple _ as x) -> h_tuple (type_of x)
+  | (Array _ as x) -> h_array (type_of x)
+  | Union _ -> h_union
+  | PolyVal _ -> h_poly
+  | ThinPtrPart (part, _) -> h_thin_part part
+  | FullPtrInner _ -> h_full_inner
+  | FullPtrMeta _ -> h_full_meta
+  | PtrMetaAs (part, _) -> h_meta_as part
+  | Field (i, _) -> h_field i
+  | VariantField (var, i, _) -> h_variant_field var i
+  | IsVariant (var, _) -> h_is_variant var
+  | ArrayField (i, _) -> h_array_field i

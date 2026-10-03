@@ -96,7 +96,7 @@ module Make (Borrows : Tree_borrows.M(DecayMap.SM).S) = struct
     let scalar_to_bv (v : Typed.([< T.scalar ] t)) =
       match%ty v with
       | TBitVector _ -> return v
-      | TExtension TFullPtr -> Sptr.decay (Typed.Ptr.ptr_of v)
+      | TFullPtr -> Sptr.decay (Typed.Ptr.ptr_of v)
       | TFloat _ -> Value_codec.float_to_bv_bits v
       | _ -> L.failwith "scalar_to_bv on non-scalar"
 

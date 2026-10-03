@@ -6,7 +6,7 @@
     version. Both should be semantically equivalent. *)
 open QCheck2
 
-open Soteria.Bv_values
+open Soteria.Bv_values.Lang.Types
 module D = Direct
 module Sv = Direct.Sv
 module Var = Soteria.Symex.Var
@@ -21,8 +21,8 @@ let gen_var ~ty =
   let+ idx = int_bound (max_var_per_ty - 1) in
   get_from_pool idx ty
 
-let gen_bv_var ~bv_size = gen_var ~ty:(TBitVector bv_size)
-let gen_bool_var = gen_var ~ty:TBool
+let gen_bv_var ~bv_size = gen_var ~ty:(Sv.t_bv bv_size)
+let gen_bool_var = gen_var ~ty:Sv.t_bool
 
 let gen_z ~bv_size =
   let open QCheck2.Gen in
@@ -109,8 +109,8 @@ let rec gen_bv ~bv_size : Sv.t Gen.sized =
           D.Bool.ite cond t e
         in
         let shrink_to_branches (ite : Sv.t) =
-          match ite.node.kind with
-          | Svalue.Triop (Ite, _, t, e) -> List.to_seq [ t; e ]
+          match ite.kind with
+          | Op3 (Ite, _, t, e) -> List.to_seq [ t; e ]
           | _ -> Seq.empty
         in
         Gen.set_shrink shrink_to_branches generator
@@ -188,8 +188,8 @@ and gen_bool ~bv_size : Sv.t Gen.sized =
           D.Bool.ite cond t e
         in
         let shrink_to_branches (ite : Sv.t) =
-          match ite.node.kind with
-          | Svalue.Triop (Ite, _, t, e) -> List.to_seq [ t; e ]
+          match ite.kind with
+          | Op3 (Ite, _, t, e) -> List.to_seq [ t; e ]
           | _ -> Seq.empty
         in
         Gen.set_shrink shrink_to_branches generator

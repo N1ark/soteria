@@ -1,74 +1,76 @@
+(** Substitution and equational learning over any language {!Value_lang.S}.
+    [Subst.apply] is generic over [operands]/[rebuild]/[as_var]/[as_exists];
+    [Subst.learn] over [learn_alts]/[learn_value] ({!View_host.learn_plan}). The
+    extensions of a language are the [rebuild], [operands] and [learn_*] cases
+    of its [extend fn]. It was written as a port of [expr.ml] ([fab3ed5]), with
+    two textual differences, neither behavioural:
+    - the binders of [apply_bound] are compared with [Var.equal] and [equal_ty]
+      instead of the polymorphic [List.mem];
+    - [learn] reads the inverse of a node in its {!View_host.learn_plan}. *)
+
 open Soteria_std
+open Deps
 
-(** Substitution over a {e built} [Svalue] module [V] (the result of
-    {!Svalue.Make}), and the {!Symex.Value.Expr} interface that the symbolic
-    execution engine expects. Provides capture-avoiding substitution
-    ([Subst.apply]) and the equational learning used to grow substitutions. *)
-module Make
-    (Ext : Svalue.Value_ext)
-    (V : module type of Svalue.Make (Ext) ()) =
+module type S = sig
+  type value
+  type vty
+
+  include
+    Symex.Value.Expr
+      with type 'a v = value
+       and type 'a ty = vty
+       and type t = value
+end
+
+module Make (V : Value_lang.S) : S with type value = V.t and type vty = V.ty =
 struct
-  module Svalue = V
-  module Eval = Eval.Make (Ext) (V)
-  open Svalue
+  module K = V.K
 
-  type t = Svalue.t [@@deriving show { with_path = false }]
-  type ty = Svalue.ty [@@deriving show { with_path = false }]
+  type value = V.t
+  type vty = V.ty
+  type t = V.t
+  type 'a v = V.t
+  type 'a ty = V.ty
 
-  let ty (s : t) : ty = s.node.ty
+  let pp = V.pp
+  let show = Fmt.to_to_string V.pp
+  let ty (s : t) : 'a ty = V.type_of s
   let[@inline] of_value v = v
 
   module Subst = struct
     module Raw_map = PatriciaTree.MakeMap (struct
-      type t = Svalue.t [@@deriving show]
+      type t = V.t
 
-      let to_int = Svalue.unique_tag
+      let to_int = V.unique_tag
+      let pp = V.pp
     end)
 
-    type t = Svalue.t Raw_map.t
+    type t = V.t Raw_map.t
 
     let extend s v subst = Raw_map.add_assert_new s v subst
-    let pp = Raw_map.pp Svalue.pp
+    let pp = Raw_map.pp V.pp
     let empty = Raw_map.empty
 
-    let rec apply ~missing_var (s : t) (v : Svalue.t) =
+    let rec apply ~missing_var (s : t) (v : V.t) =
       match Raw_map.find_opt v s with
       | Some v' -> (v', s)
       | None -> (
-          match v.node.kind with
-          | Var x ->
-              let v' = missing_var x v.node.ty in
+          match V.as_var v with
+          | Some (x, ty) ->
+              let v' = missing_var x ty in
               let s = Raw_map.add v v' s in
               (v', s)
-          | Bool _ | Float _ | BitVec _ -> (v, s)
-          | Seq elements ->
-              let elements, s = apply_list ~missing_var s elements in
-              (Svalue.SSeq.mk ~seq_ty:v.node.ty elements, s)
-          | Ptr (loc, ofs) ->
-              let loc, s = apply ~missing_var s loc in
-              let ofs, s = apply ~missing_var s ofs in
-              (Ptr.mk loc ofs, s)
-          | Unop (unop, v1) ->
-              let v1, s = apply ~missing_var s v1 in
-              (Eval.eval_unop unop v1, s)
-          | Binop (binop, v1, v2) ->
-              let v1, s = apply ~missing_var s v1 in
-              let v2, s = apply ~missing_var s v2 in
-              (Eval.eval_binop binop v1 v2, s)
-          | Triop (triop, a, b, c) ->
-              let a, s = apply ~missing_var s a in
-              let b, s = apply ~missing_var s b in
-              let c, s = apply ~missing_var s c in
-              (Eval.eval_triop triop a b c, s)
-          | Nop (nop, vs) ->
-              let vs, s = apply_list ~missing_var s vs in
-              (Eval.eval_nop nop vs, s)
-          | Exists (vs, sv) ->
-              let (vs, sv), s = apply_bound ~missing_var s vs sv in
-              (Svalue.Bool.mk_exists vs sv, s)
-          | Extension x ->
-              let x, s = Ext.apply_subst apply ~missing_var s x in
-              (Ext.mk ( <| ) v.node.ty x, s))
+          | None -> (
+              match K.as_exists v with
+              | Some (vs, sv) ->
+                  let (vs, sv), s = apply_bound ~missing_var s vs sv in
+                  (K.b_mk_exists vs sv, s)
+              | None -> (
+                  match K.operands v with
+                  | [] -> (v, s)
+                  | cs ->
+                      let cs, s = apply_list ~missing_var s cs in
+                      (K.rebuild v cs, s))))
 
     and apply_list ~missing_var s vs =
       match vs with
@@ -83,16 +85,19 @@ struct
          in [sv], which we use to create new fresh variables for the
          existential. *)
       let max_var_ind sv init =
-        Svalue.iter_vars sv
+        V.iter_vars sv
         |> IterLabels.fold ~init ~f:(fun curr (var, _) ->
             let var = Var.to_int var in
             if var > curr then var else curr)
       in
+      let is_binder (var, ty) =
+        List.exists (fun (v', ty') -> Var.equal var v' && V.equal_ty ty ty') vs
+      in
       let max_var_ind, s =
-        Svalue.iter_vars sv
-        |> Iter.filter (fun var -> not @@ List.mem var vs)
+        V.iter_vars sv
+        |> Iter.filter (fun var -> not @@ is_binder var)
         |> IterLabels.fold ~init:(0, s) ~f:(fun (curr, s) (var, ty) ->
-            let syn_var = mk_var var ty in
+            let syn_var = V.mk_var var ty in
             match Raw_map.find_opt syn_var s with
             | Some sv -> (max_var_ind sv curr, s)
             | None ->
@@ -114,7 +119,7 @@ struct
           ~init:(max_var_ind + 1, s, [], [])
           ~f:(fun (curr_var_ind, s, vs, bs) (var, ty) ->
             let new_var = Var.of_int curr_var_ind in
-            let syn_var, sem_var = (mk_var var ty, mk_var new_var ty) in
+            let syn_var, sem_var = (V.mk_var var ty, V.mk_var new_var ty) in
             let bs = (syn_var, Raw_map.find_opt syn_var s) :: bs in
             let s = Raw_map.add syn_var sem_var s in
             (curr_var_ind + 1, s, (new_var, ty) :: vs, bs))
@@ -130,70 +135,59 @@ struct
       in
       ((fresh_vs, sv), subst_after_pass)
 
-    let is_known (s : t) (e : Svalue.t) : bool =
+    let is_known (s : t) (e : V.t) : bool =
       let exception Not_covered in
       try
         let _ = apply ~missing_var:(fun _ _ -> raise_notrace Not_covered) s e in
         true
       with Not_covered -> false
 
-    let rec learn (s : t) (e : Svalue.t) (v : Svalue.t) : t option =
+    let rec learn (s : t) (e : V.t) (v : V.t) : t option =
       let open Syntaxes.Option in
       let/ () = if is_known s e then Some s else None in
-      match e.node.kind with
-      | Var _ -> if Raw_map.mem e s then Some s else Some (extend e v s)
-      (* Boolean negation: Not(e') = v => e' = Not(v) *)
-      | Unop (Unop.Not, e') -> learn s e' (Bool.not v)
-      (* Bitwise NOT is self-inverse: BvNot(e') = v => e' = BvNot(v) *)
-      | Unop (Unop.BvNot, e') -> learn s e' (BitVec.not v)
-      (* Arithmetic negation is self-inverse mod 2^n: Neg(e') = v => e' =
-         Neg(v) *)
-      | Unop (Unop.Neg _, e') -> learn s e' (BitVec.neg v)
-      (* Bit extension: BvExtend(false, by)(e') = v => e' = extract(lower bits
-         of v). This is valid whether the extension is signed or unsigned. *)
-      | Unop (Unop.BvExtend (_, _by), e') ->
-          let size = size_of e'.node.ty in
-          learn s e' (BitVec.extract 0 (size - 1) v)
-      (* BvOfBool maps false->0x0 and true->0x1. Only concrete cases are
-         handled; any other value has no valid pre-image. *)
-      | Unop (Unop.BvOfBool _, e') -> (
-          match v.node.kind with
-          | BitVec z when Z.equal z Z.zero -> learn s e' Bool.v_false
-          | BitVec z when Z.equal z Z.one -> learn s e' Bool.v_true
-          | _ -> None)
-      (* Addition: e1 + c = v => e1 = v - c (or symmetrically) *)
-      | Binop (Binop.Add _, e1, e2) ->
-          if is_known s e1 then learn s e2 (BitVec.sub v e1)
-          else if is_known s e2 then learn s e1 (BitVec.sub v e2)
-          else None
-      (* Subtraction: e1 - c = v => e1 = v + c, c - e2 = v => e2 = c - v *)
-      | Binop (Binop.Sub _, e1, e2) ->
-          if is_known s e1 then learn s e2 (BitVec.sub e1 v)
-          else if is_known s e2 then learn s e1 (BitVec.add v e2)
-          else None
-      (* XOR with a constant is self-inverse: e1 ^ c = v => e1 = v ^ c *)
-      | Binop (Binop.BitXor, e1, e2) ->
-          if is_known s e1 then learn s e2 (BitVec.xor v e1)
-          else if is_known s e2 then learn s e1 (BitVec.xor v e2)
-          else None
-      (* Concatenation: e1 ++ e2 = v => split v into high and low parts *)
-      | Binop (Binop.BvConcat, e1, e2) ->
-          let size_e2 = size_of e2.node.ty in
-          let size_e1 = size_of e1.node.ty in
-          let v_e2 = BitVec.extract 0 (size_e2 - 1) v in
-          let v_e1 = BitVec.extract size_e2 (size_e2 + size_e1 - 1) v in
-          let* s = learn s e1 v_e1 in
-          learn s e2 v_e2
-      (* Extension values delegate to the extension declaration. *)
-      | Extension x -> Ext.learn ( <| ) learn s x v
-      (* Pointer: Ptr(loc_e, ofs_e) = Ptr(loc_v, ofs_v) => learn each
-         component *)
-      | Ptr (loc_e, ofs_e) ->
-          let* s = learn s loc_e (Ptr.loc v) in
-          learn s ofs_e (Ptr.ofs v)
-      (* All other operations are not (safely) invertible. *)
-      | _ -> None
+      match K.as_var e with
+      | Some _ -> if Raw_map.mem e s then Some s else Some (extend e v s)
+      | None -> (
+          match K.learn_alts e with
+          | View_host.LNone -> None
+          | LAlts alts ->
+              let ops = Array.of_list (K.operands e) in
+              let rec first = function
+                | [] -> None
+                | (known, target) :: rest ->
+                    let known = Z.to_int known and target = Z.to_int target in
+                    if is_known s ops.(known) then
+                      let* tv = K.learn_value e (Z.of_int target) v in
+                      learn s ops.(target) tv
+                    else first rest
+              in
+              first alts
+          | LAll (eager, order) ->
+              let ops = Array.of_list (K.operands e) in
+              let values = Array.make (Array.length ops) None in
+              (* the eager values, in their order, before anything is learned *)
+              let* () =
+                List.fold_left
+                  (fun acc i ->
+                    let* () = acc in
+                    let i = Z.to_int i in
+                    let* tv = K.learn_value e (Z.of_int i) v in
+                    values.(i) <- Some tv;
+                    Some ())
+                  (Some ()) eager
+              in
+              List.fold_left
+                (fun acc i ->
+                  let* s = acc in
+                  let i = Z.to_int i in
+                  let* tv =
+                    match values.(i) with
+                    | Some tv -> Some tv
+                    | None -> K.learn_value e (Z.of_int i) v
+                  in
+                  learn s ops.(i) tv)
+                (Some s) order)
   end
 
-  let subst (f : t -> t) (s : t) : t = f s
+  let subst (f : t -> 'a v) (s : t) : 'b v = f s
 end

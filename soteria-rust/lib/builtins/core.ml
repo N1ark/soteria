@@ -102,9 +102,7 @@ module M (StateM : State.StateM.S) = struct
       | Shr _ -> if signed then BV.ashr l r else BV.lshr l r
       | _ -> L.failwith "Invalid binop in binop_fn"
     in
-    (* SAFETY: Overflows were either already checked for, or it was expected to
-       properly wrap. *)
-    ok (BV.no_ovf_unsafe res)
+    ok res
 
   (** Evaluates the checked operation, returning (wrapped value, overflowed). *)
   let eval_checked_lit_binop (op : Expressions.binop) ty l r =
@@ -128,7 +126,7 @@ module M (StateM : State.StateM.S) = struct
   let meta_as_int meta =
     match%ty meta with
     | TBitVector _ -> ok meta
-    | TExtension TThinPtr -> Sptr.decay meta
+    | TThinPtr -> Sptr.decay meta
     | _ -> failwith "invalid metadata type"
 
   let opt_meta_as_int = function

@@ -56,7 +56,7 @@ end
 
 let is_int (Ctype (_, ty)) = [%matches? Basic (Integer _)] ty
 
-let precision (RealFloating f) : Svalue.FloatPrecision.t =
+let precision (RealFloating f) : Bv_base.FloatPrecision.t =
   match f with Float -> F32 | Double -> F64 | LongDouble -> F128
 
 let normalise_int_ty int_ty =

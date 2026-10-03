@@ -1,0 +1,12 @@
+; The ONE place that chooses the [Kanon_fns] implementation of the tests of the
+; new stack (golden_new, fuzz_new, eval_new): see ../TESTS.md. [kanon_ref.ml] is
+; the hand-written reference of iface/check, compiled here unchanged.
+
+(copy_files ../iface/check/kanon_ref.ml)
+
+(library
+ (name new_stack)
+ (modules new_stack kanon_ref)
+ (libraries bv_iface bv_new soteria floatml zarith iter fmt)
+ (flags
+  (:standard -w +a-4-9-26-27-32..42-44-45-48-70)))

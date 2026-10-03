@@ -1,0 +1,3 @@
+(executable
+ (name golden_new)
+ (libraries new_stack soteria zarith))

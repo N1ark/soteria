@@ -95,12 +95,12 @@ module type Base = sig
 
   val is_literal : t -> bool
 
-  (** [= K.is_bool_ty (type_of v)] *)
+  (** [= K.is_tbool (type_of v)] *)
   val is_bool : t -> bool
 
   val as_var : t -> (Var.t * ty) option
 
-  (** [= Option.map Z.to_int (K.as_bv_ty s)] *)
+  (** [= K.as_tbitvector s] *)
   val as_bv_ty : ty -> int option
 
   val as_not : t -> t option
@@ -200,9 +200,9 @@ module Make
   let bv_mk = K.mk_bv
   let bv_uleq = K.bv_leq false
   let is_literal = K.is_literal
-  let is_bool (v : t) = K.is_bool_ty v.ty
+  let is_bool (v : t) = K.is_tbool v.ty
   let as_var (v : t) = Option.map (fun x -> (x, v.ty)) (K.as_var v)
-  let as_bv_ty s = Option.map Z.to_int (K.as_bv_ty s)
+  let as_bv_ty = K.as_tbitvector
   let as_not = K.as_not
   let as_eq = K.as_eq
   let as_and = K.as_and
@@ -278,7 +278,7 @@ module Make
           | Some v -> v
           | None -> failwith "random_value: no value of this sort"
         in
-        if K.is_bool_ty ty then Some (fun () -> K.of_bool (Random.bool ()))
+        if K.is_tbool ty then Some (fun () -> K.of_bool (Random.bool ()))
         else Some (fun () -> of_z (Z.random_int bound))
 
   let encode_ty ~sort_of_ty (s : ty) : Smt.sexp =

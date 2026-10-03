@@ -133,10 +133,10 @@ let sized_ty = function
   | TBitVector n | TPointer n | TLoc n -> Some (Z.of_int n)
   | _ -> None
 
-let as_bv_ty = function TBitVector n -> Some (Z.of_int n) | _ -> None
-let as_float_ty = function TFloat p -> Some p | _ -> None
-let as_seq_ty = function TSeq s -> Some s | _ -> None
-let is_bool_ty = function TBool -> true | _ -> false
+let as_tbitvector = function TBitVector n -> Some n | _ -> None
+let as_tfloat = function TFloat p -> Some p | _ -> None
+let as_tseq = function TSeq s -> Some s | _ -> None
+let is_tbool = function TBool -> true | _ -> false
 
 let size_of ty =
   match sized_ty ty with
@@ -180,9 +180,9 @@ let as_exists (v : t) =
 let as_ptr (v : t) =
   match v.kind with Op2 (Ptr, l, o) -> Some (l, o) | _ -> None
 
-let as_bv_lit (v : t) = match v.kind with BitVec z -> Some z | _ -> None
-let as_loc_lit (v : t) = match v.kind with LocLit z -> Some z | _ -> None
-let as_float_lit (v : t) = match v.kind with Float f -> Some f | _ -> None
+let as_bitvec (v : t) = match v.kind with BitVec z -> Some z | _ -> None
+let as_loclit (v : t) = match v.kind with LocLit z -> Some z | _ -> None
+let as_float (v : t) = match v.kind with Float f -> Some f | _ -> None
 
 let rec conjuncts (v : t) : t list =
   match v.kind with Op2 (And, a, b) -> conjuncts a @ conjuncts b | _ -> [ v ]

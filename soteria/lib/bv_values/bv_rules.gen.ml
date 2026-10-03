@@ -2984,30 +2984,6 @@ let[@inline] sized_ty (s : ty) : (Z.t option) =
     | _ -> None
     )
 
-let[@inline] as_bv_ty (s : ty) : (Z.t option) =
-    (match s with
-    | (TBitVector (n)) -> let n = Z.of_int n in (Some n)
-    | _ -> None
-    )
-
-let[@inline] as_float_ty (s : ty) : (fp option) =
-    (match s with
-    | (TFloat (p)) -> (Some p)
-    | _ -> None
-    )
-
-let[@inline] as_seq_ty (s : ty) : (ty option) =
-    (match s with
-    | (TSeq (e)) -> (Some e)
-    | _ -> None
-    )
-
-let[@inline] is_bool_ty (s : ty) : bool =
-    (match s with
-    | (TBool) -> true
-    | _ -> false
-    )
-
 let[@inline] is_literal (v : t) : bool =
     (match v with
     | { kind = Bool (_); _ } -> true
@@ -3015,24 +2991,6 @@ let[@inline] is_literal (v : t) : bool =
     | { kind = LocLit (_); _ } -> true
     | { kind = Float (_); _ } -> true
     | _ -> false
-    )
-
-let[@inline] as_bv_lit (v : t) : (Z.t option) =
-    (match v with
-    | { kind = BitVec (z); _ } -> (Some z)
-    | _ -> None
-    )
-
-let[@inline] as_loc_lit (v : t) : (Z.t option) =
-    (match v with
-    | { kind = LocLit (z); _ } -> (Some z)
-    | _ -> None
-    )
-
-let[@inline] as_float_lit (v : t) : (float option) =
-    (match v with
-    | { kind = Float (f); _ } -> (Some f)
-    | _ -> None
     )
 
 let rec append (l : (t list)) (r : (t list)) : (t list) =

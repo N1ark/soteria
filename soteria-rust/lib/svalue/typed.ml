@@ -161,12 +161,10 @@ let cast_ptr_f v = cast_checked ~ty:(t_ptr_f ()) v
 let cast_ptr_t v = cast_checked ~ty:(t_ptr_t ()) v
 
 let cast_tuple v =
-  match get_ty v with R.TTuple _ -> v | _ -> cast_error v (t_tuple [])
+  if K.is_ttuple (get_ty v) then v else cast_error v (t_tuple [])
 
 let cast_array v =
-  match get_ty v with
-  | R.TArray _ -> v
-  | _ -> cast_error v (t_array (t_int 1) Z.zero)
+  if K.is_tarray (get_ty v) then v else cast_error v (t_array (t_int 1) Z.zero)
 
 (* The [adt] ref, when given, additionally checks the value is that precise
    enum/union; callers that only know the kind (e.g. the generic store
@@ -491,14 +489,14 @@ module Adt = struct
   (* HACK: i have no idea what this really means or how to lift this for
      variables... *)
   let as_union v =
-    match (v : R.t).kind with
-    | R.Union blocks -> List.map block_of_raw blocks
-    | _ -> todo_migration "as_union unop"
+    match K.as_union v with
+    | Some blocks -> List.map block_of_raw blocks
+    | None -> todo_migration "as_union unop"
 
   let as_type_var v =
-    match (v : R.t).kind with
-    | R.PolyVal ty_id -> ty_id
-    | _ -> todo_migration "as_type_var unop"
+    match K.as_polyval v with
+    | Some ty_id -> ty_id
+    | None -> todo_migration "as_type_var unop"
 
   module Checked = struct
     let mk_enum tref variant vs =

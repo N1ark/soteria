@@ -205,18 +205,18 @@ module type Kanon_fns = sig
 
   (** [Some n] iff the sort is exactly [TBitVector n] (not a location or a
       pointer): [Solver_lang.as_bv_ty] ([solver_lang.ml:474]). *)
-  val as_bv_ty : ty -> Z.t option
+  val as_tbitvector : ty -> int option
 
   (** [Some p] iff the sort is [TFloat p]: [Svalue.is_float], [precision_of_f]
       ([svalue.ml:59-64]), [Float.fp_of] ([svalue.ml:719]). *)
-  val as_float_ty : ty -> Bv_base.FloatPrecision.t option
+  val as_tfloat : ty -> Bv_base.FloatPrecision.t option
 
   (** [Some s] iff the sort is [TSeq s]: [SSeq.inner_ty] ([svalue.ml:852]). *)
-  val as_seq_ty : ty -> ty option
+  val as_tseq : ty -> ty option
 
   (** The sort is [TBool]: [Svalue.is_bool_ty] ([svalue.ml:69]),
       [Solver_lang.is_bool] ([solver_lang.ml:469]). *)
-  val is_bool_ty : ty -> bool
+  val is_tbool : ty -> bool
 
   (** {1 VIEW: recognisers}
 
@@ -250,16 +250,16 @@ module type Kanon_fns = sig
 
   (** The value of a bit-vector literal ([BitVec]; not [LocLit]) with 0 <= z <
       2^n ([BitVec.to_z], [svalue.ml:679]; soteria-c [fun_ctx.ml:55]). *)
-  val as_bv_lit : t -> Z.t option
+  val as_bitvec : t -> Z.t option
 
   (** The value of a location literal ([LocLit]); the old code matched both
       through [BitVec] ({!Svalue_sugar.S.BitVec.to_z} returns the value of
       either, as before). *)
-  val as_loc_lit : t -> Z.t option
+  val as_loclit : t -> Z.t option
 
   (** The value of a float literal ([Float.to_float_opt], [sign_bit_opt],
       [to_bits_opt], [approx*], [svalue.ml:719-770]). *)
-  val as_float_lit : t -> F.t option
+  val as_float : t -> F.t option
 
   (** [A && B && C] as the list [A; B; C], flattening nested conjunctions only,
       left to right ([Bool.split_ands], [svalue.ml:648-653]). Specification and

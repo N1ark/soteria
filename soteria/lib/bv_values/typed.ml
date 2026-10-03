@@ -1,8 +1,8 @@
-(** The typed layer over any language: the phantom tags [T], the identity layer
-    ([type +'a t = t], [cast] = identity) and the [Bool]/[BitVec]/[Infix] sugar.
-    There is no constructor matching in it: [get_ty], [cast_float], [cast_int]
-    go through the term record and {!Kanon_fns.Kanon_fns.as_float_ty}/[as_bv_ty]
-    (via {!Svalue_sugar}).
+(** The typed layer over any language: the phantom tags [T] (those of
+    {!Bv_typed.Tag}), the identity layer ([type +'a t = t], [cast] = identity)
+    and the [Bool]/[BitVec]/[Infix] sugar. There is no constructor matching in
+    it: [get_ty], [cast_float], [cast_int] go through the term record and
+    {!Kanon_fns.Kanon_fns.as_tfloat}/[as_tbitvector] (via {!Svalue_sugar}).
 
     [Make_transparent] exposes [t] and [ty] as the underlying untyped terms, so
     that a language writes its own helpers on top of it (soteria-rust does). The

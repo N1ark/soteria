@@ -5,7 +5,7 @@
     value language, with these differences, none of them behavioural:
     - no [kind], [t_kind], [t_node], [node], [( <| )], [Unop]/[Binop]/[Triop]/
       [Nop], [R], [Ext], [Prims]: the generic code does not see constructors.
-      The two sites of soteria-c use {!Value_lang.Base.as_eq} and [as_bv_lit]
+      The two sites of soteria-c use {!Value_lang.Base.as_eq} and [as_bitvec]
       (design 3.5);
     - [Ptr.mk] and [SSeq.mk] go through {!Kanon_fns.Kanon_fns.mk_ptr} and
       [mk_seq]; [Ptr.null_loc], [Ptr.loc_of_z] through [mk_loc];
@@ -326,12 +326,12 @@ module Make (V : Value_lang.S) : S with type t = V.t and type ty = V.ty = struct
   let t_ptr n = K.t_ptr (Z.of_int n)
   let t_seq = K.t_seq
   let t_bv = V.t_bv
-  let is_float ty = Option.is_some (K.as_float_ty ty)
-  let is_bv ty = Option.is_some (K.as_bv_ty ty)
-  let is_bool_ty = K.is_bool_ty
+  let is_float ty = Option.is_some (K.as_tfloat ty)
+  let is_bv ty = Option.is_some (K.as_tbitvector ty)
+  let is_bool_ty = K.is_tbool
 
   let precision_of_f ty =
-    match K.as_float_ty ty with
+    match K.as_tfloat ty with
     | Some p -> p
     | None -> L.failwith "Not a float: %a" K.pp_ty ty
 
@@ -431,7 +431,7 @@ module Make (V : Value_lang.S) : S with type t = V.t and type ty = V.ty = struct
     let bv_to_z signed bits z = if signed then Z.signed_extract z 0 bits else z
 
     let to_z v =
-      match K.as_bv_lit v with Some _ as z -> z | None -> K.as_loc_lit v
+      match K.as_bitvec v with Some _ as z -> z | None -> K.as_loclit v
 
     let msb_of v = Z.to_int (K.msb_of v)
     let add ?(checked = unchecked) v1 v2 = K.bv_add checked v1 v2
@@ -474,7 +474,7 @@ module Make (V : Value_lang.S) : S with type t = V.t and type ty = V.ty = struct
 
   module Float = struct
     let fp_of v =
-      match K.as_float_ty (V.type_of v) with
+      match K.as_tfloat (V.type_of v) with
       | Some fp -> fp
       | None -> L.failwith "Unsupported float type"
 
@@ -491,10 +491,10 @@ module Make (V : Value_lang.S) : S with type t = V.t and type ty = V.ty = struct
        format gives an infinity. Unlike {!BitVec.to_float} the argument is not
        the contents of a bit-vector, so it is not reduced to any width. *)
     let of_z fp z = mk_raw fp (F.of_z fp z)
-    let to_float_opt v = Option.map F.to_float (K.as_float_lit v)
+    let to_float_opt v = Option.map F.to_float (K.as_float v)
 
     let sign_bit_opt v =
-      match K.as_float_lit v with
+      match K.as_float v with
       | Some f ->
           Some (Z.testbit (F.to_z f) (FloatPrecision.size (fp_of v) - 1))
       | None -> None
@@ -521,7 +521,7 @@ module Make (V : Value_lang.S) : S with type t = V.t and type ty = V.ty = struct
     let neg_infinity fp = mk_raw fp (F.neg_infinity fp)
 
     let to_bits_opt v =
-      match K.as_float_lit v with
+      match K.as_float v with
       | Some f ->
           let size = FloatPrecision.size (fp_of v) in
           Some (BitVec.mk_masked size (F.to_z f))
@@ -602,7 +602,7 @@ module Make (V : Value_lang.S) : S with type t = V.t and type ty = V.ty = struct
     let mk ~seq_ty l = K.mk_seq seq_ty l
 
     let inner_ty ty =
-      match K.as_seq_ty ty with
+      match K.as_tseq ty with
       | Some ty -> ty
       | None -> L.failwith "Expected a sequence type"
   end

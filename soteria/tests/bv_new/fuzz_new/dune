@@ -1,0 +1,35 @@
+(executables
+ (names fuzz_bool fuzz_bv)
+ (libraries new_stack bv_new soteria qcheck-core qcheck-alcotest alcotest))
+
+; Same as the old bv_fuzz: each test 4 times in parallel. Aliases are suffixed
+; -new so that the old ones are unaffected.
+
+(rule
+ (alias slow-tests-new)
+ (action
+  (concurrent
+   (run ./fuzz_bool.exe)
+   (run ./fuzz_bool.exe)
+   (run ./fuzz_bool.exe)
+   (run ./fuzz_bool.exe)
+   (run ./fuzz_bv.exe)
+   (run ./fuzz_bv.exe)
+   (run ./fuzz_bv.exe)
+   (run ./fuzz_bv.exe))))
+
+(rule
+ (alias very-slow-tests-new)
+ (action
+  (setenv
+   "QCHECK_TEST_COUNT"
+   "15000"
+   (concurrent
+    (run ./fuzz_bool.exe)
+    (run ./fuzz_bool.exe)
+    (run ./fuzz_bool.exe)
+    (run ./fuzz_bool.exe)
+    (run ./fuzz_bv.exe)
+    (run ./fuzz_bv.exe)
+    (run ./fuzz_bv.exe)
+    (run ./fuzz_bv.exe)))))

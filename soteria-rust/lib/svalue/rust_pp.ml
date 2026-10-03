@@ -19,12 +19,12 @@ let pp_checked ft = function
   | { signed = true; unsigned = true } -> Fmt.string ft "ck"
 
 let pp_bv ft (ty : ty) bv =
-  let size = Rust_prims.vsize ty in
+  let size = Rust_prims.size_of ty in
   if size mod 4 <> 0 then
     Fmt.pf ft "0b%s" (Z.format ("0" ^ string_of_int size ^ "b") bv)
   else Fmt.pf ft "0x%s" (Z.format ("0" ^ string_of_int (size / 4) ^ "x") bv)
 
-let pp_binder ft (v, ty) = Fmt.pf ft "V%a:%a" Var.pp v Rust_prims.pp_ty ty
+let pp_binder ft (v, ty) = Fmt.pf ft "V%a:%a" Var.pp v Rust_encoding.pp_ty ty
 
 (* The variables of the list, if they all are, and their range if their numbers
    are contiguous *)

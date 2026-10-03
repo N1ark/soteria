@@ -22,6 +22,33 @@ open Rust_charon
 type smt_op = (t, ty) Iface.View_host.smt_op
 type smt_sort_op = ty Iface.View_host.smt_sort_op
 
+(* What [ppx_deriving show] generated for the sorts: [(TBitVector 32)] *)
+let rec pp_ty ft = function
+  | TBool -> Format.pp_print_string ft "TBool"
+  | TFloat p ->
+      Format.fprintf ft "(@[<2>TFloat@ %a@])" Bv_base.FloatPrecision.pp p
+  | TLoc n -> Format.fprintf ft "(@[<2>TLoc@ %d@])" n
+  | TPointer n -> Format.fprintf ft "(@[<2>TPointer@ %d@])" n
+  | TSeq s -> Format.fprintf ft "(@[<2>TSeq@ %a@])" pp_ty s
+  | TBitVector n -> Format.fprintf ft "(@[<2>TBitVector@ %d@])" n
+  (* the sorts of the rust module were the sorts of the extension, [TExtension
+     X] printed by [pp_ext_ty] (ext_base.ml) *)
+  | ( TEnum _ | TUnion _ | TTuple _ | TArray _ | TThinPtr | TFullPtr | TPtrMeta
+    | TPolyType ) as x ->
+      Format.fprintf ft "(@[<2>TExtension@ %a@])" pp_ext_ty x
+
+and pp_ext_ty ft = function
+  | TEnum ty -> Crate.pp_type_decl_ref ft ty
+  | TUnion ty -> Crate.pp_type_decl_ref ft ty
+  | TTuple tys -> Fmt.(brackets (list ~sep:semi pp_ty)) ft tys
+  | TArray (ty, n) -> Fmt.pf ft "[%a; %a]" pp_ty ty Z.pp_print n
+  | TThinPtr -> Fmt.string ft "TThinPtr"
+  | TFullPtr -> Fmt.string ft "TFullPtr"
+  | TPtrMeta -> Fmt.string ft "TPtrMeta"
+  | TPolyType -> Fmt.string ft "TPolyType"
+  | TBool | TFloat _ | TLoc _ | TPointer _ | TSeq _ | TBitVector _ ->
+      assert false
+
 (** Small helper to lazily declare a sort. *)
 let declare_sort ?(type_params = []) name f =
   Soteria.Solvers.Decls.declare ~key:name (fun k ->
@@ -158,13 +185,11 @@ let so_ptr_meta : smt_sort_op = fun ~sort_of_ty:_ _ -> Ptr_meta_sort.sort ()
 
 let so_union adt : smt_sort_op =
  fun ~sort_of_ty:_ _ ->
-  L.failwith "Cannot encode type %a to SMT-LIB" Base_view_prims.pp_ext_ty
-    (TUnion adt)
+  L.failwith "Cannot encode type %a to SMT-LIB" pp_ext_ty (TUnion adt)
 
 let so_poly : smt_sort_op =
  fun ~sort_of_ty:_ _ ->
-  L.failwith "Cannot encode type %a to SMT-LIB" Base_view_prims.pp_ext_ty
-    TPolyType
+  L.failwith "Cannot encode type %a to SMT-LIB" pp_ext_ty TPolyType
 
 (* {1 Values}
 

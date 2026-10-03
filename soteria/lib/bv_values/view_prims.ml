@@ -1,8 +1,7 @@
-(* The host primitives of the view functions ([rules/view.kn]): the heads of the
-   pretty-printer, the SMT operators and sorts, and the few functions that Kanon
-   cannot express. They are ported from the printers and the [Enc] module of the
-   SMT encoding of the first generation of the value language, over the types
-   that Kanon generates.
+(* The host primitives of the view functions ([rules/view.kn]): the SMT
+   operators and sorts, and the few functions that Kanon cannot express. They
+   are ported from the [Enc] module of the SMT encoding of the first generation
+   of the value language, over the types that Kanon generates.
 
    [Bv_prims] includes this module: the generated rules call all primitives
    there, and check them against their declarations. *)
@@ -22,7 +21,6 @@ open struct
   module View_host = View_host
 end
 
-type pphead = View_host.pphead
 type smt_op = (t, ty) View_host.smt_op
 type smt_sort_op = ty View_host.smt_sort_op
 
@@ -51,134 +49,6 @@ let rec pp_ty ft = function
   | TPointer n -> Format.fprintf ft "(@[<2>TPointer@ %d@])" n
   | TSeq s -> Format.fprintf ft "(@[<2>TSeq@ %a@])" pp_ty s
   | TBitVector n -> Format.fprintf ft "(@[<2>TBitVector@ %d@])" n
-
-(* The variables of the list, if they all are, and their range if their numbers
-   are contiguous *)
-let distinct_range (l : t list) : (Z.t * Z.t) option =
-  let rec aux = function
-    | acc, [] -> acc
-    | Some l, { kind = Var v; _ } :: rest -> aux (Some (Var.to_int v :: l), rest)
-    | _, _ -> None
-  in
-  Option.bind
-    (aux (Some [], l))
-    (fun l ->
-      match List.sort Int.compare l with
-      | [] -> None
-      | hd :: _ as l ->
-          let max = List.hd (List.rev l) in
-          if max - hd + 1 = List.length l then Some (Z.of_int hd, Z.of_int max)
-          else None)
-
-let ph_text s : pphead = fun ft -> Fmt.string ft s
-let ph_var x : pphead = fun ft -> Fmt.pf ft "V%a" Var.pp x
-let ph_bool b : pphead = fun ft -> Fmt.pf ft "%b" b
-let ph_float f : pphead = fun ft -> Fmt.pf ft "%sf" (F.to_string f)
-
-let ph_bv ty bv : pphead =
- fun ft ->
-  let size = vsize ty in
-  if size mod 4 <> 0 then
-    Fmt.pf ft "0b%s" (Z.format ("0" ^ string_of_int size ^ "b") bv)
-  else Fmt.pf ft "0x%s" (Z.format ("0" ^ string_of_int (size / 4) ^ "x") bv)
-
-let ph_exists vs : pphead =
- fun ft ->
-  let var_pp ft (v, ty) = Fmt.pf ft "V%a:%a" Var.pp v pp_ty ty in
-  Fmt.pf ft "∃ %a. " (Fmt.list ~sep:Fmt.comma var_pp) vs
-
-let ph_lparen = ph_text "("
-let ph_rparen = ph_text ")"
-let ph_neq = ph_text " != "
-let ph_distinct = ph_text "distinct"
-
-let ph_distinct_range lo hi : pphead =
- fun ft -> Fmt.pf ft "distinct(V|%s-%s|)" (Z.to_string lo) (Z.to_string hi)
-
-let pp_signed ft b = Fmt.string ft (if b then "s" else "u")
-
-let pp_checked ft = function
-  | { signed = false; unsigned = false } -> ()
-  | { signed = true; unsigned = false } -> Fmt.string ft "cks"
-  | { signed = false; unsigned = true } -> Fmt.string ft "cku"
-  | { signed = true; unsigned = true } -> Fmt.string ft "ck"
-
-(* {2 Unary operators} *)
-
-let ph_not = ph_text "!"
-let ph_fabs = ph_text "abs."
-let ph_fneg = ph_text "neg."
-let ph_fsqrt = ph_text "sqrt."
-let ph_ptr_loc = ph_text "loc"
-let ph_ptr_ofs = ph_text "ofs"
-let ph_bv_of_bool n : pphead = fun ft -> Fmt.pf ft "b2bv[%a]" Z.pp_print n
-
-let ph_bv_of_float rm signed n : pphead =
- fun ft ->
-  Fmt.pf ft "f2%abv[%a,%a]" pp_signed signed RoundingMode.pp rm Z.pp_print n
-
-let ph_float_of_bv rm signed p : pphead =
- fun ft ->
-  Fmt.pf ft "%abv2f[%a,%a]" pp_signed signed RoundingMode.pp rm
-    FloatPrecision.pp p
-
-let ph_float_of_bv_raw p : pphead =
- fun ft -> Fmt.pf ft "bv2f[%a]" FloatPrecision.pp p
-
-let ph_float_of_float rm p : pphead =
- fun ft -> Fmt.pf ft "f2f[%a,%a]" RoundingMode.pp rm FloatPrecision.pp p
-
-let ph_bv_extract from to_ : pphead =
- fun ft -> Fmt.pf ft "extract[%a-%a]" Z.pp_print from Z.pp_print to_
-
-let ph_bv_extend signed by : pphead =
- fun ft -> Fmt.pf ft "extend[%a%a]" pp_signed signed Z.pp_print by
-
-let ph_bv_not = ph_text "!bv"
-
-let ph_neg checked : pphead =
- fun ft -> Fmt.pf ft "-%s" (if checked then "ck" else "")
-
-let ph_fis fc : pphead = fun ft -> Fmt.pf ft "fis(%a)" FloatClass.pp fc
-let ph_fisneg = ph_text "fisneg"
-let ph_fispos = ph_text "fispos"
-let ph_fround rm : pphead = fun ft -> Fmt.pf ft "fround(%a)" RoundingMode.pp rm
-
-(* {2 Binary and ternary operators} *)
-
-let ph_ptr = ph_text "&"
-let ph_and = ph_text "&&"
-let ph_or = ph_text "||"
-let ph_eq = ph_text "=="
-let ph_feq = ph_text "==."
-let ph_fleq = ph_text "<=."
-let ph_flt = ph_text "<."
-let ph_fadd = ph_text "+."
-let ph_fsub = ph_text "-."
-let ph_fmul = ph_text "*."
-let ph_fdiv = ph_text "/."
-let ph_frem = ph_text "rem."
-let ph_fmin = ph_text "min."
-let ph_fmax = ph_text "max."
-let ph_add c : pphead = fun ft -> Fmt.pf ft "+%a" pp_checked c
-let ph_sub c : pphead = fun ft -> Fmt.pf ft "-%a" pp_checked c
-let ph_mul c : pphead = fun ft -> Fmt.pf ft "*%a" pp_checked c
-let ph_div s : pphead = fun ft -> Fmt.pf ft "/%a" pp_signed s
-let ph_rem s : pphead = fun ft -> Fmt.pf ft "rem%a" pp_signed s
-let ph_mod = ph_text "mod"
-let ph_add_ovf s : pphead = fun ft -> Fmt.pf ft "+%a_ovf" pp_signed s
-let ph_sub_ovf s : pphead = fun ft -> Fmt.pf ft "-%a_ovf" pp_signed s
-let ph_mul_ovf s : pphead = fun ft -> Fmt.pf ft "*%a_ovf" pp_signed s
-let ph_lt s : pphead = fun ft -> Fmt.pf ft "<%a" pp_signed s
-let ph_leq s : pphead = fun ft -> Fmt.pf ft "<=%a" pp_signed s
-let ph_concat = ph_text "++"
-let ph_bit_and = ph_text "&"
-let ph_bit_or = ph_text "|"
-let ph_bit_xor = ph_text "^"
-let ph_shl = ph_text "<<"
-let ph_lshr = ph_text "l>>"
-let ph_ashr = ph_text "a>>"
-let ph_fma = ph_text "fma"
 
 (* {1 SMT encoding}
 

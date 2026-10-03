@@ -3,7 +3,7 @@
    base_view_prims.ml, a copy of the primitives of the C language over these
    types, with the patches marked PATCH) and those of the rust module
    (rules/rust.kn), which read the crate, raise the exceptions of the old code,
-   and give the heads of the printing and of the SMT encoding. *)
+   and give the heads of the SMT encoding. *)
 
 include Base_prims
 open Rust_types
@@ -114,48 +114,3 @@ let h_field = Rust_encoding.h_field
 let h_variant_field = Rust_encoding.h_variant_field
 let h_is_variant = Rust_encoding.h_is_variant
 let h_array_field = Rust_encoding.h_array_field
-
-(* {1 Pretty-printing} *)
-
-let ph_sep : pphead = fun ft -> Fmt.string ft ", "
-let ph_lbracket : pphead = fun ft -> Fmt.string ft "["
-let ph_rbracket : pphead = fun ft -> Fmt.string ft "]"
-let ph_ptr_open : pphead = fun ft -> Fmt.string ft "Ptr("
-let ph_unit_meta : pphead = fun ft -> Fmt.string ft "()"
-let ph_len : pphead = fun ft -> Fmt.string ft "len"
-let ph_vtable : pphead = fun ft -> Fmt.string ft "vtable"
-let ph_thin : pphead = fun ft -> Fmt.string ft "thin"
-let ph_meta : pphead = fun ft -> Fmt.string ft "meta"
-let ph_union_open : pphead = fun ft -> Fmt.string ft "Union("
-let ph_colon : pphead = fun ft -> Fmt.string ft ": "
-let ph_dash : pphead = fun ft -> Fmt.string ft "-"
-
-let ph_thin_tag (tag : ptag) : pphead =
- fun ft ->
-  Fmt.pf ft "[%a]" Fmt.(option ~none:(any "*") Rust_host.Ptr_tag.pp) tag
-
-let ph_enum_open (var : variant_id) : pphead =
- fun ft -> Fmt.pf ft "Enum(%a: " Types.pp_variant_id var
-
-let ph_poly (id : tyvar_id) : pphead =
- fun ft -> Fmt.pf ft "PolyVal(%a)" Types.pp_type_var_id id
-
-let ph_agg_ty (ty : rty) : pphead = fun ft -> Fmt.pf ft " : %a" Types.pp_ty ty
-
-let ph_dot_part (part : ptr_part) : pphead =
- fun ft -> Fmt.pf ft ".%a" Rust_encoding.pp_ptr_part part
-
-let ph_as_meta (part : meta_part) : pphead =
- fun ft ->
-  Fmt.pf ft ".as<%s>"
-    (match part with PartLen -> "len" | PartVTable -> "vtable")
-
-let ph_dot_field (i : Z.t) : pphead = fun ft -> Fmt.pf ft ".%d" (Z.to_int i)
-
-let ph_as_variant_field (var : variant_id) (i : Z.t) : pphead =
- fun ft -> Fmt.pf ft ".as<%a>.%d" Types.pp_variant_id var (Z.to_int i)
-
-let ph_is_variant (var : variant_id) : pphead =
- fun ft -> Fmt.pf ft ".is<%a>" Types.pp_variant_id var
-
-let ph_index (i : Z.t) : pphead = fun ft -> Fmt.pf ft "[%d]" (Z.to_int i)

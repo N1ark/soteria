@@ -243,9 +243,9 @@ fn mk_poly (id : tyvar_id) : t [@no_lean] = (PolyVal id : TPolyType)
 (* {1 The view}
 
    The cases that the nodes of the module add to the view functions of the
-   shared module (see its view.kn): the old [Ext.pp], [iter_vars], [mk],
-   [eval], [apply_subst], [learn] and [encode_*]. [operands], [rebuild],
-   [pp_style], [encode_head] and [cost] are [@total]: a node of this file
+   shared module (see its view.kn): the old [iter_vars], [mk], [eval],
+   [apply_subst], [learn] and [encode_*]. [operands], [rebuild],
+   [encode_head] and [cost] are [@total]: a node of this file
    without a case here is an error of Kanon. *)
 
 (* {2 Operands} *)
@@ -430,89 +430,3 @@ extend fn encode_head =
   | VariantField (var, i, _) -> h_variant_field var i
   | IsVariant (var, _) -> h_is_variant var
   | ArrayField (i, _) -> h_array_field i
-
-(* {2 Pretty-printing}
-
-   The formats of the old [Ext.pp]. The pieces of text are primitives; the
-   operands are printed by the generic printer, as the old code printed them
-   with the printer of the values. *)
-
-prim ph_sep : pphead [@no_lean]
-prim ph_lbracket : pphead [@no_lean]
-prim ph_rbracket : pphead [@no_lean]
-prim ph_ptr_open : pphead [@no_lean]
-prim ph_unit_meta : pphead [@no_lean]
-prim ph_len : pphead [@no_lean]
-prim ph_vtable : pphead [@no_lean]
-prim ph_thin : pphead [@no_lean]
-prim ph_meta : pphead [@no_lean]
-prim ph_union_open : pphead [@no_lean]
-prim ph_colon : pphead [@no_lean]
-prim ph_dash : pphead [@no_lean]
-prim ph_thin_tag : ptag -> pphead [@no_lean]
-prim ph_enum_open : variant_id -> pphead [@no_lean]
-prim ph_poly : tyvar_id -> pphead [@no_lean]
-prim ph_agg_ty : rty -> pphead [@no_lean]
-prim ph_dot_part : ptr_part -> pphead [@no_lean]
-prim ph_as_meta : meta_part -> pphead [@no_lean]
-prim ph_dot_field : int -> pphead [@no_lean]
-prim ph_as_variant_field : variant_id -> int -> pphead [@no_lean]
-prim ph_is_variant : variant_id -> pphead [@no_lean]
-prim ph_index : int -> pphead [@no_lean]
-
-fn sep_pieces (first : bool) : ppiece list [@no_lean] =
-  if first then [] else [ PText ph_sep ]
-
-fn pieces_cat (a b : ppiece list) : ppiece list [@no_lean] =
-  match a with [] -> b | x :: rest -> x :: pieces_cat rest b
-
-(* The pieces of the block whose value, offset and size are the operands [i],
-   [i + 1] and [i + 2], [(offset: value-size)], and of the blocks that follow it,
-   separated by [", "] *)
-fn union_pieces (bs : block list) (i : int) (first : bool) :
-    ppiece list [@no_lean] =
-  match bs with
-  | [] -> []
-  | { bvalue = bv; _ } :: rest ->
-      let sep = sep_pieces first in
-      let value =
-        match bv with
-        | Scalar _ -> [ PArg i ]
-        | Aggregate (_, ty) -> [ PArg i; PText (ph_agg_ty ty) ]
-      in
-      let block =
-        pieces_cat
-          (pieces_cat sep
-             [ PText ph_lparen; PArg (i + 1); PText ph_colon ])
-          (pieces_cat value [ PText ph_dash; PArg (i + 2); PText ph_rparen ])
-      in
-      pieces_cat block (union_pieces rest (i + 3) false)
-
-extend fn pp_style =
-  | ThinPtr { ptag = g; _ } -> PSeq [ PArg 0; PText (ph_thin_tag g) ]
-  | FullPtr _ ->
-      PSeq [ PText ph_ptr_open; PArg 0; PText ph_sep; PArg 1; PText ph_rparen ]
-  | PtrMeta m -> (
-      match m with
-      | MetaUnit -> PAtom ph_unit_meta
-      | MetaLen _ -> PCall ph_len
-      | MetaVTable _ -> PCall ph_vtable)
-  | Enum (var, _) ->
-      PSeq [ PText (ph_enum_open var); PArgs ph_sep; PText ph_rparen ]
-  | Tuple _ -> PSeq [ PText ph_lparen; PArgs ph_sep; PText ph_rparen ]
-  | Array _ -> PSeq [ PText ph_lbracket; PArgs ph_sep; PText ph_rbracket ]
-  | Union bs ->
-      PSeq
-        (pieces_cat
-           (PText ph_union_open :: union_pieces bs 0 true)
-           [ PText ph_rparen ])
-  | PolyVal id -> PAtom (ph_poly id)
-  | ThinPtrPart (part, _) -> PSeq [ PArg 0; PText (ph_dot_part part) ]
-  | FullPtrInner _ -> PCall ph_thin
-  | FullPtrMeta _ -> PCall ph_meta
-  | PtrMetaAs (part, _) -> PSeq [ PArg 0; PText (ph_as_meta part) ]
-  | Field (i, _) -> PSeq [ PArg 0; PText (ph_dot_field i) ]
-  | VariantField (var, i, _) ->
-      PSeq [ PArg 0; PText (ph_as_variant_field var i) ]
-  | IsVariant (var, _) -> PSeq [ PArg 0; PText (ph_is_variant var) ]
-  | ArrayField (i, _) -> PSeq [ PArg 0; PText (ph_index i) ]

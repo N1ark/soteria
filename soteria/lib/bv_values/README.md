@@ -45,7 +45,7 @@ Files (see `INTERFACES.md` for the contracts):
   the typed layer that soteria-c uses (`include Soteria.Bv_values.Lang.Typed`).
   The terms live in one global table, which is initialised, with the constants
   and the literal cache, when `Lang` is.
-- the generic code: `Value_lang`, `Pp`, `Eval`, `Expr`, `Svalue_sugar`,
+- the generic code: `Value_lang`, `Eval`, `Expr`, `Svalue_sugar`,
   `Lang_make`, `Typed_intf`, `Typed`, over the generated language and
   `Kanon_fns`/`View_host`. `Analyses`, `Bv_solver`, `Encoding` and `Ptr_sort`
   consume it through `Solver_lang.S`.

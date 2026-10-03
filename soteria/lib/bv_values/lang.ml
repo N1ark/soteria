@@ -185,7 +185,6 @@ module K : Kanon_fns.Kanon_fns with type t = Types.t and type ty = Types.ty =
 struct
   type t = Types.t
   type ty = Types.ty
-  type pphead = View_host.pphead
   type smt_op = (t, ty) View_host.smt_op
   type smt_sort_op = ty View_host.smt_sort_op
 
@@ -193,6 +192,7 @@ struct
   include Leaves
 
   let pp_ty = Prims.pp_ty
+  let pp = Bv_pp.pp
 end
 
 module L = Lang_make.Make (Types) (K)

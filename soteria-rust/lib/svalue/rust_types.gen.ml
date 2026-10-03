@@ -31,8 +31,6 @@ and fc = Soteria.Bv_values.Bv_base.FloatClass.t =
   | Infinite
   | NaN
 
-and pphead = View_host.pphead
-
 and smt_op = (t, ty) View_host.smt_op
 
 and smt_sort_op = ty View_host.smt_sort_op
@@ -40,21 +38,6 @@ and smt_sort_op = ty View_host.smt_sort_op
 and range_sign = View_host.range_sign =
   | Inside
   | Outside
-
-and ppiece = View_host.ppiece =
-  | PText of pphead
-  | PArg of Z.t
-  | PArgOf of Z.t * Z.t
-  | PArgs of pphead
-
-and pp_style = View_host.pp_style =
-  | PAtom of pphead
-  | PCall of pphead
-  | PCallPlain of pphead
-  | PIn of pphead
-  | PIte
-  | PBrackets
-  | PSeq of (ppiece list)
 
 and learn_plan = View_host.learn_plan =
   | LNone
@@ -286,10 +269,6 @@ and hash_fc (a : fc) =
   | Infinite -> 3
   | NaN -> 4
 
-and equal_pphead (a : pphead) (b : pphead) = Stdlib.( = ) a b
-
-and hash_pphead (a : pphead) = Hashtbl.hash a
-
 and equal_smt_op (a : smt_op) (b : smt_op) = Stdlib.( = ) a b
 
 and hash_smt_op (a : smt_op) = Hashtbl.hash a
@@ -308,45 +287,6 @@ and hash_range_sign (a : range_sign) =
   match a with
   | Inside -> 0
   | Outside -> 1
-
-and equal_ppiece (a : ppiece) (b : ppiece) =
-  match (a, b) with
-  | PText a1, PText b1 -> equal_pphead a1 b1
-  | PArg a1, PArg b1 -> Z.equal a1 b1
-  | PArgOf (a1, a2), PArgOf (b1, b2) -> Z.equal a1 b1 && Z.equal a2 b2
-  | PArgs a1, PArgs b1 -> equal_pphead a1 b1
-  | _ -> false
-
-and hash_ppiece (a : ppiece) =
-  match a with
-  | PText a1 -> hash_combine (0) (hash_pphead a1)
-  | PArg a1 -> hash_combine (1) (Z.hash a1)
-  | PArgOf (a1, a2) ->
-      hash_combine (hash_combine (2) (Z.hash a1)) (Z.hash a2)
-  | PArgs a1 -> hash_combine (3) (hash_pphead a1)
-
-and equal_pp_style (a : pp_style) (b : pp_style) =
-  match (a, b) with
-  | PAtom a1, PAtom b1 -> equal_pphead a1 b1
-  | PCall a1, PCall b1 -> equal_pphead a1 b1
-  | PCallPlain a1, PCallPlain b1 -> equal_pphead a1 b1
-  | PIn a1, PIn b1 -> equal_pphead a1 b1
-  | PIte, PIte -> true
-  | PBrackets, PBrackets -> true
-  | PSeq a1, PSeq b1 -> (List.equal equal_ppiece) a1 b1
-  | _ -> false
-
-and hash_pp_style (a : pp_style) =
-  match a with
-  | PAtom a1 -> hash_combine (0) (hash_pphead a1)
-  | PCall a1 -> hash_combine (1) (hash_pphead a1)
-  | PCallPlain a1 -> hash_combine (2) (hash_pphead a1)
-  | PIn a1 -> hash_combine (3) (hash_pphead a1)
-  | PIte -> 4
-  | PBrackets -> 5
-  | PSeq a1 ->
-      hash_combine (6)
-        ((List.fold_left (fun acc x -> hash_combine acc (hash_ppiece x)) 0) a1)
 
 and equal_learn_plan (a : learn_plan) (b : learn_plan) =
   match (a, b) with

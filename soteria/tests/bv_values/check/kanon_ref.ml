@@ -27,7 +27,6 @@ open View_host
 
 type nonrec t = t
 type nonrec ty = ty
-type nonrec pphead = pphead
 type smt_op = (t, ty) View_host.smt_op
 type smt_sort_op = ty View_host.smt_sort_op
 
@@ -110,6 +109,7 @@ let mk_float = Soteria.Bv_values.Lang.mk_float
 let mk_loc = Soteria.Bv_values.Lang.mk_loc
 let mk_ptr = Soteria.Bv_values.Lang.mk_ptr
 let mk_seq s l = Soteria.Bv_values.Lang.mk_seq ~seq_ty:s l
+let pp = Soteria.Bv_values.Lang.K.pp
 
 (* what [ppx_deriving show] generated for the sorts: [(TBitVector 32)] *)
 let rec pp_ty ft = function
@@ -612,7 +612,7 @@ let encode_head = Enc.encode_head
 let encode_sort = Enc.encode_sort
 let sort_operands = Enc.sort_operands
 
-(* {1 VIEW: pretty-printing and learning} *)
+(* {1 VIEW: learning} *)
 
 let pp_signed ft b = Fmt.string ft (if b then "s" else "u")
 
@@ -681,68 +681,6 @@ let pp_op2 ft : op2 -> unit = function
   | LShr -> Fmt.string ft "l>>"
   | AShr -> Fmt.string ft "a>>"
   | Ptr -> assert false
-
-let ph_text s : pphead = fun ft -> Fmt.string ft s
-
-let pp_style (v : t) : pp_style =
-  match v.kind with
-  | Var x -> PAtom (fun ft -> Fmt.pf ft "V%a" Var.pp x)
-  | Bool b -> PAtom (fun ft -> Fmt.pf ft "%b" b)
-  | Float f -> PAtom (fun ft -> Fmt.pf ft "%sf" (F.to_string f))
-  | BitVec bv | LocLit bv ->
-      let size = size_of v.ty in
-      PAtom
-        (fun ft ->
-          if size mod 4 <> 0 then
-            Fmt.pf ft "0b%s" (Z.format ("0" ^ string_of_int size ^ "b") bv)
-          else
-            Fmt.pf ft "0x%s"
-              (Z.format ("0" ^ string_of_int (size / 4) ^ "x") bv))
-  | Seq _ -> PBrackets
-  | Exists (vs, _) ->
-      let var_pp ft (v, ty) = Fmt.pf ft "V%a:%a" Var.pp v pp_ty ty in
-      PSeq
-        [
-          PText
-            (fun ft -> Fmt.pf ft "∃ %a. " (Fmt.list ~sep:Fmt.comma var_pp) vs);
-          PArg Z.zero;
-        ]
-  | Op1 (Not, { kind = Op2 (Eq, _, _); _ }) ->
-      PSeq
-        [
-          PText (ph_text "(");
-          PArgOf (Z.zero, Z.zero);
-          PText (ph_text " != ");
-          PArgOf (Z.zero, Z.one);
-          PText (ph_text ")");
-        ]
-  | Op1 (op, _) -> PCall (fun ft -> pp_op1 ft op)
-  | Op2 (Ptr, _, _) -> PCallPlain (ph_text "&")
-  | Op2 (op, _, _) -> PIn (fun ft -> pp_op2 ft op)
-  | Op3 (Ite, _, _, _) -> PIte
-  | Op3 (Fma, _, _, _) -> PCallPlain (ph_text "fma")
-  | OpN (Distinct, l) -> (
-      let rec aux = function
-        | acc, [] -> acc
-        | Some l, { kind = Var v; _ } :: rest ->
-            aux (Some (Var.to_int v :: l), rest)
-        | _, _ -> None
-      in
-      let range =
-        Option.bind
-          (aux (Some [], l))
-          (fun l ->
-            match List.sort Int.compare l with
-            | [] -> None
-            | hd :: _ as l ->
-                let max = List.hd (List.rev l) in
-                if max - hd + 1 = List.length l then Some (hd, max) else None)
-      in
-      let head = ph_text "distinct" in
-      match range with
-      | Some (min, max) ->
-          PAtom (fun ft -> Fmt.pf ft "%t(V|%d-%d|)" head min max)
-      | None -> PCall head)
 
 let learn_alts (v : t) : learn_plan =
   let z = Z.of_int in

@@ -8,19 +8,19 @@
             |
             |  Value_lang.Make (T) (K)            : Base   (this file)
             v
-      Pp.Make (Base)  : pp       Eval.Make (Base) : eval
-            |                                |
-            |  Lang_make.Make (T) (K)           |          (lang_make.ml)
-            v                                v
-      Value_lang.S = Base + pp + eval   (a subtype of Solver_lang.S)
+                                 Eval.Make (Base) : eval
+                                         |
+            |  Lang_make.Make (T) (K)     |          (lang_make.ml)
+            v                             v
+      Value_lang.S = Base + eval   (a subtype of Solver_lang.S)
             |
             v
       Svalue_sugar, Expr, Typed, and Analyses / Bv_solver / Encoding
     v}
 
-    {!Base} and {!S} differ in [pp] and [eval] only: they are produced by the
-    generic printer and evaluator, which consume {!Base} (and could not consume
-    {!S} that contains them). *)
+    {!Base} and {!S} differ in [eval] only: it is produced by the generic
+    evaluator, which consumes {!Base} (and could not consume {!S} that contains
+    it). *)
 
 open Deps
 
@@ -45,9 +45,9 @@ module type Term = sig
   val hash_ty : ty -> int
 end
 
-(** What the generic drivers consume ({!Pp}, {!Eval}): the identity of terms,
-    the functions of {!Kanon_fns} ([K]), and the members of {!Solver_lang.S}
-    that need nothing more than these. *)
+(** What the generic drivers consume ({!Eval}): the identity of terms, the
+    functions of {!Kanon_fns} ([K]), and the members of {!Solver_lang.S} that
+    need nothing more than these. *)
 module type Base = sig
   type t
   type ty
@@ -67,9 +67,12 @@ module type Base = sig
 
   module Hashtbl : Stdlib.Hashtbl.S with type key = t
 
-  (** {2 The members of [Solver_lang.S], except [pp] and [eval]}
+  (** {2 The members of [Solver_lang.S], except [eval]}
 
       See {!Solver_lang.S} for their documentation. *)
+
+  (** [= K.pp] *)
+  val pp : t Fmt.t
 
   val v_true : t
   val v_false : t
@@ -153,9 +156,6 @@ end
 module type S = sig
   include Base
 
-  (** The pretty-printer of terms, {!Pp}. *)
-  val pp : t Fmt.t
-
   (** The normaliser, {!Eval}: see {!Solver_lang.S.eval}. *)
   val eval : ?force:bool -> ?eval_var:(t -> Var.t -> ty -> t) -> t -> t
 end
@@ -186,6 +186,7 @@ module Make
     let hash = hash
   end)
 
+  let pp = K.pp
   let v_true = K.v_true
   let v_false = K.v_false
   let of_bool = K.of_bool

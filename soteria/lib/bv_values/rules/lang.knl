@@ -18,16 +18,6 @@
 [@@@ocaml_prims "Bv_prims"]
 [@@@ocaml_types "Bv_types"]
 
-[@@@ghost "sint" "[ `NonZero | `Zero ]"]
-[@@@ghost "sint_ovf" "[ sint | `Overflowed ]"]
-[@@@ghost "nonzero" "[ `NonZero ]"]
-[@@@ghost "zero" "[ `Zero ]"]
-[@@@ghost "sfloat" "[ `Float ]"]
-[@@@ghost "sptr" "[ `Ptr ]"]
-[@@@ghost "sloc" "[ `Loc ]"]
-[@@@ghost "'a sseq" "[ `List of 'a ]"]
-[@@@ghost "cval" "[ sint | sptr | sfloat ]"]
-[@@@ghost "any" "[ sint_ovf | sfloat | sbool | sptr | sloc | any sseq ]"]
 
 use builtin "bool"
 use "exists"
@@ -48,7 +38,7 @@ type checked [@ocaml "Bv_base.checked"] =
 node Var of var
 node Seq of t list
 
-sort TSeq of ty [@ghost sseq]
+sort TSeq of ty
 
 type fp [@ocaml "Bv_base.FloatPrecision.t"] =
   | F16

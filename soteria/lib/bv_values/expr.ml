@@ -55,7 +55,7 @@ struct
       match Raw_map.find_opt v s with
       | Some v' -> (v', s)
       | None -> (
-          match K.as_var v with
+          match V.as_var v with
           | Some (x, ty) ->
               let v' = missing_var x ty in
               let s = Raw_map.add v v' s in

@@ -74,17 +74,17 @@ type meta_part = PartLen | PartVTable
 (* {1 Sorts} *)
 
 (* an enum, a union: the reference to their declaration *)
-sort TEnum of decl_ref [@ghost enum]
-sort TUnion of decl_ref [@ghost union]
+sort TEnum of decl_ref
+sort TUnion of decl_ref
 (* structs and tuples: ordered fields *)
-sort TTuple of ty list [@ghost tuple]
+sort TTuple of ty list
 (* arrays: all the elements share the same sort *)
-sort TArray of ty * int [@ghost tuple]
-sort TThinPtr [@ghost sptr_t]
-sort TFullPtr [@ghost sptr_f]
+sort TArray of ty * int
+sort TThinPtr
+sort TFullPtr
 (* the sort of the metadata of a pointer; not exposed to the user *)
 sort TPtrMeta
-sort TPolyType [@ghost poly]
+sort TPolyType
 
 (* {1 Nodes} *)
 

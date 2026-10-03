@@ -543,15 +543,17 @@ module Suite (K : K) = struct
     [
       one "is_literal" (fun () -> string_of_bool (K.is_literal v));
       one "as_var" (fun () ->
-          opt (pair (fun x -> string_of_int (Var.to_int x)) sty) (K.as_var v));
+          opt (fun x -> string_of_int (Var.to_int x)) (K.as_var v));
       one "as_not" (fun () -> opt tm (K.as_not v));
       one "as_eq" (fun () -> opt (pair tm tm) (K.as_eq v));
       one "as_and" (fun () -> opt (pair tm tm) (K.as_and v));
       one "as_or" (fun () -> opt (pair tm tm) (K.as_or v));
       one "as_ite" (fun () ->
           opt (fun (a, b, c) -> tm a ^ tm b ^ tm c) (K.as_ite v));
-      one "as_lt" (fun () -> opt (pair tm tm) (K.as_lt v));
-      one "as_leq" (fun () -> opt (pair tm tm) (K.as_leq v));
+      one "as_lt" (fun () ->
+          opt (fun (s, a, b) -> string_of_bool s ^ tm a ^ tm b) (K.as_lt v));
+      one "as_leq" (fun () ->
+          opt (fun (s, a, b) -> string_of_bool s ^ tm a ^ tm b) (K.as_leq v));
       one "as_distinct" (fun () -> opt (lst tm) (K.as_distinct v));
       one "as_exists" (fun () ->
           opt
@@ -770,8 +772,8 @@ let compare_all (c : corpus) =
       (* the pairs that the function decides: the comparisons of the same
          operands, in either order, with either flag *)
       (match (Kref.as_lt v, Kref.as_leq v, Kref.as_eq v, Kref.as_not v) with
-      | Some (a, b), _, _, _
-      | _, Some (a, b), _, _
+      | Some (_, a, b), _, _, _
+      | _, Some (_, a, b), _, _
       | _, _, Some (a, b), _
       | _, _, _, Some { kind = Op2 (Eq, a, b); _ } ->
           List.iter

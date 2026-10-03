@@ -23,4 +23,4 @@ node FRem : TFloat p -> TFloat p -> TFloat p [@fold f_rem]
 node FMin : TFloat p -> TFloat p -> TFloat p [@fold f_min]
 node FMax : TFloat p -> TFloat p -> TFloat p [@fold f_max]
 node Fma : TFloat p -> TFloat p -> TFloat p -> TFloat p
-node TFloat of fp
+sort TFloat of fp [@ghost sfloat]

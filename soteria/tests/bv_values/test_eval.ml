@@ -1,16 +1,15 @@
-open Soteria.Bv_values
-module Sv = Svalue.Make (Svalue.Dummy_ext) ()
-module Eval = Eval.Make (Svalue.Dummy_ext) (Sv)
+module Sv = New_stack.L.Svalue
+module Eval = New_stack.L.Eval
 open Sv
 
-let ty = Svalue.TBitVector 8
+let ty = Sv.t_bv 8
 let var i = mk_var (Soteria.Symex.Var.of_int i) ty
 let x = var 1
 let y = var 2
 let z = var 3
 let c n = BitVec.mki 8 n
-let b = mk_var (Soteria.Symex.Var.of_int 4) Svalue.TBool
-let b' = mk_var (Soteria.Symex.Var.of_int 5) Svalue.TBool
+let b = mk_var (Soteria.Symex.Var.of_int 4) Sv.t_bool
+let b' = mk_var (Soteria.Symex.Var.of_int 5) Sv.t_bool
 let value = Alcotest.testable Sv.pp Sv.equal
 
 let subst_vars l _ v _ty =
@@ -23,7 +22,8 @@ let eval_with l =
       ignore sv;
       subst_vars l () v ty)
 
-let id_of (v : Sv.t) = match v.node.kind with Var i -> i | _ -> assert false
+let id_of (v : Sv.t) =
+  match v.kind with Bv_new.Types.Var i -> i | _ -> assert false
 
 let exists_body y x =
   Bool.and_ (BitVec.lt ~signed:false y x) (Bool.sem_eq y (c 5))
@@ -32,8 +32,8 @@ let mk_ex y x = Bool.mk_exists [ (id_of y, ty) ] (exists_body y x)
 
 let test_exists_substitutes_free () =
   let t = mk_ex y x in
-  (match (t : Sv.t).node.kind with
-  | Exists _ -> ()
+  (match (t : Sv.t).kind with
+  | Bv_new.Types.Exists _ -> ()
   | _ -> Alcotest.fail "not an Exists");
   let res = eval_with [ (id_of x, z) ] t in
   Alcotest.check value "free var substituted, bound var kept" (mk_ex y z) res

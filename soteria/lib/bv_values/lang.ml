@@ -2,8 +2,7 @@
     [rules/lang.knl]: its types ({!Types}, [bv_types.gen.ml]), the primitives of
     its rules ({!Prims}), its simplifying smart constructors and view functions
     ({!Rules}, [bv_rules.gen.ml]), the generic host code instantiated on it
-    ({!L}, {!Typed}), and below the leaf constructors and a printer of the raw
-    terms.
+    ({!L}), and below the leaf constructors and a printer of the raw terms.
 
     [Typed] is the typed layer of the tool; [Svalue], [Eval] and [Expr] are the
     same modules as [Typed.Svalue], [Typed.Eval] and [Typed.Expr]. The terms are
@@ -203,4 +202,3 @@ module V = L.V
 module Svalue = L.Svalue
 module Eval = L.Eval
 module Expr = L.Expr
-module Typed = Typed.Make (L)

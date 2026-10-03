@@ -20,10 +20,10 @@ type ('sc, 'ag, 'ofs, 'sz) block_raw = {
   size : 'sz;
 }
 
-(* [Make_transparent] exposes [t]/[ty] as the underlying untyped svalue, so the
+(* [Typed_base] exposes [t]/[ty] as the underlying untyped svalue, so the
    extension helpers below can be written without ghost-typing ceremony. The
    [typed.mli] re-seals [t]/[ty] as abstract for the rest of Soteria Rust. *)
-module Self = Iface.Typed.Make_transparent (Rust_stack.L)
+module Self = Typed_base
 include Self
 
 module T = struct

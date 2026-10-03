@@ -7,6 +7,5 @@ module Kanon_fns = Soteria.Bv_values.Kanon_fns
 module Value_lang = Soteria.Bv_values.Value_lang
 module Lang_make = Soteria.Bv_values.Lang_make
 module Prim = Soteria.Bv_values.Prim
-module Typed = Soteria.Bv_values.Typed
 module Typed_intf = Soteria.Bv_values.Typed_intf
 module Svalue_sugar = Soteria.Bv_values.Svalue_sugar

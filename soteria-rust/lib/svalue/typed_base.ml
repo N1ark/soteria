@@ -1,14 +1,14 @@
-(** The typed layer of the C tool, over its value language {!Lang}. The
-    phantom-typed smart constructors are those that Kanon generates
-    ({!Bv_typed.Derived}); this file adds the groups of tags ([T]), and the
-    wrappers that give them the public API ({!Typed_intf.S}): nested modules,
-    labelled and optional arguments, and the integer sizes as [int]. The leaves
-    and the operations that the rules do not type come from the untyped layer
-    {!Lang.Svalue}. There is no constructor matching in it. *)
+(* The typed layer of the Rust language without its own types, over the value
+   language of {!Rust_stack}: the phantom-typed smart constructors that Kanon
+   generates ({!Rust_typed.Derived}), the groups of tags, and the wrappers that
+   give them the public API ({!Iface.Typed_intf.S}). The leaves and the
+   operations that the rules do not type come from the untyped layer
+   ({!Rust_stack.L.Svalue}). It is the analogue of [Bv_values.Typed] for the C
+   language. *)
 
-module L_logs = Logs.Import.L
-module L = Lang
-module G = Bv_typed.Derived
+module L_logs = Soteria.Logs.Import.L
+module L = Rust_stack.L
+module G = Rust_typed.Derived
 include L.Svalue
 include G
 module Svalue = L.Svalue
@@ -17,13 +17,13 @@ module Expr = L.Expr
 module Lang : Solver_lang.S with type t = L.V.t and type ty = L.V.ty = L.V
 
 module T = struct
-  type sint = Bv_typed.Tag.tbitvector
-  type nonzero = Bv_typed.Tag.tnonzero
-  type zero = Bv_typed.Tag.tzero
-  type sfloat = Bv_typed.Tag.tfloat
-  type sbool = Bv_typed.Tag.tbool
-  type sptr = Bv_typed.Tag.tpointer
-  type sloc = Bv_typed.Tag.tloc
+  type sint = Rust_typed.Tag.tbitvector
+  type nonzero = Rust_typed.Tag.tnonzero
+  type zero = Rust_typed.Tag.tzero
+  type sfloat = Rust_typed.Tag.tfloat
+  type sbool = Rust_typed.Tag.tbool
+  type sptr = Rust_typed.Tag.tpointer
+  type sloc = Rust_typed.Tag.tloc
   type cval = [ sint | sptr | sfloat ]
   type any = [ sint | sfloat | sbool | sptr | sloc ]
 

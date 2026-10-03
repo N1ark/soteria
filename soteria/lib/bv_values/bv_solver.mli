@@ -1,5 +1,5 @@
-(** Ready-to-use Z3 solvers over a built typed layer [Typed] (from
-    {!Lang.Typed}, or {!Typed.Make}). Each bundles SMT {!Encoding} with the
+(** Ready-to-use Z3 solvers over a built typed layer [Typed] (from {!Typed}, or
+    the typed layer of another language). Each bundles SMT {!Encoding} with the
     {!Analyses}-based simplifiers.
 
     There are two variations of the solver, for experimentation:

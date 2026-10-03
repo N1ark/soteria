@@ -52,9 +52,9 @@ jobs:
 
       # Kanon, the rule language of the smart constructors of the value
       # languages, is not on opam
-      # [versionsync: KANON_COMMIT_HASH=b7624b8d77cbc4f78474337d383cc83eb7f8a0b2]
+      # [versionsync: KANON_COMMIT_HASH=9f4331f795cc351d09f4420f30cc5c4f9413c42d]
       - name: Pin kanon
-        run: opam pin add -n -y kanon git+https://github.com/N1ark/kanon#b7624b8d77cbc4f78474337d383cc83eb7f8a0b2
+        run: opam pin add -n -y kanon git+https://github.com/N1ark/kanon#9f4331f795cc351d09f4420f30cc5c4f9413c42d
 
       - name: Export tracked files, as opam-repository would see them
         run: |

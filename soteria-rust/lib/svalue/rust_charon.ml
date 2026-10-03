@@ -11,7 +11,7 @@ module Crate = Crate
 module R = Rust_types
 
 let float_precision :
-    Values.float_type -> Soteria.Bv_values.Svalue.FloatPrecision.t = function
+    Values.float_type -> Soteria.Bv_values.Bv_base.FloatPrecision.t = function
   | F16 -> F16
   | F32 -> F32
   | F64 -> F64

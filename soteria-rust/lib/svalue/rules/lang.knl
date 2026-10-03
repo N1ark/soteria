@@ -50,7 +50,7 @@ type var [@ocaml "Soteria.Symex.Var.t"] [@lean "Int"]
 type float [@ocaml "Floatml.AnyFloat.t"] [@noeq]
     [@equal "Floatml.AnyFloat.equal"] [@hash "Floatml.AnyFloat.hash"]
 
-type checked [@ocaml "Soteria.Bv_values.Svalue.checked"] =
+type checked [@ocaml "Soteria.Bv_values.Bv_base.checked"] =
   { signed : bool; unsigned : bool }
 
 node Var of var
@@ -58,20 +58,20 @@ node Seq of t list
 
 sort TSeq of ty [@ghost sseq]
 
-type fp [@ocaml "Soteria.Bv_values.Svalue.FloatPrecision.t"] =
+type fp [@ocaml "Soteria.Bv_values.Bv_base.FloatPrecision.t"] =
   | F16
   | F32
   | F64
   | F128
 
-type rm [@ocaml "Soteria.Bv_values.Svalue.RoundingMode.t"] =
+type rm [@ocaml "Soteria.Bv_values.Bv_base.RoundingMode.t"] =
   | NearestTiesToEven
   | Truncate
   | Ceil
   | Floor
   | NearestTiesToAway
 
-type fc [@ocaml "Soteria.Bv_values.Svalue.FloatClass.t"] =
+type fc [@ocaml "Soteria.Bv_values.Bv_base.FloatClass.t"] =
   | Normal
   | Subnormal
   | Zero

@@ -1,5 +1,5 @@
-(* The language of the standalone Bv_values stack under test: the C language of
-   Soteria, written for the new Kanon, which generates its types
+(* The value language of the C tool of Soteria, written for Kanon, which
+   generates its types
    ([Bv_types]) and its simplifying smart constructors ([Bv_rules]).
 
    It is made of the modules that it uses: [bool], built into kanon, then
@@ -8,11 +8,10 @@
    sorts; this file adds the variables and sequences (and their sort), and the
    host types of the nodes' parameters.
 
-   The host types are those of Soteria's own [Svalue] ([[@ocaml "..."]]), so
-   that the tests of this directory can share the values of the old and of the
-   new stack: [var], [checked], and the enumerations [fp], [rm] and [fc]. Kanon
-   re-exports each of them ([type fp = M.fp = F16 | ...]), and OCaml checks it
-   against the declaration. *)
+   The host types are those of Soteria's [Bv_base] ([[@ocaml "..."]]), which the
+   language of soteria-rust shares: [var], [checked], and the enumerations [fp],
+   [rm] and [fc]. Kanon re-exports each of them ([type fp = M.fp = F16 | ...]),
+   and OCaml checks it against the declaration. *)
 
 [@@@lean_root "Kanon"]
 [@@@lean_param "FS" "FloatSem"]
@@ -43,7 +42,7 @@ type var [@ocaml "Symex.Var.t"] [@lean "Int"]
 type float [@ocaml "Floatml.AnyFloat.t"] [@noeq]
     [@equal "Floatml.AnyFloat.equal"] [@hash "Floatml.AnyFloat.hash"]
 
-type checked [@ocaml "Svalue_ast.checked"] =
+type checked [@ocaml "Bv_base.checked"] =
   { signed : bool; unsigned : bool }
 
 node Var of var
@@ -51,20 +50,20 @@ node Seq of t list
 
 sort TSeq of ty [@ghost sseq]
 
-type fp [@ocaml "Svalue_ast.FloatPrecision.t"] =
+type fp [@ocaml "Bv_base.FloatPrecision.t"] =
   | F16
   | F32
   | F64
   | F128
 
-type rm [@ocaml "Svalue_ast.RoundingMode.t"] =
+type rm [@ocaml "Bv_base.RoundingMode.t"] =
   | NearestTiesToEven
   | Truncate
   | Ceil
   | Floor
   | NearestTiesToAway
 
-type fc [@ocaml "Svalue_ast.FloatClass.t"] =
+type fc [@ocaml "Bv_base.FloatClass.t"] =
   | Normal
   | Subnormal
   | Zero

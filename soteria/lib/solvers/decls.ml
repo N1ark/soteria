@@ -1,11 +1,10 @@
 (** Auxiliary SMT-LIB declarations required by value encodings.
 
-    A {{!Value.S}solver value} (or in some cases, a
-    {{!Soteria.Bv_values.Svalue.Value_ext}value extension} may need global
-    SMT-LIB declarations to support its encoding, e.g. declaring an algebraic
-    datatype for a recursive value type. Encoders cannot communicate with the
-    solver directly, so we instead provide a function, {!declare}, to allow
-    doing it.
+    A {{!Value.S}solver value} (or in some cases, a value extension) may need
+    global SMT-LIB declarations to support its encoding, e.g. declaring an
+    algebraic datatype for a recursive value type. Encoders cannot communicate
+    with the solver directly, so we instead provide a function, {!declare}, to
+    allow doing it.
 
     Solver implementations (like {!Z3}) handle the raised effect, {!Declare}, by
     de-duplicating declarations (by {!field:key}) and sending them to the

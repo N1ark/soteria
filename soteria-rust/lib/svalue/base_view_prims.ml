@@ -1,8 +1,8 @@
 (* The host primitives of the view functions ([rules/view.kn]): the heads of the
    pretty-printer, the SMT operators and sorts, and the few functions that Kanon
-   cannot express. They are ported from [Svalue.pp], [Unop.pp], [Binop.pp]
-   (svalue.ml, svalue_ast.ml) and from the [Enc] module of [Solver_lang]
-   (solver_lang.ml), over the types that Kanon generates.
+   cannot express. They are ported from the printers and the [Enc] module of the
+   SMT encoding of the first generation of the value language, over the types
+   that Kanon generates.
 
    [Bv_prims] includes this module: the generated rules call all primitives
    there, and check them against their declarations. *)
@@ -14,9 +14,9 @@ open struct
   module L = Soteria.Logs.Import.L
   module Var = Soteria.Symex.Var
   module F = Floatml.AnyFloat
-  module FloatPrecision = Soteria.Bv_values.Svalue.FloatPrecision
-  module FloatClass = Soteria.Bv_values.Svalue.FloatClass
-  module RoundingMode = Soteria.Bv_values.Svalue.RoundingMode
+  module FloatPrecision = Soteria.Bv_values.Bv_base.FloatPrecision
+  module FloatClass = Soteria.Bv_values.Bv_base.FloatClass
+  module RoundingMode = Soteria.Bv_values.Bv_base.RoundingMode
   module Ptr_sort = Soteria.Bv_values.Encoding.Ptr_sort
   module Smt = Soteria.Smt
   module View_host = Iface.View_host

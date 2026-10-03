@@ -1,10 +1,8 @@
 (** The "sugar" of the untyped layer: the [Bool], [BitVec], [Float], [Ptr],
-    [SSeq] and [Infix] modules, sorts, [iter_vars], [pp_ty]... of
-    [svalue.ml:50-900], over any language {!Value_lang.S}. It is the successor
-    of [module type of Svalue.Make (Ext) ()] and the [Svalue] member of
-    {!Typed_intf_v.S} ([Typed.Svalue]).
-
-    Differences with the old [Svalue.Make] output, none of them behavioural:
+    [SSeq] and [Infix] modules, sorts, [iter_vars], [pp_ty]... over any language
+    {!Value_lang.S}: the [Svalue] member of {!Typed_intf.S} ([Typed.Svalue]). It
+    was written as a port of [svalue.ml:50-900] of the first generation of the
+    value language, with these differences, none of them behavioural:
     - no [kind], [t_kind], [t_node], [node], [( <| )], [Unop]/[Binop]/[Triop]/
       [Nop], [R], [Ext], [Prims]: the generic code does not see constructors.
       The two sites of soteria-c use {!Value_lang.Base.as_eq} and [as_bv_lit]
@@ -13,8 +11,7 @@
       [mk_seq]; [Ptr.null_loc], [Ptr.loc_of_z] through [mk_loc];
     - [BitVec.to_z] still returns the value of a location literal ([LocLit]).
 
-    Written by the architect as the reference implementation (a port of
-    [svalue.ml:591-900]); WP3b owns it from now on. *)
+    (The [Typed] sugar is a port of [svalue.ml:591-900].) *)
 
 module type S = sig
   type t
@@ -22,11 +19,11 @@ module type S = sig
 
   module Var = Symex.Var
   module F = Floatml.AnyFloat
-  module FloatPrecision = Svalue_ast.FloatPrecision
-  module FloatClass = Svalue_ast.FloatClass
-  module RoundingMode = Svalue_ast.RoundingMode
+  module FloatPrecision = Bv_base.FloatPrecision
+  module FloatClass = Bv_base.FloatClass
+  module RoundingMode = Bv_base.RoundingMode
 
-  type checked = Svalue_ast.checked = { signed : bool; unsigned : bool }
+  type checked = Bv_base.checked = { signed : bool; unsigned : bool }
 
   val unchecked : checked
   val checked_both : checked
@@ -305,17 +302,17 @@ module Make (V : Value_lang.S) : S with type t = V.t and type ty = V.ty = struct
   module K = V.K
   module Var = Symex.Var
   module F = Floatml.AnyFloat
-  module FloatPrecision = Svalue_ast.FloatPrecision
-  module FloatClass = Svalue_ast.FloatClass
-  module RoundingMode = Svalue_ast.RoundingMode
+  module FloatPrecision = Bv_base.FloatPrecision
+  module FloatClass = Bv_base.FloatClass
+  module RoundingMode = Bv_base.RoundingMode
 
   type t = V.t
   type ty = V.ty
-  type checked = Svalue_ast.checked = { signed : bool; unsigned : bool }
+  type checked = Bv_base.checked = { signed : bool; unsigned : bool }
 
-  let unchecked = Svalue_ast.unchecked
-  let checked_both = Svalue_ast.checked_both
-  let checked_of_signed = Svalue_ast.checked_of_signed
+  let unchecked = Bv_base.unchecked
+  let checked_both = Bv_base.checked_both
+  let checked_of_signed = Bv_base.checked_of_signed
 
   (* {2 Sorts} *)
 

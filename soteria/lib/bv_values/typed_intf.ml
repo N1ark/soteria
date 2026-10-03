@@ -1,10 +1,26 @@
-open Svalue
+(** The public interface of the typed layer. [Svalue] and [Eval] are the
+    signatures of the generic layers ({!Svalue_sugar.S}, {!Eval.S}); the
+    constructors of the terms are not exposed: a user matches on the terms with
+    the recognisers of {!Value_lang.Base} and [BitVec.to_z]. *)
+
+open Deps
+
+(** A complete value language: the input of {!Typed.Make}. {!Lang_make.Make}
+    builds it from a {!Value_lang.Term} and a {!Kanon_fns.Kanon_fns}. *)
+module type Language = sig
+  module V : Value_lang.S
+  module Svalue : Svalue_sugar.S with type t = V.t and type ty = V.ty
+  module Eval : Eval.S with type t = V.t and type ty = V.ty
+  module Expr : Expr.S with type value = V.t and type vty = V.ty
+end
 
 module type S = sig
-  module Ext : Svalue.Value_ext
-  module Svalue : module type of Svalue.Make (Ext) ()
-  module Eval : module type of Eval.Make (Ext) (Svalue)
+  module Svalue : Svalue_sugar.S
+  module Eval : Eval.S with type t = Svalue.t and type ty = Svalue.ty
   module Lang : Solver_lang.S with type t = Svalue.t and type ty = Svalue.ty
+  module FloatPrecision = Svalue.FloatPrecision
+  module FloatClass = Svalue.FloatClass
+  module RoundingMode = Svalue.RoundingMode
 
   (** {2 Phantom types} *)
 
@@ -98,7 +114,6 @@ module type S = sig
   val get_ty : 'a t -> Svalue.ty
   val type_type : Svalue.ty -> 'a ty
   val untype_type : 'a ty -> Svalue.ty
-  val kind : 'a t -> Svalue.t_kind
   val mk_var : Var.t -> 'a ty -> 'a t
   val iter_vars : 'a t -> (Var.t * 'b ty -> unit) -> unit
   val type_ : Svalue.t -> 'a t
@@ -173,9 +188,6 @@ module type S = sig
   end
 
   include Bool_
-  module FloatPrecision = Svalue.FloatPrecision
-  module FloatClass = Svalue.FloatClass
-  module RoundingMode = Svalue.RoundingMode
 
   module Bool : sig
     include Bool_
@@ -484,17 +496,9 @@ module type S = sig
        and type t = Svalue.t
 end
 
-(** The exact slice of {!S} that {!Bv_solver}'s functors (and the {!Encoding}
-    and {!Analyses} they build on) actually consume: {!Lang} and the coercions
-    to and from untyped values, enough to also be a {!Symex.Value.S}.
-
-    Solvers take this rather than the whole {!S} so that a downstream [Typed]
-    that adds or overrides constructors — and therefore no longer matches {!S} —
-    can still be passed to {!Bv_solver.Z3_solver} directly: the solver provably
-    never touches the overridden parts. Every module matching {!S}, and
-    {!Typed_intf_v.S}, also matches this, so it stays a strict subset. It does
-    not mention [Ext], [Svalue] nor [Eval]: the solver never used them, and the
-    typed layers of the two generations of values differ there. *)
+(** What {!Bv_solver}'s functors consume of a typed layer. Every module matching
+    {!S} matches it. It does not mention [Svalue] nor [Eval]: the solver never
+    uses them. *)
 module type Solver_value = sig
   module Lang : Solver_lang.S
 

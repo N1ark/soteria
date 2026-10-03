@@ -1,33 +1,27 @@
-open Logs.Import
-open Hc
-open Svalue
+(** The typed layer over any language: the phantom tags [T], the identity layer
+    ([type +'a t = t], [cast] = identity) and the [Bool]/[BitVec]/[Infix] sugar.
+    There is no constructor matching in it: [get_ty], [cast_float], [cast_int]
+    go through the term record and {!Kanon_fns.Kanon_fns.as_float_ty}/[as_bv_ty]
+    (via {!Svalue_sugar}).
 
-module type S = Typed_intf.S
+    [Make_transparent] exposes [t] and [ty] as the underlying untyped terms, so
+    that a language writes its own helpers on top of it (soteria-rust does). The
+    extension of the language is not here: it is the [extend fn] cases of its
+    rules ({!Kanon_fns.Kanon_fns}). *)
 
-(** Like {!Make}, but additionally exposes the ghost-typed [+'a t]/[+'a ty] as
-    transparently equal to the underlying untyped svalue. This lets a downstream
-    module write extension helpers without juggling [type_]/[untyped]/[cast],
-    while its own [.mli] re-seals [t]/[ty] as abstract for the rest of the
-    world. *)
-module Make_transparent (V : Value_ext) () : sig
-  module Svalue : module type of Svalue.Make (V) ()
-
+module Make_transparent (L : Typed_intf.Language) : sig
   include
-    S
-      with module Ext = V
-       and module Svalue := Svalue
-       and type 'a t = Svalue.t
-       and type 'a ty = Svalue.ty
+    Typed_intf.S
+      with module Svalue = L.Svalue
+       and module Eval = L.Eval
+       and type 'a t = L.V.t
+       and type 'a ty = L.V.ty
 end = struct
-  (* [Svalue.Make] is a generative functor: each application instantiates its
-     own hashcons table {b and} mints a fresh abstract ghost tagging the values
-     in that table. The ghost makes those values type-incompatible with any
-     other application's, so accidentally instantiating [Svalue] twice and
-     mixing the results is a type error. *)
-  module Svalue = Svalue.Make (V) ()
-  module Eval = Eval.Make (V) (Svalue)
-  module Lang = Solver_lang.Make (V) (Svalue) (Eval)
-  module Expr = Expr.Make (V) (Svalue)
+  module L_logs = Logs.Import.L
+  module Svalue = L.Svalue
+  module Eval = L.Eval
+  module Lang : Solver_lang.S with type t = L.V.t and type ty = L.V.ty = L.V
+  module Expr = L.Expr
   include Svalue
 
   module T = struct
@@ -67,15 +61,15 @@ end = struct
     let hash_cval _ = 0
   end
 
-  type nonrec +'a t = t
-  type nonrec +'a ty = ty
+  type nonrec +'a t = Svalue.t
+  type nonrec +'a ty = Svalue.ty
   type sbool = T.sbool
 
   let t_int = t_bv
 
   include Bool
 
-  let[@inline] get_ty x = x.node.ty
+  let[@inline] get_ty x = L.V.type_of x
   let[@inline] type_type x = x
   let[@inline] untype_type x = x
   let ppa = pp
@@ -88,14 +82,18 @@ end = struct
   let[@inline] untyped x = x
   let[@inline] untyped_list l = l
   let[@inline] type_ x = x
-  let type_checked x ty = if equal_ty x.node.ty ty then Some x else None
+  let type_checked x ty = if equal_ty (L.V.type_of x) ty then Some x else None
   let cast_checked = type_checked
-  let cast_float x = if is_float x.node.ty then Some x else None
-  let cast_int x = if is_bv x.node.ty then Some (x, size_of x.node.ty) else None
-  let size_of_int x = size_of x.node.ty
+  let cast_float x = if is_float (L.V.type_of x) then Some x else None
+
+  let cast_int x =
+    if is_bv (L.V.type_of x) then Some (x, size_of (L.V.type_of x)) else None
+
+  let size_of_int x = size_of (L.V.type_of x)
 
   let cast_checked2 x y =
-    if equal_ty x.node.ty y.node.ty then Some (x, y, x.node.ty) else None
+    if equal_ty (L.V.type_of x) (L.V.type_of y) then Some (x, y, L.V.type_of x)
+    else None
 
   module Bool = struct
     include Bool
@@ -107,12 +105,14 @@ end = struct
     include BitVec
 
     let mk_nz n z =
-      if Z.equal z Z.zero then L.failwith "Zero value in mk_nonzero" else mk n z
+      if Z.equal z Z.zero then L_logs.failwith "Zero value in mk_nonzero"
+      else mk n z
 
     let mki_masked n i = mk_masked n (Z.of_int i)
 
     let mki_nz n i =
-      if i = 0 then L.failwith "Zero value in mki_nonzero" else mki_masked n i
+      if i = 0 then L_logs.failwith "Zero value in mki_nonzero"
+      else mki_masked n i
 
     let no_ovf_unsafe x = x
     let cast_nonzero x = x
@@ -150,19 +150,7 @@ end = struct
   end
 end
 
-(** The main entry point of [Bv_values]. Builds the {e ghost-typed} svalue layer
-    over {!Svalue.Make}: the same hash-consed values, but exposed through a
-    phantom-typed [+'a t] whose ['a] tracks each value's kind (the [sint],
-    [sbool], [sptr], ... tags) so that ill-kinded combinations are rejected at
-    compile time. The result also bundles the matching [Svalue] (untyped layer),
-    [Eval] (normalisation) and [Expr] (substitution) modules.
-
-    Apply it {b once} per tool and reuse the result:
-    {[
-    module Typed = Bv_values.Typed.Make (Bv_values.Svalue.Dummy_ext) ()
-    ]}
-    Like {!Svalue.Make} it is generative (final [()]): distinct applications
-    yield type-incompatible values, so do not re-apply it to share values — pass
-    the built module around instead. Unlike {!Make_transparent}, [t] and [ty]
-    are kept abstract. *)
-module Make (V : Value_ext) () : S with module Ext = V = Make_transparent (V) ()
+(** Like {!Make_transparent}, with [t] and [ty] kept abstract. *)
+module Make (L : Typed_intf.Language) :
+  Typed_intf.S with module Svalue = L.Svalue and module Eval = L.Eval =
+  Make_transparent (L)

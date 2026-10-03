@@ -1,9 +1,8 @@
-(** The generic pretty-printer of terms: replaces [Svalue.pp]
-    ([svalue.ml:101-143]) and the [Ext.pp] of extensions by one renderer of the
+(** The generic pretty-printer of terms: one renderer of the
     {!View_host.pp_style} of {!Kanon_fns.Kanon_fns.pp_style}. The formats are
-    exactly those of the old printer, break hints included: see
-    {!View_host.pp_style}. Written by the architect as the reference
-    implementation; WP3b owns it from now on. *)
+    exactly those of the printer of the first generation of the value language
+    ([svalue.ml:101-143] of [fab3ed5]), break hints included: see
+    {!View_host.pp_style}. *)
 
 module type S = sig
   type t

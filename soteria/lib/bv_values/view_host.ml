@@ -43,7 +43,7 @@ type ppiece =
   | PArgs of pphead
 
 (** How to pretty-print a term; the operands are those of [operands], printed by
-    the generic printer ({!Pp_v}) with the exact [Fmt] formats below.
+    the generic printer ({!Pp}) with the exact [Fmt] formats below.
 
     - [PAtom h]: [h]; the operands are not printed. (svalue.ml:101-143: [Var]
       ["V%a"], [Bool], [Float], [BitVec].)

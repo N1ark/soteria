@@ -5,12 +5,10 @@
     ({!L}, {!Typed}), and below the leaf constructors and a printer of the raw
     terms.
 
-    [Typed] is the typed layer of the tool, with the same public API as the
-    [Typed.Make (Svalue.Dummy_ext) ()] that it replaces; [Svalue], [Eval] and
-    [Expr] are the same modules as [Typed.Svalue], [Typed.Eval] and
-    [Typed.Expr]. The terms are hash-consed in one global table, created, like
-    the constants [v_true], [v_false] and the cached literals, when this module
-    is initialised. *)
+    [Typed] is the typed layer of the tool; [Svalue], [Eval] and [Expr] are the
+    same modules as [Typed.Svalue], [Typed.Eval] and [Typed.Expr]. The terms are
+    hash-consed in one global table, created, like the constants [v_true],
+    [v_false] and the cached literals, when this module is initialised. *)
 
 module Types = Bv_types
 module Prims = Bv_prims
@@ -76,8 +74,8 @@ let pp_checked ft (c : checked) =
     (if c.signed then "s" else "")
     (if c.unsigned then "u" else "")
 
-let pp_rm = Svalue_ast.RoundingMode.pp
-let pp_fc = Svalue_ast.FloatClass.pp
+let pp_rm = Bv_base.RoundingMode.pp
+let pp_fc = Bv_base.FloatClass.pp
 let pp_fp ft p = Fmt.pf ft "f%d" (Floatml.AnyFloat.size p)
 
 let pp_op1 ft = function
@@ -197,7 +195,7 @@ struct
   let pp_ty = Prims.pp_ty
 end
 
-module L = Lang_v.Make (Types) (K)
+module L = Lang_make.Make (Types) (K)
 
 (** The view of the language for the solver ({!Solver_lang.S}). *)
 module V = L.V
@@ -205,4 +203,4 @@ module V = L.V
 module Svalue = L.Svalue
 module Eval = L.Eval
 module Expr = L.Expr
-module Typed = Typed_v.Make (L)
+module Typed = Typed.Make (L)

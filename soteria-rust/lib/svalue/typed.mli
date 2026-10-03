@@ -20,12 +20,12 @@ include
 module T : sig
   include module type of T
 
-  type sptr_f = [ `FullPtr ]
-  type sptr_t = [ `ThinPtr ]
-  type tuple = [ `Tuple ]
-  type enum = [ `Enum ]
-  type union = [ `Union ]
-  type poly = [ `Poly ]
+  type sptr_f = Rust_typed.Tag.tfullptr
+  type sptr_t = Rust_typed.Tag.tthinptr
+  type tuple = [ Rust_typed.Tag.ttuple | Rust_typed.Tag.tarray ]
+  type enum = Rust_typed.Tag.tenum
+  type union = Rust_typed.Tag.tunion
+  type poly = Rust_typed.Tag.tpolytype
   type ptr_meta = [ sptr_t | sint ]
 
   (** Values with a direct scalar representation: integers, floats and full

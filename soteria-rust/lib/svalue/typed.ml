@@ -29,12 +29,12 @@ include Self
 module T = struct
   include T
 
-  type sptr_f = [ `FullPtr ]
-  type sptr_t = [ `ThinPtr ]
-  type tuple = [ `Tuple ]
-  type enum = [ `Enum ]
-  type union = [ `Union ]
-  type poly = [ `Poly ]
+  type sptr_f = Rust_typed.Tag.tfullptr
+  type sptr_t = Rust_typed.Tag.tthinptr
+  type tuple = [ Rust_typed.Tag.ttuple | Rust_typed.Tag.tarray ]
+  type enum = Rust_typed.Tag.tenum
+  type union = Rust_typed.Tag.tunion
+  type poly = Rust_typed.Tag.tpolytype
   type ptr_meta = [ sint | sptr_t ]
   type scalar = [ sint | sfloat | sptr_f | poly ]
   type aggregate = [ tuple | enum | union ]

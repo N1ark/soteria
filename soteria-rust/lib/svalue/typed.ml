@@ -23,7 +23,7 @@ type ('sc, 'ag, 'ofs, 'sz) block_raw = {
 (* [Make_transparent] exposes [t]/[ty] as the underlying untyped svalue, so the
    extension helpers below can be written without ghost-typing ceremony. The
    [typed.mli] re-seals [t]/[ty] as abstract for the rest of Soteria Rust. *)
-module Self = Iface.Typed_v.Make_transparent (Rust_stack.L)
+module Self = Iface.Typed.Make_transparent (Rust_stack.L)
 include Self
 
 module T = struct
@@ -105,11 +105,11 @@ let cast_error v ty = raise (CastError (v, ty, get_ty v))
 let todo_migration msg = raise (TypedMigration msg)
 
 let float_precision :
-    Values.float_type -> Soteria.Bv_values.Svalue.FloatPrecision.t =
+    Values.float_type -> Soteria.Bv_values.Bv_base.FloatPrecision.t =
   Rust_charon.float_precision
 
 let of_float_precision :
-    Soteria.Bv_values.Svalue.FloatPrecision.t -> Values.float_type = function
+    Soteria.Bv_values.Bv_base.FloatPrecision.t -> Values.float_type = function
   | F16 -> F16
   | F32 -> F32
   | F64 -> F64

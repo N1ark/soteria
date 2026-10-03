@@ -10,5 +10,5 @@ module K :
   Iface.Kanon_fns.Kanon_fns with type t = Types.t and type ty = Types.ty =
   Rust_lang
 
-module L = Iface.Lang_v.Make (Types) (K)
+module L = Iface.Lang_make.Make (Types) (K)
 module Lang = L.V

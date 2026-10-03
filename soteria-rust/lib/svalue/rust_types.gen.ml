@@ -6,25 +6,25 @@ type var = Soteria.Symex.Var.t
 
 and float = Floatml.AnyFloat.t
 
-and checked = Soteria.Bv_values.Svalue.checked = {
+and checked = Soteria.Bv_values.Bv_base.checked = {
   signed : bool;
   unsigned : bool;
 }
 
-and fp = Soteria.Bv_values.Svalue.FloatPrecision.t =
+and fp = Soteria.Bv_values.Bv_base.FloatPrecision.t =
   | F16
   | F32
   | F64
   | F128
 
-and rm = Soteria.Bv_values.Svalue.RoundingMode.t =
+and rm = Soteria.Bv_values.Bv_base.RoundingMode.t =
   | NearestTiesToEven
   | Truncate
   | Ceil
   | Floor
   | NearestTiesToAway
 
-and fc = Soteria.Bv_values.Svalue.FloatClass.t =
+and fc = Soteria.Bv_values.Bv_base.FloatClass.t =
   | Normal
   | Subnormal
   | Zero

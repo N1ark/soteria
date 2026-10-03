@@ -1,5 +1,5 @@
-(* The host primitives of the rules ([rules/*.kn]), ported from [Prims] and the
-   constants of [Svalue.Make] (soteria/lib/bv_values/svalue.ml), over the types
+(* The host primitives of the rules ([rules/*.kn]), ported from the [Prims] and
+   the constants of the first generation of the value language, over the types
    that Kanon generates ([Bv_types]).
 
    The rule functions ([Bv_rules]) call this module and check it against the
@@ -12,17 +12,18 @@ open Rust_types
 module L = Soteria.Logs.Import.L
 module Var = Soteria.Symex.Var
 module F = Floatml.AnyFloat
-module FloatPrecision = Soteria.Bv_values.Svalue.FloatPrecision
-module FloatClass = Soteria.Bv_values.Svalue.FloatClass
+module FloatPrecision = Soteria.Bv_values.Bv_base.FloatPrecision
+module FloatClass = Soteria.Bv_values.Bv_base.FloatClass
 
 let sort_by_tag (l : t list) = List.sort (fun l r -> Int.compare l.tag r.tag) l
 
 (* {1 Constants}
 
    The order of their creation is the order of their tags, which decides the
-   order of the operands of commutative operators: it is that of the application
-   of the old [Svalue.Make] functor: [v_true], [v_false], the zero literals of 1
-   to 256 bits, then the one literals of 1 to 256 bits. *)
+   order of the operands of commutative operators: it is that of the first
+   generation of the value language, which the pp output of the tools depends
+   on: [v_true], [v_false], the zero literals of 1 to 256 bits, then the one
+   literals of 1 to 256 bits. *)
 
 let v_true = node (Bool true) TBool
 let v_false = node (Bool false) TBool
@@ -257,12 +258,12 @@ let f_round = F.round
 let f_convert = F.convert
 
 let f_to_int rounding signed size f =
-  match Soteria.Bv_values.Svalue.int_size_of_size (Z.to_int size) with
+  match Soteria.Bv_values.Bv_base.int_size_of_size (Z.to_int size) with
   | Some int_size -> F.float2int f int_size rounding ~signed
   | None -> None
 
 let f_of_int rounding signed fp size z =
-  match Soteria.Bv_values.Svalue.int_size_of_size (Z.to_int size) with
+  match Soteria.Bv_values.Bv_base.int_size_of_size (Z.to_int size) with
   | Some int_size -> Some (F.int2float z int_size fp rounding ~signed)
   | None -> None
 

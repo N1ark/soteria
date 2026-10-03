@@ -6,25 +6,25 @@ type var = Symex.Var.t
 
 and float = Floatml.AnyFloat.t
 
-and checked = Svalue_ast.checked = {
+and checked = Bv_base.checked = {
   signed : bool;
   unsigned : bool;
 }
 
-and fp = Svalue_ast.FloatPrecision.t =
+and fp = Bv_base.FloatPrecision.t =
   | F16
   | F32
   | F64
   | F128
 
-and rm = Svalue_ast.RoundingMode.t =
+and rm = Bv_base.RoundingMode.t =
   | NearestTiesToEven
   | Truncate
   | Ceil
   | Floor
   | NearestTiesToAway
 
-and fc = Svalue_ast.FloatClass.t =
+and fc = Bv_base.FloatClass.t =
   | Normal
   | Subnormal
   | Zero

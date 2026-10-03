@@ -11,7 +11,7 @@ type ('sc, 'ag, 'ofs, 'sz) block_raw = {
 (* The extended ghost-typed interface, sharing [Solver_value]'s [t]/[ty] so
    values flow between the interpreter and the symex monad. *)
 include
-  Iface.Typed_intf_v.S
+  Iface.Typed_intf.S
     with module Svalue = Rust_stack.L.Svalue
      and module Eval = Rust_stack.L.Eval
 

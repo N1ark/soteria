@@ -8,14 +8,14 @@
             |
             |  Value_lang.Make (T) (K)            : Base   (this file)
             v
-      Pp_v.Make (Base)  : pp       Eval_v.Make (Base) : eval
+      Pp.Make (Base)  : pp       Eval.Make (Base) : eval
             |                                |
-            |  Lang_v.Make (T) (K)           |          (lang_v.ml)
+            |  Lang_make.Make (T) (K)           |          (lang_make.ml)
             v                                v
       Value_lang.S = Base + pp + eval   (a subtype of Solver_lang.S)
             |
             v
-      Svalue_sugar_v, Expr_v, Typed_v, and Analyses / Bv_solver / Encoding
+      Svalue_sugar, Expr, Typed, and Analyses / Bv_solver / Encoding
     v}
 
     {!Base} and {!S} differ in [pp] and [eval] only: they are produced by the
@@ -45,9 +45,9 @@ module type Term = sig
   val hash_ty : ty -> int
 end
 
-(** What the generic drivers consume ({!Pp_v}, {!Eval_v}): the identity of
-    terms, the functions of {!Kanon_fns} ([K]), and the members of
-    {!Solver_lang.S} that need nothing more than these. *)
+(** What the generic drivers consume ({!Pp}, {!Eval}): the identity of terms,
+    the functions of {!Kanon_fns} ([K]), and the members of {!Solver_lang.S}
+    that need nothing more than these. *)
 module type Base = sig
   type t
   type ty
@@ -153,10 +153,10 @@ end
 module type S = sig
   include Base
 
-  (** The pretty-printer of terms, {!Pp_v}. *)
+  (** The pretty-printer of terms, {!Pp}. *)
   val pp : t Fmt.t
 
-  (** The normaliser, {!Eval_v}: see {!Solver_lang.S.eval}. *)
+  (** The normaliser, {!Eval}: see {!Solver_lang.S.eval}. *)
   val eval : ?force:bool -> ?eval_var:(t -> Var.t -> ty -> t) -> t -> t
 end
 

@@ -1,6 +1,4 @@
 ./node_modules
-soteria/lib/bv_values/svalue_rules.gen.ml
-soteria/lib/bv_values/lang_check.gen.ml
 soteria/lib/bv_values/bv_types.gen.ml
 soteria/lib/bv_values/bv_rules.gen.ml
 soteria-rust/lib/svalue/rust_types.gen.ml

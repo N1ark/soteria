@@ -12,8 +12,6 @@
     [Ext.pp/encode_*]) are not here any more: they are the [extend fn] cases of
     its language ({!Kanon_fns.Kanon_fns}). *)
 
-open Deps
-
 module Make_transparent (L : Typed_intf_v.Language) : sig
   include
     Typed_intf_v.S
@@ -22,7 +20,7 @@ module Make_transparent (L : Typed_intf_v.Language) : sig
        and type 'a t = L.V.t
        and type 'a ty = L.V.ty
 end = struct
-  module L_logs = Soteria.Logs.Import.L
+  module L_logs = Logs.Import.L
   module Svalue = L.Svalue
   module Eval = L.Eval
   module Lang : Solver_lang.S with type t = L.V.t and type ty = L.V.ty = L.V

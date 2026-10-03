@@ -6,7 +6,7 @@
 
    Everything here is host infrastructure, not a simplification rule: every
    function and primitive is [@no_lean]. The host types are those of
-   [View_host] (soteria/tests/bv_new/iface/view_host.ml), declared again with
+   [View_host] (../view_host.ml), declared again with
    [@ocaml], with the same constructors in the same order, so that the
    generated types re-export them and OCaml checks that they agree. [nat] and
    [int] are [Z.t] in the generated OCaml. The constructor names are global:

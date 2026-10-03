@@ -9,11 +9,11 @@
    sorts of their operands. *)
 
 open Bv_types
-module L = Soteria.Logs.Import.L
-module Var = Soteria.Symex.Var
+module L = Logs.Import.L
+module Var = Symex.Var
 module F = Floatml.AnyFloat
-module FloatPrecision = Soteria.Bv_values.Svalue.FloatPrecision
-module FloatClass = Soteria.Bv_values.Svalue.FloatClass
+module FloatPrecision = Svalue_ast.FloatPrecision
+module FloatClass = Svalue_ast.FloatClass
 
 let sort_by_tag (l : t list) = List.sort (fun l r -> Int.compare l.tag r.tag) l
 
@@ -224,12 +224,12 @@ let f_round = F.round
 let f_convert = F.convert
 
 let f_to_int rounding signed size f =
-  match Soteria.Bv_values.Svalue.int_size_of_size (Z.to_int size) with
+  match Svalue_ast.int_size_of_size (Z.to_int size) with
   | Some int_size -> F.float2int f int_size rounding ~signed
   | None -> None
 
 let f_of_int rounding signed fp size z =
-  match Soteria.Bv_values.Svalue.int_size_of_size (Z.to_int size) with
+  match Svalue_ast.int_size_of_size (Z.to_int size) with
   | Some int_size -> Some (F.int2float z int_size fp rounding ~signed)
   | None -> None
 

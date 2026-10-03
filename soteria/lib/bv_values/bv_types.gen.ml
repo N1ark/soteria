@@ -2,29 +2,29 @@
 
 [@@@warning "-a"]
 
-type var = Soteria.Symex.Var.t
+type var = Symex.Var.t
 
 and float = Floatml.AnyFloat.t
 
-and checked = Soteria.Bv_values.Svalue.checked = {
+and checked = Svalue_ast.checked = {
   signed : bool;
   unsigned : bool;
 }
 
-and fp = Soteria.Bv_values.Svalue.FloatPrecision.t =
+and fp = Svalue_ast.FloatPrecision.t =
   | F16
   | F32
   | F64
   | F128
 
-and rm = Soteria.Bv_values.Svalue.RoundingMode.t =
+and rm = Svalue_ast.RoundingMode.t =
   | NearestTiesToEven
   | Truncate
   | Ceil
   | Floor
   | NearestTiesToAway
 
-and fc = Soteria.Bv_values.Svalue.FloatClass.t =
+and fc = Svalue_ast.FloatClass.t =
   | Normal
   | Subnormal
   | Zero
@@ -156,9 +156,9 @@ let rec equal_t (a : t) (b : t) = Int.equal a.tag b.tag
 
 and hash_t (a : t) = a.tag
 
-and equal_var (a : var) (b : var) = Soteria.Symex.Var.equal a b
+and equal_var (a : var) (b : var) = Symex.Var.equal a b
 
-and hash_var (a : var) = Soteria.Symex.Var.hash a
+and hash_var (a : var) = Symex.Var.hash a
 
 and equal_float (a : float) (b : float) = Floatml.AnyFloat.equal a b
 

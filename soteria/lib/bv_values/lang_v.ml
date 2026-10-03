@@ -1,5 +1,5 @@
 (** The composition of the generic layers over a generated language: the glue
-    that each language ([Bv_new] for C, a Rust module for soteria-rust) applies.
+    that each language ([Lang] for C, a Rust module for soteria-rust) applies.
 
     {v
       module L = Lang_v.Make (Types) (K)         (* a Typed_intf_v.Language *)

@@ -2,7 +2,6 @@
     concrete record of its terms ({!Term}), the view that the generic functors
     consume ({!Base}), and the complete language ({!S}) that the solver and the
     typed layer consume.
-
     {v
       Types (generated)          satisfies Term (concrete record)
       Rules + prims + glue       satisfy Kanon_fns        (kanon_fns.ml)

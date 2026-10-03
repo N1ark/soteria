@@ -17,6 +17,7 @@
 [@@@lean_param "FS" "FloatSem"]
 [@@@ocaml_prims "Bv_prims"]
 [@@@ocaml_types "Bv_types"]
+[@@@ocaml_rules "Bv_rules"]
 
 
 use builtin "bool"

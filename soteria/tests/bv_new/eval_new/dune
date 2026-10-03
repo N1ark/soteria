@@ -1,3 +1,0 @@
-(test
- (name test_eval_new)
- (libraries new_stack bv_new soteria alcotest))

@@ -1,4 +1,4 @@
-; The cost of the arrays (lists in the new language, [Iarray] in the old one).
+; The cost of the arrays (both [Iarray]: old hand-written values, new Kanon language).
 
 (rule
  (targets old_side.ml)
@@ -23,7 +23,7 @@
 (executable
  (name bench)
  (modules old_side new_side bench)
- (libraries rust_new soteria soteria-rust charon fmt iter zarith)
+ (libraries legacy_svalue soteria soteria-rust charon fmt iter zarith)
  (flags
   (:standard -open Soteria.Bv_values -w +a-4-9-26-27-32..42-44-45-48-70)))
 

@@ -13,7 +13,7 @@ let () =
   let o = Old_side.run ~n ~reps in
   let w = New_side.run ~n ~reps in
   Printf.printf "arrays of %d elements; seconds per call (CPU time)\n" n;
-  Printf.printf "%-52s %12s %12s %8s\n" "operation" "old (Iarray)" "new (list)"
+  Printf.printf "%-52s %12s %12s %8s\n" "operation" "old (Iarray)" "new (Kanon)"
     "new/old";
   List.iter2
     (fun (name, a) (_, b) ->

@@ -39,9 +39,9 @@ let all =
     {
       k = 5;
       name = "array_field_of of an array reads the next element";
-      find = "| { kind = Array (vs); _ } -> (Rust_prims.array_get vs idx)";
+      find = "| { kind = Array (vs); _ } -> (Rust_prims.iarray_get vs idx)";
       replace =
-        "| { kind = Array (vs); _ } -> (Rust_prims.array_get vs (if Mut.on 5 \
+        "| { kind = Array (vs); _ } -> (Rust_prims.iarray_get vs (if Mut.on 5 \
          then Z.succ idx else idx))";
     };
     {
@@ -55,10 +55,10 @@ let all =
     {
       k = 7;
       name = "an array is built with a wrong length in its sort";
-      find = "(TArray (elem, (Rust_prims.list_length vs)))";
+      find = "(TArray (elem, (Rust_prims.iarray_length vs)))";
       replace =
-        "(TArray (elem, (if Mut.on 7 then Z.succ (Rust_prims.list_length vs) \
-         else Rust_prims.list_length vs)))";
+        "(TArray (elem, (if Mut.on 7 then Z.succ (Rust_prims.iarray_length vs) \
+         else Rust_prims.iarray_length vs)))";
     };
     {
       k = 8;

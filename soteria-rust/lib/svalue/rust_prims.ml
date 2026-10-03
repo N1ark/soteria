@@ -1,11 +1,80 @@
 (* The primitives of the rules of the language (rules/*.kn), checked against
-   their declarations by the generated rules: the shared ones (base_prims.ml and
-   base_view_prims.ml, a copy of the primitives of the C language over these
-   types, with the patches marked PATCH) and those of the rust module
-   (rules/rust.kn), which read the crate, raise the exceptions of the old code,
-   and give the heads of the SMT encoding. *)
+   their declarations by the generated rules: the shared ones ([Prim.Make], over
+   these types) and those of the rust module (rules/rust.kn), which read the
+   crate, raise the exceptions of the old code, and give the heads of the SMT
+   encoding. *)
 
-include Base_prims
+include Iface.Prim.Make (struct
+  include Rust_types
+  module Var = Soteria.Symex.Var
+
+  let t_bool = TBool
+  let t_bv n = TBitVector n
+  let t_ptr n = TPointer n
+  let k_bool b = Bool b
+  let k_bitvec z = BitVec z
+  let k_ptr l o = Op2 (Ptr, l, o)
+  let k_seq l = Seq l
+
+  let size_of = function
+    | TBitVector n | TPointer n | TLoc n -> n
+    | _ -> Soteria.Logs.Import.L.failwith "Not a bit value"
+
+  let fp_of_ty = function
+    | TFloat fp -> fp
+    | _ -> Soteria.Logs.Import.L.failwith "Unsupported float type"
+
+  let used_binders_iter_vars (sv : t) (f : Var.t * ty -> unit) : unit =
+    let rec aux ~ignore (sv : t) : unit =
+      let aux' = aux ~ignore in
+      match sv.kind with
+      | Var v -> if Var.Set.mem v ignore then () else f (v, sv.ty)
+      | Bool _ | Float _ | BitVec _ | LocLit _ | PolyVal _ | PtrMeta MetaUnit ->
+          ()
+      | Op2 (_, l, r) ->
+          aux' l;
+          aux' r
+      | Op1 (_, sv) -> aux' sv
+      | Op3 (_, a, b, c) ->
+          aux' a;
+          aux' b;
+          aux' c
+      | OpN (_, l) | Seq l -> List.iter aux' l
+      | Exists (vs, sv) ->
+          let ignore =
+            List.fold_left (fun ignore (v, _) -> Var.Set.add v ignore) ignore vs
+          in
+          aux ~ignore sv
+      | ThinPtr { ptr; psize; palign; _ } ->
+          aux' ptr;
+          aux' psize;
+          aux' palign
+      | FullPtr (p, m) ->
+          aux' p;
+          aux' m
+      | PtrMeta (MetaLen l | MetaVTable l) -> aux' l
+      | Enum (_, vs) | Tuple vs -> List.iter aux' vs
+      | Array vs -> Iarray.iter aux' vs
+      | Union bs ->
+          List.iter
+            (fun { bvalue; boffset; bsize } ->
+              aux' (match bvalue with Scalar v | Aggregate (v, _) -> v);
+              aux' boffset;
+              aux' bsize)
+            bs
+      | ThinPtrPart (_, a)
+      | FullPtrInner a
+      | FullPtrMeta a
+      | PtrMetaAs (_, a)
+      | Field (_, a)
+      | VariantField (_, _, a)
+      | IsVariant (_, a)
+      | ArrayField (_, a) ->
+          aux' a
+    in
+    aux ~ignore:Var.Set.empty sv
+end)
+
 open Rust_types
 module Types = Charon.Types
 

@@ -9,6 +9,15 @@ module FloatPrecision = Bv_base.FloatPrecision
 module FloatClass = Bv_base.FloatClass
 module RoundingMode = Bv_base.RoundingMode
 
+(* What [ppx_deriving show] generated for the sorts: [(TBitVector 32)] *)
+let rec pp_ty ft = function
+  | TBool -> Format.pp_print_string ft "TBool"
+  | TFloat p -> Format.fprintf ft "(@[<2>TFloat@ %a@])" FloatPrecision.pp p
+  | TLoc n -> Format.fprintf ft "(@[<2>TLoc@ %d@])" n
+  | TPointer n -> Format.fprintf ft "(@[<2>TPointer@ %d@])" n
+  | TSeq s -> Format.fprintf ft "(@[<2>TSeq@ %a@])" pp_ty s
+  | TBitVector n -> Format.fprintf ft "(@[<2>TBitVector@ %d@])" n
+
 let pp_signed ft b = Fmt.string ft (if b then "s" else "u")
 
 let pp_checked ft = function
@@ -18,12 +27,12 @@ let pp_checked ft = function
   | { signed = true; unsigned = true } -> Fmt.string ft "ck"
 
 let pp_bv ft (ty : ty) bv =
-  let size = Bv_prims.vsize ty in
+  let size = Bv_prims.size_of ty in
   if size mod 4 <> 0 then
     Fmt.pf ft "0b%s" (Z.format ("0" ^ string_of_int size ^ "b") bv)
   else Fmt.pf ft "0x%s" (Z.format ("0" ^ string_of_int (size / 4) ^ "x") bv)
 
-let pp_binder ft (v, ty) = Fmt.pf ft "V%a:%a" Var.pp v Bv_prims.pp_ty ty
+let pp_binder ft (v, ty) = Fmt.pf ft "V%a:%a" Var.pp v pp_ty ty
 
 (* The variables of the list, if they all are, and their range if their numbers
    are contiguous *)

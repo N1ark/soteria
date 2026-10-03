@@ -191,7 +191,7 @@ struct
   include Rules
   include Leaves
 
-  let pp_ty = Prims.pp_ty
+  let pp_ty = Bv_pp.pp_ty
   let pp = Bv_pp.pp
 end
 

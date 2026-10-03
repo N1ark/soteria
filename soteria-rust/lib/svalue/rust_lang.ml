@@ -29,5 +29,5 @@ let mk_float f = node (Float f) (TFloat (Floatml.AnyFloat.precision f))
 let mk_loc n z = node (LocLit z) (TLoc n)
 let mk_ptr = Prims.mk_ptr
 let mk_seq = Prims.mk_seq
-let pp_ty = Prims.pp_ty
+let pp_ty = Rust_encoding.pp_ty
 let pp = Rust_pp.pp

@@ -92,10 +92,10 @@ let hash _ = hash
 let[@inline] untyped_list l = l
 let type_checked x ty = if equal_ty (L.V.type_of x) ty then Some x else None
 let cast_checked = type_checked
-let cast_float x = if is_float (L.V.type_of x) then Some x else None
+let cast_float x = if G.Float.is_tfloat (L.V.type_of x) then Some x else None
 
 let cast_int x =
-  if is_bv (L.V.type_of x) then Some (x, size_of (L.V.type_of x)) else None
+  Option.map (fun n -> (x, n)) (G.Bitvec.as_tbitvector (L.V.type_of x))
 
 let size_of_int x = size_of (L.V.type_of x)
 

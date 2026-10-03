@@ -7,7 +7,7 @@
   
   let test (x : [< Typed.T.any ] Typed.t) (y : [< Typed.T.any ] Typed.t) =
     match Typed.get_ty x with
-    | TExtension TFullPtr -> (
+    | TFullPtr -> (
         let x =
           (Typed.cast x : [< Typed.T.sptr_f ] Typed.t)
             [@@warning "-unused-var"]

@@ -35,19 +35,19 @@
             [@@warning "-unused-var"]
         in
         use_sptr x
-    | TExtension TFullPtr ->
+    | TFullPtr ->
         let x =
           (Typed.cast x : [< Typed.T.sptr_f ] Typed.t)
             [@@warning "-unused-var"]
         in
         use_sptr_f x
-    | TExtension TThinPtr ->
+    | TThinPtr ->
         let x =
           (Typed.cast x : [< Typed.T.sptr_t ] Typed.t)
             [@@warning "-unused-var"]
         in
         use_sptr_t x
-    | TExtension (TEnum _) ->
+    | TEnum _ ->
         let x =
           (Typed.cast x : [< Typed.T.enum ] Typed.t)
             [@@warning "-unused-var"]

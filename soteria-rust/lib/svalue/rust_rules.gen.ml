@@ -219,8 +219,11 @@ module _ : sig
   val nth_term : (t list) -> Z.t -> t
   val nth_ty : (ty list) -> Z.t -> ty
   val set_nth : (t list) -> Z.t -> t -> (t list)
-  val array_get : (t list) -> Z.t -> t
-  val array_set : (t list) -> Z.t -> t -> (t list)
+  val iarray_get : (t iarray) -> Z.t -> t
+  val iarray_set : (t iarray) -> Z.t -> t -> (t iarray)
+  val iarray_length : (t iarray) -> Z.t
+  val iarray_to_list : (t iarray) -> (t list)
+  val iarray_of_list : (t list) -> (t iarray)
   val list_length : (t list) -> Z.t
   val enum_field : variant_id -> variant_id -> (t list) -> Z.t -> t
   val enum_fields : variant_id -> variant_id -> (t list) -> (t list)
@@ -3451,7 +3454,7 @@ let operands (v : t) : (t list) =
     | { kind = PtrMeta (m); _ } -> (meta_operands m)
     | { kind = Enum (_, vs); _ } -> vs
     | { kind = Tuple (vs); _ } -> vs
-    | { kind = Array (vs); _ } -> vs
+    | { kind = Array (vs); _ } -> (Rust_prims.iarray_to_list vs)
     | { kind = Union (bs); _ } -> (block_operands bs)
     | { kind = PolyVal (_); _ } -> []
     | { kind = ThinPtrPart (_, a); _ } -> (a :: [])
@@ -3472,7 +3475,7 @@ let[@inline] array_elem_ty (s : ty) : ty =
 
 let[@inline] array_field_of (idx : Z.t) (v : t) : t =
     (match v with
-    | { kind = Array (vs); _ } -> (Rust_prims.array_get vs idx)
+    | { kind = Array (vs); _ } -> (Rust_prims.iarray_get vs idx)
     | _ -> (node (ArrayField ((Z.to_int idx), v)) (array_elem_ty v.ty))
     )
 
@@ -3520,8 +3523,8 @@ let[@inline] is_variant (var : variant_id) (v : t) : t =
     | _ -> (node (IsVariant (var, v)) TBool)
     )
 
-let[@inline] mk_array_of_svty (elem : ty) (vs : (t list)) : t =
-    (node (Array (vs)) (TArray (elem, (Rust_prims.list_length vs))))
+let[@inline] mk_array_of_svty (elem : ty) (vs : (t iarray)) : t =
+    (node (Array (vs)) (TArray (elem, (Rust_prims.iarray_length vs))))
 
 let[@inline] mk_enum (adt : decl_ref) (var : variant_id) (vs : (t list)) : t =
     (node (Enum (var, vs)) (TEnum (adt)))
@@ -3948,7 +3951,8 @@ let rebuild (v : t) (cs : (t list)) : t =
       )
     | { kind = Enum (var, _); _ } -> (mk_enum (t_as_enum v.ty) var cs)
     | { kind = Tuple (_); _ } -> (mk_tuple cs)
-    | { kind = Array (_); _ } -> (mk_array_of_svty (array_elem_ty v.ty) cs)
+    | { kind = Array (_); _ } ->
+      (mk_array_of_svty (array_elem_ty v.ty) (Rust_prims.iarray_of_list cs))
     | { kind = Union (bs); _ } ->
       (mk_union (t_as_union v.ty) (rebuild_blocks v bs cs))
     | { kind = PolyVal (id); _ } ->
@@ -4603,11 +4607,10 @@ let set_field_of_variant (var : variant_id) (idx : Z.t) (x : t) (v : t) : t =
     (let vs = (Rust_prims.set_nth (as_enum_of_variant var v) idx x) in
     (mk_enum (t_as_enum v.ty) var vs))
 
-let[@inline] mk_array (elem : rty) (vs : (t list)) : t =
-    (match vs with
-    | [] -> (mk_array_of_svty (Rust_prims.ty_of_rust elem) vs)
-    | (first :: _) -> (mk_array_of_svty first.ty vs)
-    )
+let mk_array (elem : rty) (vs : (t iarray)) : t =
+    (if ((Z.equal (Rust_prims.iarray_length vs) Z.zero))
+    then (mk_array_of_svty (Rust_prims.ty_of_rust elem) vs)
+    else (mk_array_of_svty (Rust_prims.iarray_get vs Z.zero).ty vs))
 
 let rec array_fields_from (i : Z.t) (n : Z.t) (v : t) : (t list) =
     (if (Z.geq i n)
@@ -4615,15 +4618,16 @@ let rec array_fields_from (i : Z.t) (n : Z.t) (v : t) : (t list) =
     else (let f = (array_field_of i v) in
          (f :: (array_fields_from (Z.add i Z.one) n v))))
 
-let[@inline] as_array (v : t) : (t list) =
+let[@inline] as_array (v : t) : (t iarray) =
     (match v with
     | { kind = Array (vs); _ } -> vs
-    | _ -> (array_fields_from Z.zero (array_length v.ty) v)
+    | _ ->
+      (Rust_prims.iarray_of_list (array_fields_from Z.zero (array_length v.ty) v))
     )
 
 let set_array_field (idx : Z.t) (x : t) (v : t) : t =
     (let vs = (as_array v) in
-    (let vs2 = (Rust_prims.array_set vs idx x) in
+    (let vs2 = (Rust_prims.iarray_set vs idx x) in
     (mk_array_of_svty (array_elem_ty v.ty) vs2)))
 
 

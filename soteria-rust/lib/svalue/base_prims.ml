@@ -64,7 +64,8 @@ let rust_operands (k : kind) : t list =
   | FullPtr (p, m) -> [ p; m ]
   | PtrMeta (MetaLen l | MetaVTable l) -> [ l ]
   | PtrMeta MetaUnit | PolyVal _ -> []
-  | Enum (_, vs) | Tuple vs | Array vs -> vs
+  | Enum (_, vs) | Tuple vs -> vs
+  | Array vs -> Soteria.Soteria_std.Iarray.to_list vs
   | Union bs ->
       List.concat_map
         (fun { bvalue; boffset; bsize } ->

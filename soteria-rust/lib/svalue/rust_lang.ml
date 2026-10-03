@@ -1,7 +1,7 @@
-(* The standalone stack of the Rust language: its types ([Types], generated),
-   the primitives of its rules ([Prims]), its rules ([Rules], generated), and
-   here the constructors and the printing that Kanon cannot express (the
-   analogue of Bv_new for the C language), composed as a [Kanon_fns]. *)
+(* The stack of the Rust language: its types ([Types], generated), the
+   primitives of its rules ([Prims]), its rules ([Rules], generated), and here
+   the constructors and the printing that Kanon cannot express (the analogue of
+   [Bv_values.Lang] for the C language), composed as a [Kanon_fns]. *)
 
 module Types = Rust_types
 module Prims = Rust_prims

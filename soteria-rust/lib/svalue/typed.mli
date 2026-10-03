@@ -1,10 +1,4 @@
-(* The interface of rust_typed.ml, which is that of
-   soteria-rust/lib/svalue/typed.mli over the stack of the new language: only
-   the first lines differ (the blocks of a union are records of this file; the
-   generic interface replaces the one with [Ext]). *)
-
 open Charon
-module Ptr_tag = Soteria_rust_lib.Svalue.Ptr_tag
 
 type ('sc, 'ag) block_value_raw = Scalar of 'sc | Aggregate of 'ag * Types.ty
 

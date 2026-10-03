@@ -1,8 +1,6 @@
 (* The modules of Soteria's generic host stack that this directory uses, under
-   one name each (they were in soteria/tests/bv_new/iface, library [bv_iface],
-   while the stack of the C language was under test). Nothing else of this
-   directory names them; the dune flags [-open Soteria.Bv_values] make the
-   generated types find [View_host]. *)
+   one name each. Nothing else of this directory names them; the generated types
+   find [View_host] through the [-open Soteria.Bv_values] of the library. *)
 
 module View_host = Soteria.Bv_values.View_host
 module Kanon_fns = Soteria.Bv_values.Kanon_fns

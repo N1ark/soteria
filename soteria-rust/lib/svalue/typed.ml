@@ -1,26 +1,14 @@
-(* The typed layer of the Rust language over the stack of this directory: a port
-   of soteria-rust/lib/svalue/typed.ml.
-
-   What changed with respect to the old file, and nothing else: -
-   [Make_transparent (Ext) ()] is [Typed_v.Make_transparent (L)] over the
-   generic layers of the language ([Rust_stack.L]); - the smart constructors
-   [Ext0.mk_tuple ~build ...] are the functions of the generated rules,
-   [Rust_stack.K] ([mk_tuple], [field_of], ...), which build nodes themselves:
-   no [( <| )]; - [TExtension X] is the sort [X], and [Extension (ThinPtr p)],
-   [Extension (Union bs)], [Extension (PolyVal id)] are the nodes [ThinPtr p],
-   [Union bs], [PolyVal id]: the three places that matched them (the functions
-   [_set_ptr], [tag_of], [as_union] and [as_type_var]) match the generated
-   constructors directly; - the arrays are lists in the language (an [Iarray]
-   has no equivalent in Kanon): [Adt.mk_array], [as_array] convert them at the
-   boundary; - the blocks of a union are the records of the generated types; the
-   polymorphic records of the interface convert to them at the boundary. *)
+(* The typed layer of the Rust language, over the generic stack of Soteria
+   ([Rust_stack.L]) and the smart constructors of the generated rules
+   ([Rust_lang]), which build the nodes themselves. [TExtension X] of the old
+   extension is the sort [X], and the nodes [ThinPtr], [Union] and [PolyVal] are
+   matched directly (functions [_set_ptr], [tag_of], [as_union] and
+   [as_type_var]). The blocks of a union are the records of the generated types;
+   the polymorphic records of the interface convert to them at the boundary. *)
 
 open Charon
 open Soteria.Soteria_std
-open Soteria_rust_lib.Common.Charon_util
-module Crate = Soteria_rust_lib.Crate
-module L = Soteria_rust_lib.L
-module Ptr_tag = Soteria_rust_lib.Svalue.Ptr_tag
+open Common.Charon_util
 module R = Rust_types
 module K = Rust_lang
 
@@ -34,8 +22,7 @@ type ('sc, 'ag, 'ofs, 'sz) block_raw = {
 
 (* [Make_transparent] exposes [t]/[ty] as the underlying untyped svalue, so the
    extension helpers below can be written without ghost-typing ceremony. The
-   [rust_typed.mli] re-seals [t]/[ty] as abstract for the rest of Soteria
-   Rust. *)
+   [typed.mli] re-seals [t]/[ty] as abstract for the rest of Soteria Rust. *)
 module Self = Iface.Typed_v.Make_transparent (Rust_stack.L)
 include Self
 
@@ -147,11 +134,11 @@ let t_tuple tys : [> T.tuple ] ty = R.TTuple tys
 let t_array ty n : [> T.tuple ] ty = R.TArray (ty, n)
 
 let t_enum adt : [> T.enum ] ty =
-  assert (Soteria_rust_lib.Common.Charon_util.tyref_is_substituted adt);
+  assert (Common.Charon_util.tyref_is_substituted adt);
   R.TEnum adt
 
 let t_union adt : [> T.union ] ty =
-  assert (Soteria_rust_lib.Common.Charon_util.tyref_is_substituted adt);
+  assert (Common.Charon_util.tyref_is_substituted adt);
   R.TUnion adt
 
 let cast_checked ~ty v =
@@ -488,8 +475,8 @@ module Adt = struct
 
   (** {2 Arrays} *)
 
-  let mk_array elem_ty arr = K.mk_array elem_ty (Iarray.to_list arr)
-  let as_array v = Iarray.of_list (K.as_array v)
+  let mk_array elem_ty arr = K.mk_array elem_ty arr
+  let as_array v = K.as_array v
   let array_field_of idx v = K.array_field_of (Z.of_int idx) v
   let set_array_field idx f v = K.set_array_field (Z.of_int idx) f v
 

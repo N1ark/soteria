@@ -5,9 +5,9 @@
    [X]. *)
 
 open Charon
-open Soteria_rust_lib.Common.Charon_util
-module L = Soteria_rust_lib.L
-module Crate = Soteria_rust_lib.Crate
+open Common.Charon_util
+module L = L
+module Crate = Crate
 module R = Rust_types
 
 let float_precision :

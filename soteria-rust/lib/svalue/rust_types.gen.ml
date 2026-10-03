@@ -69,6 +69,8 @@ and tyvar_id = Charon.Types.type_var_id
 
 and rty = Charon.Types.ty
 
+and 'a iarray = 'a Soteria.Soteria_std.Iarray.t
+
 and ptag = Rust_host.ptag
 
 and thin = {
@@ -115,7 +117,7 @@ and kind =
   | PtrMeta of ptr_meta
   | Enum of variant_id * (t list)
   | Tuple of (t list)
-  | Array of (t list)
+  | Array of (t iarray)
   | Union of (block list)
   | PolyVal of tyvar_id
   | ThinPtrPart of ptr_part * t
@@ -472,7 +474,7 @@ and equal_kind (a : kind) (b : kind) =
   | Enum (a1, a2), Enum (b1, b2) ->
       equal_variant_id a1 b1 && (List.equal equal_t) a2 b2
   | Tuple a1, Tuple b1 -> (List.equal equal_t) a1 b1
-  | Array a1, Array b1 -> (List.equal equal_t) a1 b1
+  | Array a1, Array b1 -> (Soteria.Soteria_std.Iarray.equal equal_t) a1 b1
   | Union a1, Union b1 -> (List.equal equal_block) a1 b1
   | PolyVal a1, PolyVal b1 -> equal_tyvar_id a1 b1
   | ThinPtrPart (a1, a2), ThinPtrPart (b1, b2) ->
@@ -523,8 +525,7 @@ and hash_kind (a : kind) =
       hash_combine (11)
         ((List.fold_left (fun acc x -> hash_combine acc (hash_t x)) 0) a1)
   | Array a1 ->
-      hash_combine (12)
-        ((List.fold_left (fun acc x -> hash_combine acc (hash_t x)) 0) a1)
+      hash_combine (12) ((Soteria.Soteria_std.Iarray.hash hash_t) a1)
   | Union a1 ->
       hash_combine (13)
         ((List.fold_left (fun acc x -> hash_combine acc (hash_block x)) 0) a1)

@@ -58,8 +58,8 @@ let rec pp_ty ft = function
       Format.fprintf ft "(@[<2>TExtension@ %a@])" pp_ext_ty x
 
 and pp_ext_ty ft = function
-  | TEnum ty -> Soteria_rust_lib.Crate.pp_type_decl_ref ft ty
-  | TUnion ty -> Soteria_rust_lib.Crate.pp_type_decl_ref ft ty
+  | TEnum ty -> Crate.pp_type_decl_ref ft ty
+  | TUnion ty -> Crate.pp_type_decl_ref ft ty
   | TTuple tys -> Fmt.(brackets (list ~sep:semi pp_ty)) ft tys
   | TArray (ty, n) -> Fmt.pf ft "[%a; %a]" pp_ty ty Z.pp_print n
   | TThinPtr -> Fmt.string ft "TThinPtr"
@@ -77,7 +77,9 @@ let distinct_range (l : t list) : (Z.t * Z.t) option =
     | Some l, { kind = Var v; _ } :: rest -> aux (Some (Var.to_int v :: l), rest)
     | _, _ -> None
   in
-  Option.bind
+  (* PATCH (Rust): [Stdlib], as this library opens [Soteria_std], whose
+     [Option.bind] takes its arguments the other way round *)
+  Stdlib.Option.bind
     (aux (Some [], l))
     (fun l ->
       match List.sort Int.compare l with

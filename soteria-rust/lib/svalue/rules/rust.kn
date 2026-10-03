@@ -48,8 +48,11 @@ prim set_nth : t list -> int -> t -> t list [@no_lean]
 
 (* The elements of an array: [Iarray.get] and [Iarray.copy_and_set] of the old
    code, with their exceptions ([Invalid_argument "index out of bounds"]) *)
-prim array_get : t list -> int -> t [@no_lean]
-prim array_set : t list -> int -> t -> t list [@no_lean]
+prim iarray_get : t iarray -> int -> t [@no_lean]
+prim iarray_set : t iarray -> int -> t -> t iarray [@no_lean]
+prim iarray_length : t iarray -> int [@no_lean]
+prim iarray_to_list : t iarray -> t list [@no_lean]
+prim iarray_of_list : t list -> t iarray [@no_lean]
 prim list_length : t list -> int [@no_lean]
 
 (* The field [idx] of the values of a variant, which is [var] (an assertion, as
@@ -199,19 +202,18 @@ fn is_variant (var : variant_id) (v : t) : t [@no_lean] =
 
 (* {1 Arrays} *)
 
-fn mk_array_of_svty (elem : ty) (vs : t list) : t [@no_lean] =
-  (Array vs : TArray (elem, list_length vs))
+fn mk_array_of_svty (elem : ty) (vs : t iarray) : t [@no_lean] =
+  (Array vs : TArray (elem, iarray_length vs))
 
 (* The sort of the elements is that of the first, if any; otherwise the one of
    the type of Rust *)
-fn mk_array (elem : rty) (vs : t list) : t [@no_lean] =
-  match vs with
-  | [] -> mk_array_of_svty (ty_of_rust elem) vs
-  | first :: _ -> mk_array_of_svty (type_of first) vs
+fn mk_array (elem : rty) (vs : t iarray) : t [@no_lean] =
+  if iarray_length vs = 0 then mk_array_of_svty (ty_of_rust elem) vs
+  else mk_array_of_svty (type_of (iarray_get vs 0)) vs
 
 fn array_field_of (idx : int) (v : t) : t [@no_lean] =
   match v with
-  | Array vs -> array_get vs idx
+  | Array vs -> iarray_get vs idx
   | _ -> (ArrayField (idx, v) : array_elem_ty (type_of v))
 
 (* The elements [i] to [n - 1] of [v], in this order *)
@@ -221,14 +223,14 @@ fn array_fields_from (i n : int) (v : t) : t list [@no_lean] =
     let f = array_field_of i v in
     f :: array_fields_from (i + 1) n v
 
-fn as_array (v : t) : t list [@no_lean] =
+fn as_array (v : t) : t iarray [@no_lean] =
   match v with
   | Array vs -> vs
-  | _ -> array_fields_from 0 (array_length (type_of v)) v
+  | _ -> iarray_of_list (array_fields_from 0 (array_length (type_of v)) v)
 
 fn set_array_field (idx : int) (x v : t) : t [@no_lean] =
   let vs = as_array v in
-  let vs2 = array_set vs idx x in
+  let vs2 = iarray_set vs idx x in
   mk_array_of_svty (array_elem_ty (type_of v)) vs2
 
 (* {1 Unions and polymorphic values (limited support)} *)
@@ -265,7 +267,8 @@ extend fn operands =
   | ThinPtr { ptr = p; psize = s; palign = a; _ } -> [ p; s; a ]
   | FullPtr (p, m) -> [ p; m ]
   | PtrMeta m -> meta_operands m
-  | Enum (_, vs) | Tuple vs | Array vs -> vs
+  | Enum (_, vs) | Tuple vs -> vs
+  | Array vs -> iarray_to_list vs
   | Union bs -> block_operands bs
   | PolyVal _ -> []
   | ThinPtrPart (_, a) | FullPtrInner a | FullPtrMeta a | PtrMetaAs (_, a)
@@ -314,7 +317,7 @@ extend fn rebuild =
           match cs with [ l ] -> mk_vtable_meta l | _ -> bad_operands v))
   | Enum (var, _) -> mk_enum (t_as_enum (type_of v)) var cs
   | Tuple _ -> mk_tuple cs
-  | Array _ -> mk_array_of_svty (array_elem_ty (type_of v)) cs
+  | Array _ -> mk_array_of_svty (array_elem_ty (type_of v)) (iarray_of_list cs)
   | Union bs -> mk_union (t_as_union (type_of v)) (rebuild_blocks v bs cs)
   | PolyVal id -> ( match cs with [] -> mk_poly id | _ -> bad_operands v)
   | ThinPtrPart (part, _) -> (

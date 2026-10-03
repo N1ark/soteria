@@ -1,14 +1,12 @@
-(* The value language of soteria-rust, standalone: the shared modules of the
+(* The value language of soteria-rust: the shared modules of the
    Bv_values language (bool, built into kanon; exists, bitvec, float, ptr and
    the view of the host code) plus the [rust] module, which adds the aggregates
    (tuples, arrays, enums, unions), the thin and full pointers, the metadata of
    pointers and the polymorphic values. Kanon generates the types
    ([Rust_types]) and the simplifying smart constructors ([Rust_rules]).
 
-   The path of the shared modules is written ONCE, here, in [shared]'s uses:
-   change it when they move (they live in soteria/lib/bv_values/rules while the
-   standalone stack of the C language is under test; they move to
-   soteria/lib/bv_values/rules). The text of [var], [float], [checked], [fp],
+   The path of the shared modules is written ONCE, here, in the [use]s below:
+   change it when they move. The text of [var], [float], [checked], [fp],
    [rm], [fc], [Var], [Seq] and [TSeq] below is that of the lang.knl of the C
    language: the view functions of the shared [view] module mention [Var] and
    [Seq]. *)

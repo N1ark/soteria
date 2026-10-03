@@ -15,8 +15,8 @@
 open Soteria.Smt
 open Rust_types
 module Types = Charon.Types
-module L = Soteria_rust_lib.L
-module Crate = Soteria_rust_lib.Crate
+module L = L
+module Crate = Crate
 open Rust_charon
 
 type smt_op = (t, ty) Iface.View_host.smt_op

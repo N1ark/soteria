@@ -2,7 +2,7 @@
    (rules/rust.knl declares them with [@ocaml "Rust_host.X"]); the others are
    the types of Charon. *)
 
-module Ptr_tag = Soteria_rust_lib.Svalue.Ptr_tag
+module Ptr_tag = Ptr_tag
 
 (* The tag of the provenance of a pointer, if it has one *)
 type ptag = Ptr_tag.t option

@@ -1,0 +1,34 @@
+; The value language of soteria-rust: the shared modules of the language of
+; Bv_values (soteria/lib/bv_values/rules) plus the [rust] module (rules/), from
+; which Kanon generates the types and the simplifying smart constructors. The
+; generated files are promoted to the source tree, where they are committed and
+; reviewed with the rules. Dune ignores the file names with two dots as
+; modules, hence the copies. See README.md.
+
+(rule
+ (targets rust_types.gen.ml)
+ (mode promote)
+ (deps
+  (glob_files rules/*.{kn,knl})
+  (glob_files %{project_root}/soteria/lib/bv_values/rules/*.{kn,knl}))
+ (action
+  (with-stdout-to
+   %{targets}
+   (run %{bin:kanon} ocaml-types rules/lang.knl))))
+
+(rule
+ (targets rust_rules.gen.ml)
+ (mode promote)
+ (deps
+  (glob_files rules/*.{kn,knl})
+  (glob_files %{project_root}/soteria/lib/bv_values/rules/*.{kn,knl}))
+ (action
+  (with-stdout-to
+   %{targets}
+   (run %{bin:kanon} ocaml rules/lang.knl))))
+
+(rule
+ (copy rust_types.gen.ml rust_types.ml))
+
+(rule
+ (copy rust_rules.gen.ml rust_rules.ml))

@@ -8,7 +8,7 @@ DUNE_VERSION=3.23.1
 # is not on opam
 # [versionsync: KANON_COMMIT_HASH=23f6c8637b19cff2681e507cc28e5a591d70b652]
 KANON_COMMIT_HASH=23f6c8637b19cff2681e507cc28e5a591d70b652
-KANON_PIN=$(OPAM) pin add -n -y kanon git+https://github.com/N1ark/kanon#$(KANON_COMMIT_HASH)
+KANON_PIN=$(OPAM) pin add -n -y kanon git+https://github.com/N1ark/kanon\#$(KANON_COMMIT_HASH)
 
 OPAM=opam
 OPAMX=$(OPAM) exec --

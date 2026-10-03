@@ -142,6 +142,7 @@
    (>= 5.5.0))
   (shexp :build)
   soteria
+  kanon
   dune-site
   zarith
   cmdliner

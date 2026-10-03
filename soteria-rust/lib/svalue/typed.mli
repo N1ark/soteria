@@ -1,10 +1,14 @@
+(* The interface of rust_typed.ml, which is that of
+   soteria-rust/lib/svalue/typed.mli over the stack of the new language: only
+   the first lines differ (the blocks of a union are records of this file; the
+   generic interface replaces the one with [Ext]). *)
+
 open Charon
+module Ptr_tag = Soteria_rust_lib.Svalue.Ptr_tag
 
-type ('sc, 'ag) block_value_raw = ('sc, 'ag) Ext.block_value =
-  | Scalar of 'sc
-  | Aggregate of 'ag * Types.ty
+type ('sc, 'ag) block_value_raw = Scalar of 'sc | Aggregate of 'ag * Types.ty
 
-type ('sc, 'ag, 'ofs, 'sz) block_raw = ('sc, 'ag, 'ofs, 'sz) Ext.block = {
+type ('sc, 'ag, 'ofs, 'sz) block_raw = {
   value : ('sc, 'ag) block_value_raw;
   offset : 'ofs;
   size : 'sz;
@@ -13,9 +17,9 @@ type ('sc, 'ag, 'ofs, 'sz) block_raw = ('sc, 'ag, 'ofs, 'sz) Ext.block = {
 (* The extended ghost-typed interface, sharing [Solver_value]'s [t]/[ty] so
    values flow between the interpreter and the symex monad. *)
 include
-  Soteria.Bv_values.Typed.S
-    with type 'a Ext.t = 'a Ext.t
-     and type 'a Ext.ty = 'a Ext.ty
+  Iface.Typed_intf_v.S
+    with module Svalue = Rust_stack.L.Svalue
+     and module Eval = Rust_stack.L.Eval
 
 (* T *)
 

@@ -80,22 +80,9 @@ deleted with the first generation of the value language.
 
 ### Tests
 
-`soteria/tests/bv_values/` has the compile-time checks of the generic code against
-the generated language, and its tests over a hand-written implementation of
-`Kanon_fns` (`check/`, `kanon_ref.ml`) and of the generated view functions
-against that implementation (`view_check/`); `test_lang.ml` and `test_eval.ml`
-are small tests of the language and of `Eval`. `soteria/tests/bv_fuzz/` checks
-the smart constructors against raw terms with Z3, `soteria/tests/bv_golden/`
-dumps the behaviour of the language for comparison across changes (the dump of
-the old stack, at the commit of the migration, is the reference: its only
-difference is the location of an assertion).
-
-The differential test of the simplifier with the first generation of the value
-language (`soteria/tests/bv_diff`: zero differences on 2M random terms, 1M with
-unordered commutative operands and 9M exhaustive cases, and its self-test of nine
-planted bugs: commit `f1e29af`), the comparison of the generic layers with the
-old ones (the former `check/` part B) and the one of the Rust language
-(`soteria-rust/test/legacy_svalue`: commit `157ae4c`) went with it.
+`soteria/tests/bv_values/` has `test_lang.ml` and `test_eval.ml`, small tests of the
+language and of `Eval`. `soteria/tests/bv_fuzz/` checks the smart constructors
+against raw terms with Z3.
 
 ## Proofs
 

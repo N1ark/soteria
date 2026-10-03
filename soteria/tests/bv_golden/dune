@@ -1,3 +1,0 @@
-(executable
- (name bv_golden)
- (libraries soteria zarith))

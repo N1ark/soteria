@@ -26,17 +26,6 @@ generic values (deleted: `git show fab3ed5:soteria/lib/bv_values/svalue.ml`).
 Kanon must be the pinned one (`KANON_COMMIT_HASH`): dune finds it in the `PATH`.
 The dune rules depend on the rules of the shared modules in `soteria/`.
 
-## Tests
-
-- `soteria-rust/test/golden`: the dump of the behaviour of `Svalue.Typed`
-  (`golden.expected` is the dump of the old values, byte for byte).
-
-The differential test of this language against the old one (random values built
-through the same interface, compared structurally, with SMT text, and its
-mutation self-test), and the array benchmark, lived in
-`soteria-rust/test/legacy_svalue`, deleted in S7 with the old values: its results
-are in the message of commit `157ae4c`.
-
 ## Deviations from the old stack
 
 - Thin pointer and block record fields are renamed (`ptag psize palign`,

@@ -180,7 +180,7 @@ module type Kanon_fns = sig
   val mk_seq : ty -> t list -> t
 
   (** Prints a sort as [ppx_deriving show] did, e.g. [(TBitVector 32)]
-      ([svalue_ast.ml:248], the golden output prints it). *)
+      ([svalue_ast.ml:248]). *)
   val pp_ty : ty Fmt.t
 
   (** The pretty-printer of terms, written by hand over the generated types of

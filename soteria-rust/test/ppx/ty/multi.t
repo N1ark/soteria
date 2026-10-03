@@ -21,7 +21,7 @@
             [@@warning "-unused-var"]
         in
         use_sfloat x
-    | TExtension TFullPtr, CPtr ->
+    | TFullPtr, CPtr ->
         let x =
           (Typed.cast x : [< Typed.T.sptr_f ] Typed.t)
             [@@warning "-unused-var"]

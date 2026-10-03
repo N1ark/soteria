@@ -282,9 +282,7 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).S = struct
   let panic_nounwind_fmt ~fmt:_ ~force_no_backtrace:_ = do_panic ()
 
   let begin_panic ~m:_ ~msg =
-    match%ty msg with
-    | TExtension TFullPtr -> do_panic ~msg ()
-    | _ -> do_panic ()
+    match%ty msg with TFullPtr -> do_panic ~msg () | _ -> do_panic ()
 
   (* ---- hashing ---- *)
 

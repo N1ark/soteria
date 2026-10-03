@@ -1,8 +1,6 @@
 (* A minimal stand-in for the real [Svalue]/[Typed] modules, just enough to
    type-check the output of [match%ty]. *)
 
-type ext = TEnum of int | TThinPtr | TFullPtr
-
 type ty =
   | TBool
   | TFloat of int
@@ -10,7 +8,9 @@ type ty =
   | TPointer of int
   | TSeq of ty
   | TBitVector of int
-  | TExtension of ext
+  | TEnum of int
+  | TThinPtr
+  | TFullPtr
 
 module Typed = struct
   type +'a t

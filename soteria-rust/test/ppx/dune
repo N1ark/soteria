@@ -17,6 +17,5 @@
   ./ty/err_or.ml
   ./ty/err_multi.ml
   ./ty/err_scrutinee.ml
-  ./ty/err_unknown.ml
-  ./ty/err_ext_unknown.ml)
+  ./ty/err_unknown.ml)
  (applies_to :whole_subtree))

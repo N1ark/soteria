@@ -8,7 +8,7 @@ open Ppxlib
     {[
     match%ty x with
     | TBitVector _ -> f x (* x : [< T.sint ] t *)
-    | TExtension FullPtr -> g x (* x : [< T.sptr_f ] t *)
+    | TFullPtr -> g x (* x : [< T.sptr_f ] t *)
     | _ -> h x (* x unchanged *)
     ]}
     desugars to:
@@ -17,7 +17,7 @@ open Ppxlib
     | TBitVector _ ->
         let x = (Typed.cast x : Typed.([< T.sint ] t)) in
         f x
-    | TExtension FullPtr ->
+    | TFullPtr ->
         let x = (Typed.cast x : Typed.([< T.sptr_f ] t)) in
         g x
     | _ -> h x
@@ -45,10 +45,6 @@ let key_of_ty_ctor = function
   | "TPointer" -> Some "sptr"
   | "TBitVector" -> Some "sint"
   | "TSeq" -> Some "seq"
-  | _ -> None
-
-(** Same as {!key_of_ty_ctor} but for extension constructors. *)
-let key_of_ext_ctor = function
   | "TFullPtr" -> Some "sptr_f"
   | "TThinPtr" -> Some "sptr_t"
   | "TTuple" -> Some "tuple"
@@ -103,37 +99,15 @@ let rec classify pat =
   | Ppat_constraint (p, _) | Ppat_alias (p, _) -> classify p
   | Ppat_any | Ppat_var _ -> None
   | Ppat_or (p1, p2) -> combine ~loc:pat.ppat_loc (classify p1) (classify p2)
-  | Ppat_construct (lid, arg) -> (
-      let loc = pat.ppat_loc in
-      match Longident.last_exn lid.txt with
-      | "TExtension" -> (
-          match arg with
-          | Some (_, p) -> Some (classify_ext p)
-          | None ->
-              Location.raise_errorf ~loc
-                "match%%ty: [TExtension] must be applied to an extension \
-                 constructor")
-      | ctor -> (
-          match key_of_ty_ctor ctor with
-          | Some key -> Some key
-          | None ->
-              Location.raise_errorf ~loc
-                "match%%ty: unknown runtime-type constructor [%s]" ctor))
-  | _ -> None
-
-and classify_ext pat =
-  match pat.ppat_desc with
-  | Ppat_constraint (p, _) | Ppat_alias (p, _) -> classify_ext p
   | Ppat_construct (lid, _) -> (
-      let ctor = Longident.last_exn lid.txt in
-      match key_of_ext_ctor ctor with
-      | Some key -> key
+      let loc = pat.ppat_loc in
+      match key_of_ty_ctor (Longident.last_exn lid.txt) with
+      | Some key -> Some key
       | None ->
-          Location.raise_errorf ~loc:pat.ppat_loc
-            "match%%ty: unknown extension constructor [%s]" ctor)
-  | _ ->
-      Location.raise_errorf ~loc:pat.ppat_loc
-        "match%%ty: [TExtension] expects an extension constructor"
+          Location.raise_errorf ~loc
+            "match%%ty: unknown runtime-type constructor [%s]"
+            (Longident.last_exn lid.txt))
+  | _ -> None
 
 (* Classifies a whole case pattern. In [tuple] mode (several scrutinees) only
    the first component is the [get_ty] subject; the rest are left untouched. *)

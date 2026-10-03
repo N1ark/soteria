@@ -1247,7 +1247,7 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).Impl = struct
      value is [Tuple [ Tuple lanes ]]. *)
   let simd_lanes_with cast (lanes : Typed.([< T.any ] t)) =
     match%ty lanes with
-    | TExtension (TTuple [ TExtension (TArray _) ]) ->
+    | TTuple [ TArray _ ] ->
         let wrapper = Typed.Adt.as_tuple1 @@ lanes in
         let elems = Typed.Adt.as_array @@ Typed.cast_array wrapper in
         ok (Iarray.map cast elems)

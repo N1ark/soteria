@@ -496,54 +496,49 @@ fn maps_operands (v : t) : bool [@no_lean] =
 
 (* {1 Cost} *)
 
-(* The cost of the head of a term, without its operands. One unit is roughly a
-   thousand bytes of Z3's bit-blasted encoding of the operator, measured at 32
-   bits with [(then simplify fpa2bv simplify bit-blast)]. *)
-fn node_cost (v : t) : int [@no_lean] [@total] =
+(* The estimated cost of bit-blasting a term: the cost of its head plus the
+   cost of its operands, except for a pointer, which costs 1. One unit is
+   roughly a thousand bytes of Z3's bit-blasted encoding of the operator,
+   measured at 32 bits with [(then simplify fpa2bv simplify bit-blast)]. *)
+fn cost (v : t) : int [@no_lean] [@total] =
   match v with
-  | FRem _ -> 12900
-  | Mod _ -> 12700
-  | Div (s, _, _) -> if s then 12700 else 3600
-  | Rem (s, _, _) -> if s then 12700 else 7100
-  | Mul _ -> 1900
-  | FDiv _ -> 1300
-  | FMul _ -> 345
-  | MulOvf _ -> 200
-  | FAdd _ | FSub _ -> 130
-  | Sub _ -> 97
-  | Add _ -> 75
-  | Shl _ | LShr _ | AShr _ -> 35
-  | FMin _ | FMax _ -> 24
-  | FLt _ | FLeq _ -> 12
-  | SubOvf (s, _, _) -> if s then 12 else 5
-  | AddOvf (s, _, _) -> if s then 9 else 5
-  | Lt _ | Leq _ -> 5
-  | FEq _ -> 3
-  | And _ | Or _ | Eq _ | BitAnd _ | BitOr _ | BitXor _ | BvConcat _ -> 1
-  | BvOfFloat _ -> 1400
-  | FSqrt _ -> 280
-  | FloatOfFloat _ -> 255
-  | FloatOfBv _ -> 78
-  | FRound _ -> 65
-  | Neg _ -> 10
-  | FAbs _ | FNeg _ | FloatOfBvRaw _ -> 4
+  | FRem _ -> 12900 + costs (operands v)
+  | Mod _ -> 12700 + costs (operands v)
+  | Div (s, _, _) -> (if s then 12700 else 3600) + costs (operands v)
+  | Rem (s, _, _) -> (if s then 12700 else 7100) + costs (operands v)
+  | Mul _ -> 1900 + costs (operands v)
+  | FDiv _ -> 1300 + costs (operands v)
+  | FMul _ -> 345 + costs (operands v)
+  | MulOvf _ -> 200 + costs (operands v)
+  | FAdd _ | FSub _ -> 130 + costs (operands v)
+  | Sub _ -> 97 + costs (operands v)
+  | Add _ -> 75 + costs (operands v)
+  | Shl _ | LShr _ | AShr _ -> 35 + costs (operands v)
+  | FMin _ | FMax _ -> 24 + costs (operands v)
+  | FLt _ | FLeq _ -> 12 + costs (operands v)
+  | SubOvf (s, _, _) -> (if s then 12 else 5) + costs (operands v)
+  | AddOvf (s, _, _) -> (if s then 9 else 5) + costs (operands v)
+  | Lt _ | Leq _ -> 5 + costs (operands v)
+  | FEq _ -> 3 + costs (operands v)
+  | And _ | Or _ | Eq _ | BitAnd _ | BitOr _ | BitXor _ | BvConcat _ ->
+      1 + costs (operands v)
+  | BvOfFloat _ -> 1400 + costs (operands v)
+  | FSqrt _ -> 280 + costs (operands v)
+  | FloatOfFloat _ -> 255 + costs (operands v)
+  | FloatOfBv _ -> 78 + costs (operands v)
+  | FRound _ -> 65 + costs (operands v)
+  | Neg _ -> 10 + costs (operands v)
+  | FAbs _ | FNeg _ | FloatOfBvRaw _ -> 4 + costs (operands v)
   | Not _ | GetPtrLoc _ | GetPtrOfs _ | BvNot _ | BvOfBool _ | BvExtend _
   | BvExtract _ | FIs _ | FIsNeg _ | FIsPos _ ->
-      1
-  | Fma _ -> 400
-  | Ite _ -> 0
-  | Distinct _ -> 0
+      1 + costs (operands v)
+  | Fma _ -> 400 + costs (operands v)
+  | Ite _ | Distinct _ | Seq _ -> costs (operands v)
   | Var _ -> 3
   | Float _ -> 2
-  | Seq _ -> 0
   (* quantifiers escape the bit-blasting that the costs above measure *)
-  | Exists _ -> 100000
+  | Exists _ -> 100000 + costs (operands v)
   | Ptr _ | Bool _ | BitVec _ | LocLit _ -> 1
-
-(* The estimated cost of bit-blasting a term. The operands of a pointer are
-   not counted: a pointer costs 1. *)
-fn cost (v : t) : int [@no_lean] =
-  match v with Ptr _ -> 1 | _ -> node_cost v + costs (operands v)
 
 fn costs (l : t list) : int [@no_lean] =
   match l with [] -> 0 | x :: rest -> cost x + costs rest

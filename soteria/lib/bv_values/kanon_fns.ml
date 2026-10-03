@@ -315,19 +315,14 @@ module type Kanon_fns = sig
 
   (** {1 VIEW: cost and model search} *)
 
-  (** The cost of the head of a term, without its operands: the tables
-      [cost_unop], [cost_binop], [cost_triop] and the leaves
-      ([solver_lang.ml:555-605], draft in [solver.kn]). [Var] 3, [Float] 2,
-      [Seq] 0, [Distinct] 0, [Ite] 0, [Exists] 100_000, [Ptr], [Bool], [BitVec]
-      {e and [LocLit]} 1, extensions 100_000 ("TODO" in the old code).
-      [[@total]]. *)
-  val node_cost : t -> Z.t
-
-  (** The estimated cost of bit-blasting the term ([Solver_lang.S.cost]):
-      [node_cost v] plus the cost of the operands, except [Ptr] which costs 1
+  (** The estimated cost of bit-blasting the term ([Solver_lang.S.cost]): the
+      cost of the head ([Var] 3, [Float] 2, [Seq] 0, [Distinct] 0, [Ite] 0,
+      [Exists] 100_000, [Bool], [BitVec] {e and [LocLit]} 1, the tables
+      [cost_unop], [cost_binop], [cost_triop] of [solver_lang.ml:555-605] for
+      the operators) plus the cost of the operands, except [Ptr] which costs 1
       and no more (the old code did not recurse, [solver_lang.ml:566]); [Exists]
-      is [cost body + 100_000]. Recursive Kanon [fn]; the extensions override it
-      by [extend fn] when their nodes are cheaper than 100_000 + operands. *)
+      is [cost body + 100_000]. [[@total]], recursive; the extensions give the
+      cost of their nodes by [extend fn] (100_000, "TODO" in the old code). *)
   val cost : t -> Z.t
 
   (** The number of values that a uniform generator of the sort draws from, if

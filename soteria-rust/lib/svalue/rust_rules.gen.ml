@@ -4061,69 +4061,108 @@ let maps_operands (v : t) : bool =
     | _ -> false
     )
 
-let node_cost (v : t) : Z.t =
+let rec cost (v : t) : Z.t =
     (match v with
-    | { kind = Op2 ((FRem), _, _); _ } -> (Z.of_int (12900))
-    | { kind = Op2 ((Mod), _, _); _ } -> (Z.of_int (12700))
+    | { kind = Op2 ((FRem), _, _); _ } ->
+      (Z.add (Z.of_int (12900)) (costs (operands v)))
+    | { kind = Op2 ((Mod), _, _); _ } ->
+      (Z.add (Z.of_int (12700)) (costs (operands v)))
     | { kind = Op2 ((Div (s)), _, _); _ } ->
-      (if s then (Z.of_int (12700)) else (Z.of_int (3600)))
+      (Z.add (if s then (Z.of_int (12700)) else (Z.of_int (3600))) (costs (operands v)))
     | { kind = Op2 ((Rem (s)), _, _); _ } ->
-      (if s then (Z.of_int (12700)) else (Z.of_int (7100)))
-    | { kind = Op2 ((Mul (_)), _, _); _ } -> (Z.of_int (1900))
-    | { kind = Op2 ((FDiv), _, _); _ } -> (Z.of_int (1300))
-    | { kind = Op2 ((FMul), _, _); _ } -> (Z.of_int (345))
-    | { kind = Op2 ((MulOvf (_)), _, _); _ } -> (Z.of_int (200))
-    | { kind = Op2 ((FAdd), _, _); _ } -> (Z.of_int (130))
-    | { kind = Op2 ((FSub), _, _); _ } -> (Z.of_int (130))
-    | { kind = Op2 ((Sub (_)), _, _); _ } -> (Z.of_int (97))
-    | { kind = Op2 ((Add (_)), _, _); _ } -> (Z.of_int (75))
-    | { kind = Op2 ((Shl), _, _); _ } -> (Z.of_int (35))
-    | { kind = Op2 ((LShr), _, _); _ } -> (Z.of_int (35))
-    | { kind = Op2 ((AShr), _, _); _ } -> (Z.of_int (35))
-    | { kind = Op2 ((FMin), _, _); _ } -> (Z.of_int (24))
-    | { kind = Op2 ((FMax), _, _); _ } -> (Z.of_int (24))
-    | { kind = Op2 ((FLt), _, _); _ } -> (Z.of_int (12))
-    | { kind = Op2 ((FLeq), _, _); _ } -> (Z.of_int (12))
+      (Z.add (if s then (Z.of_int (12700)) else (Z.of_int (7100))) (costs (operands v)))
+    | { kind = Op2 ((Mul (_)), _, _); _ } ->
+      (Z.add (Z.of_int (1900)) (costs (operands v)))
+    | { kind = Op2 ((FDiv), _, _); _ } ->
+      (Z.add (Z.of_int (1300)) (costs (operands v)))
+    | { kind = Op2 ((FMul), _, _); _ } ->
+      (Z.add (Z.of_int (345)) (costs (operands v)))
+    | { kind = Op2 ((MulOvf (_)), _, _); _ } ->
+      (Z.add (Z.of_int (200)) (costs (operands v)))
+    | { kind = Op2 ((FAdd), _, _); _ } ->
+      (Z.add (Z.of_int (130)) (costs (operands v)))
+    | { kind = Op2 ((FSub), _, _); _ } ->
+      (Z.add (Z.of_int (130)) (costs (operands v)))
+    | { kind = Op2 ((Sub (_)), _, _); _ } ->
+      (Z.add (Z.of_int (97)) (costs (operands v)))
+    | { kind = Op2 ((Add (_)), _, _); _ } ->
+      (Z.add (Z.of_int (75)) (costs (operands v)))
+    | { kind = Op2 ((Shl), _, _); _ } ->
+      (Z.add (Z.of_int (35)) (costs (operands v)))
+    | { kind = Op2 ((LShr), _, _); _ } ->
+      (Z.add (Z.of_int (35)) (costs (operands v)))
+    | { kind = Op2 ((AShr), _, _); _ } ->
+      (Z.add (Z.of_int (35)) (costs (operands v)))
+    | { kind = Op2 ((FMin), _, _); _ } ->
+      (Z.add (Z.of_int (24)) (costs (operands v)))
+    | { kind = Op2 ((FMax), _, _); _ } ->
+      (Z.add (Z.of_int (24)) (costs (operands v)))
+    | { kind = Op2 ((FLt), _, _); _ } ->
+      (Z.add (Z.of_int (12)) (costs (operands v)))
+    | { kind = Op2 ((FLeq), _, _); _ } ->
+      (Z.add (Z.of_int (12)) (costs (operands v)))
     | { kind = Op2 ((SubOvf (s)), _, _); _ } ->
-      (if s then (Z.of_int (12)) else (Z.of_int (5)))
+      (Z.add (if s then (Z.of_int (12)) else (Z.of_int (5))) (costs (operands v)))
     | { kind = Op2 ((AddOvf (s)), _, _); _ } ->
-      (if s then (Z.of_int (9)) else (Z.of_int (5)))
-    | { kind = Op2 ((Lt (_)), _, _); _ } -> (Z.of_int (5))
-    | { kind = Op2 ((Leq (_)), _, _); _ } -> (Z.of_int (5))
-    | { kind = Op2 ((FEq), _, _); _ } -> (Z.of_int (3))
-    | { kind = Op2 ((And), _, _); _ } -> Z.one
-    | { kind = Op2 ((Or), _, _); _ } -> Z.one
-    | { kind = Op2 ((Eq), _, _); _ } -> Z.one
-    | { kind = Op2 ((BitAnd), _, _); _ } -> Z.one
-    | { kind = Op2 ((BitOr), _, _); _ } -> Z.one
-    | { kind = Op2 ((BitXor), _, _); _ } -> Z.one
-    | { kind = Op2 ((BvConcat), _, _); _ } -> Z.one
-    | { kind = Op1 ((BvOfFloat (_, _, _)), _); _ } -> (Z.of_int (1400))
-    | { kind = Op1 ((FSqrt), _); _ } -> (Z.of_int (280))
-    | { kind = Op1 ((FloatOfFloat (_, _)), _); _ } -> (Z.of_int (255))
-    | { kind = Op1 ((FloatOfBv (_, _, _)), _); _ } -> (Z.of_int (78))
-    | { kind = Op1 ((FRound (_)), _); _ } -> (Z.of_int (65))
-    | { kind = Op1 ((Neg (_)), _); _ } -> (Z.of_int (10))
-    | { kind = Op1 ((FAbs), _); _ } -> (Z.of_int (4))
-    | { kind = Op1 ((FNeg), _); _ } -> (Z.of_int (4))
-    | { kind = Op1 ((FloatOfBvRaw (_)), _); _ } -> (Z.of_int (4))
-    | { kind = Op1 ((Not), _); _ } -> Z.one
-    | { kind = Op1 ((GetPtrLoc), _); _ } -> Z.one
-    | { kind = Op1 ((GetPtrOfs), _); _ } -> Z.one
-    | { kind = Op1 ((BvNot), _); _ } -> Z.one
-    | { kind = Op1 ((BvOfBool (_)), _); _ } -> Z.one
-    | { kind = Op1 ((BvExtend (_, _)), _); _ } -> Z.one
-    | { kind = Op1 ((BvExtract (_, _)), _); _ } -> Z.one
-    | { kind = Op1 ((FIs (_)), _); _ } -> Z.one
-    | { kind = Op1 ((FIsNeg), _); _ } -> Z.one
-    | { kind = Op1 ((FIsPos), _); _ } -> Z.one
-    | { kind = Op3 ((Fma), _, _, _); _ } -> (Z.of_int (400))
-    | { kind = Op3 ((Ite), _, _, _); _ } -> Z.zero
-    | { kind = OpN ((Distinct), _); _ } -> Z.zero
+      (Z.add (if s then (Z.of_int (9)) else (Z.of_int (5))) (costs (operands v)))
+    | { kind = Op2 ((Lt (_)), _, _); _ } ->
+      (Z.add (Z.of_int (5)) (costs (operands v)))
+    | { kind = Op2 ((Leq (_)), _, _); _ } ->
+      (Z.add (Z.of_int (5)) (costs (operands v)))
+    | { kind = Op2 ((FEq), _, _); _ } ->
+      (Z.add (Z.of_int (3)) (costs (operands v)))
+    | { kind = Op2 ((And), _, _); _ } -> (Z.add Z.one (costs (operands v)))
+    | { kind = Op2 ((Or), _, _); _ } -> (Z.add Z.one (costs (operands v)))
+    | { kind = Op2 ((Eq), _, _); _ } -> (Z.add Z.one (costs (operands v)))
+    | { kind = Op2 ((BitAnd), _, _); _ } ->
+      (Z.add Z.one (costs (operands v)))
+    | { kind = Op2 ((BitOr), _, _); _ } -> (Z.add Z.one (costs (operands v)))
+    | { kind = Op2 ((BitXor), _, _); _ } ->
+      (Z.add Z.one (costs (operands v)))
+    | { kind = Op2 ((BvConcat), _, _); _ } ->
+      (Z.add Z.one (costs (operands v)))
+    | { kind = Op1 ((BvOfFloat (_, _, _)), _); _ } ->
+      (Z.add (Z.of_int (1400)) (costs (operands v)))
+    | { kind = Op1 ((FSqrt), _); _ } ->
+      (Z.add (Z.of_int (280)) (costs (operands v)))
+    | { kind = Op1 ((FloatOfFloat (_, _)), _); _ } ->
+      (Z.add (Z.of_int (255)) (costs (operands v)))
+    | { kind = Op1 ((FloatOfBv (_, _, _)), _); _ } ->
+      (Z.add (Z.of_int (78)) (costs (operands v)))
+    | { kind = Op1 ((FRound (_)), _); _ } ->
+      (Z.add (Z.of_int (65)) (costs (operands v)))
+    | { kind = Op1 ((Neg (_)), _); _ } ->
+      (Z.add (Z.of_int (10)) (costs (operands v)))
+    | { kind = Op1 ((FAbs), _); _ } ->
+      (Z.add (Z.of_int (4)) (costs (operands v)))
+    | { kind = Op1 ((FNeg), _); _ } ->
+      (Z.add (Z.of_int (4)) (costs (operands v)))
+    | { kind = Op1 ((FloatOfBvRaw (_)), _); _ } ->
+      (Z.add (Z.of_int (4)) (costs (operands v)))
+    | { kind = Op1 ((Not), _); _ } -> (Z.add Z.one (costs (operands v)))
+    | { kind = Op1 ((GetPtrLoc), _); _ } ->
+      (Z.add Z.one (costs (operands v)))
+    | { kind = Op1 ((GetPtrOfs), _); _ } ->
+      (Z.add Z.one (costs (operands v)))
+    | { kind = Op1 ((BvNot), _); _ } -> (Z.add Z.one (costs (operands v)))
+    | { kind = Op1 ((BvOfBool (_)), _); _ } ->
+      (Z.add Z.one (costs (operands v)))
+    | { kind = Op1 ((BvExtend (_, _)), _); _ } ->
+      (Z.add Z.one (costs (operands v)))
+    | { kind = Op1 ((BvExtract (_, _)), _); _ } ->
+      (Z.add Z.one (costs (operands v)))
+    | { kind = Op1 ((FIs (_)), _); _ } -> (Z.add Z.one (costs (operands v)))
+    | { kind = Op1 ((FIsNeg), _); _ } -> (Z.add Z.one (costs (operands v)))
+    | { kind = Op1 ((FIsPos), _); _ } -> (Z.add Z.one (costs (operands v)))
+    | { kind = Op3 ((Fma), _, _, _); _ } ->
+      (Z.add (Z.of_int (400)) (costs (operands v)))
+    | { kind = Op3 ((Ite), _, _, _); _ } -> (costs (operands v))
+    | { kind = OpN ((Distinct), _); _ } -> (costs (operands v))
+    | { kind = Seq (_); _ } -> (costs (operands v))
     | { kind = Var (_); _ } -> (Z.of_int (3))
     | { kind = Float (_); _ } -> (Z.of_int (2))
-    | { kind = Seq (_); _ } -> Z.zero
-    | { kind = Exists (_, _); _ } -> (Z.of_int (100000))
+    | { kind = Exists (_, _); _ } ->
+      (Z.add (Z.of_int (100000)) (costs (operands v)))
     | { kind = Op2 ((Ptr), _, _); _ } -> Z.one
     | { kind = Bool (_); _ } -> Z.one
     | { kind = BitVec (_); _ } -> Z.one
@@ -4144,28 +4183,6 @@ let node_cost (v : t) : Z.t =
     | { kind = VariantField (_, _, _); _ } -> (Z.of_int (100000))
     | { kind = IsVariant (_, _); _ } -> (Z.of_int (100000))
     | { kind = ArrayField (_, _); _ } -> (Z.of_int (100000))
-    )
-
-let rec cost (v : t) : Z.t =
-    (match v with
-    | { kind = Op2 ((Ptr), _, _); _ } -> Z.one
-    | { kind = ThinPtr (_); _ } -> (Z.of_int (100000))
-    | { kind = FullPtr (_, _); _ } -> (Z.of_int (100000))
-    | { kind = PtrMeta (_); _ } -> (Z.of_int (100000))
-    | { kind = Enum (_, _); _ } -> (Z.of_int (100000))
-    | { kind = Tuple (_); _ } -> (Z.of_int (100000))
-    | { kind = Array (_); _ } -> (Z.of_int (100000))
-    | { kind = Union (_); _ } -> (Z.of_int (100000))
-    | { kind = PolyVal (_); _ } -> (Z.of_int (100000))
-    | { kind = ThinPtrPart (_, _); _ } -> (Z.of_int (100000))
-    | { kind = FullPtrInner (_); _ } -> (Z.of_int (100000))
-    | { kind = FullPtrMeta (_); _ } -> (Z.of_int (100000))
-    | { kind = PtrMetaAs (_, _); _ } -> (Z.of_int (100000))
-    | { kind = Field (_, _); _ } -> (Z.of_int (100000))
-    | { kind = VariantField (_, _, _); _ } -> (Z.of_int (100000))
-    | { kind = IsVariant (_, _); _ } -> (Z.of_int (100000))
-    | { kind = ArrayField (_, _); _ } -> (Z.of_int (100000))
-    | _ -> (Z.add (node_cost v) (costs (operands v)))
     )
 
 and costs (l : (t list)) : Z.t =

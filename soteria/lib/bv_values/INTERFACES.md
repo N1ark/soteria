@@ -58,7 +58,7 @@ in `Bv_base`.
    `Value_lang.Base` converts (`t_bv : int -> ty`, `as_range` size as `int`, `cost : t -> int`).
 5. **Extra view fns not in design 3.3**: `maps_operands` (old `map_operands` only maps `Unop`/`Binop`, not
    `Ptr`/`Seq`/`Exists`/`Distinct`/`Ite`/`Fma`, solver_lang.ml:539-548), `cost` (a recursive fn, because `Ptr` costs 1
-   and does not recurse, solver_lang.ml:566: design said "sum of `node_cost`"), `as_loc_lit`, `is_bool_ty`,
+   and does not recurse, solver_lang.ml:566), `as_loc_lit`, `is_bool_ty`,
    `sort_operands`. `random_of_z` returns an option; `Value_lang` keeps `Random.bool ()` for `TBool` so the random state
    evolves as before.
 6. **`mk_ptr`, `mk_seq`, `mk_var`, `mk_loc`, `mk_float` are HOST (glue), not Kanon** (design 3.3.4 had `mk_ptr` as a rule
@@ -73,7 +73,7 @@ in `Bv_base`.
    view"). `Typed.S` loses `Ext`, `kind`; `Svalue`, `Eval` are the generic signatures; `FloatPrecision`, `FloatClass`,
    `RoundingMode` are re-exported at the top of `S` as before. `Solver_value` is `{Lang : Solver_lang.S; type_;
    untyped; untype_type; ...}` (no `Ext/Svalue/Eval`), as design 3.5.
-9. **View fns are `[@no_lean]`**; `[@total]` on `operands`, `rebuild`, `pp_style`, `encode_head`, `node_cost`
+9. **View fns are `[@no_lean]`**; `[@total]` on `operands`, `rebuild`, `pp_style`, `encode_head`, `cost`
    (Kanon checks a case per node; a catch-all is rejected; a language that adds nodes adds cases with `extend fn`).
    Design said "K9 or property tests": the new Kanon already has `[@total]` (`check.ml:4276`), so both are used.
 10. **File names and arguments**: `Bv_types` mentions `View_host`, which must not depend on the generated types. The
@@ -176,7 +176,7 @@ Operands and rebuild
   a wrong operand count FAILS (prim). Replaces `Eval.eval_binop/unop/triop/nop` (eval.ml:12-71), `Ptr.mk`/`SSeq.mk` in eval and Subst.
   Kanon: write `| Not _ -> (match cs with [a] -> b_not a | _ -> fail ())` (a tuple scrutinee with list patterns would not count as total).
 - `maps_operands : t -> bool`: true exactly for the old `Unop` and `Binop` except `Ptr` (solver_lang.ml:539-548); false by default for extensions.
-- T `node_cost : t -> Z.t` and `cost : t -> Z.t` (recursive)  -- solver_lang.ml:555-605. `Var` 3, `Float` 2, `Seq` 0, `Distinct` 0, `Ite` 0,
+- T `cost : t -> Z.t` (recursive, `[@total]`)  -- solver_lang.ml:555-605. `Var` 3, `Float` 2, `Seq` 0, `Distinct` 0, `Ite` 0,
   `Exists` 100_000, `Ptr`/`Bool`/`BitVec`/`LocLit` 1 (`Ptr` does not recurse), the operator tables otherwise, extensions 100_000.
 
 Encoding
@@ -209,7 +209,7 @@ or HOST prims.
    the first (`check/check.ml: corpora`), or commutative operands print swapped (a test artefact, not a bug).
 
 ## 6. Lean decision
-All view fns are `[@no_lean]`; `[@total]` is added on the per-node ones (`operands`, `rebuild`, `pp_style`, `encode_head`, `node_cost`). The types of
+All view fns are `[@no_lean]`; `[@total]` is added on the per-node ones (`operands`, `rebuild`, `pp_style`, `encode_head`, `cost`). The types of
 `view_host.ml` are term-free (`t`/`ty` only as parameters of `smt_op`), so Lean has nothing to model for them (K6 open: confirm that Kanon does not emit
 Lean for `[@ocaml]`-abstract types used only by `[@no_lean]` items; if it does, add `R.Abstract` entries). The Lean project stays on the old pinned Kanon
 and a frozen copy of the old rules until S6; proofs do not cover the migrated rules.
@@ -217,7 +217,7 @@ and a frozen copy of the old rules until S6; proofs do not cover the migrated ru
 ## 7. Test strategy
 | what | test | oracle |
 |---|---|---|
-| view functions | `Kanon_ref` vs generated fns, every fn, on the `check/` corpus (3 x ~700 random terms + subterms, all node kinds: `coverage`); property `rebuild v (operands v) == v` for every node; `pp_style`, `encode_head`, `node_cost` never fall to a default (`[@total]` + a test per node kind); (`bv_diff`, which compared the simplifier with the old one on 2M random terms and 9M exhaustive cases with zero differences, was deleted with the old stack: see `f1e29af`) | `dune test soteria/tests/bv_values` |
+| view functions | `Kanon_ref` vs generated fns, every fn, on the `check/` corpus (3 x ~700 random terms + subterms, all node kinds: `coverage`); property `rebuild v (operands v) == v` for every node; `pp_style`, `encode_head`, `cost` never fall to a default (`[@total]` + a test per node kind); (`bv_diff`, which compared the simplifier with the old one on 2M random terms and 9M exhaustive cases with zero differences, was deleted with the old stack: see `f1e29af`) | `dune test soteria/tests/bv_values` |
 | generic layers | `check/check.ml` part B: eval idempotent on normal forms, `rebuild (operands v) == v`, coverage of every node kind. (Until S7 it also compared pp, pp_ty, cost, encode (with Decls order), as_range, recognisers, iter_vars, implies_or_contradicts, sure_neq, eval (3 modes), Subst.apply and learn with the old stack on the converted term: all equal) | `dune test soteria/tests/bv_values` |
 | golden, fuzzers | golden dump of the new stack (`soteria/tests/bv_golden/golden.sh`, seed fixed) byte-identical to the S0 golden of the old stack (pp, cost, SMT with Decls, Subst, learn, as_range, implies, iter_vars, eval); `bv_fuzz` ported (`Direct` on raw nodes) passes with `QCHECK_TEST_COUNT=50000`; `test_eval` ported | `cmp` of two dumps; fuzz exit 0 |
 Order-sensitive output (pp of commutative nodes) is only comparable if both stacks create the same nodes in the same order: the golden generator must build terms through the public API in the same call order on both stacks.
@@ -233,11 +233,11 @@ There is no `Ext` any more (the `Value_ext` extension of the old stack, deleted 
 | `Ext.apply_subst` | same `rebuild`/`operands` (Subst driver) |
 | `Ext.learn` | `extend fn learn_alts` (`LAll ([], [0 .. n-1])` for `Tuple`) and `learn_value` (`field_of i v`) |
 | `Ext.encode_ty / encode_unop / encode_value` | `extend fn encode_head`, `encode_sort`, `sort_operands` (prims = the bodies of the old encoders in `encoding.ml`; thin/full/tuple/enum sort declarations stay in Rust's hand-written code) |
-| `Ext` node cost `100_000` | `extend fn node_cost` |
+| `Ext` node cost `100_000` | `extend fn cost` |
 | `TExtension X` | the sort `X` itself (design D4) |
 | `Typed.Make_transparent (Ext) ()` | `Typed.Make_transparent (Lang_make.Make (Types) (K))` |
 
-`[@total]` makes Kanon reject a Rust node with no case in `operands`/`rebuild`/`pp_style`/`encode_head`/`node_cost`. Rust-only host code (encoding.ml, typed.ml) matches the
+`[@total]` makes Kanon reject a Rust node with no case in `operands`/`rebuild`/`pp_style`/`encode_head`/`cost`. Rust-only host code (encoding.ml, typed.ml) matches the
 generated Rust constructors directly.
 
 ## 9. Open points

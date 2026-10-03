@@ -106,33 +106,10 @@ fn sized_ty (s : ty) : int option [@no_lean] =
   | TBitVector n | TPointer n | TLoc n -> Some n
   | _ -> None
 
-(* Only bit-vectors: not locations or pointers *)
-fn as_bv_ty (s : ty) : int option [@no_lean] =
-  match s with TBitVector n -> Some n | _ -> None
-
-fn as_float_ty (s : ty) : fp option [@no_lean] =
-  match s with TFloat p -> Some p | _ -> None
-
-fn as_seq_ty (s : ty) : ty option [@no_lean] =
-  match s with TSeq e -> Some e | _ -> None
-
-fn is_bool_ty (s : ty) : bool [@no_lean] =
-  match s with TBool -> true | _ -> false
-
 (* {1 Recognisers} *)
 
 fn is_literal (v : t) : bool [@no_lean] =
   match v with Bool _ | BitVec _ | LocLit _ | Float _ -> true | _ -> false
-
-(* Only [BitVec]: a location literal is [as_loc_lit] *)
-fn as_bv_lit (v : t) : int option [@no_lean] =
-  match v with BitVec z -> Some z | _ -> None
-
-fn as_loc_lit (v : t) : int option [@no_lean] =
-  match v with LocLit z -> Some z | _ -> None
-
-fn as_float_lit (v : t) : float option [@no_lean] =
-  match v with Float f -> Some f | _ -> None
 
 fn append (l r : t list) : t list [@no_lean] =
   match l with [] -> r | x :: rest -> x :: append rest r

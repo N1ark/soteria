@@ -560,10 +560,10 @@ module Suite (K : K) = struct
             (pair (lst (pair (fun x -> string_of_int (Var.to_int x)) sty)) tm)
             (K.as_exists v));
       one "as_ptr" (fun () -> opt (pair tm tm) (K.as_ptr v));
-      one "as_bv_lit" (fun () -> opt zs (K.as_bv_lit v));
-      one "as_loc_lit" (fun () -> opt zs (K.as_loc_lit v));
+      one "as_bv_lit" (fun () -> opt zs (K.as_bitvec v));
+      one "as_loc_lit" (fun () -> opt zs (K.as_loclit v));
       one "as_float_lit" (fun () ->
-          opt (fun f -> F.to_string f ^ "/" ^ zs (F.to_z f)) (K.as_float_lit v));
+          opt (fun f -> F.to_string f ^ "/" ^ zs (F.to_z f)) (K.as_float v));
       one "conjuncts" (fun () -> lst tm (K.conjuncts v));
       one "as_range" (fun () -> show_range (K.as_range v));
       one "operands" (fun () -> lst tm (K.operands v));
@@ -577,13 +577,13 @@ module Suite (K : K) = struct
       one "learn_alts" (fun () -> show_plan (K.learn_alts v));
       (* the sort of the term *)
       one "sized_ty" (fun () -> opt zs (K.sized_ty v.ty));
-      one "as_bv_ty" (fun () -> opt zs (K.as_bv_ty v.ty));
+      one "as_bv_ty" (fun () -> opt string_of_int (K.as_tbitvector v.ty));
       one "as_float_ty" (fun () ->
           opt
             (fun p -> string_of_int (Floatml.AnyFloat.size p))
-            (K.as_float_ty v.ty));
-      one "as_seq_ty" (fun () -> opt sty (K.as_seq_ty v.ty));
-      one "is_bool_ty" (fun () -> string_of_bool (K.is_bool_ty v.ty));
+            (K.as_tfloat v.ty));
+      one "as_seq_ty" (fun () -> opt sty (K.as_tseq v.ty));
+      one "is_bool_ty" (fun () -> string_of_bool (K.is_tbool v.ty));
       one "sort_operands" (fun () -> lst sty (K.sort_operands v.ty));
       one "encode_sort" (fun () ->
           let log = Buffer.create 16 in

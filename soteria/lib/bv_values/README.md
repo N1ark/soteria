@@ -35,7 +35,12 @@ Files (see `INTERFACES.md` for the contracts):
   (recognisers, operands, rebuild, printing, SMT encoding, learning...). The
   modules are shared by the languages: soteria-rust's `lang.knl` `use`s them by
   relative path.
-- `bv_types.gen.ml` and `bv_rules.gen.ml` are generated from them (below).
+  `bitvec.knl` declares the infix operators of the comparisons, `<u`, `<s`, `<=u`
+  and `<=s` (unsigned and signed), and the subsorts `TNonzero` and `TZero` of
+  `TBitVector`; the Lean project does not know them (see below).
+- `bv_types.gen.ml`, `bv_typed.gen.ml` and `bv_rules.gen.ml` are generated from them (below). `bv_typed.gen.ml`
+  is the ghost-typed interface: its `Tag` module has a tag type per sort and per subsort (`TNonzero` and `TZero` of
+  `TBitVector`), which are the tags `T.sint`, `T.nonzero`, `T.zero`... of `Typed`.
 - `prim.ml` is `Prim.Make`, the primitives that the rules of the C and Rust
   languages call (literal arithmetic, the constants and the cache of literals,
   SMT builders...), over the few sorts and nodes of a language. `bv_prims.ml`
@@ -59,10 +64,11 @@ Files (see `INTERFACES.md` for the contracts):
 
 `kanon`, which soteria pins in its `Makefile` and CI (see `KANON_COMMIT_HASH` in
 `scripts/versions.json`; `scripts/versionsync.py update` propagates it), generates
-`bv_types.gen.ml` (`kanon ocaml-types rules/lang.knl`) and `bv_rules.gen.ml`
-(`kanon ocaml rules/lang.knl`): the rules of `dune` regenerate them whenever
+`bv_types.gen.ml` (`kanon ocaml-types rules/lang.knl`), `bv_typed.gen.ml`
+(`kanon ocaml-typed rules/lang.knl`) and `bv_rules.gen.ml` (`kanon ocaml rules/lang.knl`):
+the rules of `dune` regenerate them whenever
 `rules/` changes, and promote them to the source tree, where they are committed
-and reviewed with the rules. Dune copies them to the modules `Bv_types` and
+and reviewed with the rules. Dune copies them to the modules `Bv_types`, `Bv_typed` and
 `Bv_rules` (it does not read the names with two dots as modules). Dune finds
 `kanon` in the `PATH`: the one that is installed must be the pinned one (to
 develop with another, put it first in the `PATH`).

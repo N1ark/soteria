@@ -1,0 +1,36 @@
+; The MUTANTS of the new stack, for the self-test of the differential test: a
+; copy of the library (the same sources), whose generated rules have the
+; deliberate errors of ../mutations.ml, each active when [Mut.current] says so.
+
+(copy_files#
+ ../../{iface,rust_host,rust_types,base_view_prims,base_prims,rust_charon,rust_encoding,rust_prims,rust_lang,rust_stack,rust_typed}.ml)
+
+(copy_files# ../../rust_typed.mli)
+
+(rule
+ (targets rust_rules.ml)
+ (deps ../../rust_rules.gen.ml)
+ (action
+  (with-stdout-to
+   rust_rules.ml
+   (run ../mutate.exe ../../rust_rules.gen.ml))))
+
+(library
+ (name rust_mut)
+ (modules
+  mut
+  iface
+  rust_host
+  rust_types
+  base_view_prims
+  base_prims
+  rust_charon
+  rust_encoding
+  rust_prims
+  rust_rules
+  rust_lang
+  rust_stack
+  rust_typed)
+ (libraries soteria soteria-rust charon floatml iter zarith fmt)
+ (flags
+  (:standard -open Soteria.Bv_values -w +a-4-9-26-27-32..42-44-45-48-70)))

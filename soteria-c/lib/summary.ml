@@ -162,14 +162,14 @@ let prune (summary : after_exec t) : pruned t =
   (* For each equality [e1 = e2] in the path condition, we add a double edge
      from all variables of [e1] to all variables of [e2] *)
   ListLabels.iter summary.pc ~f:(fun v ->
-      match Typed.Svalue.kind v with
-      | Binop (Eq, el, er) ->
+      match Typed.Lang.as_eq v with
+      | Some (el, er) ->
           (* We make the second iterator peristent to avoid going over the
              structure too many times if there are many *)
           let r_iter = Iter.persistent_lazy (Typed.Svalue.iter_vars er) in
           let product = Iter.product (Typed.Svalue.iter_vars el) r_iter in
           product (fun ((x, _), (y, _)) -> Var_graph.add_double_edge graph x y)
-      | _ -> ());
+      | None -> ());
   (* For each block $l -> B in the pre and post state, we add a single-sided
      arrow from all variables in $l to all variables contained in B. *)
   let all_points_tos =

@@ -7,7 +7,7 @@
     fuzz-testing that the simplifications of the generated rules are correct. *)
 
 open Soteria.Bv_values.Lang.Types
-module Typed = Soteria.Bv_values.Lang.Typed
+module Typed = Soteria.Bv_values.Typed
 module Sv = Typed.Svalue
 open Sv
 

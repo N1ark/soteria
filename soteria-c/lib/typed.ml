@@ -1,4 +1,4 @@
-include Soteria.Bv_values.Lang.Typed
+include Soteria.Bv_values.Typed
 
 let ptr_bits =
   Option.get Cerb_frontend.Ocaml_implementation.DefaultImpl.impl.sizeof_pointer

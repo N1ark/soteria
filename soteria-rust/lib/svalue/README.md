@@ -4,7 +4,8 @@ soteria-rust's values, written in Kanon: the language is generated from the
 SHARED modules of `Bv_values` (bool, exists, bitvec, float, ptr and the `view` of
 the host code, in `soteria/lib/bv_values/rules/`) plus the `rust` module
 (aggregates, thin/full pointers, pointer metadata, poly values), over the same
-generic host stack as the C language (`Lang_make.Make`, `Typed.Make_transparent`).
+generic host stack as the C language (`Lang_make.Make`); its typed layer is `Typed_base` (the analogue of
+`Bv_values.Typed`: `Rust_typed.Derived` and thin wrappers), extended by `Typed`.
 It replaced the extension `Ext` of the first, hand-written generation of the
 generic values (deleted: `git show fab3ed5:soteria/lib/bv_values/svalue.ml`).
 `Svalue.Typed` is what the rest of soteria-rust uses.
@@ -19,7 +20,7 @@ generic values (deleted: `git show fab3ed5:soteria/lib/bv_values/svalue.ml`).
 | `rust_prims.ml` | `Prim.Make` (the primitives shared with the C language) applied to `Rust_types`, and the prims of rust.kn |
 | `rust_host.ml`, `rust_charon.ml`, `rust_encoding.ml` | `ptag`; `ty_of_rust`, `usize_bits`, `t_as_*`; the SMT sort modules and operators, `pp_ty` |
 | `rust_pp.ml` | the pretty-printer of the Rust language, `K.pp`, written by hand over `Rust_types`: the shared nodes as the C language prints them, and the nodes of rust.kn |
-| `rust_lang.ml`, `rust_stack.ml`, `typed.ml(i)` | `Kanon_fns` composition; `Lang_make.Make`; the typed layer (`Svalue.Typed`) |
+| `rust_lang.ml`, `rust_stack.ml`, `typed_base.ml(i)`, `typed.ml(i)` | `Kanon_fns` composition; `Lang_make.Make`; the typed layer over the generated `Rust_typed.Derived` (`Typed_base`) and its Rust extension (`Svalue.Typed`) |
 | `iface.ml` | the ONE file naming the generic stack (`Soteria.Bv_values.*`) |
 | `ptr_tag.ml(i)` | the tags of the provenance of pointers |
 

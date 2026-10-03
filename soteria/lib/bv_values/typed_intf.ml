@@ -5,15 +5,6 @@
 
 open Deps
 
-(** A complete value language: the input of {!Typed.Make}. {!Lang_make.Make}
-    builds it from a {!Value_lang.Term} and a {!Kanon_fns.Kanon_fns}. *)
-module type Language = sig
-  module V : Value_lang.S
-  module Svalue : Svalue_sugar.S with type t = V.t and type ty = V.ty
-  module Eval : Eval.S with type t = V.t and type ty = V.ty
-  module Expr : Expr.S with type value = V.t and type vty = V.ty
-end
-
 module type S = sig
   module Svalue : Svalue_sugar.S
   module Eval : Eval.S with type t = Svalue.t and type ty = Svalue.ty
@@ -42,9 +33,8 @@ module type S = sig
     type sbool = Bv_typed.Tag.tbool
     type sptr = Bv_typed.Tag.tpointer
     type sloc = Bv_typed.Tag.tloc
-    type 'a sseq = [ `List of 'a ]
     type cval = [ sint | sptr | sfloat ]
-    type any = [ sint | sfloat | sbool | sptr | sloc | any sseq ]
+    type any = [ sint | sfloat | sbool | sptr | sloc ]
 
     val pp_sint : Format.formatter -> sint -> unit
     val pp_nonzero : Format.formatter -> nonzero -> unit
@@ -54,10 +44,6 @@ module type S = sig
     val pp_sptr : Format.formatter -> sptr -> unit
     val pp_sloc : Format.formatter -> sloc -> unit
     val pp_cval : Format.formatter -> cval -> unit
-
-    val pp_sseq :
-      (Format.formatter -> 'a -> unit) -> Format.formatter -> 'a sseq -> unit
-
     val pp_any : Format.formatter -> any -> unit
     val hash_sint : sint -> int
     val hash_nonzero : nonzero -> int
@@ -67,7 +53,6 @@ module type S = sig
     val hash_sptr : sptr -> int
     val hash_sloc : sloc -> int
     val hash_cval : cval -> int
-    val hash_sseq : 'a sseq -> int
     val hash_any : any -> int
   end
 
@@ -85,7 +70,6 @@ module type S = sig
   val t_int : int -> [> sint ] ty
   val t_ptr : int -> [> sptr ] ty
   val t_loc : int -> [> sloc ] ty
-  val t_seq : ([< any ] as 'a) ty -> [> 'a sseq ] ty
   val t_f16 : [> sfloat ] ty
   val t_f32 : [> sfloat ] ty
   val t_f64 : [> sfloat ] ty
@@ -405,10 +389,6 @@ module type S = sig
     val is_null_loc : [< sloc ] t -> [> sbool ] t
     val is_null : [< sptr ] t -> [> sbool ] t
     val is_at_null_loc : [< sptr ] t -> [> sbool ] t
-  end
-
-  module SSeq : sig
-    val mk : seq_ty:'a sseq ty -> 'a t list -> [> 'a sseq ] t
   end
 
   module Infix : sig

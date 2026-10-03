@@ -39,8 +39,10 @@ Files (see `INTERFACES.md` for the contracts):
   and `<=s` (unsigned and signed), and the subsorts `TNonzero` and `TZero` of
   `TBitVector`; the Lean project does not know them (see below).
 - `bv_types.gen.ml`, `bv_typed.gen.ml` and `bv_rules.gen.ml` are generated from them (below). `bv_typed.gen.ml`
-  is the ghost-typed interface: its `Tag` module has a tag type per sort and per subsort (`TNonzero` and `TZero` of
-  `TBitVector`), which are the tags `T.sint`, `T.nonzero`, `T.zero`... of `Typed`.
+  is the ghost-typed interface (`[@@@ocaml_rules "Bv_rules"]` in `lang.knl`): its `Tag` module has a tag type per sort
+  and per subsort (`TNonzero` and `TZero` of `TBitVector`), which are the tags `T.sint`, `T.nonzero`, `T.zero`... of
+  `Typed`; its `S` has a submodule per Kanon module (`Bool`, `Bitvec`, `Float`, `Ptr`...) and `Derived` implements it
+  from the rules.
 - `prim.ml` is `Prim.Make`, the primitives that the rules of the C and Rust
   languages call (literal arithmetic, the constants and the cache of literals,
   SMT builders...), over the few sorts and nodes of a language. `bv_prims.ml`
@@ -48,12 +50,16 @@ Files (see `INTERFACES.md` for the contracts):
 - `lang.ml` is the glue of the language, `Bv_values.Lang`: `Lang.Types`,
   `Lang.Prims`, `Lang.Rules`, the implementation `Lang.K` of `Kanon_fns`, and
   the generic code instantiated on it: `Lang.Svalue`, `Lang.Eval`, `Lang.Expr`,
-  `Lang.V` (the language as `Solver_lang.S`, for `Bv_solver`) and `Lang.Typed`,
-  the typed layer that soteria-c uses (`include Soteria.Bv_values.Lang.Typed`).
+  `Lang.V` (the language as `Solver_lang.S`, for `Bv_solver`).
+- `typed.ml(i)` is `Bv_values.Typed`, the typed layer that soteria-c uses
+  (`include Soteria.Bv_values.Typed`). It is not a functor: it is `Bv_typed.Derived` (the typed smart constructors that
+  Kanon generates), the groups of tags (`T.cval`, `T.any`), and thin wrappers that give them the public API
+  (`Typed_intf.S`: nested modules, labelled and optional arguments, `int` sizes: `BitVec.add ?checked` is
+  `Bv_typed.Derived.Bitvec.bv_add`). The leaves and the operations that the rules do not type come from `Lang.Svalue`.
   The terms live in one global table, which is initialised, with the constants
   and the literal cache, when `Lang` is.
 - the generic code: `Value_lang`, `Eval`, `Expr`, `Svalue_sugar`,
-  `Lang_make`, `Typed_intf`, `Typed`, over the generated language and
+  `Lang_make`, over the generated language and
   `Kanon_fns`/`View_host`. `Analyses`, `Bv_solver`, `Encoding` and `Ptr_sort`
   consume it through `Solver_lang.S`.
 - `bv_base.ml` has the host types that the generated types refer to

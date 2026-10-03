@@ -15,6 +15,7 @@
 [@@@lean_param "FS" "FloatSem"]
 [@@@ocaml_prims "Rust_prims"]
 [@@@ocaml_types "Rust_types"]
+[@@@ocaml_rules "Rust_rules"]
 
 
 (* The tags of the Rust values, as in soteria-rust/lib/svalue/typed.ml *)

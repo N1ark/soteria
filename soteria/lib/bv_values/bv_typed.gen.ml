@@ -2,7 +2,7 @@
 
 open Bv_types
 
-(** The ghost tag types of the sorts: a sort that has subsorts has their variants too, which a term of the sort may be. *)
+(** The tags of the terms, one polymorphic variant type per sort and per subsort, with the sort in lowercase as its name. A sort that has subsorts has their variants too, which a term of the sort may be. The types may be joined, in a group of tags of the user: [type scalar = [ Tag.tbitvec | Tag.tfloat ]]. *)
 module Tag = struct
   type tseq = [ `TSeq ]
   type tbool = [ `TBool ]
@@ -14,27 +14,22 @@ module Tag = struct
   type tpointer = [ `TPointer ]
 end
 
+(** The typed interface of the language, organised like it: a module per Kanon module (per file). A term of type [_ t] has a phantom parameter, one of the tags of [Tag], that says what Kanon knows of the term, and the smart constructors check it at compile time. The tag is not data: a term is the same value as its untyped term, [raw]. *)
 module type S = sig
-  open Tag
-  
-  (** {2 Types} *)
-  
-  (** The untyped terms and sorts, of the types of the language. *)
+  (** The terms and sorts of the types of the language, without tag. *)
   type raw = t
   type raw_ty = ty
   
-  (** A sort of terms, phantom-typed by the tag of its terms. *)
-  type +'a ty
-  
-  (** A term, phantom-typed by its tag. *)
+  (** A term, whose phantom parameter is its tag. *)
   type +'a t
   
-  (** {2 Escape hatches} *)
+  (** A sort of terms of the tag [ 'a ]. *)
+  type +'a ty
   
-  (** Forgets the tag of a term. *)
+  (** Forgets the tag of a term: the same value. *)
   val untyped : 'a t -> raw
   
-  (** Trusts the tag of a term: its type is not checked. *)
+  (** Trusts the tag of a term: unchecked. *)
   val type_ : raw -> 'a t
   
   (** Changes the tag of a term: unchecked. *)
@@ -46,248 +41,512 @@ module type S = sig
   (** Trusts the tag of a sort: unchecked. *)
   val type_type : raw_ty -> 'a ty
   
-  (** {2 Sorts} *)
+  (** The Kanon module lang. *)
+  module Lang : sig
+    val t_seq : _ ty -> [> Tag.tseq ] ty
+    val as_var : _ t -> var option
+    val is_var : _ t -> bool
+    val as_seq : _ t -> (_ t list) option
+    val is_seq : _ t -> bool
+    val as_tseq : _ ty -> raw_ty option
+    val is_tseq : _ ty -> bool
+  end
   
-  val t_seq : _ ty -> [> tseq ] ty
-  val t_bool : [> tbool ] ty
-  val t_bitvector : int -> [> tbitvector ] ty
-  val t_float : fp -> [> tfloat ] ty
-  val t_loc : int -> [> tloc ] ty
-  val t_pointer : int -> [> tpointer ] ty
+  (** The Kanon module bool. *)
+  module Bool : sig
+    val t_bool : [> Tag.tbool ] ty
+    val b_and : [< Tag.tbool ] t -> [< Tag.tbool ] t -> [> Tag.tbool ] t
+    val b_or : [< Tag.tbool ] t -> [< Tag.tbool ] t -> [> Tag.tbool ] t
+    val b_not : [< Tag.tbool ] t -> [> Tag.tbool ] t
+    val b_ite : [< Tag.tbool ] t -> 'a t -> 'a t -> 'a t
+    val sem_eq : 'a t -> 'a t -> [> Tag.tbool ] t
+    val sem_eq_untyped : 'a t -> 'a t -> [> Tag.tbool ] t
+    val b_distinct : 'a t list -> [> Tag.tbool ] t
+    val as_bool : _ t -> bool option
+    val is_bool : _ t -> bool
+    val as_not : _ t -> [> Tag.tbool ] t option
+    val is_not : _ t -> bool
+    val as_and : _ t -> ([> Tag.tbool ] t * [> Tag.tbool ] t) option
+    val is_and : _ t -> bool
+    val as_or : _ t -> ([> Tag.tbool ] t * [> Tag.tbool ] t) option
+    val is_or : _ t -> bool
+    val as_eq : _ t -> ('a t * 'a t) option
+    val is_eq : _ t -> bool
+    val as_ite : _ t -> ([> Tag.tbool ] t * 'a t * 'a t) option
+    val is_ite : _ t -> bool
+    val as_distinct : _ t -> 'a t list option
+    val is_distinct : _ t -> bool
+    val as_tbool : _ ty -> unit option
+    val is_tbool : _ ty -> bool
+  end
   
-  (** {2 Smart constructors} *)
+  (** The Kanon module bitvec. *)
+  module Bitvec : sig
+    val t_bitvector : int -> [> Tag.tbitvector ] ty
+    val bv_of_bool : Z.t -> [< Tag.tbool ] t -> [> Tag.tbitvector ] t
+    val bv_to_bool : _ t -> [> Tag.tbool ] t
+    val bv_not_bool : _ t -> [> Tag.tbitvector ] t
+    val bv_add : checked -> [< Tag.tbitvector ] t -> [< Tag.tbitvector ] t ->
+      [> Tag.tbitvector ] t
+    val bv_sub : checked -> [< Tag.tbitvector ] t -> [< Tag.tbitvector ] t ->
+      [> Tag.tbitvector ] t
+    val bv_neg : bool -> [< Tag.tbitvector ] t -> [> Tag.tbitvector ] t
+    val bv_mod : [< Tag.tbitvector ] t -> [< Tag.tbitvector ] t ->
+      [> Tag.tbitvector ] t
+    val bv_rem : bool -> [< Tag.tbitvector ] t -> [< Tag.tnonzero ] t ->
+      [> Tag.tbitvector ] t
+    val bv_not : [< Tag.tbitvector ] t -> [> Tag.tbitvector ] t
+    val bv_and : [< Tag.tbitvector ] t -> [< Tag.tbitvector ] t ->
+      [> Tag.tbitvector ] t
+    val bv_or : [< Tag.tbitvector ] t -> [< Tag.tbitvector ] t ->
+      [> Tag.tbitvector ] t
+    val bv_xor : [< Tag.tbitvector ] t -> [< Tag.tbitvector ] t ->
+      [> Tag.tbitvector ] t
+    val bv_extract : Z.t -> Z.t -> [< Tag.tbitvector ] t ->
+      [> Tag.tbitvector ] t
+    val bv_extend : bool -> Z.t -> [< Tag.tbitvector ] t ->
+      [> Tag.tbitvector ] t
+    val bv_concat : [< Tag.tbitvector ] t -> [< Tag.tbitvector ] t ->
+      [> Tag.tbitvector ] t
+    val bv_shl : [< Tag.tbitvector ] t -> [< Tag.tbitvector ] t ->
+      [> Tag.tbitvector ] t
+    val bv_lshr : [< Tag.tbitvector ] t -> [< Tag.tbitvector ] t ->
+      [> Tag.tbitvector ] t
+    val bv_ashr : [< Tag.tbitvector ] t -> [< Tag.tbitvector ] t ->
+      [> Tag.tbitvector ] t
+    val bv_mul : checked -> [< Tag.tbitvector ] t -> [< Tag.tbitvector ] t ->
+      [> Tag.tbitvector ] t
+    val bv_div : bool -> [< Tag.tbitvector ] t -> [< Tag.tnonzero ] t ->
+      [> Tag.tbitvector ] t
+    val bv_lt_zero : [< Tag.tbitvector ] t -> [> Tag.tbool ] t
+    val bv_lt : bool -> [< Tag.tbitvector ] t -> [< Tag.tbitvector ] t ->
+      [> Tag.tbool ] t
+    val bv_leq : bool -> [< Tag.tbitvector ] t -> [< Tag.tbitvector ] t ->
+      [> Tag.tbool ] t
+    val bv_add_overflows : bool -> [< Tag.tbitvector ] t ->
+      [< Tag.tbitvector ] t -> [> Tag.tbool ] t
+    val bv_mul_overflows : bool -> [< Tag.tbitvector ] t ->
+      [< Tag.tbitvector ] t -> [> Tag.tbool ] t
+    val bv_neg_overflows : 'a t -> [> Tag.tbool ] t
+    val bv_sub_overflows : bool -> [< Tag.tbitvector ] t ->
+      [< Tag.tbitvector ] t -> [> Tag.tbool ] t
+    val bv_of_float : rm -> bool -> Z.t -> [< Tag.tfloat ] t ->
+      [> Tag.tbitvector ] t
+    val bv_to_float : rm -> bool -> fp -> [< Tag.tbitvector ] t ->
+      [> Tag.tfloat ] t
+    val bv_to_float_raw : [< Tag.tbitvector ] t -> [> Tag.tfloat ] t
+    val as_bitvec : _ t -> Z.t option
+    val is_bitvec : _ t -> bool
+    val as_loclit : _ t -> Z.t option
+    val is_loclit : _ t -> bool
+    val as_bvofbool : _ t -> (int * [> Tag.tbool ] t) option
+    val is_bvofbool : _ t -> bool
+    val as_bvextract : _ t -> (int * int * [> Tag.tbitvector ] t) option
+    val is_bvextract : _ t -> bool
+    val as_bvextend : _ t -> (bool * int * [> Tag.tbitvector ] t) option
+    val is_bvextend : _ t -> bool
+    val as_bvnot : _ t -> [> Tag.tbitvector ] t option
+    val is_bvnot : _ t -> bool
+    val as_neg : _ t -> (bool * [> Tag.tbitvector ] t) option
+    val is_neg : _ t -> bool
+    val as_add : _ t ->
+      (checked * [> Tag.tbitvector ] t * [> Tag.tbitvector ] t) option
+    val is_add : _ t -> bool
+    val as_sub : _ t ->
+      (checked * [> Tag.tbitvector ] t * [> Tag.tbitvector ] t) option
+    val is_sub : _ t -> bool
+    val as_mul : _ t ->
+      (checked * [> Tag.tbitvector ] t * [> Tag.tbitvector ] t) option
+    val is_mul : _ t -> bool
+    val as_div : _ t ->
+      (bool * [> Tag.tbitvector ] t * [> Tag.tnonzero ] t) option
+    val is_div : _ t -> bool
+    val as_rem : _ t ->
+      (bool * [> Tag.tbitvector ] t * [> Tag.tnonzero ] t) option
+    val is_rem : _ t -> bool
+    val as_mod : _ t ->
+      ([> Tag.tbitvector ] t * [> Tag.tbitvector ] t) option
+    val is_mod : _ t -> bool
+    val as_addovf : _ t ->
+      (bool * [> Tag.tbitvector ] t * [> Tag.tbitvector ] t) option
+    val is_addovf : _ t -> bool
+    val as_subovf : _ t ->
+      (bool * [> Tag.tbitvector ] t * [> Tag.tbitvector ] t) option
+    val is_subovf : _ t -> bool
+    val as_mulovf : _ t ->
+      (bool * [> Tag.tbitvector ] t * [> Tag.tbitvector ] t) option
+    val is_mulovf : _ t -> bool
+    val as_lt : _ t ->
+      (bool * [> Tag.tbitvector ] t * [> Tag.tbitvector ] t) option
+    val is_lt : _ t -> bool
+    val as_leq : _ t ->
+      (bool * [> Tag.tbitvector ] t * [> Tag.tbitvector ] t) option
+    val is_leq : _ t -> bool
+    val as_bvconcat : _ t ->
+      ([> Tag.tbitvector ] t * [> Tag.tbitvector ] t) option
+    val is_bvconcat : _ t -> bool
+    val as_bitand : _ t ->
+      ([> Tag.tbitvector ] t * [> Tag.tbitvector ] t) option
+    val is_bitand : _ t -> bool
+    val as_bitor : _ t ->
+      ([> Tag.tbitvector ] t * [> Tag.tbitvector ] t) option
+    val is_bitor : _ t -> bool
+    val as_bitxor : _ t ->
+      ([> Tag.tbitvector ] t * [> Tag.tbitvector ] t) option
+    val is_bitxor : _ t -> bool
+    val as_shl : _ t ->
+      ([> Tag.tbitvector ] t * [> Tag.tbitvector ] t) option
+    val is_shl : _ t -> bool
+    val as_lshr : _ t ->
+      ([> Tag.tbitvector ] t * [> Tag.tbitvector ] t) option
+    val is_lshr : _ t -> bool
+    val as_ashr : _ t ->
+      ([> Tag.tbitvector ] t * [> Tag.tbitvector ] t) option
+    val is_ashr : _ t -> bool
+    val as_tbitvector : _ ty -> int option
+    val is_tbitvector : _ ty -> bool
+  end
   
-  val b_and : [< tbool ] t -> [< tbool ] t -> [> tbool ] t
-  val b_or : [< tbool ] t -> [< tbool ] t -> [> tbool ] t
-  val b_not : [< tbool ] t -> [> tbool ] t
-  val b_ite : [< tbool ] t -> 'a t -> 'a t -> 'a t
-  val sem_eq : 'a t -> 'a t -> [> tbool ] t
-  val sem_eq_untyped : 'a t -> 'a t -> [> tbool ] t
-  val b_distinct : 'a t list -> [> tbool ] t
-  val b_mk_exists : ((var * raw_ty) list) -> _ t -> [> tbool ] t
-  val bv_of_bool : int -> [< tbool ] t -> [> tbitvector ] t
-  val bv_to_bool : _ t -> [> tbool ] t
-  val bv_not_bool : _ t -> [> tbitvector ] t
-  val bv_add : checked -> [< tbitvector ] t -> [< tbitvector ] t ->
-    [> tbitvector ] t
-  val bv_sub : checked -> [< tbitvector ] t -> [< tbitvector ] t ->
-    [> tbitvector ] t
-  val bv_neg : bool -> [< tbitvector ] t -> [> tbitvector ] t
-  val bv_mod : [< tbitvector ] t -> [< tbitvector ] t -> [> tbitvector ] t
-  val bv_rem : bool -> [< tbitvector ] t -> [< tnonzero ] t ->
-    [> tbitvector ] t
-  val bv_not : [< tbitvector ] t -> [> tbitvector ] t
-  val bv_and : [< tbitvector ] t -> [< tbitvector ] t -> [> tbitvector ] t
-  val bv_or : [< tbitvector ] t -> [< tbitvector ] t -> [> tbitvector ] t
-  val bv_xor : [< tbitvector ] t -> [< tbitvector ] t -> [> tbitvector ] t
-  val bv_extract : int -> int -> [< tbitvector ] t -> [> tbitvector ] t
-  val bv_extend : bool -> int -> [< tbitvector ] t -> [> tbitvector ] t
-  val bv_concat : [< tbitvector ] t -> [< tbitvector ] t -> [> tbitvector ] t
-  val bv_shl : [< tbitvector ] t -> [< tbitvector ] t -> [> tbitvector ] t
-  val bv_lshr : [< tbitvector ] t -> [< tbitvector ] t -> [> tbitvector ] t
-  val bv_ashr : [< tbitvector ] t -> [< tbitvector ] t -> [> tbitvector ] t
-  val bv_mul : checked -> [< tbitvector ] t -> [< tbitvector ] t ->
-    [> tbitvector ] t
-  val bv_div : bool -> [< tbitvector ] t -> [< tnonzero ] t ->
-    [> tbitvector ] t
-  val bv_lt_zero : [< tbitvector ] t -> [> tbool ] t
-  val bv_lt : bool -> [< tbitvector ] t -> [< tbitvector ] t -> [> tbool ] t
-  val bv_leq : bool -> [< tbitvector ] t -> [< tbitvector ] t -> [> tbool ] t
-  val bv_add_overflows : bool -> [< tbitvector ] t -> [< tbitvector ] t ->
-    [> tbool ] t
-  val bv_mul_overflows : bool -> [< tbitvector ] t -> [< tbitvector ] t ->
-    [> tbool ] t
-  val bv_neg_overflows : 'a t -> [> tbool ] t
-  val bv_sub_overflows : bool -> [< tbitvector ] t -> [< tbitvector ] t ->
-    [> tbool ] t
-  val bv_of_float : rm -> bool -> int -> [< tfloat ] t -> [> tbitvector ] t
-  val bv_to_float : rm -> bool -> fp -> [< tbitvector ] t -> [> tfloat ] t
-  val bv_to_float_raw : [< tbitvector ] t -> [> tfloat ] t
-  val float_is_floatclass : fc -> [< tfloat ] t -> [> tbool ] t
-  val float_is_negative : [< tfloat ] t -> [> tbool ] t
-  val float_is_positive : [< tfloat ] t -> [> tbool ] t
-  val float_cast : rm -> fp -> [< tfloat ] t -> [> tfloat ] t
-  val float_eq : [< tfloat ] t -> [< tfloat ] t -> [> tbool ] t
-  val float_lt : [< tfloat ] t -> [< tfloat ] t -> [> tbool ] t
-  val float_leq : [< tfloat ] t -> [< tfloat ] t -> [> tbool ] t
-  val float_add : [< tfloat ] t -> [< tfloat ] t -> [> tfloat ] t
-  val float_sub : [< tfloat ] t -> [< tfloat ] t -> [> tfloat ] t
-  val float_div : [< tfloat ] t -> [< tfloat ] t -> [> tfloat ] t
-  val float_mul : [< tfloat ] t -> [< tfloat ] t -> [> tfloat ] t
-  val float_rem : [< tfloat ] t -> [< tfloat ] t -> [> tfloat ] t
-  val float_abs : [< tfloat ] t -> [> tfloat ] t
-  val float_neg : [< tfloat ] t -> [> tfloat ] t
-  val float_fma : [< tfloat ] t -> [< tfloat ] t -> [< tfloat ] t ->
-    [> tfloat ] t
-  val float_fmod_of_rem : _ t -> _ t -> _ t -> _ t
-  val float_fmod : _ t -> _ t -> _ t
-  val float_min : [< tfloat ] t -> [< tfloat ] t -> [> tfloat ] t
-  val float_max : [< tfloat ] t -> [< tfloat ] t -> [> tfloat ] t
-  val float_sqrt : [< tfloat ] t -> [> tfloat ] t
-  val float_round : rm -> [< tfloat ] t -> [> tfloat ] t
-  val ptr_loc : [< tpointer ] t -> [> tloc ] t
-  val ptr_ofs : [< tpointer ] t -> [> tbitvector ] t
+  (** The Kanon module float. *)
+  module Float : sig
+    val t_float : fp -> [> Tag.tfloat ] ty
+    val float_is_floatclass : fc -> [< Tag.tfloat ] t -> [> Tag.tbool ] t
+    val float_is_negative : [< Tag.tfloat ] t -> [> Tag.tbool ] t
+    val float_is_positive : [< Tag.tfloat ] t -> [> Tag.tbool ] t
+    val float_cast : rm -> fp -> [< Tag.tfloat ] t -> [> Tag.tfloat ] t
+    val float_eq : [< Tag.tfloat ] t -> [< Tag.tfloat ] t -> [> Tag.tbool ] t
+    val float_lt : [< Tag.tfloat ] t -> [< Tag.tfloat ] t -> [> Tag.tbool ] t
+    val float_leq : [< Tag.tfloat ] t -> [< Tag.tfloat ] t ->
+      [> Tag.tbool ] t
+    val float_add : [< Tag.tfloat ] t -> [< Tag.tfloat ] t ->
+      [> Tag.tfloat ] t
+    val float_sub : [< Tag.tfloat ] t -> [< Tag.tfloat ] t ->
+      [> Tag.tfloat ] t
+    val float_div : [< Tag.tfloat ] t -> [< Tag.tfloat ] t ->
+      [> Tag.tfloat ] t
+    val float_mul : [< Tag.tfloat ] t -> [< Tag.tfloat ] t ->
+      [> Tag.tfloat ] t
+    val float_rem : [< Tag.tfloat ] t -> [< Tag.tfloat ] t ->
+      [> Tag.tfloat ] t
+    val float_abs : [< Tag.tfloat ] t -> [> Tag.tfloat ] t
+    val float_neg : [< Tag.tfloat ] t -> [> Tag.tfloat ] t
+    val float_fma : [< Tag.tfloat ] t -> [< Tag.tfloat ] t ->
+      [< Tag.tfloat ] t -> [> Tag.tfloat ] t
+    val float_fmod_of_rem : _ t -> _ t -> _ t -> _ t
+    val float_fmod : _ t -> _ t -> _ t
+    val float_min : [< Tag.tfloat ] t -> [< Tag.tfloat ] t ->
+      [> Tag.tfloat ] t
+    val float_max : [< Tag.tfloat ] t -> [< Tag.tfloat ] t ->
+      [> Tag.tfloat ] t
+    val float_sqrt : [< Tag.tfloat ] t -> [> Tag.tfloat ] t
+    val float_round : rm -> [< Tag.tfloat ] t -> [> Tag.tfloat ] t
+    val as_float : _ t -> float option
+    val is_float : _ t -> bool
+    val as_bvoffloat : _ t -> (rm * bool * int * [> Tag.tfloat ] t) option
+    val is_bvoffloat : _ t -> bool
+    val as_floatofbv : _ t -> (rm * bool * fp * [> Tag.tbitvector ] t) option
+    val is_floatofbv : _ t -> bool
+    val as_floatofbvraw : _ t -> (fp * [> Tag.tbitvector ] t) option
+    val is_floatofbvraw : _ t -> bool
+    val as_floatoffloat : _ t -> (rm * fp * [> Tag.tfloat ] t) option
+    val is_floatoffloat : _ t -> bool
+    val as_fabs : _ t -> [> Tag.tfloat ] t option
+    val is_fabs : _ t -> bool
+    val as_fneg : _ t -> [> Tag.tfloat ] t option
+    val is_fneg : _ t -> bool
+    val as_fsqrt : _ t -> [> Tag.tfloat ] t option
+    val is_fsqrt : _ t -> bool
+    val as_fis : _ t -> (fc * [> Tag.tfloat ] t) option
+    val is_fis : _ t -> bool
+    val as_fisneg : _ t -> [> Tag.tfloat ] t option
+    val is_fisneg : _ t -> bool
+    val as_fispos : _ t -> [> Tag.tfloat ] t option
+    val is_fispos : _ t -> bool
+    val as_fround : _ t -> (rm * [> Tag.tfloat ] t) option
+    val is_fround : _ t -> bool
+    val as_feq : _ t -> ([> Tag.tfloat ] t * [> Tag.tfloat ] t) option
+    val is_feq : _ t -> bool
+    val as_fleq : _ t -> ([> Tag.tfloat ] t * [> Tag.tfloat ] t) option
+    val is_fleq : _ t -> bool
+    val as_flt : _ t -> ([> Tag.tfloat ] t * [> Tag.tfloat ] t) option
+    val is_flt : _ t -> bool
+    val as_fadd : _ t -> ([> Tag.tfloat ] t * [> Tag.tfloat ] t) option
+    val is_fadd : _ t -> bool
+    val as_fsub : _ t -> ([> Tag.tfloat ] t * [> Tag.tfloat ] t) option
+    val is_fsub : _ t -> bool
+    val as_fmul : _ t -> ([> Tag.tfloat ] t * [> Tag.tfloat ] t) option
+    val is_fmul : _ t -> bool
+    val as_fdiv : _ t -> ([> Tag.tfloat ] t * [> Tag.tfloat ] t) option
+    val is_fdiv : _ t -> bool
+    val as_frem : _ t -> ([> Tag.tfloat ] t * [> Tag.tfloat ] t) option
+    val is_frem : _ t -> bool
+    val as_fmin : _ t -> ([> Tag.tfloat ] t * [> Tag.tfloat ] t) option
+    val is_fmin : _ t -> bool
+    val as_fmax : _ t -> ([> Tag.tfloat ] t * [> Tag.tfloat ] t) option
+    val is_fmax : _ t -> bool
+    val as_fma : _ t ->
+      ([> Tag.tfloat ] t * [> Tag.tfloat ] t * [> Tag.tfloat ] t) option
+    val is_fma : _ t -> bool
+    val as_tfloat : _ ty -> fp option
+    val is_tfloat : _ ty -> bool
+  end
   
-  (** {2 Destructors} *)
+  (** The Kanon module ptr. *)
+  module Ptr : sig
+    val t_loc : int -> [> Tag.tloc ] ty
+    val t_pointer : int -> [> Tag.tpointer ] ty
+    val ptr_loc : [< Tag.tpointer ] t -> [> Tag.tloc ] t
+    val ptr_ofs : [< Tag.tpointer ] t -> [> Tag.tbitvector ] t
+    val as_ptr : _ t -> ([> Tag.tloc ] t * [> Tag.tbitvector ] t) option
+    val is_ptr : _ t -> bool
+    val as_getptrloc : _ t -> [> Tag.tpointer ] t option
+    val is_getptrloc : _ t -> bool
+    val as_getptrofs : _ t -> [> Tag.tpointer ] t option
+    val is_getptrofs : _ t -> bool
+    val as_tloc : _ ty -> int option
+    val is_tloc : _ ty -> bool
+    val as_tpointer : _ ty -> int option
+    val is_tpointer : _ ty -> bool
+  end
   
-  val as_var : _ t -> var option
-  val is_var : _ t -> bool
-  val as_seq : _ t -> (_ t list) option
-  val is_seq : _ t -> bool
-  val as_bool : _ t -> bool option
-  val is_bool : _ t -> bool
-  val as_exists : _ t -> (((var * raw_ty) list) * _ t) option
-  val is_exists : _ t -> bool
-  val as_bitvec : _ t -> Z.t option
-  val is_bitvec : _ t -> bool
-  val as_loclit : _ t -> Z.t option
-  val is_loclit : _ t -> bool
-  val as_float : _ t -> float option
-  val is_float : _ t -> bool
-  val as_not : _ t -> [> tbool ] t option
-  val is_not : _ t -> bool
-  val as_and : _ t -> ([> tbool ] t * [> tbool ] t) option
-  val is_and : _ t -> bool
-  val as_or : _ t -> ([> tbool ] t * [> tbool ] t) option
-  val is_or : _ t -> bool
-  val as_eq : _ t -> ('a t * 'a t) option
-  val is_eq : _ t -> bool
-  val as_ite : _ t -> ([> tbool ] t * 'a t * 'a t) option
-  val is_ite : _ t -> bool
-  val as_distinct : _ t -> 'a t list option
-  val is_distinct : _ t -> bool
-  val as_bvofbool : _ t -> (int * [> tbool ] t) option
-  val is_bvofbool : _ t -> bool
-  val as_bvextract : _ t -> (int * int * [> tbitvector ] t) option
-  val is_bvextract : _ t -> bool
-  val as_bvextend : _ t -> (bool * int * [> tbitvector ] t) option
-  val is_bvextend : _ t -> bool
-  val as_bvnot : _ t -> [> tbitvector ] t option
-  val is_bvnot : _ t -> bool
-  val as_neg : _ t -> (bool * [> tbitvector ] t) option
-  val is_neg : _ t -> bool
-  val as_add : _ t ->
-    (checked * [> tbitvector ] t * [> tbitvector ] t) option
-  val is_add : _ t -> bool
-  val as_sub : _ t ->
-    (checked * [> tbitvector ] t * [> tbitvector ] t) option
-  val is_sub : _ t -> bool
-  val as_mul : _ t ->
-    (checked * [> tbitvector ] t * [> tbitvector ] t) option
-  val is_mul : _ t -> bool
-  val as_div : _ t -> (bool * [> tbitvector ] t * [> tnonzero ] t) option
-  val is_div : _ t -> bool
-  val as_rem : _ t -> (bool * [> tbitvector ] t * [> tnonzero ] t) option
-  val is_rem : _ t -> bool
-  val as_mod : _ t -> ([> tbitvector ] t * [> tbitvector ] t) option
-  val is_mod : _ t -> bool
-  val as_addovf : _ t ->
-    (bool * [> tbitvector ] t * [> tbitvector ] t) option
-  val is_addovf : _ t -> bool
-  val as_subovf : _ t ->
-    (bool * [> tbitvector ] t * [> tbitvector ] t) option
-  val is_subovf : _ t -> bool
-  val as_mulovf : _ t ->
-    (bool * [> tbitvector ] t * [> tbitvector ] t) option
-  val is_mulovf : _ t -> bool
-  val as_lt : _ t -> (bool * [> tbitvector ] t * [> tbitvector ] t) option
-  val is_lt : _ t -> bool
-  val as_leq : _ t -> (bool * [> tbitvector ] t * [> tbitvector ] t) option
-  val is_leq : _ t -> bool
-  val as_bvconcat : _ t -> ([> tbitvector ] t * [> tbitvector ] t) option
-  val is_bvconcat : _ t -> bool
-  val as_bitand : _ t -> ([> tbitvector ] t * [> tbitvector ] t) option
-  val is_bitand : _ t -> bool
-  val as_bitor : _ t -> ([> tbitvector ] t * [> tbitvector ] t) option
-  val is_bitor : _ t -> bool
-  val as_bitxor : _ t -> ([> tbitvector ] t * [> tbitvector ] t) option
-  val is_bitxor : _ t -> bool
-  val as_shl : _ t -> ([> tbitvector ] t * [> tbitvector ] t) option
-  val is_shl : _ t -> bool
-  val as_lshr : _ t -> ([> tbitvector ] t * [> tbitvector ] t) option
-  val is_lshr : _ t -> bool
-  val as_ashr : _ t -> ([> tbitvector ] t * [> tbitvector ] t) option
-  val is_ashr : _ t -> bool
-  val as_bvoffloat : _ t -> (rm * bool * int * [> tfloat ] t) option
-  val is_bvoffloat : _ t -> bool
-  val as_floatofbv : _ t -> (rm * bool * fp * [> tbitvector ] t) option
-  val is_floatofbv : _ t -> bool
-  val as_floatofbvraw : _ t -> (fp * [> tbitvector ] t) option
-  val is_floatofbvraw : _ t -> bool
-  val as_floatoffloat : _ t -> (rm * fp * [> tfloat ] t) option
-  val is_floatoffloat : _ t -> bool
-  val as_fabs : _ t -> [> tfloat ] t option
-  val is_fabs : _ t -> bool
-  val as_fneg : _ t -> [> tfloat ] t option
-  val is_fneg : _ t -> bool
-  val as_fsqrt : _ t -> [> tfloat ] t option
-  val is_fsqrt : _ t -> bool
-  val as_fis : _ t -> (fc * [> tfloat ] t) option
-  val is_fis : _ t -> bool
-  val as_fisneg : _ t -> [> tfloat ] t option
-  val is_fisneg : _ t -> bool
-  val as_fispos : _ t -> [> tfloat ] t option
-  val is_fispos : _ t -> bool
-  val as_fround : _ t -> (rm * [> tfloat ] t) option
-  val is_fround : _ t -> bool
-  val as_feq : _ t -> ([> tfloat ] t * [> tfloat ] t) option
-  val is_feq : _ t -> bool
-  val as_fleq : _ t -> ([> tfloat ] t * [> tfloat ] t) option
-  val is_fleq : _ t -> bool
-  val as_flt : _ t -> ([> tfloat ] t * [> tfloat ] t) option
-  val is_flt : _ t -> bool
-  val as_fadd : _ t -> ([> tfloat ] t * [> tfloat ] t) option
-  val is_fadd : _ t -> bool
-  val as_fsub : _ t -> ([> tfloat ] t * [> tfloat ] t) option
-  val is_fsub : _ t -> bool
-  val as_fmul : _ t -> ([> tfloat ] t * [> tfloat ] t) option
-  val is_fmul : _ t -> bool
-  val as_fdiv : _ t -> ([> tfloat ] t * [> tfloat ] t) option
-  val is_fdiv : _ t -> bool
-  val as_frem : _ t -> ([> tfloat ] t * [> tfloat ] t) option
-  val is_frem : _ t -> bool
-  val as_fmin : _ t -> ([> tfloat ] t * [> tfloat ] t) option
-  val is_fmin : _ t -> bool
-  val as_fmax : _ t -> ([> tfloat ] t * [> tfloat ] t) option
-  val is_fmax : _ t -> bool
-  val as_fma : _ t -> ([> tfloat ] t * [> tfloat ] t * [> tfloat ] t) option
-  val is_fma : _ t -> bool
-  val as_ptr : _ t -> ([> tloc ] t * [> tbitvector ] t) option
-  val is_ptr : _ t -> bool
-  val as_getptrloc : _ t -> [> tpointer ] t option
-  val is_getptrloc : _ t -> bool
-  val as_getptrofs : _ t -> [> tpointer ] t option
-  val is_getptrofs : _ t -> bool
-  val as_tseq : _ ty -> raw_ty option
-  val is_tseq : _ ty -> bool
-  val as_tbool : _ ty -> unit option
-  val is_tbool : _ ty -> bool
-  val as_tbitvector : _ ty -> int option
-  val is_tbitvector : _ ty -> bool
-  val as_tfloat : _ ty -> fp option
-  val is_tfloat : _ ty -> bool
-  val as_tloc : _ ty -> int option
-  val is_tloc : _ ty -> bool
-  val as_tpointer : _ ty -> int option
-  val is_tpointer : _ ty -> bool
+  (** The Kanon module exists. *)
+  module Exists : sig
+    val b_mk_exists : ((var * raw_ty) list) -> _ t -> [> Tag.tbool ] t
+    val as_exists : _ t -> (((var * raw_ty) list) * _ t) option
+    val is_exists : _ t -> bool
+  end
 end
 
-(** The phantom types of [S], over the types of the language, with the escape hatches, which are the identity, and the sorts: [module Typed : S = struct include Ghost include Rules ... end] only needs what is not generated, such as the leaf nodes. *)
-module Ghost = struct
+(** The implementation of [S], from the rules, with the types of [S] visible: [type 'a t = raw]. [S] hides it, since a visible equality would make every tag the same type. What it does not define are the leaf nodes, written by hand: [module Typed : S = struct include Derived ... end]. *)
+module Derived = struct
+  module Kanon_rules = Bv_rules
   type raw = t
   type raw_ty = ty
   type nonrec 'a t = raw
   type nonrec 'a ty = raw_ty
   
-  let untyped : 'a t -> raw = Fun.id
-  let type_ : raw -> 'a t = Fun.id
-  let cast : 'a t -> 'b t = Fun.id
-  let untype_type : 'a ty -> raw_ty = Fun.id
-  let type_type : raw_ty -> 'a ty = Fun.id
-  let t_seq a1 = TSeq (a1)
-  let t_bool = TBool
-  let t_bitvector a1 = TBitVector (a1)
-  let t_float a1 = TFloat (a1)
-  let t_loc a1 = TLoc (a1)
-  let t_pointer a1 = TPointer (a1)
+  let[@inline] untyped (x : 'a t) : raw = x
+  let[@inline] type_ (x : raw) : 'a t = x
+  let[@inline] cast (x : 'a t) : 'b t = x
+  let[@inline] untype_type (x : 'a ty) : raw_ty = x
+  let[@inline] type_type (x : raw_ty) : 'a ty = x
+  
+  module Lang = struct
+    let t_seq = fun a1 -> TSeq (a1)
+    let as_var = Kanon_rules.as_var
+    let is_var = Kanon_rules.is_var
+    let as_seq = Kanon_rules.as_seq
+    let is_seq = Kanon_rules.is_seq
+    let as_tseq = Kanon_rules.as_tseq
+    let is_tseq = Kanon_rules.is_tseq
+  end
+  
+  module Bool = struct
+    let t_bool = TBool
+    let b_and = Kanon_rules.b_and
+    let b_or = Kanon_rules.b_or
+    let b_not = Kanon_rules.b_not
+    let b_ite = Kanon_rules.b_ite
+    let sem_eq = Kanon_rules.sem_eq
+    let sem_eq_untyped = Kanon_rules.sem_eq_untyped
+    let b_distinct = Kanon_rules.b_distinct
+    let as_bool = Kanon_rules.as_bool
+    let is_bool = Kanon_rules.is_bool
+    let as_not = Kanon_rules.as_not
+    let is_not = Kanon_rules.is_not
+    let as_and = Kanon_rules.as_and
+    let is_and = Kanon_rules.is_and
+    let as_or = Kanon_rules.as_or
+    let is_or = Kanon_rules.is_or
+    let as_eq = Kanon_rules.as_eq
+    let is_eq = Kanon_rules.is_eq
+    let as_ite = Kanon_rules.as_ite
+    let is_ite = Kanon_rules.is_ite
+    let as_distinct = Kanon_rules.as_distinct
+    let is_distinct = Kanon_rules.is_distinct
+    let as_tbool = Kanon_rules.as_tbool
+    let is_tbool = Kanon_rules.is_tbool
+  end
+  
+  module Bitvec = struct
+    let t_bitvector = fun a1 -> TBitVector (a1)
+    let bv_of_bool = Kanon_rules.bv_of_bool
+    let bv_to_bool = Kanon_rules.bv_to_bool
+    let bv_not_bool = Kanon_rules.bv_not_bool
+    let bv_add = Kanon_rules.bv_add
+    let bv_sub = Kanon_rules.bv_sub
+    let bv_neg = Kanon_rules.bv_neg
+    let bv_mod = Kanon_rules.bv_mod
+    let bv_rem = Kanon_rules.bv_rem
+    let bv_not = Kanon_rules.bv_not
+    let bv_and = Kanon_rules.bv_and
+    let bv_or = Kanon_rules.bv_or
+    let bv_xor = Kanon_rules.bv_xor
+    let bv_extract = Kanon_rules.bv_extract
+    let bv_extend = Kanon_rules.bv_extend
+    let bv_concat = Kanon_rules.bv_concat
+    let bv_shl = Kanon_rules.bv_shl
+    let bv_lshr = Kanon_rules.bv_lshr
+    let bv_ashr = Kanon_rules.bv_ashr
+    let bv_mul = Kanon_rules.bv_mul
+    let bv_div = Kanon_rules.bv_div
+    let bv_lt_zero = Kanon_rules.bv_lt_zero
+    let bv_lt = Kanon_rules.bv_lt
+    let bv_leq = Kanon_rules.bv_leq
+    let bv_add_overflows = Kanon_rules.bv_add_overflows
+    let bv_mul_overflows = Kanon_rules.bv_mul_overflows
+    let bv_neg_overflows = Kanon_rules.bv_neg_overflows
+    let bv_sub_overflows = Kanon_rules.bv_sub_overflows
+    let bv_of_float = Kanon_rules.bv_of_float
+    let bv_to_float = Kanon_rules.bv_to_float
+    let bv_to_float_raw = Kanon_rules.bv_to_float_raw
+    let as_bitvec = Kanon_rules.as_bitvec
+    let is_bitvec = Kanon_rules.is_bitvec
+    let as_loclit = Kanon_rules.as_loclit
+    let is_loclit = Kanon_rules.is_loclit
+    let as_bvofbool = Kanon_rules.as_bvofbool
+    let is_bvofbool = Kanon_rules.is_bvofbool
+    let as_bvextract = Kanon_rules.as_bvextract
+    let is_bvextract = Kanon_rules.is_bvextract
+    let as_bvextend = Kanon_rules.as_bvextend
+    let is_bvextend = Kanon_rules.is_bvextend
+    let as_bvnot = Kanon_rules.as_bvnot
+    let is_bvnot = Kanon_rules.is_bvnot
+    let as_neg = Kanon_rules.as_neg
+    let is_neg = Kanon_rules.is_neg
+    let as_add = Kanon_rules.as_add
+    let is_add = Kanon_rules.is_add
+    let as_sub = Kanon_rules.as_sub
+    let is_sub = Kanon_rules.is_sub
+    let as_mul = Kanon_rules.as_mul
+    let is_mul = Kanon_rules.is_mul
+    let as_div = Kanon_rules.as_div
+    let is_div = Kanon_rules.is_div
+    let as_rem = Kanon_rules.as_rem
+    let is_rem = Kanon_rules.is_rem
+    let as_mod = Kanon_rules.as_mod
+    let is_mod = Kanon_rules.is_mod
+    let as_addovf = Kanon_rules.as_addovf
+    let is_addovf = Kanon_rules.is_addovf
+    let as_subovf = Kanon_rules.as_subovf
+    let is_subovf = Kanon_rules.is_subovf
+    let as_mulovf = Kanon_rules.as_mulovf
+    let is_mulovf = Kanon_rules.is_mulovf
+    let as_lt = Kanon_rules.as_lt
+    let is_lt = Kanon_rules.is_lt
+    let as_leq = Kanon_rules.as_leq
+    let is_leq = Kanon_rules.is_leq
+    let as_bvconcat = Kanon_rules.as_bvconcat
+    let is_bvconcat = Kanon_rules.is_bvconcat
+    let as_bitand = Kanon_rules.as_bitand
+    let is_bitand = Kanon_rules.is_bitand
+    let as_bitor = Kanon_rules.as_bitor
+    let is_bitor = Kanon_rules.is_bitor
+    let as_bitxor = Kanon_rules.as_bitxor
+    let is_bitxor = Kanon_rules.is_bitxor
+    let as_shl = Kanon_rules.as_shl
+    let is_shl = Kanon_rules.is_shl
+    let as_lshr = Kanon_rules.as_lshr
+    let is_lshr = Kanon_rules.is_lshr
+    let as_ashr = Kanon_rules.as_ashr
+    let is_ashr = Kanon_rules.is_ashr
+    let as_tbitvector = Kanon_rules.as_tbitvector
+    let is_tbitvector = Kanon_rules.is_tbitvector
+  end
+  
+  module Float = struct
+    let t_float = fun a1 -> TFloat (a1)
+    let float_is_floatclass = Kanon_rules.float_is_floatclass
+    let float_is_negative = Kanon_rules.float_is_negative
+    let float_is_positive = Kanon_rules.float_is_positive
+    let float_cast = Kanon_rules.float_cast
+    let float_eq = Kanon_rules.float_eq
+    let float_lt = Kanon_rules.float_lt
+    let float_leq = Kanon_rules.float_leq
+    let float_add = Kanon_rules.float_add
+    let float_sub = Kanon_rules.float_sub
+    let float_div = Kanon_rules.float_div
+    let float_mul = Kanon_rules.float_mul
+    let float_rem = Kanon_rules.float_rem
+    let float_abs = Kanon_rules.float_abs
+    let float_neg = Kanon_rules.float_neg
+    let float_fma = Kanon_rules.float_fma
+    let float_fmod_of_rem = Kanon_rules.float_fmod_of_rem
+    let float_fmod = Kanon_rules.float_fmod
+    let float_min = Kanon_rules.float_min
+    let float_max = Kanon_rules.float_max
+    let float_sqrt = Kanon_rules.float_sqrt
+    let float_round = Kanon_rules.float_round
+    let as_float = Kanon_rules.as_float
+    let is_float = Kanon_rules.is_float
+    let as_bvoffloat = Kanon_rules.as_bvoffloat
+    let is_bvoffloat = Kanon_rules.is_bvoffloat
+    let as_floatofbv = Kanon_rules.as_floatofbv
+    let is_floatofbv = Kanon_rules.is_floatofbv
+    let as_floatofbvraw = Kanon_rules.as_floatofbvraw
+    let is_floatofbvraw = Kanon_rules.is_floatofbvraw
+    let as_floatoffloat = Kanon_rules.as_floatoffloat
+    let is_floatoffloat = Kanon_rules.is_floatoffloat
+    let as_fabs = Kanon_rules.as_fabs
+    let is_fabs = Kanon_rules.is_fabs
+    let as_fneg = Kanon_rules.as_fneg
+    let is_fneg = Kanon_rules.is_fneg
+    let as_fsqrt = Kanon_rules.as_fsqrt
+    let is_fsqrt = Kanon_rules.is_fsqrt
+    let as_fis = Kanon_rules.as_fis
+    let is_fis = Kanon_rules.is_fis
+    let as_fisneg = Kanon_rules.as_fisneg
+    let is_fisneg = Kanon_rules.is_fisneg
+    let as_fispos = Kanon_rules.as_fispos
+    let is_fispos = Kanon_rules.is_fispos
+    let as_fround = Kanon_rules.as_fround
+    let is_fround = Kanon_rules.is_fround
+    let as_feq = Kanon_rules.as_feq
+    let is_feq = Kanon_rules.is_feq
+    let as_fleq = Kanon_rules.as_fleq
+    let is_fleq = Kanon_rules.is_fleq
+    let as_flt = Kanon_rules.as_flt
+    let is_flt = Kanon_rules.is_flt
+    let as_fadd = Kanon_rules.as_fadd
+    let is_fadd = Kanon_rules.is_fadd
+    let as_fsub = Kanon_rules.as_fsub
+    let is_fsub = Kanon_rules.is_fsub
+    let as_fmul = Kanon_rules.as_fmul
+    let is_fmul = Kanon_rules.is_fmul
+    let as_fdiv = Kanon_rules.as_fdiv
+    let is_fdiv = Kanon_rules.is_fdiv
+    let as_frem = Kanon_rules.as_frem
+    let is_frem = Kanon_rules.is_frem
+    let as_fmin = Kanon_rules.as_fmin
+    let is_fmin = Kanon_rules.is_fmin
+    let as_fmax = Kanon_rules.as_fmax
+    let is_fmax = Kanon_rules.is_fmax
+    let as_fma = Kanon_rules.as_fma
+    let is_fma = Kanon_rules.is_fma
+    let as_tfloat = Kanon_rules.as_tfloat
+    let is_tfloat = Kanon_rules.is_tfloat
+  end
+  
+  module Ptr = struct
+    let t_loc = fun a1 -> TLoc (a1)
+    let t_pointer = fun a1 -> TPointer (a1)
+    let ptr_loc = Kanon_rules.ptr_loc
+    let ptr_ofs = Kanon_rules.ptr_ofs
+    let as_ptr = Kanon_rules.as_ptr
+    let is_ptr = Kanon_rules.is_ptr
+    let as_getptrloc = Kanon_rules.as_getptrloc
+    let is_getptrloc = Kanon_rules.is_getptrloc
+    let as_getptrofs = Kanon_rules.as_getptrofs
+    let is_getptrofs = Kanon_rules.is_getptrofs
+    let as_tloc = Kanon_rules.as_tloc
+    let is_tloc = Kanon_rules.is_tloc
+    let as_tpointer = Kanon_rules.as_tpointer
+    let is_tpointer = Kanon_rules.is_tpointer
+  end
+  
+  module Exists = struct
+    let b_mk_exists = Kanon_rules.b_mk_exists
+    let as_exists = Kanon_rules.as_exists
+    let is_exists = Kanon_rules.is_exists
+  end
 end

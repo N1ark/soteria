@@ -1,8 +1,9 @@
-(* Sanity checks of the standalone stack ([Bv_new]) on a handful of terms; the
-   comparison with the old simplifier is the job of the differential harness. *)
+(* Sanity checks of the standalone stack ([Soteria.Bv_values.Lang]) on a handful
+   of terms; the comparison with the old simplifier is the job of the
+   differential harness. *)
 
-open Bv_new
-open Bv_new.Types
+open Soteria.Bv_values.Lang
+open Soteria.Bv_values.Lang.Types
 module Old = Soteria.Bv_values.Svalue
 module OS = Old.Make (Old.Dummy_ext) ()
 module F = Floatml.AnyFloat
@@ -10,8 +11,8 @@ module F = Floatml.AnyFloat
 (* The old stack is created first, so that its constants are its first nodes (it
    has its own table: the order of creation matters only inside a stack). *)
 
-(* the sorts of [Bv_new] (widths are [int]s), which [Rules] shadows with those
-   of the view functions ([Z.t]) *)
+(* the sorts of [Soteria.Bv_values.Lang] (widths are [int]s), which [Rules]
+   shadows with those of the view functions ([Z.t]) *)
 module Sorts = struct
   let t_bv = t_bv
   let t_ptr = t_ptr
@@ -174,9 +175,9 @@ let print () =
   Alcotest.(check string) "pp bv" "(bv bv8 5)" (show (bv8 (z 5)))
 
 let () =
-  Alcotest.run "bv_new"
+  Alcotest.run "lang"
     [
-      ( "bv_new",
+      ( "lang",
         [
           Alcotest.test_case "init order" `Quick init_order;
           Alcotest.test_case "hash-consing" `Quick hashcons;

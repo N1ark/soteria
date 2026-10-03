@@ -6,7 +6,7 @@
     version. Both should be semantically equivalent. *)
 open QCheck2
 
-open Bv_new.Types
+open Soteria.Bv_values.Lang.Types
 module D = Direct
 module Sv = Direct.Sv
 module Var = Soteria.Symex.Var

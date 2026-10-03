@@ -5,7 +5,9 @@
 
 open Soteria.Bv_values
 module Svalue = Gen.Sv
-module Z3_raw = Soteria.Solvers.Z3.Make (Encoding.Make (New_stack.Lang))
+
+module Z3_raw = Soteria.Solvers.Z3.Make (Encoding.Make (Soteria.Bv_values.Lang.V))
+
 module Eval = Direct.Typed.Eval
 module Var = Soteria.Symex.Var
 
@@ -60,8 +62,12 @@ let z3_check_equivalent_raw ~vars_d ~assumptions (smart : Svalue.t)
   List.iter (Z3_raw.add_constraint solver) assumptions;
   (* Build: not(smart = direct) using RAW constructors to avoid relying on the
      smart constructors we're testing. *)
-  let eq_expr = Bv_new.Types.(node (Op2 (Eq, smart, direct)) Svalue.t_bool) in
-  let neq_expr = Bv_new.Types.(node (Op1 (Not, eq_expr)) Svalue.t_bool) in
+  let eq_expr =
+    Soteria.Bv_values.Lang.Types.(node (Op2 (Eq, smart, direct)) Svalue.t_bool)
+  in
+  let neq_expr =
+    Soteria.Bv_values.Lang.Types.(node (Op1 (Not, eq_expr)) Svalue.t_bool)
+  in
   Z3_raw.add_constraint solver neq_expr;
   Z3_raw.check_sat solver
 

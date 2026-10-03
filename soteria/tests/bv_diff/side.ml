@@ -5,7 +5,7 @@
     - {!BASE}: terms, leaves, and a structural {!Tm.view} (what {!Iso} walks).
     - {!RAW}: the raw rule functions (the generated smart constructors: [b_and],
       [bv_add], ...), as plain functions on terms. The new side provides these
-      from [bv_new]; the old side from [Svalue.R].
+      from [Bv_values.Lang]; the old side from [Svalue.R].
     - {!SIDE}: what {!Build} needs: [apply] one public entry point.
 
     The old side implements {!SIDE} directly through the public typed API

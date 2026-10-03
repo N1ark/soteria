@@ -1,13 +1,13 @@
 (** Non-simplifying ("direct") constructors for the Svalue expressions of the
-    NEW stack ({!New_stack}).
+    NEW stack ({!Soteria.Bv_values.Lang}).
 
     Each function here corresponds 1:1 to a smart constructor of the new
-    language, but builds the raw node ([Bv_new.Types.node]) without any
-    simplification. This serves as the semantic ground truth when fuzz-testing
-    that the simplifications of the generated rules are correct. *)
+    language, but builds the raw node ([Soteria.Bv_values.Lang.Types.node])
+    without any simplification. This serves as the semantic ground truth when
+    fuzz-testing that the simplifications of the generated rules are correct. *)
 
-open Bv_new.Types
-module Typed = New_stack.Typed
+open Soteria.Bv_values.Lang.Types
+module Typed = Soteria.Bv_values.Lang.Typed
 module Sv = Typed.Svalue
 open Sv
 

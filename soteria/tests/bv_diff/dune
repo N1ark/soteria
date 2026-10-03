@@ -1,12 +1,3 @@
 (executable
  (name bv_diff)
- (libraries
-  soteria
-  zarith
-  fmt
-  qcheck-core
-  (select
-   new_side.ml
-   from
-   (bv_new -> new_side.real.ml)
-   (-> new_side.none.ml))))
+ (libraries soteria zarith fmt qcheck-core))

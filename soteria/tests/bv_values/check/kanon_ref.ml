@@ -1,27 +1,28 @@
-(** A hand-written OCaml REFERENCE implementation of {!Bv_iface.Kanon_fns} for
-    the language of [Bv_new] (the C language in the new Kanon).
+(** A hand-written OCaml REFERENCE implementation of
+    {!Soteria.Bv_values.Kanon_fns} for the language of [Soteria.Bv_values.Lang]
+    (the C language in the new Kanon).
 
     It is the oracle of WP3a: the Kanon [fn]s of [rules/view.kn] must agree with
     it on every term (differential test at the level of the functions); and it
     lets WP3b and WP3c develop and test the generic layers before [view.kn]
     exists. The rules, the constants and the constructors are the real ones
-    ([Bv_new.Rules], [Bv_new]); the view functions are ports of the code that
-    they replace ([solver_lang.ml], [svalue.ml], [expr.ml]), written against the
-    new constructors. Where the old printers exist they are reused (through a
-    conversion of the operators) so that the pretty-printing is the old one by
-    construction.
+    ([Soteria.Bv_values.Lang.Rules], [Soteria.Bv_values.Lang]); the view
+    functions are ports of the code that they replace ([solver_lang.ml],
+    [svalue.ml], [expr.ml]), written against the new constructors. Where the old
+    printers exist they are reused (through a conversion of the operators) so
+    that the pretty-printing is the old one by construction.
 
     Not intended to be fast. *)
 
-open Bv_new.Types
-module R = Bv_new.Rules
+open Soteria.Bv_values.Lang.Types
+module R = Soteria.Bv_values.Lang.Rules
 module Old = Soteria.Bv_values.Svalue
 module Smt = Soteria.Smt
 module Ptr_sort = Soteria.Bv_values.Encoding.Ptr_sort
 module Var = Soteria.Symex.Var
 module F = Floatml.AnyFloat
 module FloatPrecision = Old.FloatPrecision
-module View_host = Bv_iface.View_host
+module View_host = Soteria.Bv_values.View_host
 open View_host
 
 type nonrec t = t
@@ -98,17 +99,17 @@ let ptr_ofs = R.ptr_ofs
 
 (* {1 HOST} *)
 
-let v_true = Bv_new.v_true
-let v_false = Bv_new.v_false
-let mk_var = Bv_new.mk_var
-let mk_bv = Bv_new.mk_bv
-let mk_masked = Bv_new.mk_masked
-let bv_zero = Bv_new.bv_zero
-let bv_one = Bv_new.bv_one
-let mk_float = Bv_new.mk_float
-let mk_loc = Bv_new.mk_loc
-let mk_ptr = Bv_new.mk_ptr
-let mk_seq s l = Bv_new.mk_seq ~seq_ty:s l
+let v_true = Soteria.Bv_values.Lang.v_true
+let v_false = Soteria.Bv_values.Lang.v_false
+let mk_var = Soteria.Bv_values.Lang.mk_var
+let mk_bv = Soteria.Bv_values.Lang.mk_bv
+let mk_masked = Soteria.Bv_values.Lang.mk_masked
+let bv_zero = Soteria.Bv_values.Lang.bv_zero
+let bv_one = Soteria.Bv_values.Lang.bv_one
+let mk_float = Soteria.Bv_values.Lang.mk_float
+let mk_loc = Soteria.Bv_values.Lang.mk_loc
+let mk_ptr = Soteria.Bv_values.Lang.mk_ptr
+let mk_seq s l = Soteria.Bv_values.Lang.mk_seq ~seq_ty:s l
 
 let rec to_old_ty : ty -> 'a Old.ty = function
   | TBool -> Old.TBool

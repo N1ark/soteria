@@ -1,7 +1,7 @@
 (* Compile-check of the frozen interfaces, and tests of the generic layers
    against the OLD stack.
 
-   Part A (compile time): the generated [Bv_new.Types] satisfies
+   Part A (compile time): the generated [Soteria.Bv_values.Lang.Types] satisfies
    [Value_lang.Term]; the reference [Kanon_ref] satisfies [Kanon_fns] over the
    generated types; the language composed by [Lang_v.Make] is a [Solver_lang.S]
    (so [Analyses] and [Encoding] apply to it unchanged) and [Typed_v.Make] gives
@@ -12,8 +12,8 @@
    [sure_neq], [eval], [Subst.apply] and [Subst.learn] over [Kanon_ref] give
    what the old stack gives on the same term (converted into raw old nodes). *)
 
-open Bv_iface
-module Types = Bv_new.Types
+open Soteria.Bv_values
+module Types = Soteria.Bv_values.Lang.Types
 
 (* {1 Part A} *)
 
@@ -453,7 +453,7 @@ let eval_idempotent () =
           (str V.pp v) (str V.pp e))
 
 let () =
-  Alcotest.run "bv_iface"
+  Alcotest.run "check"
     [
       ( "generic layers vs the old stack",
         [

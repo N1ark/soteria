@@ -1,0 +1,232 @@
+# Frozen interfaces between the Kanon-generated language and the generic host code
+
+Stage S3 of the migration (design.md section 4/S3). Everything here compiles:
+`dune build soteria/tests/bv_new soteria/tests/bv_diff` and
+`dune test soteria/tests/bv_new/iface` (compile-time checks + 14 run-time tests of
+the generic layers against the OLD stack). The OCaml signatures are the contract;
+this file explains them, says who owns what, and what must not change.
+
+Files (all in `soteria/tests/bv_new/iface/`, library `bv_iface`, staging area:
+S4 moves them to `soteria/lib/bv_values`, replacing `deps.ml` by aliases):
+
+| file | content |
+|---|---|
+| `kanon_fns.ml` | module type `Kanon_fns`: every Kanon `fn` / glue function the host needs |
+| `view_host.ml` | the host types of the view (`pphead`, `smt_op`, `smt_sort_op`, `range_sign`, `ppiece`, `pp_style`, `learn_plan`) |
+| `value_lang.ml` | `Term` (concrete record), `Base`, `S` (= `Base` + `pp` + `eval`, a subtype of `Solver_lang.S`), `Make (T) (K)` |
+| `pp_v.ml`, `eval_v.ml`, `expr_v.ml`, `svalue_sugar_v.ml` | the generic functors over `Value_lang.Base` / `S` |
+| `lang_v.ml` | `Lang_v.Make (T) (K)`: composition (`V`, `Svalue`, `Eval`, `Expr`) |
+| `typed_intf_v.ml`, `typed_v.ml` | typed layer: `Language`, `S`, `Solver_value`, `Make`, `Make_transparent` |
+| `deps.ml`, `stub.ml` | aliases of the modules of Soteria mentioned; `Not_implemented` for stubs |
+| `check/` | test executable: compile checks + oracle tests; `check/kanon_ref.ml` = hand-written reference implementation of `Kanon_fns` over `Bv_new.Types` |
+
+## 0. Deviations from design.md (with justification)
+
+1. **`pp_style` constructors.** Design 3.3.2: `PAtom | PCall | PIn | PPost | PIte | PBrackets | PParens | PWrap`.
+   Frozen: `PAtom | PCall | PCallPlain | PIn | PIte | PBrackets | PSeq of ppiece list`
+   (`ppiece = PText | PArg i | PArgOf (i, j) | PArgs sep`). Reason: byte-identical output needs the exact `Fmt`
+   break hints (`PCall` uses `Fmt.comma`, Fma and `&(..)` use `", "` without a break hint: `PCallPlain`),
+   `Exists` prints `∃ x. body`, `Not (Eq (a, b))` prints `(a != b)` (needs the operands of the operand: `PArgOf`).
+   No operator is printed postfix, so `PPost` was dropped; `PSeq` is the escape hatch for Rust.
+2. **`encode_head : t -> smt_op` is total, not an `option`** (design 3.3.1 said `option`). Terms with no encoding
+   (`Seq []`) return an operator that fails when applied, as the old code failed at encoding time. Needed for `[@total]`.
+   `smt_op` takes the operands too: `~sort_of_ty ~encode_child operands -> sexp`; the operator owns the order of the
+   `encode_child`/`sort_of_ty` calls (see 3.6.9 below). `encode_sort : ty -> smt_sort_op` + `sort_operands : ty -> ty list`.
+3. **`learn_plan`** is `LNone | LAlts of (known, target) list | LAll of eager * order` (design: `NoInv | All | OneOf`).
+   Reason: reproduce the node creation order of `expr.ml:140-198` exactly: `BvConcat` computes the LOW half before the
+   high half although it learns the high operand first (`eager = [1; 0]`); `Add/Sub/BitXor` pick the first alternative whose
+   other operand is known and compute only that value. `learn_value e i v` takes the operand index as `Z.t`.
+4. **All integers in `Kanon_fns` fns are `Z.t`** (generated OCaml: `int` and `nat` are `Z.t` in `fn` signatures; verified).
+   Only the HOST items (`mk_bv`, `mk_loc`, `mk_masked`, `bv_zero`, `bv_one`) take OCaml `int` widths, like `Bv_new`.
+   `Value_lang.Base` converts (`t_bv : int -> ty`, `as_range` size as `int`, `cost : t -> int`).
+5. **Extra view fns not in design 3.3**: `maps_operands` (old `map_operands` only maps `Unop`/`Binop`, not
+   `Ptr`/`Seq`/`Exists`/`Distinct`/`Ite`/`Fma`, solver_lang.ml:539-548), `cost` (a recursive fn, because `Ptr` costs 1
+   and does not recurse, solver_lang.ml:566: design said "sum of `node_cost`"), `as_loc_lit`, `is_bool_ty`,
+   `sort_operands`. `random_of_z` returns an option; `Value_lang` keeps `Random.bool ()` for `TBool` so the random state
+   evolves as before.
+6. **`mk_ptr`, `mk_seq`, `mk_var`, `mk_loc`, `mk_float` are HOST (glue), not Kanon** (design 3.3.4 had `mk_ptr` as a rule
+   fn of a typed operator). Reason: `Bv_new` declares `Ptr` as a plain `Op2` built unsimplified by `Bv_new.mk_ptr`
+   (assert equal sizes), and `rebuild` of `Ptr` must not simplify (old `Ptr.mk` did not). `mk_seq : ty -> t list -> t`
+   takes the sort (needed for `[]`). With K1 these may become Kanon fns later without changing the signature.
+7. **`Value_lang.S` is two module types**: `Base` (consumed by the generic `Pp_v`/`Eval_v`, and exposing `K`) and
+   `S = Base + pp + eval` (what everything else consumes). Reason: `pp` and `eval` are produced by functors over `Base`
+   and cannot consume themselves. `S <: Solver_lang.S` is checked in `check/check.ml`, so `Analyses`, `Bv_solver`,
+   `Encoding`, `Ptr_sort` are untouched.
+8. **`Typed_intf_v.Language`** (new): `{V; Svalue; Eval; Expr}` is the input of `Typed_v.Make` (design said "over the
+   view"). `Typed.S` loses `Ext`, `kind`; `Svalue`, `Eval` are the generic signatures; `FloatPrecision`, `FloatClass`,
+   `RoundingMode` are re-exported at the top of `S` as before. `Solver_value` is `{Lang : Solver_lang.S; type_;
+   untyped; untype_type; ...}` (no `Ext/Svalue/Eval`), as design 3.5.
+9. **View fns are `[@no_lean]`**; `[@total]` on `operands`, `rebuild`, `pp_style`, `encode_head`, `node_cost`
+   (Kanon checks a case per node; a catch-all is rejected; a language that adds nodes adds cases with `extend fn`).
+   Design said "K9 or property tests": the new Kanon already has `[@total]` (`check.ml:4276`), so both are used.
+10. **Location of files**: `bv_new/iface/` (library `bv_iface`) rather than directly in `bv_new/`: `Bv_types` mentions
+    `View_host`, which must not depend on `bv_new` (see the dune comment), and `check/` depends on both.
+    File names carry `_v` until S4 (as the design says) and `Value_lang.Make` takes two functor arguments `(T) (K)`
+    instead of `(K)` alone (the record `T` gives the O(1) identity functions).
+11. **`kind`-based sites of soteria-c** keep exact behaviour as follows: `fun_ctx.ml:55` `BitVec z` -> `Typed.Svalue.BitVec.to_z`
+    (matches `BitVec` and `LocLit`, like the old match on `BitVec` at a `TLoc` sort), not `as_bv_lit`;
+    `summary.ml:165` `Binop (Eq, a, b)` -> `Typed.Svalue.as_eq` (`Eq` only; checked against the old stack by `check/`).
+
+## 1. Layering
+
+```
+generated Bv_types   (kind, ty, t = {kind; ty; tag}, node)        satisfies Value_lang.Term
+generated Bv_rules   (smart constructors, sure_neq, VIEW fns)  \
+Bv_prims + glue      (HOST: constants, mk_*, pp_ty)            /  = one module K : Kanon_fns
+Value_lang.Make (T) (K)             : Value_lang.Base            no constructor is mentioned
+Pp_v.Make, Eval_v.Make              : pp, eval
+Lang_v.Make (T) (K)                 : { V : Value_lang.S; Svalue; Eval; Expr }
+Typed_v.Make (L)                    : Typed_intf_v.S             (identity layer 'a t = t)
+Analyses / Bv_solver / Encoding     : unchanged functors over V (= Solver_lang.S)
+```
+`Value_lang.Term` is satisfied by the generated `Types` as is (`kind` abstract, `t` the concrete record: generic code gets
+`equal`/`hash`/`type_of` for free but cannot match a constructor: every constructor-dependent function is a Kanon fn, a
+prim, or per-language). Checked: `module _ : Value_lang.Term = Bv_new.Types` in `check/check.ml`.
+
+## 2. Who owns what
+
+| WP | exclusive files | must not touch |
+|---|---|---|
+| **WP3a** view fns | `rules/view.knl`, `rules/view.kn` (+ the one line `use view` in `rules/lang.knl`, the regeneration `regen.sh`, `bv_types.gen.ml`, `bv_rules.gen.ml`) | everything in `iface/` except adding `[@no_lean]`-related docs; `bitvec.kn`... (S2) |
+| **WP3b** generic OCaml | `iface/{value_lang,pp_v,eval_v,expr_v,svalue_sugar_v,lang_v,typed_v,typed_intf_v}.ml` (bodies; signatures only by agreement) | `kanon_fns.ml`, `view_host.ml` (frozen: change = ask the architect, i.e. open an issue in this file) |
+| **WP3c** tests | `soteria/tests/bv_golden/` (port), `soteria/tests/bv_fuzz/` (port: `Direct` with raw `node (Op2 (Add c, a, b)) ty`), `soteria/tests/bv_values/test_eval.ml` (port), `iface/check/` (extend) | the lib code |
+| frozen (architect) | `iface/kanon_fns.ml`, `iface/view_host.ml`, `iface/deps.ml`, this file | |
+
+The stand-in until `view.kn` exists is `iface/check/kanon_ref.ml` (a hand-written `Kanon_fns` over `Bv_new.Types`; rules,
+constants and constructors are the real ones, the view fns are ports of the old code). WP3b and WP3c develop against
+`Lang_v.Make (Bv_new.Types) (Kanon_ref)`; when WP3a lands, K is composed from the generated module:
+
+```ocaml
+module K = struct
+  include Bv_rules        (* RULES + VIEW, generated *)
+  include Host            (* HOST: v_true ... pp_ty, hand-written in Bv_new / Bv_prims *)
+end
+```
+and `Kanon_ref` becomes the oracle of WP3a (differential test of the fns on every term of the `check/` corpus: add it to
+`check.ml`, one `check_eq` per fn).
+
+## 3. The contract WP3a <-> WP3b: every `Kanon_fns` item
+
+Types: `t`, `ty` (generated), `pphead = Format.formatter -> unit`, `smt_op`, `smt_sort_op`, `View_host.range_sign`,
+`pp_style`, `learn_plan` (declared in `view_host.ml`; `view.knl` re-declares them `[@ocaml "View_host.X"]` with the same
+constructors in the same order, `[@noeq]`, `[@no_lean]` where Kanon allows: K6 open, see section 8).
+
+### 3.1 RULES (generated from bool/bitvec/float/ptr/exists; exist today in `Bv_rules`; not WP3a)
+`sure_neq`, `of_bool`, `b_and b_or b_not b_ite sem_eq sem_eq_untyped b_distinct b_mk_exists`, `bv_add/sub/mul : checked -> ..`,
+`bv_div bv_rem : bool -> ..`, `bv_mod bv_neg bv_*_overflows bv_lt bv_leq bv_concat bv_extend bv_extract bv_and bv_or
+bv_xor bv_shl bv_lshr bv_ashr bv_not bv_of_bool bv_to_bool bv_not_bool bv_of_float bv_to_float bv_to_float_raw msb_of`,
+`float_*` (21 fns), `ptr_loc ptr_ofs`. Integers are `Z.t`.
+
+### 3.2 HOST (glue/prims: Kanon cannot express them; `Bv_new`/`Bv_prims` have them for C)
+| item | type | why not Kanon | replaces |
+|---|---|---|---|
+| `v_true`, `v_false` | `t` | creation order: tags 0 and 1 | svalue.ml:369-393 |
+| `mk_var` | `Var.t -> ty -> t` | sort given by a `ty` expression (K1) | `Svalue.mk_var` |
+| `mk_bv`, `mk_masked`, `bv_zero`, `bv_one` | `int -> ..` | caches, 512 nodes created at init in this order: v_true, v_false, zeros 1..256, ones 1..256 | svalue.ml:372-393 |
+| `mk_float` | `F.t -> t` | sort `TFloat (precision f)` | svalue.ml:719 |
+| `mk_loc` | `int -> Z.t -> t` | `LocLit` at `TLoc n` | svalue.ml:829-831 |
+| `mk_ptr` | `t -> t -> t` | asserts equal sizes; NO simplification | svalue.ml:823-826 |
+| `mk_seq` | `ty -> t list -> t` | sort argument | svalue.ml:849 |
+| `pp_ty` | `ty Fmt.t` | must reproduce `ppx_deriving show` (`(TBitVector 32)`) | svalue_ast.ml:248 |
+
+The prims used INSIDE view fns (written in `bv_prims.ml`, `[@no_lean]`): the `smt_op` builders (`h_add : checked -> smt_op`
+...: the code of `Enc.smt_of_unop/binop/triop`, solver_lang.ml:192-300), the `pphead` builders (`ph_bv : ty -> Z.t -> pphead`:
+hex when size mod 4 = 0 else binary, svalue.ml:107-112; `ph_distinct : t list -> pphead` looks at `as_var` of the operands for
+`distinct(V|a-b|)`; one per operator), `fail` (wrong operand count in `rebuild`), `min_signed` etc.
+
+### 3.3 VIEW (Kanon fns in `view.kn`; the whole of WP3a). Unless said, `[@no_lean]`; `[@total]` marked T.
+Each row: name : type  -- old code replaced (and what it did).
+
+Sorts
+- `t_bool : ty`, `t_bv t_loc t_ptr : Z.t -> ty`, `t_float : fp -> ty`, `t_seq : ty -> ty`  -- constructors of sorts for generic code.
+- `sized_ty : ty -> Z.t option`  -- `Svalue.size_of` (svalue.ml:95): size of `TBitVector|TPointer|TLoc`; the host wrapper fails on `None`.
+- `as_bv_ty : ty -> Z.t option`  -- `Solver_lang.as_bv_ty` (solver_lang.ml:474): ONLY `TBitVector`.
+- `as_float_ty : ty -> fp option`, `as_seq_ty : ty -> ty option`, `is_bool_ty : ty -> bool`  -- svalue.ml:59-69, 62, 852.
+- `sort_operands : ty -> ty list`, `encode_sort : ty -> smt_sort_op`  -- `Enc.encode_ty` (solver_lang.ml:173-183), `[s]` for `TSeq s`.
+- `random_bound : ty -> Z.t option`, `random_of_z : ty -> Z.t -> t option`  -- `random_value` (solver_lang.ml:607-619): `2^n` for bv and loc, 2 for bool, `2^size p` for floats, `None` for pointers/seqs.
+
+Recognisers (shape only; the flags are ignored: `as_lt` matches signed and unsigned)  -- solver_lang.ml:466-500
+- `is_literal : t -> bool` (Bool, BitVec, LocLit, Float), `as_var : t -> (Var.t * ty) option`, `as_not`, `as_eq` (`Eq` only; `Not` is NOT looked through),
+  `as_and`, `as_or`, `as_ite : t -> (t*t*t) option`, `as_lt`, `as_leq`, `as_distinct : t -> t list option`,
+  `as_exists : t -> ((Var.t * ty) list * t) option` (svalue.ml:84, eval.ml:112, expr.ml:67), `as_ptr : t -> (t*t) option` (only `Ptr`, svalue.ml:835),
+  `as_bv_lit : t -> Z.t option` (only `BitVec`), `as_loc_lit` (only `LocLit`), `as_float_lit : t -> F.t option` (svalue.ml:719-770).
+- `conjuncts : t -> t list`  -- `Bool.split_ands` (svalue.ml:648-653), flattening `And` left to right; specification/oracle only.
+- `implies_or_contradicts : t -> t -> t -> bool option` (`q neg_q pc`)  -- solver_lang.ml:505-532; hot path, no allocation on `None`.
+- `as_range : t -> (Var.t * Z.t * (range_sign * (Z.t * Z.t))) option`, `range_sign = Inside | Outside`  -- solver_lang.ml:303-445 (NB: ctor names are
+  global in Kanon, hence not `Pos | Neg`, and the draft in `rules/solver.kn` misses cases: both orders of `Add` with a constant, `Eq (Var, lit)`,
+  `Lt/Leq` with the constant on the right in case 3, literals at `TBitVector size` exactly).
+
+Operands and rebuild
+- T `operands : t -> t list`, left to right; `[]` for leaves; `Seq` its elements, `Distinct` its list, `Exists` its body, `Ptr` `[loc; ofs]`.
+- T `rebuild : t -> t list -> t`: same operator through its smart constructor (`Ptr` via `mk_ptr`, `Seq` via `mk_seq (type_of v)`), leaf -> `v`;
+  a wrong operand count FAILS (prim). Replaces `Eval.eval_binop/unop/triop/nop` (eval.ml:12-71), `Ptr.mk`/`SSeq.mk` in eval and Subst.
+  Kanon: write `| Not _ -> (match cs with [a] -> b_not a | _ -> fail ())` (a tuple scrutinee with list patterns would not count as total).
+- `maps_operands : t -> bool`: true exactly for the old `Unop` and `Binop` except `Ptr` (solver_lang.ml:539-548); false by default for extensions.
+- T `node_cost : t -> Z.t` and `cost : t -> Z.t` (recursive)  -- solver_lang.ml:555-605. `Var` 3, `Float` 2, `Seq` 0, `Distinct` 0, `Ite` 0,
+  `Exists` 100_000, `Ptr`/`Bool`/`BitVec`/`LocLit` 1 (`Ptr` does not recurse), the operator tables otherwise, extensions 100_000.
+
+Encoding
+- T `encode_head : t -> smt_op`; applied by `Value_lang` as `(encode_head v) ~sort_of_ty ~encode_child (operands v)`.
+  **Order contract (design 3.6.9):** binary operators encode left then right; `Triop` and `Ptr` encode right to left (the old code passed the encoders as
+  function arguments, evaluated right to left); `Exists` encodes the body, then the sorts of the binders; `Seq`, `Distinct` left to right.
+  The order of `encode_child` calls is the order of the emitted `Decls`: `check/` compares them (`Enc_log`).
+
+Pretty-printing and learning
+- T `pp_style : t -> pp_style`  -- svalue.ml:101-143 and the heads of `Unop.pp`/`Binop.pp` (svalue_ast.ml:64-246). `Not (Eq a b)` prints `(a != b)`;
+  `BitVec` and `LocLit` by `ph_bv`; `Distinct` of contiguous variables by `ph_distinct`. The generic renderer is `Pp_v`; the exact `Fmt` format of each
+  constructor is in `view_host.ml`.
+- `learn_alts : t -> learn_plan` (default `LNone`) and `learn_value : t -> Z.t -> t -> t option`  -- expr.ml:140-198; the old values are listed in `kanon_fns.ml`.
+  `learn_value` is lazy: it creates nodes exactly when the old code did.
+
+## 4. What is a PRIM (provided by glue, because Kanon cannot express it)
+Section 3.2 (HOST items + prims used inside view fns). In Kanon they are declared `prim ... [@no_lean]` in `view.knl` and implemented in `bv_prims.ml`
+(`Bv_prims`; the S4 move turns it into the shared functor `Bv_prims.Make` of the design). Nothing in `view.kn` may construct a node by hand; builders must go through rule fns
+or HOST prims.
+
+## 5. Order constraints that must be preserved (design 3.6)
+1. **Node creation order at start-up**: `v_true`, `v_false`, zeros 1..256, ones 1..256, before anything else. Tags decide the operand order of every
+   commutative node and therefore `pp` output. `Bv_prims` module initialisation does this; `Lang_v.Make` creates no node.
+2. **Evaluation order**: `learn_value` computed lazily in the plan's order (`LAll (eager, order)`); `rebuild` called once per changed node; `map_operands`
+   applies `f` left to right and rebuilds iff an operand changed (`Value_lang.map_operands`); `eval`/`Subst.apply` copy HEAD (f52223c) behaviour
+   (substitution under `Exists`, `Ite` guard comparison, lazy `Ite`, `Division_by_zero` catch).
+3. **Derived-rule order** (inside the generated rule fns): `lit` rule, laws, `ite:` hand rule FIRST in `bv_not`/`bv_neg`, then hand rules (S2 owns this).
+4. **`encode_child` call order per arity**: section 3.3, Encoding.
+5. Test corpora: the two stacks have independent tag counters, so an oracle test must convert/create terms of the other stack in the order of creation of
+   the first (`check/check.ml: corpora`), or commutative operands print swapped (a test artefact, not a bug).
+
+## 6. Lean decision
+All view fns are `[@no_lean]`; `[@total]` is added on the per-node ones (`operands`, `rebuild`, `pp_style`, `encode_head`, `node_cost`). The types of
+`view_host.ml` are term-free (`t`/`ty` only as parameters of `smt_op`), so Lean has nothing to model for them (K6 open: confirm that Kanon does not emit
+Lean for `[@ocaml]`-abstract types used only by `[@no_lean]` items; if it does, add `R.Abstract` entries). The Lean project stays on the old pinned Kanon
+and a frozen copy of the old rules until S6; proofs do not cover the migrated rules.
+
+## 7. Test strategy (oracles of S3)
+| WP | test | oracle |
+|---|---|---|
+| WP3a | `Kanon_ref` vs generated fns, every fn, on the `check/` corpus (3 x ~700 random terms + subterms, all node kinds: `coverage`); property `rebuild v (operands v) == v` for every node; `pp_style`, `encode_head`, `node_cost` never fall to a default (`[@total]` + a test per node kind); `bv_diff` still zero diffs | `dune test soteria/tests/bv_new/iface`, `dune build soteria/tests/bv_diff && dune exec soteria/tests/bv_diff/bv_diff.exe` |
+| WP3b | `check/check.ml` part B: pp, pp_ty, cost, encode (with Decls order), as_range, recognisers, iter_vars, implies_or_contradicts, sure_neq, eval (3 modes), Subst.apply, learn, vs the old stack on the converted term; eval idempotent on normal forms | all 14 tests green |
+| WP3c | golden dump of the new stack (`soteria/tests/bv_golden/golden.sh`, seed fixed) byte-identical to the S0 golden of the old stack (pp, cost, SMT with Decls, Subst, learn, as_range, implies, iter_vars, eval); `bv_fuzz` ported (`Direct` on raw nodes) passes with `QCHECK_TEST_COUNT=50000`; `test_eval` ported | `cmp` of two dumps; fuzz exit 0 |
+Order-sensitive output (pp of commutative nodes) is only comparable if both stacks create the same nodes in the same order: the golden generator must build terms through the public API in the same call order on both stacks.
+
+## 8. Rust: the equivalents of the Value_ext hooks
+There is no `Ext` any more. The old `Value_ext` members map to `extend fn` cases of the Rust language module (`rust.kn`, over the shared modules by relative `use`):
+
+| old (`Ext`/`Ext_base`) | new |
+|---|---|
+| `Ext.pp` | `extend fn pp_style` (PSeq/PCall/..., heads by Rust prims); operands via `operands` |
+| `Ext.iter_vars` | `extend fn operands` (generic `iter_vars` recurses) |
+| `Ext.mk` / `Ext.eval` | `extend fn rebuild`: the node's smart constructor (`Ext.mk` simplified once; `Ext.eval` rebuilt via `mk` only when a child changed: `rebuild` is only called then, `Value_lang.map_operands`/`Eval_v` check `equal`) |
+| `Ext.apply_subst` | same `rebuild`/`operands` (Subst driver) |
+| `Ext.learn` | `extend fn learn_alts` (`LAll ([], [0 .. n-1])` for `Tuple`) and `learn_value` (`field_of i v`) |
+| `Ext.encode_ty / encode_unop / encode_value` | `extend fn encode_head`, `encode_sort`, `sort_operands` (prims = the bodies of the old encoders in `encoding.ml`; thin/full/tuple/enum sort declarations stay in Rust's hand-written code) |
+| `Ext` node cost `100_000` | `extend fn node_cost` |
+| `TExtension X` | the sort `X` itself (design D4) |
+| `Typed.Make_transparent (Ext) ()` | `Typed_v.Make_transparent (Lang_v.Make (Types) (K))` |
+
+`[@total]` makes Kanon reject a Rust node with no case in `operands`/`rebuild`/`pp_style`/`encode_head`/`node_cost`. Rust-only host code (encoding.ml, typed.ml) matches the
+generated Rust constructors directly.
+
+## 9. Open points
+- `kanon_fns.ml` documents `[@ocaml "..."]` re-declaration of the `view_host` types; `view.knl` must verify it compiles with the Kanon in use (verified in experiments x6/x9 only in a smaller form).
+- K6 (see 6), K1 (computed sort: would let `mk_var`/`mk_seq` be Kanon fns without a change of signature).
+- Performance of the indirect calls and of the list-returning `operands` (allocation per call in `iter_vars`/`eval`): measured only at S4.

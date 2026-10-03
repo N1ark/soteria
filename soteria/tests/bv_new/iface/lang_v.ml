@@ -1,0 +1,31 @@
+(** The composition of the generic layers over a generated language: the glue
+    that each language ([Bv_new] for C, a Rust module for soteria-rust) applies.
+
+    {v
+      module L = Lang_v.Make (Types) (K)         (* a Typed_intf_v.Language *)
+      module Typed = Typed_v.Make (L)            (* soteria-c *)
+      module Lang = L.V                          (* Analyses, Bv_solver, ... *)
+    v}
+
+    Creation order (design 3.6.1): the constants of the language ([K.v_true],
+    [K.v_false], the zeros and ones) are created when its prims module is
+    initialised, before anything of this functor. *)
+
+module Make
+    (T : Value_lang.Term)
+    (K : Kanon_fns.Kanon_fns with type t = T.t and type ty = T.ty) :
+  Typed_intf_v.Language with type V.t = T.t and type V.ty = T.ty = struct
+  module Base = Value_lang.Make (T) (K)
+  module Pp = Pp_v.Make (Base)
+  module Eval = Eval_v.Make (Base)
+
+  module V : Value_lang.S with type t = T.t and type ty = T.ty = struct
+    include Base
+
+    let pp = Pp.pp
+    let eval = Eval.eval
+  end
+
+  module Svalue = Svalue_sugar_v.Make (V)
+  module Expr = Expr_v.Make (V)
+end

@@ -150,7 +150,7 @@ let is_literal (v : t) =
   | Bool _ | BitVec _ | LocLit _ | Float _ -> true
   | _ -> false
 
-let as_var (v : t) = match v.kind with Var x -> Some (x, v.ty) | _ -> None
+let as_var (v : t) = match v.kind with Var x -> Some x | _ -> None
 let as_not (v : t) = match v.kind with Op1 (Not, x) -> Some x | _ -> None
 
 let as_eq (v : t) =
@@ -166,10 +166,10 @@ let as_ite (v : t) =
   match v.kind with Op3 (Ite, g, a, b) -> Some (g, a, b) | _ -> None
 
 let as_lt (v : t) =
-  match v.kind with Op2 (Lt _, l, r) -> Some (l, r) | _ -> None
+  match v.kind with Op2 (Lt s, l, r) -> Some (s, l, r) | _ -> None
 
 let as_leq (v : t) =
-  match v.kind with Op2 (Leq _, l, r) -> Some (l, r) | _ -> None
+  match v.kind with Op2 (Leq s, l, r) -> Some (s, l, r) | _ -> None
 
 let as_distinct (v : t) =
   match v.kind with OpN (Distinct, l) -> Some l | _ -> None

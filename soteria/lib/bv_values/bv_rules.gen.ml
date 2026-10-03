@@ -3017,72 +3017,6 @@ let[@inline] is_literal (v : t) : bool =
     | _ -> false
     )
 
-let[@inline] as_var (v : t) : ((var * ty) option) =
-    (match v with
-    | { kind = Var (x); _ } -> (Some (x, v.ty))
-    | _ -> None
-    )
-
-let[@inline] as_not (v : t) : (t option) =
-    (match v with
-    | { kind = Op1 ((Not), x); _ } -> (Some x)
-    | _ -> None
-    )
-
-let[@inline] as_eq (v : t) : ((t * t) option) =
-    (match v with
-    | { kind = Op2 ((Eq), l, r); _ } -> (Some (l, r))
-    | _ -> None
-    )
-
-let[@inline] as_and (v : t) : ((t * t) option) =
-    (match v with
-    | { kind = Op2 ((And), l, r); _ } -> (Some (l, r))
-    | _ -> None
-    )
-
-let[@inline] as_or (v : t) : ((t * t) option) =
-    (match v with
-    | { kind = Op2 ((Or), l, r); _ } -> (Some (l, r))
-    | _ -> None
-    )
-
-let[@inline] as_ite (v : t) : ((t * t * t) option) =
-    (match v with
-    | { kind = Op3 ((Ite), g, a, b); _ } -> (Some (g, a, b))
-    | _ -> None
-    )
-
-let[@inline] as_lt (v : t) : ((t * t) option) =
-    (match v with
-    | { kind = Op2 ((Lt (_)), l, r); _ } -> (Some (l, r))
-    | _ -> None
-    )
-
-let[@inline] as_leq (v : t) : ((t * t) option) =
-    (match v with
-    | { kind = Op2 ((Leq (_)), l, r); _ } -> (Some (l, r))
-    | _ -> None
-    )
-
-let[@inline] as_distinct (v : t) : ((t list) option) =
-    (match v with
-    | { kind = OpN ((Distinct), l); _ } -> (Some l)
-    | _ -> None
-    )
-
-let[@inline] as_exists (v : t) : ((((var * ty) list) * t) option) =
-    (match v with
-    | { kind = Exists (bs, b); _ } -> (Some (bs, b))
-    | _ -> None
-    )
-
-let[@inline] as_ptr (v : t) : ((t * t) option) =
-    (match v with
-    | { kind = Op2 ((Ptr), l, o); _ } -> (Some (l, o))
-    | _ -> None
-    )
-
 let[@inline] as_bv_lit (v : t) : (Z.t option) =
     (match v with
     | { kind = BitVec (z); _ } -> (Some z)
@@ -3959,5 +3893,407 @@ let learn_value (e : t) (i : Z.t) (v : t) : (t option) =
       (Some (ptr_ofs v))
     | _ -> None
     )
+
+let as_var (t : t) =
+  match[@warning "-11"] t with { kind = Var (p1); _ } -> Some p1 | _ -> None
+
+let is_var (t : t) =
+  match[@warning "-11"] t with { kind = Var (_); _ } -> true | _ -> false
+
+let as_seq (t : t) =
+  match[@warning "-11"] t with { kind = Seq (p1); _ } -> Some p1 | _ -> None
+
+let is_seq (t : t) =
+  match[@warning "-11"] t with { kind = Seq (_); _ } -> true | _ -> false
+
+let as_bool (t : t) =
+  match[@warning "-11"] t with { kind = Bool (p1); _ } -> Some p1 | _ -> None
+
+let is_bool (t : t) =
+  match[@warning "-11"] t with { kind = Bool (_); _ } -> true | _ -> false
+
+let as_exists (t : t) =
+  match[@warning "-11"] t with { kind = Exists (p1, p2); _ } -> Some (p1, p2) | _ -> None
+
+let is_exists (t : t) =
+  match[@warning "-11"] t with { kind = Exists (_, _); _ } -> true | _ -> false
+
+let as_bitvec (t : t) =
+  match[@warning "-11"] t with { kind = BitVec (p1); _ } -> Some p1 | _ -> None
+
+let is_bitvec (t : t) =
+  match[@warning "-11"] t with { kind = BitVec (_); _ } -> true | _ -> false
+
+let as_loclit (t : t) =
+  match[@warning "-11"] t with { kind = LocLit (p1); _ } -> Some p1 | _ -> None
+
+let is_loclit (t : t) =
+  match[@warning "-11"] t with { kind = LocLit (_); _ } -> true | _ -> false
+
+let as_float (t : t) =
+  match[@warning "-11"] t with { kind = Float (p1); _ } -> Some p1 | _ -> None
+
+let is_float (t : t) =
+  match[@warning "-11"] t with { kind = Float (_); _ } -> true | _ -> false
+
+let as_not (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (Not, x1); _ } -> Some x1 | _ -> None
+
+let is_not (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (Not, _); _ } -> true | _ -> false
+
+let as_and (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (And, x1, x2); _ } -> Some (x1, x2) | _ -> None
+
+let is_and (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (And, _, _); _ } -> true | _ -> false
+
+let as_or (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (Or, x1, x2); _ } -> Some (x1, x2) | _ -> None
+
+let is_or (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (Or, _, _); _ } -> true | _ -> false
+
+let as_eq (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (Eq, x1, x2); _ } -> Some (x1, x2) | _ -> None
+
+let is_eq (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (Eq, _, _); _ } -> true | _ -> false
+
+let as_ite (t : t) =
+  match[@warning "-11"] t with { kind = Op3 (Ite, x1, x2, x3); _ } -> Some (x1, x2, x3) | _ -> None
+
+let is_ite (t : t) =
+  match[@warning "-11"] t with { kind = Op3 (Ite, _, _, _); _ } -> true | _ -> false
+
+let as_distinct (t : t) =
+  match[@warning "-11"] t with { kind = OpN (Distinct, xs); _ } -> Some xs | _ -> None
+
+let is_distinct (t : t) =
+  match[@warning "-11"] t with { kind = OpN (Distinct, _); _ } -> true | _ -> false
+
+let as_bvofbool (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (BvOfBool (p1), x1); _ } -> Some (p1, x1) | _ -> None
+
+let is_bvofbool (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (BvOfBool (_), _); _ } -> true | _ -> false
+
+let as_bvextract (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (BvExtract (p1, p2), x1); _ } -> Some (p1, p2, x1) | _ -> None
+
+let is_bvextract (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (BvExtract (_, _), _); _ } -> true | _ -> false
+
+let as_bvextend (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (BvExtend (p1, p2), x1); _ } -> Some (p1, p2, x1) | _ -> None
+
+let is_bvextend (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (BvExtend (_, _), _); _ } -> true | _ -> false
+
+let as_bvnot (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (BvNot, x1); _ } -> Some x1 | _ -> None
+
+let is_bvnot (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (BvNot, _); _ } -> true | _ -> false
+
+let as_neg (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (Neg (p1), x1); _ } -> Some (p1, x1) | _ -> None
+
+let is_neg (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (Neg (_), _); _ } -> true | _ -> false
+
+let as_add (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (Add (p1), x1, x2); _ } -> Some (p1, x1, x2) | _ -> None
+
+let is_add (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (Add (_), _, _); _ } -> true | _ -> false
+
+let as_sub (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (Sub (p1), x1, x2); _ } -> Some (p1, x1, x2) | _ -> None
+
+let is_sub (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (Sub (_), _, _); _ } -> true | _ -> false
+
+let as_mul (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (Mul (p1), x1, x2); _ } -> Some (p1, x1, x2) | _ -> None
+
+let is_mul (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (Mul (_), _, _); _ } -> true | _ -> false
+
+let as_div (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (Div (p1), x1, x2); _ } -> Some (p1, x1, x2) | _ -> None
+
+let is_div (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (Div (_), _, _); _ } -> true | _ -> false
+
+let as_rem (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (Rem (p1), x1, x2); _ } -> Some (p1, x1, x2) | _ -> None
+
+let is_rem (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (Rem (_), _, _); _ } -> true | _ -> false
+
+let as_mod (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (Mod, x1, x2); _ } -> Some (x1, x2) | _ -> None
+
+let is_mod (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (Mod, _, _); _ } -> true | _ -> false
+
+let as_addovf (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (AddOvf (p1), x1, x2); _ } -> Some (p1, x1, x2) | _ -> None
+
+let is_addovf (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (AddOvf (_), _, _); _ } -> true | _ -> false
+
+let as_subovf (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (SubOvf (p1), x1, x2); _ } -> Some (p1, x1, x2) | _ -> None
+
+let is_subovf (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (SubOvf (_), _, _); _ } -> true | _ -> false
+
+let as_mulovf (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (MulOvf (p1), x1, x2); _ } -> Some (p1, x1, x2) | _ -> None
+
+let is_mulovf (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (MulOvf (_), _, _); _ } -> true | _ -> false
+
+let as_lt (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (Lt (p1), x1, x2); _ } -> Some (p1, x1, x2) | _ -> None
+
+let is_lt (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (Lt (_), _, _); _ } -> true | _ -> false
+
+let as_leq (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (Leq (p1), x1, x2); _ } -> Some (p1, x1, x2) | _ -> None
+
+let is_leq (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (Leq (_), _, _); _ } -> true | _ -> false
+
+let as_bvconcat (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (BvConcat, x1, x2); _ } -> Some (x1, x2) | _ -> None
+
+let is_bvconcat (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (BvConcat, _, _); _ } -> true | _ -> false
+
+let as_bitand (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (BitAnd, x1, x2); _ } -> Some (x1, x2) | _ -> None
+
+let is_bitand (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (BitAnd, _, _); _ } -> true | _ -> false
+
+let as_bitor (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (BitOr, x1, x2); _ } -> Some (x1, x2) | _ -> None
+
+let is_bitor (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (BitOr, _, _); _ } -> true | _ -> false
+
+let as_bitxor (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (BitXor, x1, x2); _ } -> Some (x1, x2) | _ -> None
+
+let is_bitxor (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (BitXor, _, _); _ } -> true | _ -> false
+
+let as_shl (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (Shl, x1, x2); _ } -> Some (x1, x2) | _ -> None
+
+let is_shl (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (Shl, _, _); _ } -> true | _ -> false
+
+let as_lshr (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (LShr, x1, x2); _ } -> Some (x1, x2) | _ -> None
+
+let is_lshr (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (LShr, _, _); _ } -> true | _ -> false
+
+let as_ashr (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (AShr, x1, x2); _ } -> Some (x1, x2) | _ -> None
+
+let is_ashr (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (AShr, _, _); _ } -> true | _ -> false
+
+let as_bvoffloat (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (BvOfFloat (p1, p2, p3), x1); _ } -> Some (p1, p2, p3, x1) | _ -> None
+
+let is_bvoffloat (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (BvOfFloat (_, _, _), _); _ } -> true | _ -> false
+
+let as_floatofbv (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (FloatOfBv (p1, p2, p3), x1); _ } -> Some (p1, p2, p3, x1) | _ -> None
+
+let is_floatofbv (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (FloatOfBv (_, _, _), _); _ } -> true | _ -> false
+
+let as_floatofbvraw (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (FloatOfBvRaw (p1), x1); _ } -> Some (p1, x1) | _ -> None
+
+let is_floatofbvraw (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (FloatOfBvRaw (_), _); _ } -> true | _ -> false
+
+let as_floatoffloat (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (FloatOfFloat (p1, p2), x1); _ } -> Some (p1, p2, x1) | _ -> None
+
+let is_floatoffloat (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (FloatOfFloat (_, _), _); _ } -> true | _ -> false
+
+let as_fabs (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (FAbs, x1); _ } -> Some x1 | _ -> None
+
+let is_fabs (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (FAbs, _); _ } -> true | _ -> false
+
+let as_fneg (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (FNeg, x1); _ } -> Some x1 | _ -> None
+
+let is_fneg (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (FNeg, _); _ } -> true | _ -> false
+
+let as_fsqrt (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (FSqrt, x1); _ } -> Some x1 | _ -> None
+
+let is_fsqrt (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (FSqrt, _); _ } -> true | _ -> false
+
+let as_fis (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (FIs (p1), x1); _ } -> Some (p1, x1) | _ -> None
+
+let is_fis (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (FIs (_), _); _ } -> true | _ -> false
+
+let as_fisneg (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (FIsNeg, x1); _ } -> Some x1 | _ -> None
+
+let is_fisneg (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (FIsNeg, _); _ } -> true | _ -> false
+
+let as_fispos (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (FIsPos, x1); _ } -> Some x1 | _ -> None
+
+let is_fispos (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (FIsPos, _); _ } -> true | _ -> false
+
+let as_fround (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (FRound (p1), x1); _ } -> Some (p1, x1) | _ -> None
+
+let is_fround (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (FRound (_), _); _ } -> true | _ -> false
+
+let as_feq (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (FEq, x1, x2); _ } -> Some (x1, x2) | _ -> None
+
+let is_feq (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (FEq, _, _); _ } -> true | _ -> false
+
+let as_fleq (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (FLeq, x1, x2); _ } -> Some (x1, x2) | _ -> None
+
+let is_fleq (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (FLeq, _, _); _ } -> true | _ -> false
+
+let as_flt (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (FLt, x1, x2); _ } -> Some (x1, x2) | _ -> None
+
+let is_flt (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (FLt, _, _); _ } -> true | _ -> false
+
+let as_fadd (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (FAdd, x1, x2); _ } -> Some (x1, x2) | _ -> None
+
+let is_fadd (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (FAdd, _, _); _ } -> true | _ -> false
+
+let as_fsub (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (FSub, x1, x2); _ } -> Some (x1, x2) | _ -> None
+
+let is_fsub (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (FSub, _, _); _ } -> true | _ -> false
+
+let as_fmul (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (FMul, x1, x2); _ } -> Some (x1, x2) | _ -> None
+
+let is_fmul (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (FMul, _, _); _ } -> true | _ -> false
+
+let as_fdiv (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (FDiv, x1, x2); _ } -> Some (x1, x2) | _ -> None
+
+let is_fdiv (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (FDiv, _, _); _ } -> true | _ -> false
+
+let as_frem (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (FRem, x1, x2); _ } -> Some (x1, x2) | _ -> None
+
+let is_frem (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (FRem, _, _); _ } -> true | _ -> false
+
+let as_fmin (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (FMin, x1, x2); _ } -> Some (x1, x2) | _ -> None
+
+let is_fmin (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (FMin, _, _); _ } -> true | _ -> false
+
+let as_fmax (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (FMax, x1, x2); _ } -> Some (x1, x2) | _ -> None
+
+let is_fmax (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (FMax, _, _); _ } -> true | _ -> false
+
+let as_fma (t : t) =
+  match[@warning "-11"] t with { kind = Op3 (Fma, x1, x2, x3); _ } -> Some (x1, x2, x3) | _ -> None
+
+let is_fma (t : t) =
+  match[@warning "-11"] t with { kind = Op3 (Fma, _, _, _); _ } -> true | _ -> false
+
+let as_ptr (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (Ptr, x1, x2); _ } -> Some (x1, x2) | _ -> None
+
+let is_ptr (t : t) =
+  match[@warning "-11"] t with { kind = Op2 (Ptr, _, _); _ } -> true | _ -> false
+
+let as_getptrloc (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (GetPtrLoc, x1); _ } -> Some x1 | _ -> None
+
+let is_getptrloc (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (GetPtrLoc, _); _ } -> true | _ -> false
+
+let as_getptrofs (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (GetPtrOfs, x1); _ } -> Some x1 | _ -> None
+
+let is_getptrofs (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (GetPtrOfs, _); _ } -> true | _ -> false
+
+let as_tseq (t : ty) =
+  match[@warning "-11"] t with TSeq (p1) -> Some p1 | _ -> None
+
+let is_tseq (t : ty) =
+  match[@warning "-11"] t with TSeq (_) -> true | _ -> false
+
+let as_tbool (t : ty) =
+  match[@warning "-11"] t with TBool -> Some () | _ -> None
+
+let is_tbool (t : ty) =
+  match[@warning "-11"] t with TBool -> true | _ -> false
+
+let as_tbitvector (t : ty) =
+  match[@warning "-11"] t with TBitVector (p1) -> Some p1 | _ -> None
+
+let is_tbitvector (t : ty) =
+  match[@warning "-11"] t with TBitVector (_) -> true | _ -> false
+
+let as_tfloat (t : ty) =
+  match[@warning "-11"] t with TFloat (p1) -> Some p1 | _ -> None
+
+let is_tfloat (t : ty) =
+  match[@warning "-11"] t with TFloat (_) -> true | _ -> false
+
+let as_tloc (t : ty) =
+  match[@warning "-11"] t with TLoc (p1) -> Some p1 | _ -> None
+
+let is_tloc (t : ty) =
+  match[@warning "-11"] t with TLoc (_) -> true | _ -> false
+
+let as_tpointer (t : ty) =
+  match[@warning "-11"] t with TPointer (p1) -> Some p1 | _ -> None
+
+let is_tpointer (t : ty) =
+  match[@warning "-11"] t with TPointer (_) -> true | _ -> false
 
 

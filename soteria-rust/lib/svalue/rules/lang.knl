@@ -16,26 +16,8 @@
 [@@@ocaml_prims "Rust_prims"]
 [@@@ocaml_types "Rust_types"]
 
-[@@@ghost "sint" "[ `NonZero | `Zero ]"]
-[@@@ghost "sint_ovf" "[ sint | `Overflowed ]"]
-[@@@ghost "nonzero" "[ `NonZero ]"]
-[@@@ghost "zero" "[ `Zero ]"]
-[@@@ghost "sfloat" "[ `Float ]"]
-[@@@ghost "sptr" "[ `Ptr ]"]
-[@@@ghost "sloc" "[ `Loc ]"]
-[@@@ghost "'a sseq" "[ `List of 'a ]"]
-[@@@ghost "cval" "[ sint | sptr | sfloat ]"]
 
 (* The tags of the Rust values, as in soteria-rust/lib/svalue/typed.ml *)
-[@@@ghost "sptr_f" "[ `FullPtr ]"]
-[@@@ghost "sptr_t" "[ `ThinPtr ]"]
-[@@@ghost "tuple" "[ `Tuple ]"]
-[@@@ghost "enum" "[ `Enum ]"]
-[@@@ghost "union" "[ `Union ]"]
-[@@@ghost "poly" "[ `Poly ]"]
-[@@@ghost "scalar" "[ sint | sfloat | sptr_f | poly ]"]
-[@@@ghost "aggregate" "[ tuple | enum | union ]"]
-[@@@ghost "any" "[ scalar | aggregate ]"]
 
 use builtin "bool"
 use "../../../../soteria/lib/bv_values/rules/exists"
@@ -56,7 +38,7 @@ type checked [@ocaml "Soteria.Bv_values.Bv_base.checked"] =
 node Var of var
 node Seq of t list
 
-sort TSeq of ty [@ghost sseq]
+sort TSeq of ty
 
 type fp [@ocaml "Soteria.Bv_values.Bv_base.FloatPrecision.t"] =
   | F16

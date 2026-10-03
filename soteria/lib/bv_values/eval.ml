@@ -24,7 +24,7 @@ struct
   let rec eval ~force ~eval_var (x : t) : t =
     let eval' = eval ~force in
     let eval = eval ~force ~eval_var in
-    match K.as_var x with
+    match as_var x with
     | Some (v, ty) -> eval_var x v ty
     | None -> (
         match K.as_exists x with

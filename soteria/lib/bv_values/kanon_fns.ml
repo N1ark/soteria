@@ -229,14 +229,14 @@ module type Kanon_fns = sig
       [BitVec]: [LocLit] is included.) *)
   val is_literal : t -> bool
 
-  val as_var : t -> (Var.t * ty) option
+  val as_var : t -> Var.t option
   val as_not : t -> t option
   val as_eq : t -> (t * t) option
   val as_and : t -> (t * t) option
   val as_or : t -> (t * t) option
   val as_ite : t -> (t * t * t) option
-  val as_lt : t -> (t * t) option
-  val as_leq : t -> (t * t) option
+  val as_lt : t -> (bool * t * t) option
+  val as_leq : t -> (bool * t * t) option
   val as_distinct : t -> t list option
 
   (** [Some (binders, body)] for an existential. Replaces the [Exists] matches

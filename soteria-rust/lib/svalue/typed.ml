@@ -430,7 +430,7 @@ module Adt = struct
 
   let mk_tuple vs = K.mk_tuple vs
   let unit = mk_tuple []
-  let as_tuple v = K.as_tuple v
+  let as_tuple v = K.tuple_fields v
 
   let as_tuple1 v =
     match as_tuple v with [ a ] -> a | _ -> cast_error v (t_tuple [ t_int 1 ])
@@ -476,7 +476,7 @@ module Adt = struct
   (** {2 Arrays} *)
 
   let mk_array elem_ty arr = K.mk_array elem_ty arr
-  let as_array v = K.as_array v
+  let as_array v = K.array_elems v
   let array_field_of idx v = K.array_field_of (Z.of_int idx) v
   let set_array_field idx f v = K.set_array_field (Z.of_int idx) f v
 

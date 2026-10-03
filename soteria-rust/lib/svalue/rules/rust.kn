@@ -156,13 +156,13 @@ fn fields_from (i : int) (v : t) (tys : ty list) : t list [@no_lean] =
       let f = field_of i v in
       f :: fields_from (i + 1) v rest
 
-fn as_tuple (v : t) : t list [@no_lean] =
+fn tuple_fields (v : t) : t list [@no_lean] =
   match v with
   | Tuple vs -> vs
   | _ -> fields_from 0 v (t_as_tuple (type_of v))
 
 fn set_field (idx : int) (x v : t) : t [@no_lean] =
-  mk_tuple (set_nth (as_tuple v) idx x)
+  mk_tuple (set_nth (tuple_fields v) idx x)
 
 (* {1 Enums} *)
 
@@ -223,13 +223,13 @@ fn array_fields_from (i n : int) (v : t) : t list [@no_lean] =
     let f = array_field_of i v in
     f :: array_fields_from (i + 1) n v
 
-fn as_array (v : t) : t iarray [@no_lean] =
+fn array_elems (v : t) : t iarray [@no_lean] =
   match v with
   | Array vs -> vs
   | _ -> iarray_of_list (array_fields_from 0 (array_length (type_of v)) v)
 
 fn set_array_field (idx : int) (x v : t) : t [@no_lean] =
-  let vs = as_array v in
+  let vs = array_elems v in
   let vs2 = iarray_set vs idx x in
   mk_array_of_svty (array_elem_ty (type_of v)) vs2
 

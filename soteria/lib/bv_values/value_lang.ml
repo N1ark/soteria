@@ -201,15 +201,15 @@ module Make
   let bv_uleq = K.bv_leq false
   let is_literal = K.is_literal
   let is_bool (v : t) = K.is_bool_ty v.ty
-  let as_var = K.as_var
+  let as_var (v : t) = Option.map (fun x -> (x, v.ty)) (K.as_var v)
   let as_bv_ty s = Option.map Z.to_int (K.as_bv_ty s)
   let as_not = K.as_not
   let as_eq = K.as_eq
   let as_and = K.as_and
   let as_or = K.as_or
   let as_ite = K.as_ite
-  let as_lt = K.as_lt
-  let as_leq = K.as_leq
+  let as_lt v = Option.map (fun (_, l, r) -> (l, r)) (K.as_lt v)
+  let as_leq v = Option.map (fun (_, l, r) -> (l, r)) (K.as_leq v)
   let as_distinct = K.as_distinct
 
   (* [A && B && C] iterates over [A], [B], [C], left to right *)
@@ -253,7 +253,7 @@ module Make
   let iter_vars (sv : t) (f : Var.t * ty -> unit) : unit =
     let rec aux ~ignore (sv : t) : unit =
       match K.as_var sv with
-      | Some (x, s) -> if Var.Set.mem x ignore then () else f (x, s)
+      | Some x -> if Var.Set.mem x ignore then () else f (x, sv.ty)
       | None -> (
           match K.as_exists sv with
           | Some (vs, body) ->

@@ -121,44 +121,8 @@ fn is_bool_ty (s : ty) : bool [@no_lean] =
 
 (* {1 Recognisers} *)
 
-(* The flags of the operators are ignored *)
-
 fn is_literal (v : t) : bool [@no_lean] =
   match v with Bool _ | BitVec _ | LocLit _ | Float _ -> true | _ -> false
-
-fn as_var (v : t) : (var * ty) option [@no_lean] =
-  match v with Var x -> Some (x, type_of v) | _ -> None
-
-fn as_not (v : t) : t option [@no_lean] =
-  match v with Not x -> Some x | _ -> None
-
-fn as_eq (v : t) : (t * t) option [@no_lean] =
-  match v with Eq (l, r) -> Some (l, r) | _ -> None
-
-fn as_and (v : t) : (t * t) option [@no_lean] =
-  match v with And (l, r) -> Some (l, r) | _ -> None
-
-fn as_or (v : t) : (t * t) option [@no_lean] =
-  match v with Or (l, r) -> Some (l, r) | _ -> None
-
-fn as_ite (v : t) : (t * t * t) option [@no_lean] =
-  match v with Ite (g, a, b) -> Some (g, a, b) | _ -> None
-
-fn as_lt (v : t) : (t * t) option [@no_lean] =
-  match v with Lt (_, l, r) -> Some (l, r) | _ -> None
-
-fn as_leq (v : t) : (t * t) option [@no_lean] =
-  match v with Leq (_, l, r) -> Some (l, r) | _ -> None
-
-fn as_distinct (v : t) : t list option [@no_lean] =
-  match v with Distinct l -> Some l | _ -> None
-
-fn as_exists (v : t) : ((var * ty) list * t) option [@no_lean] =
-  match v with Exists (bs, b) -> Some (bs, b) | _ -> None
-
-(* Only the node [Ptr] *)
-fn as_ptr (v : t) : (t * t) option [@no_lean] =
-  match v with Ptr (l, o) -> Some (l, o) | _ -> None
 
 (* Only [BitVec]: a location literal is [as_loc_lit] *)
 fn as_bv_lit (v : t) : int option [@no_lean] =

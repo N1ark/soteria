@@ -343,8 +343,9 @@ module Api
 end
 
 (** The two old-side instantiations: [A] is the reference old side; [B] is a
-    separate table, used as a stand-in for the new side until [bv_new] exists
-    (old vs old: validates {!Iso}, the generators and {!Side.Compose}). *)
+    separate table, used as a stand-in for the new side until the new language
+    existed (old vs old: validates {!Iso}, the generators and {!Side.Compose}).
+*)
 module A_typed = B.Typed.Make (Sv.Dummy_ext) ()
 
 module B_typed = B.Typed.Make (Sv.Dummy_ext) ()

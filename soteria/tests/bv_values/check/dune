@@ -1,12 +1,14 @@
-; Compile-check of the frozen interfaces against the generated language
-; ([Bv_new.Types] satisfies [Value_lang.Term]; a Kanon_fns implementation
-; typechecks against the generated types; the composed language satisfies
-; Solver_lang.S, Typed_intf_v.S and Solver_value), and tests of the generic
-; layers against the old stack. [dune test soteria/tests/bv_new/iface].
+; Compile-check of the interfaces of the generic host code against the
+; generated language ([Lang.Types] satisfies [Value_lang.Term]; a Kanon_fns
+; implementation typechecks against the generated types; the composed language
+; satisfies Solver_lang.S, Typed_intf_v.S and Solver_value), and tests of the
+; generic layers against the old stack, with the hand-written reference
+; [Kanon_ref] as the view functions. [dune test soteria/tests/bv_values/check].
+; [../view_check] runs the same tests with the generated view functions.
 
 (test
  (name check)
  (modules kanon_ref conv gen check)
- (libraries bv_iface bv_new soteria floatml zarith iter fmt alcotest)
+ (libraries soteria floatml zarith iter fmt alcotest)
  (flags
   (:standard -w +a-4-9-26-27-32..42-44-45-48-70)))

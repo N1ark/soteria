@@ -3,7 +3,7 @@
    simplification. The old printers and solver functions applied to the
    converted term are the oracles of the generic layers. *)
 
-open Bv_new.Types
+open Soteria.Bv_values.Lang.Types
 module Old = Soteria.Bv_values.Svalue
 module OT = Soteria.Bv_values.Typed.Make (Old.Dummy_ext) ()
 module OS = OT.Svalue

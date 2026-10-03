@@ -9,8 +9,8 @@
    their order (see [creation_trials]). Also: [rebuild v (operands v) == v], and
    every node kind occurs. *)
 
-open Bv_iface
-module Types = Bv_new.Types
+open Soteria.Bv_values
+module Types = Soteria.Bv_values.Lang.Types
 module Smt = Soteria.Smt
 module Decls = Soteria.Solvers.Decls
 module Var = Soteria.Symex.Var
@@ -92,20 +92,22 @@ let canon (v : Types.t) : string =
                 bs))
           (go body)
     | Op1 (op, a) ->
-        Printf.sprintf "(%s %s)" (Format.asprintf "%a" Bv_new.pp_op1 op) (go a)
+        Printf.sprintf "(%s %s)"
+          (Format.asprintf "%a" Soteria.Bv_values.Lang.pp_op1 op)
+          (go a)
     | Op2 (op, x, y) ->
         let l = [ go x; go y ] in
         let l = if comm op then List.sort compare l else l in
         Printf.sprintf "(%s %s)"
-          (Format.asprintf "%a" Bv_new.pp_op2 op)
+          (Format.asprintf "%a" Soteria.Bv_values.Lang.pp_op2 op)
           (String.concat " " l)
     | Op3 (op, x, y, z) ->
         Printf.sprintf "(%s %s %s %s)"
-          (Format.asprintf "%a" Bv_new.pp_op3 op)
+          (Format.asprintf "%a" Soteria.Bv_values.Lang.pp_op3 op)
           (go x) (go y) (go z)
     | OpN (op, l) ->
         Printf.sprintf "(%s %s)"
-          (Format.asprintf "%a" Bv_new.pp_opn op)
+          (Format.asprintf "%a" Soteria.Bv_values.Lang.pp_opn op)
           (String.concat " " (List.sort compare (List.map go l)))
   in
   go v
@@ -170,10 +172,10 @@ let kind_name (v : Types.t) =
   | BitVec _ -> "BitVec"
   | LocLit _ -> "LocLit"
   | Float _ -> "Float"
-  | Op1 (op, _) -> "op1:" ^ first (str Bv_new.pp_op1 op)
-  | Op2 (op, _, _) -> "op2:" ^ first (str Bv_new.pp_op2 op)
-  | Op3 (op, _, _, _) -> "op3:" ^ first (str Bv_new.pp_op3 op)
-  | OpN (op, _) -> "opN:" ^ first (str Bv_new.pp_opn op)
+  | Op1 (op, _) -> "op1:" ^ first (str Soteria.Bv_values.Lang.pp_op1 op)
+  | Op2 (op, _, _) -> "op2:" ^ first (str Soteria.Bv_values.Lang.pp_op2 op)
+  | Op3 (op, _, _, _) -> "op3:" ^ first (str Soteria.Bv_values.Lang.pp_op3 op)
+  | OpN (op, _) -> "opN:" ^ first (str Soteria.Bv_values.Lang.pp_opn op)
 
 (* every node of the generated types *)
 let all_kinds =
@@ -770,7 +772,7 @@ let compare_all (c : corpus) =
             incr rebuild_bad;
             if !rebuild_bad <= 5 then
               Printf.printf "rebuild (operands v) <> v on %s\n%!"
-                (Bv_new.show v))
+                (Soteria.Bv_values.Lang.show v))
     c.random;
   let rng = Random.State.make [| 7 |] in
   let arr = Array.of_list c.all in
@@ -780,7 +782,7 @@ let compare_all (c : corpus) =
       let kn = kind_name v in
       Hashtbl.replace counts kn
         (1 + Option.value ~default:0 (Hashtbl.find_opt counts kn));
-      let ctx () = Bv_new.show v in
+      let ctx () = Soteria.Bv_values.Lang.show v in
       compare_results ~ctx (SG.on_term v) (SR.on_term v);
       compare_results ~ctx (SG.on_rebuild pool v k) (SR.on_rebuild pool v k);
       compare_results ~ctx (SG.on_learn pool v k) (SR.on_learn pool v k);
@@ -794,7 +796,11 @@ let compare_all (c : corpus) =
       | _, _, _, Some { kind = Op2 (Eq, a, b); _ } ->
           List.iter
             (fun pc ->
-              let ctx () = Bv_new.show v ^ "  and  " ^ Bv_new.show pc in
+              let ctx () =
+                Soteria.Bv_values.Lang.show v
+                ^ "  and  "
+                ^ Soteria.Bv_values.Lang.show pc
+              in
               compare_results ~ctx (SG.on_pair v pc) (SR.on_pair v pc);
               compare_results ~ctx (SG.on_pair pc v) (SR.on_pair pc v))
             (List.concat_map
@@ -813,7 +819,11 @@ let compare_all (c : corpus) =
         for _ = 1 to 3 do
           let other = arr.(Random.State.int rng n) in
           if other.ty = TBool then (
-            let ctx () = Bv_new.show v ^ "  and  " ^ Bv_new.show other in
+            let ctx () =
+              Soteria.Bv_values.Lang.show v
+              ^ "  and  "
+              ^ Soteria.Bv_values.Lang.show other
+            in
             compare_results ~ctx (SG.on_pair v other) (SR.on_pair v other);
             compare_results ~ctx (SG.on_pair other v) (SR.on_pair other v))
         done)
@@ -957,7 +967,7 @@ let trial name (inputs : Types.t list) f_ref f_gen =
         Printf.printf
           "CREATION DIFF %s on %s (%s first):\n  first:  %s\n  second: %s\n%!"
           name
-          (String.concat " ; " (List.map Bv_new.show inputs))
+          (String.concat " ; " (List.map Soteria.Bv_values.Lang.show inputs))
           (if !swap then "generated" else "reference")
           ra rb);
     swap := true

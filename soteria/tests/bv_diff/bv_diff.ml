@@ -288,7 +288,7 @@ module Run (New : NEW) = struct
       \  both sides raised  : %d@\n\
       \  peak heap          : %d MB@\n"
       label New.label
-      (if New.available then "" else "; NOT bv_new")
+      (if New.available then "" else "; NOT Lang")
       stats.checked stats.nodes stats.agree stats.order_only stats.diffs
       stats.both_raise
       ((Gc.quick_stat ()).top_heap_words * (Sys.word_size / 8) / 1_048_576)

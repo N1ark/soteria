@@ -485,20 +485,18 @@ module type S = sig
 end
 
 (** The exact slice of {!S} that {!Bv_solver}'s functors (and the {!Encoding}
-    and {!Analyses} they build on) actually consume — essentially {!Svalue},
-    {!Eval}, {!Ext}, {!Lang} and the coercions to and from untyped values,
-    enough to also be a {!Symex.Value.S}.
+    and {!Analyses} they build on) actually consume: {!Lang} and the coercions
+    to and from untyped values, enough to also be a {!Symex.Value.S}.
 
     Solvers take this rather than the whole {!S} so that a downstream [Typed]
     that adds or overrides constructors — and therefore no longer matches {!S} —
     can still be passed to {!Bv_solver.Z3_solver} directly: the solver provably
-    never touches the overridden parts. Every module matching {!S} also matches
-    this, so it stays a strict subset. *)
+    never touches the overridden parts. Every module matching {!S}, and
+    {!Typed_intf_v.S}, also matches this, so it stays a strict subset. It does
+    not mention [Ext], [Svalue] nor [Eval]: the solver never used them, and the
+    typed layers of the two generations of values differ there. *)
 module type Solver_value = sig
-  module Ext : Svalue.Value_ext
-  module Svalue : module type of Svalue.Make (Ext) ()
-  module Eval : module type of Eval.Make (Ext) (Svalue)
-  module Lang : Solver_lang.S with type t = Svalue.t and type ty = Svalue.ty
+  module Lang : Solver_lang.S
 
   module T : sig
     type sint = [ `NonZero | `Zero ]
@@ -509,7 +507,7 @@ module type Solver_value = sig
 
   (** {2 Extra operations beyond {!Symex.Value.S}} *)
 
-  val untype_type : 'a ty -> Svalue.ty
-  val type_ : Svalue.t -> 'a t
-  val untyped : 'a t -> Svalue.t
+  val untype_type : 'a ty -> Lang.ty
+  val type_ : Lang.t -> 'a t
+  val untyped : 'a t -> Lang.t
 end

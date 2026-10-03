@@ -16,19 +16,17 @@
     Written by the architect as the reference implementation (a port of
     [svalue.ml:591-900]); WP3b owns it from now on. *)
 
-open Deps
-
 module type S = sig
   type t
   type ty
 
-  module Var = Soteria.Symex.Var
+  module Var = Symex.Var
   module F = Floatml.AnyFloat
-  module FloatPrecision = Svalue_base.FloatPrecision
-  module FloatClass = Svalue_base.FloatClass
-  module RoundingMode = Svalue_base.RoundingMode
+  module FloatPrecision = Svalue_ast.FloatPrecision
+  module FloatClass = Svalue_ast.FloatClass
+  module RoundingMode = Svalue_ast.RoundingMode
 
-  type checked = Svalue_base.checked = { signed : bool; unsigned : bool }
+  type checked = Svalue_ast.checked = { signed : bool; unsigned : bool }
 
   val unchecked : checked
   val checked_both : checked
@@ -303,21 +301,21 @@ module type S = sig
 end
 
 module Make (V : Value_lang.S) : S with type t = V.t and type ty = V.ty = struct
-  module L = Soteria.Logs.Import.L
+  module L = Logs.Import.L
   module K = V.K
-  module Var = Soteria.Symex.Var
+  module Var = Symex.Var
   module F = Floatml.AnyFloat
-  module FloatPrecision = Svalue_base.FloatPrecision
-  module FloatClass = Svalue_base.FloatClass
-  module RoundingMode = Svalue_base.RoundingMode
+  module FloatPrecision = Svalue_ast.FloatPrecision
+  module FloatClass = Svalue_ast.FloatClass
+  module RoundingMode = Svalue_ast.RoundingMode
 
   type t = V.t
   type ty = V.ty
-  type checked = Svalue_base.checked = { signed : bool; unsigned : bool }
+  type checked = Svalue_ast.checked = { signed : bool; unsigned : bool }
 
-  let unchecked = Svalue_base.unchecked
-  let checked_both = Svalue_base.checked_both
-  let checked_of_signed = Svalue_base.checked_of_signed
+  let unchecked = Svalue_ast.unchecked
+  let checked_both = Svalue_ast.checked_both
+  let checked_of_signed = Svalue_ast.checked_of_signed
 
   (* {2 Sorts} *)
 
@@ -512,7 +510,7 @@ module Make (V : Value_lang.S) : S with type t = V.t and type ty = V.ty = struct
         (to_float_opt v)
 
     let approx2 f v1 v2 =
-      Soteria.Soteria_std.Option.map2
+      Soteria_std.Option.map2
         (fun x1 x2 ->
           let fp = fp_of v1 in
           mk_raw fp (F.of_float fp (f x1 x2)))

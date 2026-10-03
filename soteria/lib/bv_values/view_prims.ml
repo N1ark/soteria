@@ -11,15 +11,15 @@ open Bv_types
 
 (* the aliases are private: [Bv_prims] has its own *)
 open struct
-  module L = Soteria.Logs.Import.L
-  module Var = Soteria.Symex.Var
+  module L = Logs.Import.L
+  module Var = Symex.Var
   module F = Floatml.AnyFloat
-  module FloatPrecision = Soteria.Bv_values.Svalue.FloatPrecision
-  module FloatClass = Soteria.Bv_values.Svalue.FloatClass
-  module RoundingMode = Soteria.Bv_values.Svalue.RoundingMode
-  module Ptr_sort = Soteria.Bv_values.Encoding.Ptr_sort
-  module Smt = Soteria.Smt
-  module View_host = Bv_iface.View_host
+  module FloatPrecision = Svalue_ast.FloatPrecision
+  module FloatClass = Svalue_ast.FloatClass
+  module RoundingMode = Svalue_ast.RoundingMode
+  module Ptr_sort = Ptr_sort
+  module Smt = Smt
+  module View_host = View_host
 end
 
 type pphead = View_host.pphead

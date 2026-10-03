@@ -500,24 +500,6 @@ module type S = sig
        and type t = Svalue.t
 end
 
-(** The exact slice of {!S} that {!Bv_solver}'s functors (and the {!Encoding}
-    and {!Analyses} they build on) actually consume: {!Lang} and the coercions
-    to and from untyped values, enough to also be a {!Symex.Value.S}. Unlike the
-    old signature, it no longer has [Ext], [Svalue] and [Eval]: the solver never
-    used them. Every module matching {!S} also matches this. *)
-module type Solver_value = sig
-  module Lang : Solver_lang.S
-
-  module T : sig
-    type sint = [ `NonZero | `Zero ]
-    type sbool = [ `Bool ]
-  end
-
-  include Symex.Value.S with type sbool = T.sbool
-
-  (** {2 Extra operations beyond {!Symex.Value.S}} *)
-
-  val untype_type : 'a ty -> Lang.ty
-  val type_ : Lang.t -> 'a t
-  val untyped : 'a t -> Lang.t
-end
+(** What {!Bv_solver}'s functors consume of a typed layer, as for the old one:
+    see {!Typed_intf.Solver_value}. Every module matching {!S} matches it. *)
+module type Solver_value = Typed_intf.Solver_value

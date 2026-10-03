@@ -21,15 +21,14 @@ type pphead = Format.formatter -> unit
     is the order of the emitted [Decls], and it must be that of the code that it
     replaces (design 3.6.9). *)
 type ('t, 'ty) smt_op =
-  sort_of_ty:('ty -> Soteria.Smt.sexp) ->
-  encode_child:('t -> Soteria.Smt.sexp) ->
+  sort_of_ty:('ty -> Smt.sexp) ->
+  encode_child:('t -> Smt.sexp) ->
   't list ->
-  Soteria.Smt.sexp
+  Smt.sexp
 
 (** Same for sorts: [op ~sort_of_ty components] where [components] are the sorts
     that the sort is made of, left to right ([TSeq s] has [[s]]). *)
-type 'ty smt_sort_op =
-  sort_of_ty:('ty -> Soteria.Smt.sexp) -> 'ty list -> Soteria.Smt.sexp
+type 'ty smt_sort_op = sort_of_ty:('ty -> Smt.sexp) -> 'ty list -> Smt.sexp
 
 (** Which side of the range [as_range] is. *)
 type range_sign = Inside | Outside

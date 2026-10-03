@@ -59,9 +59,7 @@ struct
                 match K.operands x with
                 | [] -> x
                 | cs ->
-                    let cs', changed =
-                      Soteria.Soteria_std.List.map_changed eval cs
-                    in
+                    let cs', changed = Soteria_std.List.map_changed eval cs in
                     if (not force) && not changed then x else K.rebuild x cs')))
 
   let eval ?(force = false) ?(eval_var : t -> Var.t -> ty -> t = fun x _ _ -> x)

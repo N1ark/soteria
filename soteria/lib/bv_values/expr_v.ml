@@ -4,15 +4,14 @@
     over [learn_alts]/[learn_value] ({!View_host.learn_plan}). The [Ext.mk],
     [Ext.apply_subst] and [Ext.learn] hooks of the extensions are the [rebuild],
     [operands] and [learn_*] cases of their [extend fn]. Written by the
-    architect as the reference implementation; WP3b owns it from now on.
-
-    Two textual differences with [expr.ml], neither behavioural:
+    architect as the reference implementation; WP3b owns it from now on. Two
+    textual differences with [expr.ml], neither behavioural:
     - the binders of [apply_bound] are compared with [Var.equal] and [equal_ty]
       instead of the polymorphic [List.mem];
     - [learn] reads the inverse of a node in its {!View_host.learn_plan}. *)
 
+open Soteria_std
 open Deps
-open Soteria.Soteria_std
 
 module type S = sig
   type value

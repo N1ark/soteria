@@ -31,8 +31,7 @@ open Typed
 (* ------------------------------------------------------------------ *)
 (* Shim: everything that is not plain [Typed] API. A port to another
    implementation only has to re-implement these.
-   - [Shim.make]: the generative application of [Typed.Make]
-     (above: [Typed.Make (Svalue.Dummy_ext) ()]);
+   - [Shim.make]: the application of [Typed.Make];
    - [Shim.lang_ty_pp]: print a [Lang.ty] (via [type_type] and [ppa_ty]);
    - [Shim.lang]: uses [untyped] / [type_] to move between [Typed.t] and
      [Lang.t].

@@ -1,3 +1,0 @@
-(executable
- (name bv_diff)
- (libraries soteria zarith fmt qcheck-core))

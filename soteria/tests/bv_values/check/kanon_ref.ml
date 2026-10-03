@@ -8,20 +8,20 @@
     exists. The rules, the constants and the constructors are the real ones
     ([Soteria.Bv_values.Lang.Rules], [Soteria.Bv_values.Lang]); the view
     functions are ports of the code that they replace ([solver_lang.ml],
-    [svalue.ml], [expr.ml]), written against the new constructors. Where the old
-    printers exist they are reused (through a conversion of the operators) so
-    that the pretty-printing is the old one by construction.
+    [svalue.ml], [expr.ml] of the first, hand-written generation of the value
+    language, since deleted), written against the new constructors. The printers
+    of the operators and of the sorts are copies of that generation's.
 
     Not intended to be fast. *)
 
 open Soteria.Bv_values.Lang.Types
 module R = Soteria.Bv_values.Lang.Rules
-module Old = Soteria.Bv_values.Svalue
+module Bv_base = Soteria.Bv_values.Bv_base
 module Smt = Soteria.Smt
 module Ptr_sort = Soteria.Bv_values.Encoding.Ptr_sort
 module Var = Soteria.Symex.Var
 module F = Floatml.AnyFloat
-module FloatPrecision = Old.FloatPrecision
+module FloatPrecision = Bv_base.FloatPrecision
 module View_host = Soteria.Bv_values.View_host
 open View_host
 
@@ -111,16 +111,14 @@ let mk_loc = Soteria.Bv_values.Lang.mk_loc
 let mk_ptr = Soteria.Bv_values.Lang.mk_ptr
 let mk_seq s l = Soteria.Bv_values.Lang.mk_seq ~seq_ty:s l
 
-let rec to_old_ty : ty -> 'a Old.ty = function
-  | TBool -> Old.TBool
-  | TBitVector n -> Old.TBitVector n
-  | TFloat p -> Old.TFloat p
-  | TLoc n -> Old.TLoc n
-  | TPointer n -> Old.TPointer n
-  | TSeq s -> Old.TSeq (to_old_ty s)
-
-(* the derived [show] of the old sorts *)
-let pp_ty ft ty = Old.pp_ty (fun _ _ -> ()) ft (to_old_ty ty)
+(* what [ppx_deriving show] generated for the sorts: [(TBitVector 32)] *)
+let rec pp_ty ft = function
+  | TBool -> Fmt.string ft "TBool"
+  | TFloat p -> Fmt.pf ft "(@[<2>TFloat@ %a@])" FloatPrecision.pp p
+  | TLoc n -> Fmt.pf ft "(@[<2>TLoc@ %d@])" n
+  | TPointer n -> Fmt.pf ft "(@[<2>TPointer@ %d@])" n
+  | TSeq s -> Fmt.pf ft "(@[<2>TSeq@ %a@])" pp_ty s
+  | TBitVector n -> Fmt.pf ft "(@[<2>TBitVector@ %d@])" n
 
 (* {1 VIEW: sorts} *)
 
@@ -468,7 +466,7 @@ let random_of_z (s : ty) (z : Z.t) : t option =
 module Enc = struct
   open Smt
 
-  let rm_to_smt : Old.RoundingMode.t -> Smt.RoundingMode.t = function
+  let rm_to_smt : Bv_base.RoundingMode.t -> Smt.RoundingMode.t = function
     | NearestTiesToEven -> NearestTiesToEven
     | NearestTiesToAway -> NearestTiesToAway
     | Ceil -> Ceil
@@ -497,7 +495,7 @@ module Enc = struct
     | BvExtend (false, by) -> bv_zero_extend by
     | BvNot -> bv_not
     | Neg _ -> bv_neg
-    | FIs fc -> fp_is (Old.FloatClass.as_fpclass fc)
+    | FIs fc -> fp_is (Bv_base.FloatClass.as_fpclass fc)
     | FIsNeg -> fp_is_negative
     | FIsPos -> fp_is_positive
     | FRound rm -> fp_round (rm_to_smt rm)
@@ -616,59 +614,72 @@ let sort_operands = Enc.sort_operands
 
 (* {1 VIEW: pretty-printing and learning} *)
 
-let old_unop : op1 -> Old.Unop.t = function
-  | Not -> Old.Unop.Not
-  | GetPtrLoc -> Old.Unop.GetPtrLoc
-  | GetPtrOfs -> Old.Unop.GetPtrOfs
-  | BvOfBool n -> Old.Unop.BvOfBool n
-  | BvOfFloat (rm, s, n) -> Old.Unop.BvOfFloat (rm, s, n)
-  | FloatOfBv (rm, s, p) -> Old.Unop.FloatOfBv (rm, s, p)
-  | FloatOfBvRaw p -> Old.Unop.FloatOfBvRaw p
-  | FloatOfFloat (rm, p) -> Old.Unop.FloatOfFloat (rm, p)
-  | BvExtract (f, t) -> Old.Unop.BvExtract (f, t)
-  | BvExtend (s, k) -> Old.Unop.BvExtend (s, k)
-  | BvNot -> Old.Unop.BvNot
-  | Neg c -> Old.Unop.Neg c
-  | FAbs -> Old.Unop.FAbs
-  | FNeg -> Old.Unop.FNeg
-  | FSqrt -> Old.Unop.FSqrt
-  | FIs fc -> Old.Unop.FIs fc
-  | FIsNeg -> Old.Unop.FIsNeg
-  | FIsPos -> Old.Unop.FIsPos
-  | FRound rm -> Old.Unop.FRound rm
+let pp_signed ft b = Fmt.string ft (if b then "s" else "u")
 
-let old_binop : op2 -> Old.Binop.t = function
-  | And -> Old.Binop.And
-  | Or -> Old.Binop.Or
-  | Eq -> Old.Binop.Eq
-  | Add c -> Old.Binop.Add c
-  | Sub c -> Old.Binop.Sub c
-  | Mul c -> Old.Binop.Mul c
-  | Div s -> Old.Binop.Div s
-  | Rem s -> Old.Binop.Rem s
-  | Mod -> Old.Binop.Mod
-  | AddOvf s -> Old.Binop.AddOvf s
-  | SubOvf s -> Old.Binop.SubOvf s
-  | MulOvf s -> Old.Binop.MulOvf s
-  | Lt s -> Old.Binop.Lt s
-  | Leq s -> Old.Binop.Leq s
-  | BvConcat -> Old.Binop.BvConcat
-  | BitAnd -> Old.Binop.BitAnd
-  | BitOr -> Old.Binop.BitOr
-  | BitXor -> Old.Binop.BitXor
-  | Shl -> Old.Binop.Shl
-  | LShr -> Old.Binop.LShr
-  | AShr -> Old.Binop.AShr
-  | FEq -> Old.Binop.FEq
-  | FLeq -> Old.Binop.FLeq
-  | FLt -> Old.Binop.FLt
-  | FAdd -> Old.Binop.FAdd
-  | FSub -> Old.Binop.FSub
-  | FMul -> Old.Binop.FMul
-  | FDiv -> Old.Binop.FDiv
-  | FRem -> Old.Binop.FRem
-  | FMin -> Old.Binop.FMin
-  | FMax -> Old.Binop.FMax
+let pp_checked ft = function
+  | { signed = false; unsigned = false } -> ()
+  | { signed = true; unsigned = false } -> Fmt.string ft "cks"
+  | { signed = false; unsigned = true } -> Fmt.string ft "cku"
+  | { signed = true; unsigned = true } -> Fmt.string ft "ck"
+
+(* the printed heads of the operators *)
+let pp_op1 ft : op1 -> unit = function
+  | Not -> Fmt.string ft "!"
+  | FAbs -> Fmt.string ft "abs."
+  | FNeg -> Fmt.string ft "neg."
+  | FSqrt -> Fmt.string ft "sqrt."
+  | GetPtrLoc -> Fmt.string ft "loc"
+  | GetPtrOfs -> Fmt.string ft "ofs"
+  | BvOfBool n -> Fmt.pf ft "b2bv[%d]" n
+  | BvOfFloat (rm, signed, n) ->
+      Fmt.pf ft "f2%abv[%a,%d]" pp_signed signed Bv_base.RoundingMode.pp rm n
+  | FloatOfBv (rm, signed, p) ->
+      Fmt.pf ft "%abv2f[%a,%a]" pp_signed signed Bv_base.RoundingMode.pp rm
+        FloatPrecision.pp p
+  | FloatOfBvRaw p -> Fmt.pf ft "bv2f[%a]" FloatPrecision.pp p
+  | FloatOfFloat (rm, p) ->
+      Fmt.pf ft "f2f[%a,%a]" Bv_base.RoundingMode.pp rm FloatPrecision.pp p
+  | BvExtract (from, to_) -> Fmt.pf ft "extract[%d-%d]" from to_
+  | BvExtend (signed, by) -> Fmt.pf ft "extend[%a%d]" pp_signed signed by
+  | BvNot -> Fmt.string ft "!bv"
+  | Neg checked -> Fmt.pf ft "-%s" (if checked then "ck" else "")
+  | FIs fc -> Fmt.pf ft "fis(%a)" Bv_base.FloatClass.pp fc
+  | FIsNeg -> Fmt.string ft "fisneg"
+  | FIsPos -> Fmt.string ft "fispos"
+  | FRound mode -> Fmt.pf ft "fround(%a)" Bv_base.RoundingMode.pp mode
+
+let pp_op2 ft : op2 -> unit = function
+  | And -> Fmt.string ft "&&"
+  | Or -> Fmt.string ft "||"
+  | Eq -> Fmt.string ft "=="
+  | FEq -> Fmt.string ft "==."
+  | FLeq -> Fmt.string ft "<=."
+  | FLt -> Fmt.string ft "<."
+  | FAdd -> Fmt.string ft "+."
+  | FSub -> Fmt.string ft "-."
+  | FMul -> Fmt.string ft "*."
+  | FDiv -> Fmt.string ft "/."
+  | FRem -> Fmt.string ft "rem."
+  | FMin -> Fmt.string ft "min."
+  | FMax -> Fmt.string ft "max."
+  | Add checked -> Fmt.pf ft "+%a" pp_checked checked
+  | Sub checked -> Fmt.pf ft "-%a" pp_checked checked
+  | Mul checked -> Fmt.pf ft "*%a" pp_checked checked
+  | Div s -> Fmt.pf ft "/%a" pp_signed s
+  | Rem s -> Fmt.pf ft "rem%a" pp_signed s
+  | Mod -> Fmt.string ft "mod"
+  | AddOvf s -> Fmt.pf ft "+%a_ovf" pp_signed s
+  | SubOvf s -> Fmt.pf ft "-%a_ovf" pp_signed s
+  | MulOvf s -> Fmt.pf ft "*%a_ovf" pp_signed s
+  | Lt s -> Fmt.pf ft "<%a" pp_signed s
+  | Leq s -> Fmt.pf ft "<=%a" pp_signed s
+  | BvConcat -> Fmt.string ft "++"
+  | BitAnd -> Fmt.string ft "&"
+  | BitOr -> Fmt.string ft "|"
+  | BitXor -> Fmt.string ft "^"
+  | Shl -> Fmt.string ft "<<"
+  | LShr -> Fmt.string ft "l>>"
+  | AShr -> Fmt.string ft "a>>"
   | Ptr -> assert false
 
 let ph_text s : pphead = fun ft -> Fmt.string ft s
@@ -705,11 +716,11 @@ let pp_style (v : t) : pp_style =
           PArgOf (Z.zero, Z.one);
           PText (ph_text ")");
         ]
-  | Op1 (op, _) -> PCall (fun ft -> Old.Unop.pp ft (old_unop op))
+  | Op1 (op, _) -> PCall (fun ft -> pp_op1 ft op)
   | Op2 (Ptr, _, _) -> PCallPlain (ph_text "&")
-  | Op2 (op, _, _) -> PIn (fun ft -> Old.Binop.pp ft (old_binop op))
+  | Op2 (op, _, _) -> PIn (fun ft -> pp_op2 ft op)
   | Op3 (Ite, _, _, _) -> PIte
-  | Op3 (Fma, _, _, _) -> PCallPlain (fun ft -> Old.Triop.pp ft Old.Triop.Fma)
+  | Op3 (Fma, _, _, _) -> PCallPlain (ph_text "fma")
   | OpN (Distinct, l) -> (
       let rec aux = function
         | acc, [] -> acc
@@ -727,7 +738,7 @@ let pp_style (v : t) : pp_style =
                 let max = List.hd (List.rev l) in
                 if max - hd + 1 = List.length l then Some (hd, max) else None)
       in
-      let head ft = Old.Nop.pp ft Old.Nop.Distinct in
+      let head = ph_text "distinct" in
       match range with
       | Some (min, max) ->
           PAtom (fun ft -> Fmt.pf ft "%t(V|%d-%d|)" head min max)

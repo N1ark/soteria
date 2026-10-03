@@ -587,7 +587,6 @@ module Suite (K : K) = struct
           let r = K.rebuild v (K.operands v) in
           if r != v then "DIFFERENT " ^ nt r else "same");
       one "maps_operands" (fun () -> string_of_bool (K.maps_operands v));
-      one "node_cost" (fun () -> zs (K.node_cost v));
       one "cost" (fun () -> zs (K.cost v));
       one "pp_style" (fun () -> show_style (K.pp_style v));
       one "encode_head" (fun () ->

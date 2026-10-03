@@ -245,7 +245,7 @@ fn mk_poly (id : tyvar_id) : t [@no_lean] = (PolyVal id : TPolyType)
    The cases that the nodes of the module add to the view functions of the
    shared module (see its view.kn): the old [Ext.pp], [iter_vars], [mk],
    [eval], [apply_subst], [learn] and [encode_*]. [operands], [rebuild],
-   [pp_style], [encode_head] and [node_cost] are [@total]: a node of this file
+   [pp_style], [encode_head] and [cost] are [@total]: a node of this file
    without a case here is an error of Kanon. *)
 
 (* {2 Operands} *)
@@ -340,12 +340,6 @@ extend fn rebuild =
 
    Every node of this module costs 100_000, whatever its operands: the old code
    did not count them ("TODO: cost for extensions") *)
-
-extend fn node_cost =
-  | ThinPtr _ | FullPtr _ | PtrMeta _ | Enum _ | Tuple _ | Array _ | Union _
-  | PolyVal _ | ThinPtrPart _ | FullPtrInner _ | FullPtrMeta _ | PtrMetaAs _
-  | Field _ | VariantField _ | IsVariant _ | ArrayField _ ->
-      100000
 
 extend fn cost =
   | ThinPtr _ | FullPtr _ | PtrMeta _ | Enum _ | Tuple _ | Array _ | Union _

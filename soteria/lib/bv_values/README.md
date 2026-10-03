@@ -80,9 +80,7 @@ deleted with the first generation of the value language.
 
 ### Tests
 
-`soteria/tests/bv_values/` has `test_lang.ml` and `test_eval.ml`, small tests of the
-language and of `Eval`. `soteria/tests/bv_fuzz/` checks the smart constructors
-against raw terms with Z3.
+`soteria/tests/bv_fuzz/` checks the smart constructors against raw terms with Z3.
 
 ## Proofs
 

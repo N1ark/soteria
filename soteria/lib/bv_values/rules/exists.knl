@@ -1,3 +1,5 @@
 (* The exists module: existential quantification over terms. *)
 
+use "core"
+
 node Exists of (var * ty) list * t : TBool

@@ -1,0 +1,43 @@
+(* The core of the value languages: the variables and the sequences (and their
+   sort), and the host types of the nodes' parameters. It is shared by the
+   languages of the C and Rust tools, and used by the modules that mention them.
+
+   The host types are those of Soteria's [Bv_base] ([[@ocaml "..."]]). Kanon
+   re-exports each of them ([type fp = M.fp = F16 | ...]), and OCaml checks it
+   against the declaration. The paths are relative to [Bv_values], which both
+   languages open. *)
+
+type var [@ocaml "Bv_base.Var.t"] [@lean "Int"]
+    [@equal "Bv_base.Var.equal"] [@hash "Bv_base.Var.hash"]
+
+(* Floats are compared and hashed bit by bit ([NaN] is equal to itself) *)
+type float [@ocaml "Floatml.AnyFloat.t"] [@noeq]
+    [@equal "Floatml.AnyFloat.equal"] [@hash "Floatml.AnyFloat.hash"]
+
+type checked [@ocaml "Bv_base.checked"] =
+  { signed : bool; unsigned : bool }
+
+node Var of var
+node Seq of t list
+
+sort TSeq of ty
+
+type fp [@ocaml "Bv_base.FloatPrecision.t"] =
+  | F16
+  | F32
+  | F64
+  | F128
+
+type rm [@ocaml "Bv_base.RoundingMode.t"] =
+  | NearestTiesToEven
+  | Truncate
+  | Ceil
+  | Floor
+  | NearestTiesToAway
+
+type fc [@ocaml "Bv_base.FloatClass.t"] =
+  | Normal
+  | Subnormal
+  | Zero
+  | Infinite
+  | NaN

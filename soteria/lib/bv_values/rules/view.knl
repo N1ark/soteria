@@ -12,6 +12,8 @@
    [Inside | Outside] and not the [Pos | Neg] of the solver ([Neg] is a node
    of bitvec). *)
 
+use "core"
+
 (* The SMT operator of the encoding of a term and of a sort: they apply to the
    encoders and to the operands, and own the order of their calls (see
    View_host) *)

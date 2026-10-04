@@ -90,19 +90,15 @@ let pp_block ft (block : block) = pp_block ppa ppa ppa ppa ft block
 (** [CastError (value, expected, got)] *)
 exception CastError of T.any t * T.any ty * T.any ty
 
-exception TypedMigration of string
-
 let () =
   Printexc.register_printer (function
     | CastError (v, expected, got) ->
         Some
           (Fmt.str "Cast error: expected %a, got %a for value %a" ppa_ty
              expected ppa_ty got ppa v)
-    | TypedMigration msg -> Some (Fmt.str "TODO(typed migration): %s" msg)
     | _ -> None)
 
 let cast_error v ty = raise (CastError (v, ty, get_ty v))
-let todo_migration msg = raise (TypedMigration msg)
 
 let float_precision :
     Values.float_type -> Soteria.Bv_values.Bv_base.FloatPrecision.t =
@@ -488,15 +484,8 @@ module Adt = struct
 
   (* HACK: i have no idea what this really means or how to lift this for
      variables... *)
-  let as_union v =
-    match K.as_union v with
-    | Some blocks -> List.map block_of_raw blocks
-    | None -> todo_migration "as_union unop"
-
-  let as_type_var v =
-    match K.as_polyval v with
-    | Some ty_id -> ty_id
-    | None -> todo_migration "as_type_var unop"
+  let as_union v = List.map block_of_raw (Option.get (K.as_union v))
+  let as_type_var v = Option.get (K.as_polyval v)
 
   module Checked = struct
     let mk_enum tref variant vs =

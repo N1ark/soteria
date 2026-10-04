@@ -317,7 +317,7 @@ module type S = sig
   end
 end
 
-(** The implementation of [S], from the rules, with the types of [S] visible: [type 'a t = raw]. [S] hides it, since a visible equality would make every tag the same type. What it does not define are the leaf nodes, written by hand: [module Typed : S = struct include Derived ... end]. *)
+(** The implementation of [S], from the rules, with the types of [S] visible: [type 'a t = raw]. [S] hides it, since a visible equality would make every tag the same type. It has no constructor for the leaf nodes, which no rule builds: a program adds them around it, with [type_], in [module Typed = struct include (Derived : S) ... end]. *)
 module Derived = struct
   module Kanon_rules = Bv_rules
   type raw = t

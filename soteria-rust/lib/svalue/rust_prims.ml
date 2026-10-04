@@ -124,23 +124,6 @@ let nth_ty (l : ty list) (i : Z.t) : ty = List.nth l (Z.to_int i)
 let set_nth (l : t list) (i : Z.t) (x : t) : t list =
   Soteria.Soteria_std.List.set_nth (Z.to_int i) x l
 
-(* [Iarray.get] and [Iarray.copy_and_set] of the arrays: out of range is
-   [Invalid_argument "index out of bounds"] *)
-module Iarray = Soteria.Soteria_std.Iarray
-
-let iarray_get (a : t Iarray.t) (i : Z.t) : t =
-  let i = Z.to_int i in
-  if i < 0 || i >= Iarray.length a then invalid_arg "index out of bounds"
-  else Iarray.get a i
-
-let iarray_set (a : t Iarray.t) (i : Z.t) (x : t) : t Iarray.t =
-  let i = Z.to_int i in
-  if i < 0 || i >= Iarray.length a then invalid_arg "index out of bounds"
-  else Iarray.copy_and_set i x a
-
-let iarray_length (a : t Iarray.t) : Z.t = Z.of_int (Iarray.length a)
-let iarray_to_list (a : t Iarray.t) : t list = Iarray.to_list a
-let iarray_of_list (l : t list) : t Iarray.t = Iarray.of_list l
 let list_length (l : t list) : Z.t = Z.of_int (List.length l)
 
 (* [ext_base.ml:field_of_variant] on an enum: the variant is the one asked *)

@@ -337,7 +337,7 @@ module type S = sig
     val is_enum : _ t -> bool
     val as_tuple : _ t -> (_ t list) option
     val is_tuple : _ t -> bool
-    val as_array : _ t -> (_ t iarray) option
+    val as_array : _ t -> (_ t Iarray.t) option
     val is_array : _ t -> bool
     val as_union : _ t -> (block list) option
     val is_union : _ t -> bool
@@ -385,7 +385,7 @@ module type S = sig
   end
 end
 
-(** The implementation of [S], from the rules, with the types of [S] visible: [type 'a t = raw]. [S] hides it, since a visible equality would make every tag the same type. What it does not define are the leaf nodes, written by hand: [module Typed : S = struct include Derived ... end]. *)
+(** The implementation of [S], from the rules, with the types of [S] visible: [type 'a t = raw]. [S] hides it, since a visible equality would make every tag the same type. It has no constructor for the leaf nodes, which no rule builds: a program adds them around it, with [type_], in [module Typed = struct include (Derived : S) ... end]. *)
 module Derived = struct
   module Kanon_rules = Rust_rules
   type raw = t

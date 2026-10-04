@@ -42,12 +42,6 @@ type tyvar_id [@ocaml "Charon.Types.type_var_id"]
 type rty [@ocaml "Charon.Types.ty"] [@equal "Charon.Types.equal_ty"]
     [@hash "Hashtbl.hash"]
 
-(* The immutable arrays of the host, [Soteria_std.Iarray]: the elements of an
-   array are read in constant time *)
-type 'a iarray [@ocaml "Soteria.Soteria_std.Iarray.t"]
-    [@equal "Soteria.Soteria_std.Iarray.equal"]
-    [@hash "Soteria.Soteria_std.Iarray.hash"]
-
 (* The tag of the provenance of a pointer, if it has one *)
 type ptag [@ocaml "Rust_host.ptag"] [@equal "Rust_host.equal_ptag"]
     [@hash "Rust_host.hash_ptag"]
@@ -96,7 +90,7 @@ node PtrMeta of ptr_meta
 (* the variant and its fields *)
 node Enum of variant_id * t list
 node Tuple of t list
-node Array of t iarray
+node Array of t array
 node Union of block list
 (* the opaque value of a type variable *)
 node PolyVal of tyvar_id

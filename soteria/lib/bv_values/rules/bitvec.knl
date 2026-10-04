@@ -1,6 +1,8 @@
 (* The bitvec module: bit-vectors, their arithmetic and bitwise operations, and
    their comparisons. *)
 
+use "core"
+
 (* A bit-vector literal stores its value as an integer in [0, 2^n), whatever
    its signedness. *)
 node BitVec of int : TBitVector n

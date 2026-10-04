@@ -6,6 +6,8 @@ open Logs.Import
 (** Concrete floating-point values, of any of the four precisions. *)
 module F = Floatml.AnyFloat
 
+module Var = Symex.Var
+
 module FloatPrecision = struct
   type t = F.precision = F16 | F32 | F64 | F128
 

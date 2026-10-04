@@ -2,16 +2,12 @@
    generates its types
    ([Bv_types]) and its simplifying smart constructors ([Bv_rules]).
 
-   It is made of the modules that it uses: [bool], built into kanon, then
-   [exists], [bitvec], [float] and [ptr], in this order, each declared by its
-   [.knl] file with its rules in its [.kn] file. A module declares its nodes and
-   sorts; this file adds the variables and sequences (and their sort), and the
-   host types of the nodes' parameters.
-
-   The host types are those of Soteria's [Bv_base] ([[@ocaml "..."]]), which the
-   language of soteria-rust shares: [var], [checked], and the enumerations [fp],
-   [rm] and [fc]. Kanon re-exports each of them ([type fp = M.fp = F16 | ...]),
-   and OCaml checks it against the declaration. *)
+   It is made of the modules that it uses: [core], [bool] (built into kanon),
+   [exists], [bitvec], [float], [ptr] and [view], each declared by its [.knl]
+   file with its rules in its [.kn] file. A module declares its nodes and sorts
+   and uses [core], which declares the variables, the sequences (and their
+   sort) and the host types of the nodes' parameters, shared with the language
+   of soteria-rust. *)
 
 [@@@lean_root "Kanon"]
 [@@@lean_param "FS" "FloatSem"]
@@ -20,44 +16,10 @@
 [@@@ocaml_rules "Bv_rules"]
 
 
+use "core"
 use builtin "bool"
 use "exists"
 use "bitvec"
 use "float"
 use "ptr"
-
-type var [@ocaml "Symex.Var.t"] [@lean "Int"]
-    [@equal "Symex.Var.equal"] [@hash "Symex.Var.hash"]
-
-(* Floats are compared and hashed bit by bit ([NaN] is equal to itself) *)
-type float [@ocaml "Floatml.AnyFloat.t"] [@noeq]
-    [@equal "Floatml.AnyFloat.equal"] [@hash "Floatml.AnyFloat.hash"]
-
-type checked [@ocaml "Bv_base.checked"] =
-  { signed : bool; unsigned : bool }
-
-node Var of var
-node Seq of t list
-
-sort TSeq of ty
-
-type fp [@ocaml "Bv_base.FloatPrecision.t"] =
-  | F16
-  | F32
-  | F64
-  | F128
-
-type rm [@ocaml "Bv_base.RoundingMode.t"] =
-  | NearestTiesToEven
-  | Truncate
-  | Ceil
-  | Floor
-  | NearestTiesToAway
-
-type fc [@ocaml "Bv_base.FloatClass.t"] =
-  | Normal
-  | Subnormal
-  | Zero
-  | Infinite
-  | NaN
 use "view"

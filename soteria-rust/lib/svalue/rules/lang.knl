@@ -6,10 +6,8 @@
    ([Rust_types]) and the simplifying smart constructors ([Rust_rules]).
 
    The path of the shared modules is written ONCE, here, in the [use]s below:
-   change it when they move. The text of [var], [float], [checked], [fp],
-   [rm], [fc], [Var], [Seq] and [TSeq] below is that of the lang.knl of the C
-   language: the view functions of the shared [view] module mention [Var] and
-   [Seq]. *)
+   change it when they move. The variables, the sequences and the host types
+   are those of the shared [core] module, which the other shared modules use. *)
 
 [@@@lean_root "Kanon"]
 [@@@lean_param "FS" "FloatSem"]
@@ -20,46 +18,12 @@
 
 (* The tags of the Rust values, as in soteria-rust/lib/svalue/typed.ml *)
 
+use "../../../../soteria/lib/bv_values/rules/core"
 use builtin "bool"
 use "../../../../soteria/lib/bv_values/rules/exists"
 use "../../../../soteria/lib/bv_values/rules/bitvec"
 use "../../../../soteria/lib/bv_values/rules/float"
 use "../../../../soteria/lib/bv_values/rules/ptr"
-
-type var [@ocaml "Soteria.Symex.Var.t"] [@lean "Int"]
-    [@equal "Soteria.Symex.Var.equal"] [@hash "Soteria.Symex.Var.hash"]
-
-(* Floats are compared and hashed bit by bit ([NaN] is equal to itself) *)
-type float [@ocaml "Floatml.AnyFloat.t"] [@noeq]
-    [@equal "Floatml.AnyFloat.equal"] [@hash "Floatml.AnyFloat.hash"]
-
-type checked [@ocaml "Soteria.Bv_values.Bv_base.checked"] =
-  { signed : bool; unsigned : bool }
-
-node Var of var
-node Seq of t list
-
-sort TSeq of ty
-
-type fp [@ocaml "Soteria.Bv_values.Bv_base.FloatPrecision.t"] =
-  | F16
-  | F32
-  | F64
-  | F128
-
-type rm [@ocaml "Soteria.Bv_values.Bv_base.RoundingMode.t"] =
-  | NearestTiesToEven
-  | Truncate
-  | Ceil
-  | Floor
-  | NearestTiesToAway
-
-type fc [@ocaml "Soteria.Bv_values.Bv_base.FloatClass.t"] =
-  | Normal
-  | Subnormal
-  | Zero
-  | Infinite
-  | NaN
 
 use "../../../../soteria/lib/bv_values/rules/view"
 use "rust"

@@ -327,6 +327,10 @@ module type S = sig
     val t_fullptr : [> Tag.tfullptr ] ty
     val t_ptrmeta : [> Tag.tptrmeta ] ty
     val t_polytype : [> Tag.tpolytype ] ty
+    val full_ptr_inner : [< Tag.tfullptr ] t -> [> Tag.tthinptr ] t
+    val full_ptr_meta_raw : [< Tag.tfullptr ] t -> [> Tag.tptrmeta ] t
+    val is_variant : variant_id -> [< Tag.tenum ] t -> [> Tag.tbool ] t
+    val array_field_of : Z.t -> [< Tag.tarray ] t -> 'e t
     val as_thinptr : _ t -> thin option
     val is_thinptr : _ t -> bool
     val as_fullptr : _ t -> (_ t * _ t) option
@@ -345,19 +349,19 @@ module type S = sig
     val is_polyval : _ t -> bool
     val as_thinptrpart : _ t -> (ptr_part * _ t) option
     val is_thinptrpart : _ t -> bool
-    val as_fullptrinner : _ t -> _ t option
-    val is_fullptrinner : _ t -> bool
-    val as_fullptrmeta : _ t -> _ t option
-    val is_fullptrmeta : _ t -> bool
     val as_ptrmetaas : _ t -> (meta_part * _ t) option
     val is_ptrmetaas : _ t -> bool
     val as_field : _ t -> (int * _ t) option
     val is_field : _ t -> bool
     val as_variantfield : _ t -> (variant_id * int * _ t) option
     val is_variantfield : _ t -> bool
-    val as_isvariant : _ t -> (variant_id * _ t) option
+    val as_fullptrinner : _ t -> [> Tag.tfullptr ] t option
+    val is_fullptrinner : _ t -> bool
+    val as_fullptrmeta : _ t -> [> Tag.tfullptr ] t option
+    val is_fullptrmeta : _ t -> bool
+    val as_isvariant : _ t -> (variant_id * [> Tag.tenum ] t) option
     val is_isvariant : _ t -> bool
-    val as_arrayfield : _ t -> (int * _ t) option
+    val as_arrayfield : _ t -> (int * [> Tag.tarray ] t) option
     val is_arrayfield : _ t -> bool
     val as_tenum : _ ty -> decl_ref option
     val is_tenum : _ ty -> bool
@@ -621,6 +625,10 @@ module Derived = struct
     let t_fullptr = TFullPtr
     let t_ptrmeta = TPtrMeta
     let t_polytype = TPolyType
+    let full_ptr_inner = Kanon_rules.full_ptr_inner
+    let full_ptr_meta_raw = Kanon_rules.full_ptr_meta_raw
+    let is_variant = Kanon_rules.is_variant
+    let array_field_of = Kanon_rules.array_field_of
     let as_thinptr = Kanon_rules.as_thinptr
     let is_thinptr = Kanon_rules.is_thinptr
     let as_fullptr = Kanon_rules.as_fullptr
@@ -639,16 +647,16 @@ module Derived = struct
     let is_polyval = Kanon_rules.is_polyval
     let as_thinptrpart = Kanon_rules.as_thinptrpart
     let is_thinptrpart = Kanon_rules.is_thinptrpart
-    let as_fullptrinner = Kanon_rules.as_fullptrinner
-    let is_fullptrinner = Kanon_rules.is_fullptrinner
-    let as_fullptrmeta = Kanon_rules.as_fullptrmeta
-    let is_fullptrmeta = Kanon_rules.is_fullptrmeta
     let as_ptrmetaas = Kanon_rules.as_ptrmetaas
     let is_ptrmetaas = Kanon_rules.is_ptrmetaas
     let as_field = Kanon_rules.as_field
     let is_field = Kanon_rules.is_field
     let as_variantfield = Kanon_rules.as_variantfield
     let is_variantfield = Kanon_rules.is_variantfield
+    let as_fullptrinner = Kanon_rules.as_fullptrinner
+    let is_fullptrinner = Kanon_rules.is_fullptrinner
+    let as_fullptrmeta = Kanon_rules.as_fullptrmeta
+    let is_fullptrmeta = Kanon_rules.is_fullptrmeta
     let as_isvariant = Kanon_rules.as_isvariant
     let is_isvariant = Kanon_rules.is_isvariant
     let as_arrayfield = Kanon_rules.as_arrayfield

@@ -67,6 +67,10 @@ let pp_op1 ft = function
   | FIsNeg -> Fmt.string ft "fisneg"
   | FIsPos -> Fmt.string ft "fispos"
   | FRound rm -> Fmt.pf ft "fround(%a)" RoundingMode.pp rm
+  | FullPtrInner -> Fmt.string ft "thin"
+  | FullPtrMeta -> Fmt.string ft "meta"
+  | IsVariant var -> Fmt.pf ft "is<%a>" Charon.Types.pp_variant_id var
+  | ArrayField i -> Fmt.pf ft "[%d]" i
 
 let pp_op2 ft = function
   | Ptr -> Fmt.string ft "&"
@@ -116,6 +120,9 @@ let rec pp ft (t : t) =
   | Exists (bs, body) ->
       Fmt.pf ft "∃ %a. %a" (Fmt.list ~sep:Fmt.comma pp_binder) bs pp body
   | Op1 (Not, { kind = Op2 (Eq, a, b); _ }) -> Fmt.pf ft "(%a != %a)" pp a pp b
+  | Op1 (IsVariant var, a) ->
+      Fmt.pf ft "%a.is<%a>" pp a Charon.Types.pp_variant_id var
+  | Op1 (ArrayField i, a) -> Fmt.pf ft "%a[%d]" pp a i
   | Op1 (op, a) -> Fmt.pf ft "%a(%a)" pp_op1 op pp a
   | Op2 (Ptr, a, b) -> Fmt.pf ft "%a(%a, %a)" pp_op2 Ptr pp a pp b
   | Op2 (op, a, b) -> Fmt.pf ft "(%a %a %a)" pp a pp_op2 op pp b
@@ -149,15 +156,10 @@ let rec pp ft (t : t) =
   | PolyVal id -> Fmt.pf ft "PolyVal(%a)" Charon.Types.pp_type_var_id id
   | ThinPtrPart (part, a) ->
       Fmt.pf ft "%a.%a" pp a Rust_encoding.pp_ptr_part part
-  | FullPtrInner a -> Fmt.pf ft "thin(%a)" pp a
-  | FullPtrMeta a -> Fmt.pf ft "meta(%a)" pp a
   | PtrMetaAs (part, a) -> Fmt.pf ft "%a.as<%a>" pp a pp_meta_part part
   | Field (i, a) -> Fmt.pf ft "%a.%d" pp a i
   | VariantField (var, i, a) ->
       Fmt.pf ft "%a.as<%a>.%d" pp a Charon.Types.pp_variant_id var i
-  | IsVariant (var, a) ->
-      Fmt.pf ft "%a.is<%a>" pp a Charon.Types.pp_variant_id var
-  | ArrayField (i, a) -> Fmt.pf ft "%a[%d]" pp a i
 
 and pp_block ft ~first (b : block) =
   if not first then Fmt.string ft ", ";

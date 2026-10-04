@@ -63,13 +63,9 @@ include Iface.Prim.Make (struct
               aux' bsize)
             bs
       | ThinPtrPart (_, a)
-      | FullPtrInner a
-      | FullPtrMeta a
       | PtrMetaAs (_, a)
       | Field (_, a)
-      | VariantField (_, _, a)
-      | IsVariant (_, a)
-      | ArrayField (_, a) ->
+      | VariantField (_, _, a) ->
           aux' a
     in
     aux ~ignore:Var.Set.empty sv

@@ -11,8 +11,9 @@
    operands are the terms inside its arguments ([Tuple of t list]), and the
    sort of the node is given where it is built, by the functions of rust.kn
    ([(Tuple vs : TTuple (types_of vs))]). The nodes that read a component of an
-   aggregate ([Field], [VariantField], [ArrayField], ...) are leaves too, at the
-   sort of the component that they read (a computed sort).
+   aggregate ([Field], [VariantField], ...) are leaves too, at the sort of the
+   component that they read (a computed sort), except where the typing of an
+   operator gives it ([ArrayField], [IsVariant], [FullPtrInner], [FullPtrMeta]).
 
    There is no Lean semantics for these nodes (the old Lean model took the
    extension as opaque): every function of the module is [@no_lean], and the
@@ -95,14 +96,18 @@ node Union of block list
 (* the opaque value of a type variable *)
 node PolyVal of tyvar_id
 
-(* The nodes that read a part of a value, at the sort of that part *)
+(* The nodes that read a part of a value, at the sort of that part. The sort of
+   [ThinPtrPart], [PtrMetaAs], [Field] and [VariantField] is computed from their
+   arguments and the crate, which a typing cannot express: they are leaves with
+   an explicit sort. The others are operators with a typing, and their
+   reductions are rules. *)
 node ThinPtrPart of ptr_part * t
-node FullPtrInner of t
-node FullPtrMeta of t
+node FullPtrInner : TFullPtr -> TThinPtr
+node FullPtrMeta : TFullPtr -> TPtrMeta
 node PtrMetaAs of meta_part * t
 node Field of nat * t
 node VariantField of variant_id * nat * t
-node IsVariant of variant_id * t
+node IsVariant of variant_id : TEnum d -> TBool
 (* TODO: this could be a binary node, with a (possibly symbolic) index, to allow
    symbolically sized arrays *)
-node ArrayField of nat * t
+node ArrayField of nat : TArray (e, n) -> e

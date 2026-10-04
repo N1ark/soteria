@@ -109,13 +109,13 @@ fn mk_len_meta (len : t) : t [@no_lean] = (PtrMeta (MetaLen len) : TPtrMeta)
 fn mk_vtable_meta (vtable : t) : t [@no_lean] =
   (PtrMeta (MetaVTable vtable) : TPtrMeta)
 
-fn full_ptr_inner (v : t) : t [@no_lean] =
-  match v with FullPtr (p, _) -> p | _ -> (FullPtrInner v : TThinPtr)
+rule full_ptr_inner : FullPtrInner v =
+  | full: FullPtr (p, _) -> p
 
 fn of_thin_ptr (v : t) : t [@no_lean] = mk_full_ptr v (mk_unit_meta ())
 
-fn full_ptr_meta_raw (v : t) : t [@no_lean] =
-  match v with FullPtr (_, m) -> m | _ -> (FullPtrMeta v : TPtrMeta)
+rule full_ptr_meta_raw : FullPtrMeta v =
+  | full: FullPtr (_, m) -> m
 
 fn ptr_meta_as (part : meta_part) (v : t) : t [@no_lean] =
   match v with
@@ -188,10 +188,8 @@ fn set_field_of_variant (var : variant_id) (idx : int) (x v : t) :
   let vs = set_nth (as_enum_of_variant var v) idx x in
   mk_enum (t_as_enum (type_of v)) var vs
 
-fn is_variant (var : variant_id) (v : t) : t [@no_lean] =
-  match v with
-  | Enum (cur, _) -> of_bool (var = cur)
-  | _ -> (IsVariant (var, v) : TBool)
+rule is_variant : IsVariant (var, v) =
+  | enum: Enum (cur, _) -> of_bool (var = cur)
 
 (* {1 Arrays} *)
 
@@ -204,10 +202,8 @@ fn mk_array (elem : rty) (vs : t array) : t [@no_lean] =
   if array_length vs = 0 then mk_array_of_svty (ty_of_rust elem) vs
   else mk_array_of_svty (type_of (array_get vs 0)) vs
 
-fn array_field_of (idx : int) (v : t) : t [@no_lean] =
-  match v with
-  | Array vs -> array_get vs idx
-  | _ -> (ArrayField (idx, v) : array_elem_ty (type_of v))
+rule array_field_of : ArrayField (idx, v) =
+  | array: Array vs -> array_get vs idx
 
 (* The elements [i] to [n - 1] of [v], in this order *)
 fn array_fields_from (i n : int) (v : t) : t list [@no_lean] =

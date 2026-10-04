@@ -3260,13 +3260,13 @@ let operands (v : t) : (t list) =
     | { kind = Union (bs); _ } -> (block_operands bs)
     | { kind = PolyVal (_); _ } -> []
     | { kind = ThinPtrPart (_, a); _ } -> (a :: [])
-    | { kind = FullPtrInner (a); _ } -> (a :: [])
-    | { kind = FullPtrMeta (a); _ } -> (a :: [])
+    | { kind = Op1 ((FullPtrInner), a); _ } -> (a :: [])
+    | { kind = Op1 ((FullPtrMeta), a); _ } -> (a :: [])
     | { kind = PtrMetaAs (_, a); _ } -> (a :: [])
     | { kind = Field (_, a); _ } -> (a :: [])
     | { kind = VariantField (_, _, a); _ } -> (a :: [])
-    | { kind = IsVariant (_, a); _ } -> (a :: [])
-    | { kind = ArrayField (_, a); _ } -> (a :: [])
+    | { kind = Op1 ((IsVariant (_)), a); _ } -> (a :: [])
+    | { kind = Op1 ((ArrayField (_)), a); _ } -> (a :: [])
     )
 
 let[@inline] array_elem_ty (s : ty) : ty =
@@ -3275,11 +3275,20 @@ let[@inline] array_elem_ty (s : ty) : ty =
     | _ -> (Rust_prims.fail_array_elem s)
     )
 
-let[@inline] array_field_of (idx : Z.t) (v : t) : t =
+let array_field_of (idx : Z.t) (v : t) : t =
+    (assert ((match v.ty with
+             | (TArray (kanon__e, kanon__n)) -> true
+             | _ -> false
+             ) [@warning "-11"]);
     (match v with
     | { kind = Array (vs); _ } -> (Iarray.get vs (Z.to_int idx))
-    | _ -> (node (ArrayField ((Z.to_int idx), v)) (array_elem_ty v.ty))
-    )
+    | _ ->
+      (node (Op1 ((ArrayField ((Z.to_int idx))), v)) (match v.ty with
+                                                     | (TArray (kanon__e, kanon__n)) ->
+                                                       kanon__e
+                                                     | _ -> v.ty
+                                                     ))
+    ))
 
 let[@inline] t_as_tuple (s : ty) : (ty list) =
     (match s with
@@ -3307,23 +3316,35 @@ let field_of_variant (var : variant_id) (idx : Z.t) (v : t) : t =
       (node (VariantField (var, (Z.to_int idx), v)) (Rust_prims.variant_field_ty (t_as_enum v.ty) var idx))
     )
 
-let[@inline] full_ptr_inner (v : t) : t =
+let full_ptr_inner (v : t) : t =
+    (assert ((match v.ty with
+             | (TFullPtr) -> true
+             | _ -> false
+             ) [@warning "-11"]);
     (match v with
     | { kind = FullPtr (p, _); _ } -> p
-    | _ -> (node (FullPtrInner (v)) TThinPtr)
-    )
+    | _ -> (node (Op1 (FullPtrInner, v)) TThinPtr)
+    ))
 
-let[@inline] full_ptr_meta_raw (v : t) : t =
+let full_ptr_meta_raw (v : t) : t =
+    (assert ((match v.ty with
+             | (TFullPtr) -> true
+             | _ -> false
+             ) [@warning "-11"]);
     (match v with
     | { kind = FullPtr (_, m); _ } -> m
-    | _ -> (node (FullPtrMeta (v)) TPtrMeta)
-    )
+    | _ -> (node (Op1 (FullPtrMeta, v)) TPtrMeta)
+    ))
 
-let[@inline] is_variant (var : variant_id) (v : t) : t =
+let is_variant (var : variant_id) (v : t) : t =
+    (assert ((match v.ty with
+             | (TEnum (kanon__d)) -> true
+             | _ -> false
+             ) [@warning "-11"]);
     (match v with
     | { kind = Enum (cur, _); _ } -> (of_bool ((equal_variant_id var cur)))
-    | _ -> (node (IsVariant (var, v)) TBool)
-    )
+    | _ -> (node (Op1 ((IsVariant (var)), v)) TBool)
+    ))
 
 let[@inline] mk_array_of_svty (elem : ty) (vs : (t Iarray.t)) : t =
     (node (Array (vs)) (TArray (elem, (Z.of_int (Iarray.length vs)))))
@@ -3767,12 +3788,12 @@ let rebuild (v : t) (cs : (t list)) : t =
       | (a :: []) -> (thin_ptr_part part a)
       | _ -> (Rust_prims.bad_operands v)
       )
-    | { kind = FullPtrInner (_); _ } ->
+    | { kind = Op1 ((FullPtrInner), _); _ } ->
       (match cs with
       | (a :: []) -> (full_ptr_inner a)
       | _ -> (Rust_prims.bad_operands v)
       )
-    | { kind = FullPtrMeta (_); _ } ->
+    | { kind = Op1 ((FullPtrMeta), _); _ } ->
       (match cs with
       | (a :: []) -> (full_ptr_meta_raw a)
       | _ -> (Rust_prims.bad_operands v)
@@ -3794,12 +3815,12 @@ let rebuild (v : t) (cs : (t list)) : t =
       | (a :: []) -> (field_of_variant var i a)
       | _ -> (Rust_prims.bad_operands v)
       )
-    | { kind = IsVariant (var, _); _ } ->
+    | { kind = Op1 ((IsVariant (var)), _); _ } ->
       (match cs with
       | (a :: []) -> (is_variant var a)
       | _ -> (Rust_prims.bad_operands v)
       )
-    | { kind = ArrayField (i, _); _ } ->
+    | { kind = Op1 ((ArrayField (i)), _); _ } ->
       let i = Z.of_int i in
       (match cs with
       | (a :: []) -> (array_field_of i a)
@@ -3978,13 +3999,13 @@ let rec cost (v : t) : Z.t =
     | { kind = Union (_); _ } -> (Z.of_int (100000))
     | { kind = PolyVal (_); _ } -> (Z.of_int (100000))
     | { kind = ThinPtrPart (_, _); _ } -> (Z.of_int (100000))
-    | { kind = FullPtrInner (_); _ } -> (Z.of_int (100000))
-    | { kind = FullPtrMeta (_); _ } -> (Z.of_int (100000))
+    | { kind = Op1 ((FullPtrInner), _); _ } -> (Z.of_int (100000))
+    | { kind = Op1 ((FullPtrMeta), _); _ } -> (Z.of_int (100000))
     | { kind = PtrMetaAs (_, _); _ } -> (Z.of_int (100000))
     | { kind = Field (_, _); _ } -> (Z.of_int (100000))
     | { kind = VariantField (_, _, _); _ } -> (Z.of_int (100000))
-    | { kind = IsVariant (_, _); _ } -> (Z.of_int (100000))
-    | { kind = ArrayField (_, _); _ } -> (Z.of_int (100000))
+    | { kind = Op1 ((IsVariant (_)), _); _ } -> (Z.of_int (100000))
+    | { kind = Op1 ((ArrayField (_)), _); _ } -> (Z.of_int (100000))
     )
 
 and costs (l : (t list)) : Z.t =
@@ -4132,8 +4153,8 @@ let encode_head (v : t) : smt_op =
     | { kind = Union (_); _ } -> Rust_prims.h_union
     | { kind = PolyVal (_); _ } -> Rust_prims.h_poly
     | { kind = ThinPtrPart (part, _); _ } -> (Rust_prims.h_thin_part part)
-    | { kind = FullPtrInner (_); _ } -> Rust_prims.h_full_inner
-    | { kind = FullPtrMeta (_); _ } -> Rust_prims.h_full_meta
+    | { kind = Op1 ((FullPtrInner), _); _ } -> Rust_prims.h_full_inner
+    | { kind = Op1 ((FullPtrMeta), _); _ } -> Rust_prims.h_full_meta
     | { kind = PtrMetaAs (part, _); _ } -> (Rust_prims.h_meta_as part)
     | { kind = Field (i, _); _ } ->
       let i = Z.of_int i in
@@ -4141,8 +4162,9 @@ let encode_head (v : t) : smt_op =
     | { kind = VariantField (var, i, _); _ } ->
       let i = Z.of_int i in
       (Rust_prims.h_variant_field var i)
-    | { kind = IsVariant (var, _); _ } -> (Rust_prims.h_is_variant var)
-    | { kind = ArrayField (i, _); _ } ->
+    | { kind = Op1 ((IsVariant (var)), _); _ } ->
+      (Rust_prims.h_is_variant var)
+    | { kind = Op1 ((ArrayField (i)), _); _ } ->
       let i = Z.of_int i in
       (Rust_prims.h_array_field i)
     )
@@ -4401,18 +4423,6 @@ let as_thinptrpart (t : t) =
 let is_thinptrpart (t : t) =
   match[@warning "-11"] t with { kind = ThinPtrPart (_, _); _ } -> true | _ -> false
 
-let as_fullptrinner (t : t) =
-  match[@warning "-11"] t with { kind = FullPtrInner (p1); _ } -> Some p1 | _ -> None
-
-let is_fullptrinner (t : t) =
-  match[@warning "-11"] t with { kind = FullPtrInner (_); _ } -> true | _ -> false
-
-let as_fullptrmeta (t : t) =
-  match[@warning "-11"] t with { kind = FullPtrMeta (p1); _ } -> Some p1 | _ -> None
-
-let is_fullptrmeta (t : t) =
-  match[@warning "-11"] t with { kind = FullPtrMeta (_); _ } -> true | _ -> false
-
 let as_ptrmetaas (t : t) =
   match[@warning "-11"] t with { kind = PtrMetaAs (p1, p2); _ } -> Some (p1, p2) | _ -> None
 
@@ -4430,18 +4440,6 @@ let as_variantfield (t : t) =
 
 let is_variantfield (t : t) =
   match[@warning "-11"] t with { kind = VariantField (_, _, _); _ } -> true | _ -> false
-
-let as_isvariant (t : t) =
-  match[@warning "-11"] t with { kind = IsVariant (p1, p2); _ } -> Some (p1, p2) | _ -> None
-
-let is_isvariant (t : t) =
-  match[@warning "-11"] t with { kind = IsVariant (_, _); _ } -> true | _ -> false
-
-let as_arrayfield (t : t) =
-  match[@warning "-11"] t with { kind = ArrayField (p1, p2); _ } -> Some (p1, p2) | _ -> None
-
-let is_arrayfield (t : t) =
-  match[@warning "-11"] t with { kind = ArrayField (_, _); _ } -> true | _ -> false
 
 let as_not (t : t) =
   match[@warning "-11"] t with { kind = Op1 (Not, x1); _ } -> Some x1 | _ -> None
@@ -4766,6 +4764,30 @@ let as_getptrofs (t : t) =
 
 let is_getptrofs (t : t) =
   match[@warning "-11"] t with { kind = Op1 (GetPtrOfs, _); _ } -> true | _ -> false
+
+let as_fullptrinner (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (FullPtrInner, x1); _ } -> Some x1 | _ -> None
+
+let is_fullptrinner (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (FullPtrInner, _); _ } -> true | _ -> false
+
+let as_fullptrmeta (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (FullPtrMeta, x1); _ } -> Some x1 | _ -> None
+
+let is_fullptrmeta (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (FullPtrMeta, _); _ } -> true | _ -> false
+
+let as_isvariant (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (IsVariant (p1), x1); _ } -> Some (p1, x1) | _ -> None
+
+let is_isvariant (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (IsVariant (_), _); _ } -> true | _ -> false
+
+let as_arrayfield (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (ArrayField (p1), x1); _ } -> Some (p1, x1) | _ -> None
+
+let is_arrayfield (t : t) =
+  match[@warning "-11"] t with { kind = Op1 (ArrayField (_), _); _ } -> true | _ -> false
 
 let as_tseq (t : ty) =
   match[@warning "-11"] t with TSeq (p1) -> Some p1 | _ -> None

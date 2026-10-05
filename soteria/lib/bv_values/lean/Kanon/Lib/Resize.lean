@@ -1,5 +1,6 @@
 import Kanon.Lib.Tactic
 import Kanon.Lib.Float
+import Kanon.Model.Bitvec.lsb
 
 /-!
 # Lemmas for the resizing, conversion, float and pointer rules

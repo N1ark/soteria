@@ -1,5 +1,8 @@
 import Kanon.Lib.Float
 import Kanon.Lib.Tactic
+import Kanon.Model.Bitvec.msb_of
+import Kanon.Model.Bitvec.zmax
+import Kanon.Model.Bitvec.zmin
 
 /-! The values of a bit-vector term are below `2 ^ (Bitvec.msb_of v + 1)`. -/
 

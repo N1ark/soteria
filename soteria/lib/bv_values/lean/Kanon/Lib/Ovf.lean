@@ -1,5 +1,17 @@
 import Kanon.Lib.Meta
 import Kanon.Lib.Lit
+import Kanon.Model.Bitvec.checked_has
+import Kanon.Model.Bitvec.fold_checked
+import Kanon.Model.Bitvec.is_int_min
+import Kanon.Model.Bitvec.lit_add_overflows
+import Kanon.Model.Bitvec.lit_mul_overflows
+import Kanon.Model.Bitvec.lit_sub_overflows
+import Kanon.Model.Bitvec.max_for
+import Kanon.Model.Bitvec.overflows_add
+import Kanon.Model.Bitvec.overflows_mul
+import Kanon.Model.Bitvec.overflows_sub
+import Kanon.Model.Bitvec.to_z
+import Kanon.Model.Bitvec.udivides
 
 /-!
 # Overflow

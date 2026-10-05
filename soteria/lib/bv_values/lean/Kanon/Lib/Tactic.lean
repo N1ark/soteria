@@ -4,6 +4,18 @@ import Kanon.Lib.Lit
 import Kanon.Lib.Ovf
 import Kanon.Lib.LitOps
 import Kanon.Lib.Float
+import Kanon.Model.Bitvec.checked_both
+import Kanon.Model.Bitvec.checked_has
+import Kanon.Model.Bitvec.checked_meet
+import Kanon.Model.Bitvec.checked_of_signed
+import Kanon.Model.Bitvec.checked_signed
+import Kanon.Model.Bitvec.checked_unsigned
+import Kanon.Model.Bitvec.is_checked
+import Kanon.Model.Bitvec.is_pow2
+import Kanon.Model.Bitvec.signed_to_unsigned_cmp
+import Kanon.Model.Bitvec.unchecked
+import Kanon.Model.Bool.of_bool
+import Kanon.Model.mk_commut_binop
 
 /-!
 # Tactics for the rule proofs
@@ -72,7 +84,7 @@ theorem ssubOverflow_zero_left {n : Nat} (hn : 0 < n) (x : BitVec n) :
     exact ⟨m.toNat, by omega, by simp; omega, h1, h2⟩
 
 set_option hygiene false in
-/-- Closes a goal `Nonzero v` left by the lifting (`kanon_lift_body_side`, which provides the
+/-- Closes a goal `Nonzero v` left by the lifting (`kanon_lift_body`, which provides the
 hypothesis `kw` that the spec is well-typed): `v` is the divisor of the spec or a literal
 that is not zero. -/
 macro "kanon_nonzero" : tactic => `(tactic| first
@@ -89,22 +101,9 @@ macro "kanon_nonzero" : tactic => `(tactic| first
      simp only [Term.WT]
      exact ⟨_, ‹_›, ‹_›, ‹_›, ‹_›⟩))
 
-/-- `kanon_rule_lift` (Kanon's), with `kanon_lift_body_side`. -/
+/-- `kanon_rule_lift` (Kanon's), with `kanon_nonzero` on the goals of the subsorts it leaves. -/
 macro "kanon_rule_lift_side" : tactic => `(tactic| (
-  intro _
-  intros
-  (try kanon_guards)
-  (try kanon_split)
-  (try subst_vars)
-  (try simp only [kanon_spec, kanon_body])
-  (repeat' split)
-  all_goals (try kanon_lift_body_side)
-  all_goals (try simp only [kanon_spec, kanon_body])
-  all_goals (try first
-    | exact Kanon.Sem.Refines.refl
-    | (kanon_comm; done)
-    | kanon_rule_close
-    | kanon_close_lemmas)
+  kanon_rule_lift
   all_goals (try kanon_nonzero)))
 
 /-- The typing lemmas of the nodes. -/

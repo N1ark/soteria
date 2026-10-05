@@ -1,4 +1,7 @@
 import Kanon.Lib.Ovf
+import Kanon.Model.Bitvec.is_pow2
+import Kanon.Model.Bitvec.overflows_mul
+import Kanon.Model.Bitvec.udivides
 
 /-!
 # The operations on literals

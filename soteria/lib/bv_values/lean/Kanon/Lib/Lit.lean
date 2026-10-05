@@ -1,4 +1,8 @@
 import Kanon.Lib.Den
+import Kanon.Model.Bitvec.is_bv
+import Kanon.Model.Bitvec.is_pow2
+import Kanon.Model.Bitvec.msb_of
+import Kanon.Model.Bool.of_bool
 
 /-!
 # Literals

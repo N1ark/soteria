@@ -1,4 +1,9 @@
 import Kanon.Lib.Tactic
+import Kanon.Model.Bitvec.bits_in
+import Kanon.Model.Bitvec.disjoint
+import Kanon.Model.Bitvec.is_ones
+import Kanon.Model.Bitvec.ones
+import Kanon.Model.Bitvec.zmin
 
 /-!
 # Bitwise operations and shifts

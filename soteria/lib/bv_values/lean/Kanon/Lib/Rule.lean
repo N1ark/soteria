@@ -3,6 +3,7 @@ import Kanon.Lib.Compare
 import Kanon.Lib.Eq
 import Kanon.Lib.Resize
 import Kanon.Lib.Bitwise
+import Kanon.Lib.Arith
 
 /-! The default proof of the arms. -/
 
@@ -32,5 +33,8 @@ macro "kanon_msb" : tactic => `(tactic| (
        · exact h))))
 
 attribute [kanon_tactic "kanon_msb"] Bitvec.lt_zero.spec
+
+-- the arms of `Bool.and_` and `Bool.or_` that the tactics prove are on bounds
+attribute [kanon_tactic "kanon_rule_bounds"] Bool.and_.spec Bool.or_.spec
 
 end Kanon.Lib

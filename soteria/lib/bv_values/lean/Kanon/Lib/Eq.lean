@@ -1,10 +1,20 @@
 import Kanon.Lib.Msb
+import Kanon.Model.Bitvec.checked_meet
+import Kanon.Model.Bitvec.checked_signed
+import Kanon.Model.Bitvec.checked_unsigned
+import Kanon.Model.Bitvec.is_checked
+import Kanon.Model.Bitvec.is_pow2
+import Kanon.Model.Bitvec.max_for
+import Kanon.Model.Bitvec.msb_of
+import Kanon.Model.Bitvec.to_z
+import Kanon.Model.Bitvec.unchecked
+import Kanon.Model.Bitvec.zmax
 
 /-!
 # Equality and the overflow checks
 
-Tactics and lemmas for `Proofs/EqCases.lean` (`Bool.eq`, `Bitvec.neg`, `Bitvec.mod_`, `Bitvec.rem`
-and the overflow checks).
+Tactics and lemmas for `Bool.eq` (`Proofs/Bool/eq.lean`), `Bitvec.neg`, `Bitvec.mod_`, `Bitvec.rem`
+and the overflow checks.
 
 - `kanon_rule_b` is `kanon_rule_bv` for boolean specs, and for `Bool.eq` at any type: it
   splits all the conditionals of a body, proves the equalities of `ite`s,

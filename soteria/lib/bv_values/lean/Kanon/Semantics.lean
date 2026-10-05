@@ -1,6 +1,6 @@
 import KanonCore.Sem
 import KanonCore.BoolMod.Val
-import Kanon.Model
+import Kanon.Ops
 import Kanon.Typing
 
 /-!

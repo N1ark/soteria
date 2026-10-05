@@ -1,6 +1,10 @@
 import KanonCore.BoolMod
 import Kanon.Lib.Float
 import Kanon.Lib.Tactic
+import Kanon.Model.Bitvec.lower_bound
+import Kanon.Model.Bitvec.to_z
+import Kanon.Model.Bitvec.upper_bound
+import Kanon.Model.Bool.sure_neq
 
 /-!
 # Lemmas and tactics for the boolean rules
@@ -10,7 +14,7 @@ any language that gives the terms of its nodes, its booleans and its primitives,
 with their laws: here `boolLang`. The only law that is more than the typing and
 evaluation of the nodes is that of `Bool.sure_neq`, which the other modules extend.
 The arms that they add to the rule functions of the bool module are proved
-here and in `Proofs/BoolCases.lean`.
+here and in `Proofs/Bool/and_.lean`.
 -/
 
 namespace Kanon.Lib

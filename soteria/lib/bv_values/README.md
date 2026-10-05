@@ -95,23 +95,25 @@ deleted with the first generation of the value language.
 `lean/` is a Lean project that proves that the simplifications of the rules of
 `rules/` are sound. It requires the Lean library of Kanon at
 `KANON_LEAN_COMMIT_HASH` (`scripts/versions.json`), and its generated files come
-from `kanon lean-all rules/lang.knl` (`dune test` checks that they are up to
-date, `dune promote` updates them). What the Lean model contains is what the
+from `kanon lean-all . ../rules/lang.knl`, run in `lean/` (`dune test` checks
+that they are up to date). What the Lean model contains is what the
 rules define; the view functions and the primitives marked `[@no_lean]`
 (`view.kn`, `bv_prims.ml`) are infrastructure that it does not model.
 
 - `Types.lean` and `Syntax.lean` define the types of the language, around
   `Abstract.lean` (written by hand), `Typing.lean` the typing of the operators,
   and `Types.lean` which operators commute (`Op2.Comm`, from `[@comm]`).
-- `Model.lean` is a Lean model of the rule functions, over the primitives of
+- `Ops.lean`, `Model/M/f.lean` and `Model.lean` are a Lean model of the rule
+  functions, one file per rule function or helper, over the primitives of
   `Prims.lean` (written by hand), and `Semantics.lean` gives terms their meaning
   (written by hand), parameterised by a semantics of floats `FS`.
-- `Statements.lean` states that every alternative (arm) of every rule is sound:
-  its result *refines* its spec (the raw term it simplifies): it has the same
-  sort, and the same value wherever the raw term has one; and that the operands
-  of every `[@comm]` operator commute.
-- `Soundness.lean` proves each arm, each rule from its arms and every function
-  from its rules, up to `Kanon.opsN_sound`: the whole simplifier is sound.
+- `Statements.lean` and `Statements/M/f.lean` state that every alternative (arm)
+  of every rule is sound: its result *refines* its spec (the raw term it
+  simplifies): it has the same sort, and the same value wherever the raw term
+  has one; and that the operands of every `[@comm]` operator commute.
+- `Soundness/M/f.lean` proves each arm of `M.f`, each rule from its arms and
+  the function from its rules, and `Soundness.lean` puts them together, up to
+  `Kanon.opsN_sound`: the whole simplifier is sound.
 
 The subsorts are in the statements: `TNonzero` is `Nonzero` and `TZero` is
 `Zero` (`Semantics.lean`: the term never has a bit-vector value that is zero,
@@ -121,15 +123,13 @@ interface that the OCaml side trusts, and `Ops.Sound` assumes it of `Bitvec.div`
 `Bitvec.rem`. The rules that call them prove `Nonzero` of the divisor they pass
 (`Lib/Lit.lean`, `kanon_nonzero`).
 
-The proof of an arm is the theorem tagged `@[kanon_arm]` that proves
-`M.f.r_name.arm.Stmt` in `Kanon/Proofs/`. The arms that the default tactics
-prove are listed in `Kanon/Proofs/Auto*.lean`, ten per module: elaborated in one
-file (`Soundness.lean`) they need over 14 GB of memory. Each is proved by the
-tactic given to its function by `attribute [kanon_tactic tac] M.f.spec`, in the
-library that defines `tac` (`Kanon/Lib/`), or else by `kanon_auto`
-(`Kanon/Lib/Rule.lean`); the Auto files spell that tactic out, since Kanon's
-`kanon_proof%` looks the attribute up under the first component of the arm (the
-module `M`), not under the function `M.f`.
+An arm is proved by the theorem tagged `@[kanon_arm]` that proves
+`M.f.r_name.arm.Stmt` in `Kanon/Proofs/M/f.lean` (the commutativity of the
+operators in `Kanon/Proofs/Laws.lean`), if there is one; or else by the tactic
+given to its function by `attribute [kanon_tactic tac] M.f.spec`, in the library
+that defines `tac` (`Kanon/Lib/`), or else by `kanon_auto`
+(`Kanon/Lib/Rule.lean`). The arms of `Bitvec.lt` and `Bitvec.leq` have a larger
+bound on heartbeats (`[@lean_heartbeats]` in `rules/bitvec.kn`).
 The arms of the bool module are proved once, in Kanon's library
 (`KanonCore.BoolMod`), for the language `boolLang` of `Kanon/Lib/Bool.lean`. The
 integers of the bit-vector literals are related to Lean's `BitVec` by

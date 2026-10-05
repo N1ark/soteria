@@ -1,4 +1,14 @@
 import Kanon.Lib.Msb
+import Kanon.Model.Bitvec.cancellable
+import Kanon.Model.Bitvec.const_keeps_in_range
+import Kanon.Model.Bitvec.is_max_of
+import Kanon.Model.Bitvec.is_min_of
+import Kanon.Model.Bitvec.msb_of
+import Kanon.Model.Bitvec.no_wrap
+import Kanon.Model.Bitvec.unsigned_ub
+import Kanon.Model.Bitvec.zmax
+import Kanon.Model.Bitvec.zmin
+import Kanon.Model.Bool.sure_neq
 
 /-!
 # Comparisons

@@ -1,4 +1,5 @@
 import Kanon.Lib.Lit
+import Kanon.Model.Bool.of_bool
 
 /-! Floats, pointers and equalities, by evaluation. -/
 

@@ -5,7 +5,7 @@ import Kanon.Lemmas
 
 The operands of a commutative operator can be swapped (`Refines.comm`): the
 commutativity statements of the operators (`Op2.X.comm.Stmt`) are proved from it
-in `Proofs/CommCases.lean`.
+in `Proofs/Laws.lean`.
 -/
 
 namespace Kanon.Lib

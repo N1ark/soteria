@@ -75,6 +75,9 @@ jobs:
       - name: Update opam
         run: |
           rm -rf _opam/.opam-switch/sources/charon _opam/.opam-switch/sources/name_matcher_parser
+          # the cached pin of kanon may name a commit that is no longer fetchable;
+          # `make ocaml-deps` pins it again
+          opam pin remove -n -y kanon || true
           set -o pipefail
           if ! opam update 2>&1 | tee opam-update.log; then
             rm -rf "$(opam var root)/repo/default"

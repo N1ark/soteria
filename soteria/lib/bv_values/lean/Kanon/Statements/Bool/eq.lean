@@ -244,83 +244,83 @@ def Bool.eq.r_not.swap.Stmt : Prop :=
 
 def Bool.eq.r_add_const.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (w__1 : Int) (t__2 : Ty) (w__4 : Checked) (w__6 : Int) (t__7 : Ty) (r : Term) (t__10 : Ty),
+  ∀ (w__1 : Int) (t__2 : Ty) (w__4 : CoreMod.Checked) (w__6 : Int) (t__7 : Ty) (r : Term) (t__10 : Ty),
   Refines FS (Bool.eq.spec (Term.mk (Kind.BitVec w__1) t__2) (Term.mk (Kind.Op2 (Op2.Add w__4) (Term.mk (Kind.BitVec w__6) t__7) r) t__10))
   ((O.bool_eq (O.bitvec_sub Bitvec.unchecked (Term.mk (Kind.BitVec w__1) t__2) (Term.mk (Kind.BitVec w__6) t__7)) r))
 
 def Bool.eq.r_add_const.swap1.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (w__1 : Int) (t__2 : Ty) (w__4 : Checked) (r : Term) (w__6 : Int) (t__7 : Ty) (t__10 : Ty),
+  ∀ (w__1 : Int) (t__2 : Ty) (w__4 : CoreMod.Checked) (r : Term) (w__6 : Int) (t__7 : Ty) (t__10 : Ty),
   Refines FS (Bool.eq.spec (Term.mk (Kind.BitVec w__1) t__2) (Term.mk (Kind.Op2 (Op2.Add w__4) r (Term.mk (Kind.BitVec w__6) t__7)) t__10))
   ((O.bool_eq (O.bitvec_sub Bitvec.unchecked (Term.mk (Kind.BitVec w__1) t__2) (Term.mk (Kind.BitVec w__6) t__7)) r))
 
 def Bool.eq.r_add_const.swap2.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (w__4 : Checked) (w__6 : Int) (t__7 : Ty) (r : Term) (t__10 : Ty) (w__1 : Int) (t__2 : Ty),
+  ∀ (w__4 : CoreMod.Checked) (w__6 : Int) (t__7 : Ty) (r : Term) (t__10 : Ty) (w__1 : Int) (t__2 : Ty),
   Refines FS (Bool.eq.spec (Term.mk (Kind.Op2 (Op2.Add w__4) (Term.mk (Kind.BitVec w__6) t__7) r) t__10) (Term.mk (Kind.BitVec w__1) t__2))
   ((O.bool_eq (O.bitvec_sub Bitvec.unchecked (Term.mk (Kind.BitVec w__1) t__2) (Term.mk (Kind.BitVec w__6) t__7)) r))
 
 def Bool.eq.r_add_const.swap1_swap2.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (w__4 : Checked) (r : Term) (w__6 : Int) (t__7 : Ty) (t__10 : Ty) (w__1 : Int) (t__2 : Ty),
+  ∀ (w__4 : CoreMod.Checked) (r : Term) (w__6 : Int) (t__7 : Ty) (t__10 : Ty) (w__1 : Int) (t__2 : Ty),
   Refines FS (Bool.eq.spec (Term.mk (Kind.Op2 (Op2.Add w__4) r (Term.mk (Kind.BitVec w__6) t__7)) t__10) (Term.mk (Kind.BitVec w__1) t__2))
   ((O.bool_eq (O.bitvec_sub Bitvec.unchecked (Term.mk (Kind.BitVec w__1) t__2) (Term.mk (Kind.BitVec w__6) t__7)) r))
 
 def Bool.eq.r_sub_const1.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (w__1 : Int) (t__2 : Ty) (w__4 : Checked) (l : Term) (w__7 : Int) (t__8 : Ty) (t__10 : Ty),
+  ∀ (w__1 : Int) (t__2 : Ty) (w__4 : CoreMod.Checked) (l : Term) (w__7 : Int) (t__8 : Ty) (t__10 : Ty),
   Refines FS (Bool.eq.spec (Term.mk (Kind.BitVec w__1) t__2) (Term.mk (Kind.Op2 (Op2.Sub w__4) l (Term.mk (Kind.BitVec w__7) t__8)) t__10))
   ((O.bool_eq (O.bitvec_add Bitvec.unchecked (Term.mk (Kind.BitVec w__1) t__2) (Term.mk (Kind.BitVec w__7) t__8)) l))
 
 def Bool.eq.r_sub_const1.swap.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (w__4 : Checked) (l : Term) (w__7 : Int) (t__8 : Ty) (t__10 : Ty) (w__1 : Int) (t__2 : Ty),
+  ∀ (w__4 : CoreMod.Checked) (l : Term) (w__7 : Int) (t__8 : Ty) (t__10 : Ty) (w__1 : Int) (t__2 : Ty),
   Refines FS (Bool.eq.spec (Term.mk (Kind.Op2 (Op2.Sub w__4) l (Term.mk (Kind.BitVec w__7) t__8)) t__10) (Term.mk (Kind.BitVec w__1) t__2))
   ((O.bool_eq (O.bitvec_add Bitvec.unchecked (Term.mk (Kind.BitVec w__1) t__2) (Term.mk (Kind.BitVec w__7) t__8)) l))
 
 def Bool.eq.r_sub_const2.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (w__1 : Int) (t__2 : Ty) (w__4 : Checked) (w__6 : Int) (t__7 : Ty) (r : Term) (t__10 : Ty),
+  ∀ (w__1 : Int) (t__2 : Ty) (w__4 : CoreMod.Checked) (w__6 : Int) (t__7 : Ty) (r : Term) (t__10 : Ty),
   Refines FS (Bool.eq.spec (Term.mk (Kind.BitVec w__1) t__2) (Term.mk (Kind.Op2 (Op2.Sub w__4) (Term.mk (Kind.BitVec w__6) t__7) r) t__10))
   ((O.bool_eq (O.bitvec_sub Bitvec.unchecked (Term.mk (Kind.BitVec w__6) t__7) (Term.mk (Kind.BitVec w__1) t__2)) r))
 
 def Bool.eq.r_sub_const2.swap.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (w__4 : Checked) (w__6 : Int) (t__7 : Ty) (r : Term) (t__10 : Ty) (w__1 : Int) (t__2 : Ty),
+  ∀ (w__4 : CoreMod.Checked) (w__6 : Int) (t__7 : Ty) (r : Term) (t__10 : Ty) (w__1 : Int) (t__2 : Ty),
   Refines FS (Bool.eq.spec (Term.mk (Kind.Op2 (Op2.Sub w__4) (Term.mk (Kind.BitVec w__6) t__7) r) t__10) (Term.mk (Kind.BitVec w__1) t__2))
   ((O.bool_eq (O.bitvec_sub Bitvec.unchecked (Term.mk (Kind.BitVec w__6) t__7) (Term.mk (Kind.BitVec w__1) t__2)) r))
 
 def Bool.eq.r_self_add.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (v1 : Term) (w__2 : Checked) (kanon__4 : Term) (bv : Int) (t__6 : Ty) (t__7 : Ty),
+  ∀ (v1 : Term) (w__2 : CoreMod.Checked) (kanon__4 : Term) (bv : Int) (t__6 : Ty) (t__7 : Ty),
   (decide (v1 = kanon__4)) = true →
   Refines FS (Bool.eq.spec v1 (Term.mk (Kind.Op2 (Op2.Add w__2) kanon__4 (Term.mk (Kind.BitVec bv) t__6)) t__7))
   ((Bool.of_bool (decide (bv = (0 : Int)))))
 
 def Bool.eq.r_self_add.swap1.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (v1 : Term) (w__2 : Checked) (bv : Int) (t__6 : Ty) (kanon__4 : Term) (t__7 : Ty),
+  ∀ (v1 : Term) (w__2 : CoreMod.Checked) (bv : Int) (t__6 : Ty) (kanon__4 : Term) (t__7 : Ty),
   (decide (v1 = kanon__4)) = true →
   Refines FS (Bool.eq.spec v1 (Term.mk (Kind.Op2 (Op2.Add w__2) (Term.mk (Kind.BitVec bv) t__6) kanon__4) t__7))
   ((Bool.of_bool (decide (bv = (0 : Int)))))
 
 def Bool.eq.r_self_add.swap2.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (v2 : Term) (w__2 : Checked) (kanon__4 : Term) (bv : Int) (t__6 : Ty) (t__7 : Ty),
+  ∀ (v2 : Term) (w__2 : CoreMod.Checked) (kanon__4 : Term) (bv : Int) (t__6 : Ty) (t__7 : Ty),
   (decide (v2 = kanon__4)) = true →
   Refines FS (Bool.eq.spec (Term.mk (Kind.Op2 (Op2.Add w__2) kanon__4 (Term.mk (Kind.BitVec bv) t__6)) t__7) v2)
   ((Bool.of_bool (decide (bv = (0 : Int)))))
 
 def Bool.eq.r_self_add.swap1_swap2.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (v2 : Term) (w__2 : Checked) (bv : Int) (t__6 : Ty) (kanon__4 : Term) (t__7 : Ty),
+  ∀ (v2 : Term) (w__2 : CoreMod.Checked) (bv : Int) (t__6 : Ty) (kanon__4 : Term) (t__7 : Ty),
   (decide (v2 = kanon__4)) = true →
   Refines FS (Bool.eq.spec (Term.mk (Kind.Op2 (Op2.Add w__2) (Term.mk (Kind.BitVec bv) t__6) kanon__4) t__7) v2)
   ((Bool.of_bool (decide (bv = (0 : Int)))))
 
 def Bool.eq.r_add_add.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (w__1 : Checked) (bv_l : Int) (t__4 : Ty) (y : Term) (t__7 : Ty) (w__9 : Checked) (bv_r : Int) (t__12 : Ty) (x : Term) (t__15 : Ty),
+  ∀ (w__1 : CoreMod.Checked) (bv_l : Int) (t__4 : Ty) (y : Term) (t__7 : Ty) (w__9 : CoreMod.Checked) (bv_r : Int) (t__12 : Ty) (x : Term) (t__15 : Ty),
   Refines FS (Bool.eq.spec (Term.mk (Kind.Op2 (Op2.Add w__1) (Term.mk (Kind.BitVec bv_l) t__4) y) t__7) (Term.mk (Kind.Op2 (Op2.Add w__9) (Term.mk (Kind.BitVec bv_r) t__12) x) t__15))
   ((if (decide (bv_l ≥ bv_r))
    then (O.bool_eq x (O.bitvec_add Bitvec.unchecked y (O.bitvec_sub Bitvec.unchecked (Term.mk (Kind.BitVec bv_l) t__4) (Term.mk (Kind.BitVec bv_r) t__12))))
@@ -328,7 +328,7 @@ def Bool.eq.r_add_add.main.Stmt : Prop :=
 
 def Bool.eq.r_add_add.swap2.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (w__1 : Checked) (bv_l : Int) (t__4 : Ty) (y : Term) (t__7 : Ty) (w__9 : Checked) (x : Term) (bv_r : Int) (t__12 : Ty) (t__15 : Ty),
+  ∀ (w__1 : CoreMod.Checked) (bv_l : Int) (t__4 : Ty) (y : Term) (t__7 : Ty) (w__9 : CoreMod.Checked) (x : Term) (bv_r : Int) (t__12 : Ty) (t__15 : Ty),
   Refines FS (Bool.eq.spec (Term.mk (Kind.Op2 (Op2.Add w__1) (Term.mk (Kind.BitVec bv_l) t__4) y) t__7) (Term.mk (Kind.Op2 (Op2.Add w__9) x (Term.mk (Kind.BitVec bv_r) t__12)) t__15))
   ((if (decide (bv_l ≥ bv_r))
    then (O.bool_eq x (O.bitvec_add Bitvec.unchecked y (O.bitvec_sub Bitvec.unchecked (Term.mk (Kind.BitVec bv_l) t__4) (Term.mk (Kind.BitVec bv_r) t__12))))
@@ -336,7 +336,7 @@ def Bool.eq.r_add_add.swap2.Stmt : Prop :=
 
 def Bool.eq.r_add_add.swap1.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (w__1 : Checked) (y : Term) (bv_l : Int) (t__4 : Ty) (t__7 : Ty) (w__9 : Checked) (bv_r : Int) (t__12 : Ty) (x : Term) (t__15 : Ty),
+  ∀ (w__1 : CoreMod.Checked) (y : Term) (bv_l : Int) (t__4 : Ty) (t__7 : Ty) (w__9 : CoreMod.Checked) (bv_r : Int) (t__12 : Ty) (x : Term) (t__15 : Ty),
   Refines FS (Bool.eq.spec (Term.mk (Kind.Op2 (Op2.Add w__1) y (Term.mk (Kind.BitVec bv_l) t__4)) t__7) (Term.mk (Kind.Op2 (Op2.Add w__9) (Term.mk (Kind.BitVec bv_r) t__12) x) t__15))
   ((if (decide (bv_l ≥ bv_r))
    then (O.bool_eq x (O.bitvec_add Bitvec.unchecked y (O.bitvec_sub Bitvec.unchecked (Term.mk (Kind.BitVec bv_l) t__4) (Term.mk (Kind.BitVec bv_r) t__12))))
@@ -344,7 +344,7 @@ def Bool.eq.r_add_add.swap1.Stmt : Prop :=
 
 def Bool.eq.r_add_add.swap1_swap2.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (w__1 : Checked) (y : Term) (bv_l : Int) (t__4 : Ty) (t__7 : Ty) (w__9 : Checked) (x : Term) (bv_r : Int) (t__12 : Ty) (t__15 : Ty),
+  ∀ (w__1 : CoreMod.Checked) (y : Term) (bv_l : Int) (t__4 : Ty) (t__7 : Ty) (w__9 : CoreMod.Checked) (x : Term) (bv_r : Int) (t__12 : Ty) (t__15 : Ty),
   Refines FS (Bool.eq.spec (Term.mk (Kind.Op2 (Op2.Add w__1) y (Term.mk (Kind.BitVec bv_l) t__4)) t__7) (Term.mk (Kind.Op2 (Op2.Add w__9) x (Term.mk (Kind.BitVec bv_r) t__12)) t__15))
   ((if (decide (bv_l ≥ bv_r))
    then (O.bool_eq x (O.bitvec_add Bitvec.unchecked y (O.bitvec_sub Bitvec.unchecked (Term.mk (Kind.BitVec bv_l) t__4) (Term.mk (Kind.BitVec bv_r) t__12))))
@@ -352,7 +352,7 @@ def Bool.eq.r_add_add.swap1_swap2.Stmt : Prop :=
 
 def Bool.eq.r_mul_const.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (n : Int) (t__2 : Ty) (ck : Checked) (m : Int) (t__6 : Ty) (x : Term) (t__8 : Ty),
+  ∀ (n : Int) (t__2 : Ty) (ck : CoreMod.Checked) (m : Int) (t__6 : Ty) (x : Term) (t__8 : Ty),
   (Bitvec.is_checked ck) = true →
   Refines FS (Bool.eq.spec (Term.mk (Kind.BitVec n) t__2) (Term.mk (Kind.Op2 (Op2.Mul ck) (Term.mk (Kind.BitVec m) t__6) x) t__8))
   ((let sz := (Bitvec.size x);
@@ -374,7 +374,7 @@ def Bool.eq.r_mul_const.main.Stmt : Prop :=
 
 def Bool.eq.r_mul_const.swap1.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (n : Int) (t__2 : Ty) (ck : Checked) (x : Term) (m : Int) (t__6 : Ty) (t__8 : Ty),
+  ∀ (n : Int) (t__2 : Ty) (ck : CoreMod.Checked) (x : Term) (m : Int) (t__6 : Ty) (t__8 : Ty),
   (Bitvec.is_checked ck) = true →
   Refines FS (Bool.eq.spec (Term.mk (Kind.BitVec n) t__2) (Term.mk (Kind.Op2 (Op2.Mul ck) x (Term.mk (Kind.BitVec m) t__6)) t__8))
   ((let sz := (Bitvec.size x);
@@ -396,7 +396,7 @@ def Bool.eq.r_mul_const.swap1.Stmt : Prop :=
 
 def Bool.eq.r_mul_const.swap2.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (ck : Checked) (m : Int) (t__6 : Ty) (x : Term) (t__8 : Ty) (n : Int) (t__2 : Ty),
+  ∀ (ck : CoreMod.Checked) (m : Int) (t__6 : Ty) (x : Term) (t__8 : Ty) (n : Int) (t__2 : Ty),
   (Bitvec.is_checked ck) = true →
   Refines FS (Bool.eq.spec (Term.mk (Kind.Op2 (Op2.Mul ck) (Term.mk (Kind.BitVec m) t__6) x) t__8) (Term.mk (Kind.BitVec n) t__2))
   ((let sz := (Bitvec.size x);
@@ -418,7 +418,7 @@ def Bool.eq.r_mul_const.swap2.Stmt : Prop :=
 
 def Bool.eq.r_mul_const.swap1_swap2.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (ck : Checked) (x : Term) (m : Int) (t__6 : Ty) (t__8 : Ty) (n : Int) (t__2 : Ty),
+  ∀ (ck : CoreMod.Checked) (x : Term) (m : Int) (t__6 : Ty) (t__8 : Ty) (n : Int) (t__2 : Ty),
   (Bitvec.is_checked ck) = true →
   Refines FS (Bool.eq.spec (Term.mk (Kind.Op2 (Op2.Mul ck) x (Term.mk (Kind.BitVec m) t__6)) t__8) (Term.mk (Kind.BitVec n) t__2))
   ((let sz := (Bitvec.size x);
@@ -440,28 +440,28 @@ def Bool.eq.r_mul_const.swap1_swap2.Stmt : Prop :=
 
 def Bool.eq.r_mul_cancel.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (ck1 : Checked) (a : Int) (t__4 : Ty) (b : Term) (t__6 : Ty) (ck2 : Checked) (a2 : Int) (t__11 : Ty) (d : Term) (t__13 : Ty),
+  ∀ (ck1 : CoreMod.Checked) (a : Int) (t__4 : Ty) (b : Term) (t__6 : Ty) (ck2 : CoreMod.Checked) (a2 : Int) (t__11 : Ty) (d : Term) (t__13 : Ty),
   ((decide (a = a2)) && ((decide ((z_land a (1 : Int)) = (1 : Int))) || ((decide (a ≠ (0 : Int))) && (Bitvec.is_checked (Bitvec.checked_meet ck1 ck2))))) = true →
   Refines FS (Bool.eq.spec (Term.mk (Kind.Op2 (Op2.Mul ck1) (Term.mk (Kind.BitVec a) t__4) b) t__6) (Term.mk (Kind.Op2 (Op2.Mul ck2) (Term.mk (Kind.BitVec a2) t__11) d) t__13))
   ((O.bool_eq b d))
 
 def Bool.eq.r_mul_cancel.swap2.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (ck1 : Checked) (a : Int) (t__4 : Ty) (b : Term) (t__6 : Ty) (ck2 : Checked) (d : Term) (a2 : Int) (t__11 : Ty) (t__13 : Ty),
+  ∀ (ck1 : CoreMod.Checked) (a : Int) (t__4 : Ty) (b : Term) (t__6 : Ty) (ck2 : CoreMod.Checked) (d : Term) (a2 : Int) (t__11 : Ty) (t__13 : Ty),
   ((decide (a = a2)) && ((decide ((z_land a (1 : Int)) = (1 : Int))) || ((decide (a ≠ (0 : Int))) && (Bitvec.is_checked (Bitvec.checked_meet ck1 ck2))))) = true →
   Refines FS (Bool.eq.spec (Term.mk (Kind.Op2 (Op2.Mul ck1) (Term.mk (Kind.BitVec a) t__4) b) t__6) (Term.mk (Kind.Op2 (Op2.Mul ck2) d (Term.mk (Kind.BitVec a2) t__11)) t__13))
   ((O.bool_eq b d))
 
 def Bool.eq.r_mul_cancel.swap1.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (ck1 : Checked) (b : Term) (a : Int) (t__4 : Ty) (t__6 : Ty) (ck2 : Checked) (a2 : Int) (t__11 : Ty) (d : Term) (t__13 : Ty),
+  ∀ (ck1 : CoreMod.Checked) (b : Term) (a : Int) (t__4 : Ty) (t__6 : Ty) (ck2 : CoreMod.Checked) (a2 : Int) (t__11 : Ty) (d : Term) (t__13 : Ty),
   ((decide (a = a2)) && ((decide ((z_land a (1 : Int)) = (1 : Int))) || ((decide (a ≠ (0 : Int))) && (Bitvec.is_checked (Bitvec.checked_meet ck1 ck2))))) = true →
   Refines FS (Bool.eq.spec (Term.mk (Kind.Op2 (Op2.Mul ck1) b (Term.mk (Kind.BitVec a) t__4)) t__6) (Term.mk (Kind.Op2 (Op2.Mul ck2) (Term.mk (Kind.BitVec a2) t__11) d) t__13))
   ((O.bool_eq b d))
 
 def Bool.eq.r_mul_cancel.swap1_swap2.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (ck1 : Checked) (b : Term) (a : Int) (t__4 : Ty) (t__6 : Ty) (ck2 : Checked) (d : Term) (a2 : Int) (t__11 : Ty) (t__13 : Ty),
+  ∀ (ck1 : CoreMod.Checked) (b : Term) (a : Int) (t__4 : Ty) (t__6 : Ty) (ck2 : CoreMod.Checked) (d : Term) (a2 : Int) (t__11 : Ty) (t__13 : Ty),
   ((decide (a = a2)) && ((decide ((z_land a (1 : Int)) = (1 : Int))) || ((decide (a ≠ (0 : Int))) && (Bitvec.is_checked (Bitvec.checked_meet ck1 ck2))))) = true →
   Refines FS (Bool.eq.spec (Term.mk (Kind.Op2 (Op2.Mul ck1) b (Term.mk (Kind.BitVec a) t__4)) t__6) (Term.mk (Kind.Op2 (Op2.Mul ck2) d (Term.mk (Kind.BitVec a2) t__11)) t__13))
   ((O.bool_eq b d))
@@ -642,7 +642,7 @@ def Bool.eq.r_msb.main.Stmt : Prop :=
 
 def Bool.eq.r_floats.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (f1 : Float) (t__2 : Ty) (f2 : Float) (t__4 : Ty),
+  ∀ (f1 : CoreMod.Float) (t__2 : Ty) (f2 : CoreMod.Float) (t__4 : Ty),
   Refines FS (Bool.eq.spec (Term.mk (Kind.Float f1) t__2) (Term.mk (Kind.Float f2) t__4))
   ((Bool.of_bool (f_bits_equal f1 f2)))
 

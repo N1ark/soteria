@@ -5,6 +5,8 @@ import Kanon.Statements.Float.fmod
 
 namespace Kanon
 
+open CoreMod
+
 open Classical Lib
 
 @[kanon_arm] theorem Float.fmod.r_lits.main.proof : Float.fmod.r_lits.main.Stmt := by

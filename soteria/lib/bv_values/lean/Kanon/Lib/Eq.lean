@@ -28,6 +28,8 @@ and the overflow checks.
 
 namespace Kanon.Lib
 
+open CoreMod
+
 open Classical
 
 /-! ## Normalizing the value goals -/
@@ -654,6 +656,8 @@ macro "kanon_sem_b" : tactic => `(tactic| (
 end Kanon.Lib
 
 namespace Kanon.Lib.SemEq
+
+open CoreMod
 
 open Classical
 

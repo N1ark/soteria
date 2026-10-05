@@ -13,6 +13,8 @@ refinements preserve once they are well-typed (`kanon_ty_refines`).
 
 namespace Kanon.Lib
 
+open CoreMod
+
 open Classical
 
 variable {FS : FloatSem}

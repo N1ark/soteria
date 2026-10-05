@@ -13,24 +13,24 @@ open Classical Kanon
 
 def Float.to_float_bits.r_lit.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (fp : Fp) (v : Term) (res : Term), Float.to_float_bits.r_lit O fp v = some res →
+  ∀ (fp : CoreMod.Fp) (v : Term) (res : Term), Float.to_float_bits.r_lit O fp v = some res →
   Refines FS (Float.to_float_bits.spec fp v) res
 
 def Float.to_float_bits.r_default.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (fp : Fp) (v : Term) (res : Term), Float.to_float_bits.r_default O fp v = some res →
+  ∀ (fp : CoreMod.Fp) (v : Term) (res : Term), Float.to_float_bits.r_default O fp v = some res →
   Refines FS (Float.to_float_bits.spec fp v) res
 
 def Float.to_float_bits.r_lit.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (fp : Fp) (z : Int) (t__2 : Ty),
+  ∀ (fp : CoreMod.Fp) (z : Int) (t__2 : Ty),
   Refines FS (Float.to_float_bits.spec fp (Term.mk (Kind.BitVec z) t__2))
   ((let kanon__a1 := (f_of_bits fp z);
    (Term.mk (Kind.Float kanon__a1) (Ty.TFloat (f_prec kanon__a1)))))
 
 def Float.to_float_bits.r_default.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (fp : Fp) (v : Term),
+  ∀ (fp : CoreMod.Fp) (v : Term),
   Refines FS (Float.to_float_bits.spec fp v)
   ((Term.mk (Kind.Op1 (Op1.FloatOfBvRaw fp) v) (Ty.TFloat fp)))
 

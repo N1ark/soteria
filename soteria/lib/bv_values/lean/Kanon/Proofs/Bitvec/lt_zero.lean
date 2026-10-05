@@ -6,6 +6,8 @@ import Kanon.Statements.Bitvec.lt_zero
 
 namespace Kanon
 
+open CoreMod
+
 open Classical Lib
 
 /-- `ite g p p` is `p`. -/

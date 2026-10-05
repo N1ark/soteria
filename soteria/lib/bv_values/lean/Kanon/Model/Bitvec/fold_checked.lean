@@ -13,11 +13,11 @@ namespace Kanon
 
 open Classical Kanon
 
-def Bitvec.fold_checked (c : Checked) (n : Int) (a : Int) (b : Int) (is_add : Bool) : Checked :=
+def Bitvec.fold_checked (c : CoreMod.Checked) (n : Int) (a : Int) (b : Int) (is_add : Bool) : CoreMod.Checked :=
   (let keep := fun (signed : Bool) =>
     ((Bitvec.checked_has signed c) && (! (if is_add
                                          then (Bitvec.overflows_add signed n a b)
                                          else (Bitvec.overflows_sub signed n a b))));
-  ({ signed := (keep true), unsigned := (keep false) } : Checked))
+  ({ signed := (keep true), unsigned := (keep false) } : CoreMod.Checked))
 
 end Kanon

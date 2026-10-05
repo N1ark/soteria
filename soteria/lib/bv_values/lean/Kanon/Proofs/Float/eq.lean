@@ -5,6 +5,8 @@ import Kanon.Statements.Float.eq
 
 namespace Kanon
 
+open CoreMod
+
 open Classical Lib
 
 @[kanon_arm] theorem Float.eq.r_same.main.proof : Float.eq.r_same.main.Stmt := by

@@ -8,6 +8,8 @@ facts on values and refinement (`Kanon.Sem`).
 
 namespace Kanon
 
+open CoreMod
+
 open Classical
 
 /-! Kanon's `Sem.eval_WT` and `Sem.eval_eq_ev`, stated on `Term.WT`, `eval` and

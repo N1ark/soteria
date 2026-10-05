@@ -4,6 +4,8 @@ import Kanon.Lib.Compare
 
 namespace Kanon
 
+open CoreMod
+
 open Classical Lib
 
 theorem factor_ok {n : Nat} {a b x y : BitVec n} (hab : a.toNat ≠ 0 ∨ b.toNat ≠ 0)

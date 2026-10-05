@@ -13,9 +13,9 @@ namespace Kanon
 
 open Classical Kanon
 
-def Bitvec.no_wrap (c : Checked) (v1 : Term) (v2 : Term) : Checked :=
+def Bitvec.no_wrap (c : CoreMod.Checked) (v1 : Term) (v2 : Term) : CoreMod.Checked :=
   (if ((Bitvec.is_bv (ty v1)) && (decide (((Bitvec.unsigned_ub v1) + (Bitvec.unsigned_ub v2)) < (z_lsl (1 : Int) (Bitvec.size v1)))))
-  then ({ signed := c.signed, unsigned := true } : Checked)
+  then ({ signed := c.signed, unsigned := true } : CoreMod.Checked)
   else c)
 
 end Kanon

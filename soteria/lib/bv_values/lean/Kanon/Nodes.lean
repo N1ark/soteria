@@ -47,10 +47,10 @@ kanon_node_lemma kanon_node_wt Nodes.Kind.LocLit.wt (FS : FloatSem) (x1 : Int) (
 kanon_node_lemma kanon_node_ev Nodes.Kind.LocLit.ev (FS : FloatSem) (ρ : (sem FS).Env) (x1 : Int) (t : Ty) :
   (sem FS).ev ρ (Term.mk (Kind.LocLit x1) t)
 
-kanon_node_lemma kanon_node_wt Nodes.Kind.Float.wt (FS : FloatSem) (x1 : Float) (t : Ty) :
+kanon_node_lemma kanon_node_wt Nodes.Kind.Float.wt (FS : FloatSem) (x1 : CoreMod.Float) (t : Ty) :
   (sem FS).WT (Term.mk (Kind.Float x1) t)
 
-kanon_node_lemma kanon_node_ev Nodes.Kind.Float.ev (FS : FloatSem) (ρ : (sem FS).Env) (x1 : Float) (t : Ty) :
+kanon_node_lemma kanon_node_ev Nodes.Kind.Float.ev (FS : FloatSem) (ρ : (sem FS).Env) (x1 : CoreMod.Float) (t : Ty) :
   (sem FS).ev ρ (Term.mk (Kind.Float x1) t)
 
 kanon_node_lemma kanon_node_wt Nodes.Op1.Not.wt (FS : FloatSem) (a1 : Term) (t : Ty) :
@@ -119,22 +119,22 @@ kanon_node_lemma kanon_node_wt Nodes.Op1.Neg.wt (FS : FloatSem) (x1 : Bool) (a1 
 kanon_node_lemma kanon_node_ev Nodes.Op1.Neg.ev (FS : FloatSem) (ρ : (sem FS).Env) (x1 : Bool) (a1 : Term) (t : Ty) :
   (sem FS).ev ρ (Term.mk (Kind.Op1 (Op1.Neg x1) a1) t)
 
-kanon_node_lemma kanon_node_wt Nodes.Op2.Add.wt (FS : FloatSem) (x1 : Checked) (a1 : Term) (a2 : Term) (t : Ty) :
+kanon_node_lemma kanon_node_wt Nodes.Op2.Add.wt (FS : FloatSem) (x1 : CoreMod.Checked) (a1 : Term) (a2 : Term) (t : Ty) :
   (sem FS).WT (Term.mk (Kind.Op2 (Op2.Add x1) a1 a2) t)
 
-kanon_node_lemma kanon_node_ev Nodes.Op2.Add.ev (FS : FloatSem) (ρ : (sem FS).Env) (x1 : Checked) (a1 : Term) (a2 : Term) (t : Ty) :
+kanon_node_lemma kanon_node_ev Nodes.Op2.Add.ev (FS : FloatSem) (ρ : (sem FS).Env) (x1 : CoreMod.Checked) (a1 : Term) (a2 : Term) (t : Ty) :
   (sem FS).ev ρ (Term.mk (Kind.Op2 (Op2.Add x1) a1 a2) t)
 
-kanon_node_lemma kanon_node_wt Nodes.Op2.Sub.wt (FS : FloatSem) (x1 : Checked) (a1 : Term) (a2 : Term) (t : Ty) :
+kanon_node_lemma kanon_node_wt Nodes.Op2.Sub.wt (FS : FloatSem) (x1 : CoreMod.Checked) (a1 : Term) (a2 : Term) (t : Ty) :
   (sem FS).WT (Term.mk (Kind.Op2 (Op2.Sub x1) a1 a2) t)
 
-kanon_node_lemma kanon_node_ev Nodes.Op2.Sub.ev (FS : FloatSem) (ρ : (sem FS).Env) (x1 : Checked) (a1 : Term) (a2 : Term) (t : Ty) :
+kanon_node_lemma kanon_node_ev Nodes.Op2.Sub.ev (FS : FloatSem) (ρ : (sem FS).Env) (x1 : CoreMod.Checked) (a1 : Term) (a2 : Term) (t : Ty) :
   (sem FS).ev ρ (Term.mk (Kind.Op2 (Op2.Sub x1) a1 a2) t)
 
-kanon_node_lemma kanon_node_wt Nodes.Op2.Mul.wt (FS : FloatSem) (x1 : Checked) (a1 : Term) (a2 : Term) (t : Ty) :
+kanon_node_lemma kanon_node_wt Nodes.Op2.Mul.wt (FS : FloatSem) (x1 : CoreMod.Checked) (a1 : Term) (a2 : Term) (t : Ty) :
   (sem FS).WT (Term.mk (Kind.Op2 (Op2.Mul x1) a1 a2) t)
 
-kanon_node_lemma kanon_node_ev Nodes.Op2.Mul.ev (FS : FloatSem) (ρ : (sem FS).Env) (x1 : Checked) (a1 : Term) (a2 : Term) (t : Ty) :
+kanon_node_lemma kanon_node_ev Nodes.Op2.Mul.ev (FS : FloatSem) (ρ : (sem FS).Env) (x1 : CoreMod.Checked) (a1 : Term) (a2 : Term) (t : Ty) :
   (sem FS).ev ρ (Term.mk (Kind.Op2 (Op2.Mul x1) a1 a2) t)
 
 kanon_node_lemma kanon_node_wt Nodes.Op2.Div.wt (FS : FloatSem) (x1 : Bool) (a1 : Term) (a2 : Term) (t : Ty) :
@@ -227,28 +227,28 @@ kanon_node_lemma kanon_node_wt Nodes.Op2.AShr.wt (FS : FloatSem) (a1 : Term) (a2
 kanon_node_lemma kanon_node_ev Nodes.Op2.AShr.ev (FS : FloatSem) (ρ : (sem FS).Env) (a1 : Term) (a2 : Term) (t : Ty) :
   (sem FS).ev ρ (Term.mk (Kind.Op2 Op2.AShr a1 a2) t)
 
-kanon_node_lemma kanon_node_wt Nodes.Op1.BvOfFloat.wt (FS : FloatSem) (x1 : Rm) (x2 : Bool) (x3 : Int) (a1 : Term) (t : Ty) :
+kanon_node_lemma kanon_node_wt Nodes.Op1.BvOfFloat.wt (FS : FloatSem) (x1 : CoreMod.Rm) (x2 : Bool) (x3 : Int) (a1 : Term) (t : Ty) :
   (sem FS).WT (Term.mk (Kind.Op1 (Op1.BvOfFloat x1 x2 x3) a1) t)
 
-kanon_node_lemma kanon_node_ev Nodes.Op1.BvOfFloat.ev (FS : FloatSem) (ρ : (sem FS).Env) (x1 : Rm) (x2 : Bool) (x3 : Int) (a1 : Term) (t : Ty) :
+kanon_node_lemma kanon_node_ev Nodes.Op1.BvOfFloat.ev (FS : FloatSem) (ρ : (sem FS).Env) (x1 : CoreMod.Rm) (x2 : Bool) (x3 : Int) (a1 : Term) (t : Ty) :
   (sem FS).ev ρ (Term.mk (Kind.Op1 (Op1.BvOfFloat x1 x2 x3) a1) t)
 
-kanon_node_lemma kanon_node_wt Nodes.Op1.FloatOfBv.wt (FS : FloatSem) (x1 : Rm) (x2 : Bool) (x3 : Fp) (a1 : Term) (t : Ty) :
+kanon_node_lemma kanon_node_wt Nodes.Op1.FloatOfBv.wt (FS : FloatSem) (x1 : CoreMod.Rm) (x2 : Bool) (x3 : CoreMod.Fp) (a1 : Term) (t : Ty) :
   (sem FS).WT (Term.mk (Kind.Op1 (Op1.FloatOfBv x1 x2 x3) a1) t)
 
-kanon_node_lemma kanon_node_ev Nodes.Op1.FloatOfBv.ev (FS : FloatSem) (ρ : (sem FS).Env) (x1 : Rm) (x2 : Bool) (x3 : Fp) (a1 : Term) (t : Ty) :
+kanon_node_lemma kanon_node_ev Nodes.Op1.FloatOfBv.ev (FS : FloatSem) (ρ : (sem FS).Env) (x1 : CoreMod.Rm) (x2 : Bool) (x3 : CoreMod.Fp) (a1 : Term) (t : Ty) :
   (sem FS).ev ρ (Term.mk (Kind.Op1 (Op1.FloatOfBv x1 x2 x3) a1) t)
 
-kanon_node_lemma kanon_node_wt Nodes.Op1.FloatOfBvRaw.wt (FS : FloatSem) (x1 : Fp) (a1 : Term) (t : Ty) :
+kanon_node_lemma kanon_node_wt Nodes.Op1.FloatOfBvRaw.wt (FS : FloatSem) (x1 : CoreMod.Fp) (a1 : Term) (t : Ty) :
   (sem FS).WT (Term.mk (Kind.Op1 (Op1.FloatOfBvRaw x1) a1) t)
 
-kanon_node_lemma kanon_node_ev Nodes.Op1.FloatOfBvRaw.ev (FS : FloatSem) (ρ : (sem FS).Env) (x1 : Fp) (a1 : Term) (t : Ty) :
+kanon_node_lemma kanon_node_ev Nodes.Op1.FloatOfBvRaw.ev (FS : FloatSem) (ρ : (sem FS).Env) (x1 : CoreMod.Fp) (a1 : Term) (t : Ty) :
   (sem FS).ev ρ (Term.mk (Kind.Op1 (Op1.FloatOfBvRaw x1) a1) t)
 
-kanon_node_lemma kanon_node_wt Nodes.Op1.FloatOfFloat.wt (FS : FloatSem) (x1 : Rm) (x2 : Fp) (a1 : Term) (t : Ty) :
+kanon_node_lemma kanon_node_wt Nodes.Op1.FloatOfFloat.wt (FS : FloatSem) (x1 : CoreMod.Rm) (x2 : CoreMod.Fp) (a1 : Term) (t : Ty) :
   (sem FS).WT (Term.mk (Kind.Op1 (Op1.FloatOfFloat x1 x2) a1) t)
 
-kanon_node_lemma kanon_node_ev Nodes.Op1.FloatOfFloat.ev (FS : FloatSem) (ρ : (sem FS).Env) (x1 : Rm) (x2 : Fp) (a1 : Term) (t : Ty) :
+kanon_node_lemma kanon_node_ev Nodes.Op1.FloatOfFloat.ev (FS : FloatSem) (ρ : (sem FS).Env) (x1 : CoreMod.Rm) (x2 : CoreMod.Fp) (a1 : Term) (t : Ty) :
   (sem FS).ev ρ (Term.mk (Kind.Op1 (Op1.FloatOfFloat x1 x2) a1) t)
 
 kanon_node_lemma kanon_node_wt Nodes.Op1.FAbs.wt (FS : FloatSem) (a1 : Term) (t : Ty) :
@@ -269,10 +269,10 @@ kanon_node_lemma kanon_node_wt Nodes.Op1.FSqrt.wt (FS : FloatSem) (a1 : Term) (t
 kanon_node_lemma kanon_node_ev Nodes.Op1.FSqrt.ev (FS : FloatSem) (ρ : (sem FS).Env) (a1 : Term) (t : Ty) :
   (sem FS).ev ρ (Term.mk (Kind.Op1 Op1.FSqrt a1) t)
 
-kanon_node_lemma kanon_node_wt Nodes.Op1.FIs.wt (FS : FloatSem) (x1 : Fc) (a1 : Term) (t : Ty) :
+kanon_node_lemma kanon_node_wt Nodes.Op1.FIs.wt (FS : FloatSem) (x1 : CoreMod.Fc) (a1 : Term) (t : Ty) :
   (sem FS).WT (Term.mk (Kind.Op1 (Op1.FIs x1) a1) t)
 
-kanon_node_lemma kanon_node_ev Nodes.Op1.FIs.ev (FS : FloatSem) (ρ : (sem FS).Env) (x1 : Fc) (a1 : Term) (t : Ty) :
+kanon_node_lemma kanon_node_ev Nodes.Op1.FIs.ev (FS : FloatSem) (ρ : (sem FS).Env) (x1 : CoreMod.Fc) (a1 : Term) (t : Ty) :
   (sem FS).ev ρ (Term.mk (Kind.Op1 (Op1.FIs x1) a1) t)
 
 kanon_node_lemma kanon_node_wt Nodes.Op1.FIsNeg.wt (FS : FloatSem) (a1 : Term) (t : Ty) :
@@ -287,10 +287,10 @@ kanon_node_lemma kanon_node_wt Nodes.Op1.FIsPos.wt (FS : FloatSem) (a1 : Term) (
 kanon_node_lemma kanon_node_ev Nodes.Op1.FIsPos.ev (FS : FloatSem) (ρ : (sem FS).Env) (a1 : Term) (t : Ty) :
   (sem FS).ev ρ (Term.mk (Kind.Op1 Op1.FIsPos a1) t)
 
-kanon_node_lemma kanon_node_wt Nodes.Op1.FRound.wt (FS : FloatSem) (x1 : Rm) (a1 : Term) (t : Ty) :
+kanon_node_lemma kanon_node_wt Nodes.Op1.FRound.wt (FS : FloatSem) (x1 : CoreMod.Rm) (a1 : Term) (t : Ty) :
   (sem FS).WT (Term.mk (Kind.Op1 (Op1.FRound x1) a1) t)
 
-kanon_node_lemma kanon_node_ev Nodes.Op1.FRound.ev (FS : FloatSem) (ρ : (sem FS).Env) (x1 : Rm) (a1 : Term) (t : Ty) :
+kanon_node_lemma kanon_node_ev Nodes.Op1.FRound.ev (FS : FloatSem) (ρ : (sem FS).Env) (x1 : CoreMod.Rm) (a1 : Term) (t : Ty) :
   (sem FS).ev ρ (Term.mk (Kind.Op1 (Op1.FRound x1) a1) t)
 
 kanon_node_lemma kanon_node_wt Nodes.Op2.FEq.wt (FS : FloatSem) (a1 : Term) (a2 : Term) (t : Ty) :

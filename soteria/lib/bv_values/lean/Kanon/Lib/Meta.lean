@@ -16,6 +16,8 @@ import Kanon.Lib.Den
 
 namespace Kanon.Lib
 
+open CoreMod
+
 open Lean Meta Elab Tactic
 
 @[kanon_atom_cases] theorem den_cases {FS ρ n t} :

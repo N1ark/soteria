@@ -23,7 +23,7 @@ def Float.is_positive.r_default.Stmt : Prop :=
 
 def Float.is_positive.r_lit.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (f : Float) (t__2 : Ty),
+  ∀ (f : CoreMod.Float) (t__2 : Ty),
   Refines FS (Float.is_positive.spec (Term.mk (Kind.Float f) t__2))
   ((Term.mk (Kind.Bool (f_is_positive f)) Ty.TBool))
 

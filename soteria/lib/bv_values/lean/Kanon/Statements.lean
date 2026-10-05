@@ -88,8 +88,8 @@ structure Ops.Sound (FS : FloatSem) (O : Ops) : Prop where
   bitvec_of_bool : ∀ (n : Int) (b : Term), Refines FS (Bitvec.of_bool.spec n b) (O.bitvec_of_bool n b)
   bitvec_to_bool : ∀ (v : Term), Refines FS (Bitvec.to_bool.spec v) (O.bitvec_to_bool v)
   bitvec_not_bool : ∀ (v : Term), Refines FS (Bitvec.not_bool.spec v) (O.bitvec_not_bool v)
-  bitvec_add : ∀ (checked : Checked) (v1 : Term) (v2 : Term), Refines FS (Bitvec.add.spec checked v1 v2) (O.bitvec_add checked v1 v2)
-  bitvec_sub : ∀ (checked : Checked) (v1 : Term) (v2 : Term), Refines FS (Bitvec.sub.spec checked v1 v2) (O.bitvec_sub checked v1 v2)
+  bitvec_add : ∀ (checked : CoreMod.Checked) (v1 : Term) (v2 : Term), Refines FS (Bitvec.add.spec checked v1 v2) (O.bitvec_add checked v1 v2)
+  bitvec_sub : ∀ (checked : CoreMod.Checked) (v1 : Term) (v2 : Term), Refines FS (Bitvec.sub.spec checked v1 v2) (O.bitvec_sub checked v1 v2)
   bitvec_neg : ∀ (checked : Bool) (v : Term), Refines FS (Bitvec.neg.spec checked v) (O.bitvec_neg checked v)
   bitvec_mod_ : ∀ (v1 : Term) (v2 : Term), Refines FS (Bitvec.mod_.spec v1 v2) (O.bitvec_mod_ v1 v2)
   bitvec_rem : ∀ (signed : Bool) (v1 : Term) (v2 : Term), Nonzero v2 → Refines FS (Bitvec.rem.spec signed v1 v2) (O.bitvec_rem signed v1 v2)
@@ -103,7 +103,7 @@ structure Ops.Sound (FS : FloatSem) (O : Ops) : Prop where
   bitvec_shl : ∀ (v1 : Term) (v2 : Term), Refines FS (Bitvec.shl.spec v1 v2) (O.bitvec_shl v1 v2)
   bitvec_lshr : ∀ (v1 : Term) (v2 : Term), Refines FS (Bitvec.lshr.spec v1 v2) (O.bitvec_lshr v1 v2)
   bitvec_ashr : ∀ (v1 : Term) (v2 : Term), Refines FS (Bitvec.ashr.spec v1 v2) (O.bitvec_ashr v1 v2)
-  bitvec_mul : ∀ (checked : Checked) (v1 : Term) (v2 : Term), Refines FS (Bitvec.mul.spec checked v1 v2) (O.bitvec_mul checked v1 v2)
+  bitvec_mul : ∀ (checked : CoreMod.Checked) (v1 : Term) (v2 : Term), Refines FS (Bitvec.mul.spec checked v1 v2) (O.bitvec_mul checked v1 v2)
   bitvec_div : ∀ (signed : Bool) (v1 : Term) (v2 : Term), Nonzero v2 → Refines FS (Bitvec.div.spec signed v1 v2) (O.bitvec_div signed v1 v2)
   bitvec_lt_zero : ∀ (v : Term), Refines FS (Bitvec.lt_zero.spec v) (O.bitvec_lt_zero v)
   bitvec_lt : ∀ (signed : Bool) (v1 : Term) (v2 : Term), Refines FS (Bitvec.lt.spec signed v1 v2) (O.bitvec_lt signed v1 v2)
@@ -112,10 +112,10 @@ structure Ops.Sound (FS : FloatSem) (O : Ops) : Prop where
   bitvec_mul_overflows : ∀ (signed : Bool) (v1 : Term) (v2 : Term), Refines FS (Bitvec.mul_overflows.spec signed v1 v2) (O.bitvec_mul_overflows signed v1 v2)
   bitvec_neg_overflows : ∀ (v : Term), Refines FS (Bitvec.neg_overflows.spec v) (O.bitvec_neg_overflows v)
   bitvec_sub_overflows : ∀ (signed : Bool) (v1 : Term) (v2 : Term), Refines FS (Bitvec.sub_overflows.spec signed v1 v2) (O.bitvec_sub_overflows signed v1 v2)
-  float_is_floatclass : ∀ (fc : Fc) (sv : Term), Refines FS (Float.is_floatclass.spec fc sv) (O.float_is_floatclass fc sv)
+  float_is_floatclass : ∀ (fc : CoreMod.Fc) (sv : Term), Refines FS (Float.is_floatclass.spec fc sv) (O.float_is_floatclass fc sv)
   float_is_negative : ∀ (v : Term), Refines FS (Float.is_negative.spec v) (O.float_is_negative v)
   float_is_positive : ∀ (v : Term), Refines FS (Float.is_positive.spec v) (O.float_is_positive v)
-  float_cast : ∀ (rounding : Rm) (fp : Fp) (v : Term), Refines FS (Float.cast.spec rounding fp v) (O.float_cast rounding fp v)
+  float_cast : ∀ (rounding : CoreMod.Rm) (fp : CoreMod.Fp) (v : Term), Refines FS (Float.cast.spec rounding fp v) (O.float_cast rounding fp v)
   float_eq : ∀ (v1 : Term) (v2 : Term), Refines FS (Float.eq.spec v1 v2) (O.float_eq v1 v2)
   float_lt : ∀ (v1 : Term) (v2 : Term), Refines FS (Float.lt.spec v1 v2) (O.float_lt v1 v2)
   float_leq : ∀ (v1 : Term) (v2 : Term), Refines FS (Float.leq.spec v1 v2) (O.float_leq v1 v2)
@@ -132,10 +132,10 @@ structure Ops.Sound (FS : FloatSem) (O : Ops) : Prop where
   float_min : ∀ (v1 : Term) (v2 : Term), Refines FS (Float.min.spec v1 v2) (O.float_min v1 v2)
   float_max : ∀ (v1 : Term) (v2 : Term), Refines FS (Float.max.spec v1 v2) (O.float_max v1 v2)
   float_sqrt : ∀ (v : Term), Refines FS (Float.sqrt.spec v) (O.float_sqrt v)
-  float_round : ∀ (rm : Rm) (sv : Term), Refines FS (Float.round.spec rm sv) (O.float_round rm sv)
-  float_of_float : ∀ (rounding : Rm) (signed : Bool) (sz : Int) (v : Term), Refines FS (Float.of_float.spec rounding signed sz v) (O.float_of_float rounding signed sz v)
-  float_to_float : ∀ (rounding : Rm) (signed : Bool) (fp : Fp) (v : Term), Refines FS (Float.to_float.spec rounding signed fp v) (O.float_to_float rounding signed fp v)
-  float_to_float_bits : ∀ (fp : Fp) (v : Term), Refines FS (Float.to_float_bits.spec fp v) (O.float_to_float_bits fp v)
+  float_round : ∀ (rm : CoreMod.Rm) (sv : Term), Refines FS (Float.round.spec rm sv) (O.float_round rm sv)
+  float_of_float : ∀ (rounding : CoreMod.Rm) (signed : Bool) (sz : Int) (v : Term), Refines FS (Float.of_float.spec rounding signed sz v) (O.float_of_float rounding signed sz v)
+  float_to_float : ∀ (rounding : CoreMod.Rm) (signed : Bool) (fp : CoreMod.Fp) (v : Term), Refines FS (Float.to_float.spec rounding signed fp v) (O.float_to_float rounding signed fp v)
+  float_to_float_bits : ∀ (fp : CoreMod.Fp) (v : Term), Refines FS (Float.to_float_bits.spec fp v) (O.float_to_float_bits fp v)
   ptr_loc : ∀ (p : Term), Refines FS (Ptr.loc.spec p) (O.ptr_loc p)
   ptr_ofs : ∀ (p : Term), Refines FS (Ptr.ofs.spec p) (O.ptr_ofs p)
 
@@ -159,13 +159,13 @@ def Op2.Eq.comm.Stmt : Prop :=
 
 /-- The operands of `Op2.Add` commute. -/
 def Op2.Add.comm.Stmt : Prop :=
-  ∀ (FS : FloatSem) (x1 : Checked) (a b : Term) (t : Ty),
+  ∀ (FS : FloatSem) (x1 : CoreMod.Checked) (a b : Term) (t : Ty),
   Refines FS (Term.mk (Kind.Op2 (Op2.Add x1) a b) t)
   (Term.mk (Kind.Op2 (Op2.Add x1) b a) t)
 
 /-- The operands of `Op2.Mul` commute. -/
 def Op2.Mul.comm.Stmt : Prop :=
-  ∀ (FS : FloatSem) (x1 : Checked) (a b : Term) (t : Ty),
+  ∀ (FS : FloatSem) (x1 : CoreMod.Checked) (a b : Term) (t : Ty),
   Refines FS (Term.mk (Kind.Op2 (Op2.Mul x1) a b) t)
   (Term.mk (Kind.Op2 (Op2.Mul x1) b a) t)
 

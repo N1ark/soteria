@@ -23,7 +23,7 @@ def Float.sqrt.r_default.Stmt : Prop :=
 
 def Float.sqrt.r_lit.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (f : Float) (t__2 : Ty),
+  ∀ (f : CoreMod.Float) (t__2 : Ty),
   Refines FS (Float.sqrt.spec (Term.mk (Kind.Float f) t__2))
   ((let kanon__a1 := (O.orc.f_sqrt f);
    (Term.mk (Kind.Float kanon__a1) (Ty.TFloat (f_prec kanon__a1)))))

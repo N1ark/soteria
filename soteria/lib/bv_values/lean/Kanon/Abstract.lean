@@ -8,15 +8,6 @@ in `Types.lean` and in `Syntax.lean`. Widths and indices are `Int`s, like OCaml'
 terms are modelled as trees, so that the physical equality of hash-consed terms
 is structural equality.
 
-This file defines the types that `lang.knl` declares without defining them.
+The language declares no abstract type of its own: that of floats is the core
+module's (`CoreMod/Abstract.lean`).
 -/
-
-namespace Kanon
-
-/-- A concrete float of Floatml, given by its precision and bit pattern. -/
-structure Float where
-  prec : Fp
-  bits : Nat
-  deriving DecidableEq, Repr, Inhabited
-
-end Kanon

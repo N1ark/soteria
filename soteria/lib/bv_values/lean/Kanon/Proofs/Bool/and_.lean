@@ -5,6 +5,8 @@ import Kanon.Statements.Bool.and_
 
 namespace Kanon
 
+open CoreMod
+
 open Classical Lib
 
 @[kanon_arm] theorem Bool.and_.r_eq_extracts.main.proof : Bool.and_.r_eq_extracts.main.Stmt := by

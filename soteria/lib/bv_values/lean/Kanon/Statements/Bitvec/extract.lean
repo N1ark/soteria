@@ -227,42 +227,42 @@ def Bitvec.extract.r_concat.main.Stmt : Prop :=
 
 def Bitvec.extract.r_add_low.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (from_ : Int) (to_ : Int) (w__1 : Checked) (l : Term) (r : Term) (t__5 : Ty),
+  ∀ (from_ : Int) (to_ : Int) (w__1 : CoreMod.Checked) (l : Term) (r : Term) (t__5 : Ty),
   (decide (from_ = (0 : Int))) = true →
   Refines FS (Bitvec.extract.spec from_ to_ (Term.mk (Kind.Op2 (Op2.Add w__1) l r) t__5))
   ((O.bitvec_add Bitvec.unchecked (O.bitvec_extract from_ to_ l) (O.bitvec_extract from_ to_ r)))
 
 def Bitvec.extract.r_add_const.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (from_ : Int) (to_ : Int) (w__1 : Checked) (n : Int) (t__4 : Ty) (x : Term) (t__6 : Ty),
+  ∀ (from_ : Int) (to_ : Int) (w__1 : CoreMod.Checked) (n : Int) (t__4 : Ty) (x : Term) (t__6 : Ty),
   (decide (to_ < (Bitvec.lsb n))) = true →
   Refines FS (Bitvec.extract.spec from_ to_ (Term.mk (Kind.Op2 (Op2.Add w__1) (Term.mk (Kind.BitVec n) t__4) x) t__6))
   ((O.bitvec_extract from_ to_ x))
 
 def Bitvec.extract.r_add_const.swap.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (from_ : Int) (to_ : Int) (w__1 : Checked) (x : Term) (n : Int) (t__4 : Ty) (t__6 : Ty),
+  ∀ (from_ : Int) (to_ : Int) (w__1 : CoreMod.Checked) (x : Term) (n : Int) (t__4 : Ty) (t__6 : Ty),
   (decide (to_ < (Bitvec.lsb n))) = true →
   Refines FS (Bitvec.extract.spec from_ to_ (Term.mk (Kind.Op2 (Op2.Add w__1) x (Term.mk (Kind.BitVec n) t__4)) t__6))
   ((O.bitvec_extract from_ to_ x))
 
 def Bitvec.extract.r_mul_pow2.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (from_ : Int) (to_ : Int) (w__1 : Checked) (n : Int) (t__4 : Ty) (w__5 : Term) (t__6 : Ty),
+  ∀ (from_ : Int) (to_ : Int) (w__1 : CoreMod.Checked) (n : Int) (t__4 : Ty) (w__5 : Term) (t__6 : Ty),
   ((Bitvec.is_pow2 n) && (decide (to_ < (log2 n)))) = true →
   Refines FS (Bitvec.extract.spec from_ to_ (Term.mk (Kind.Op2 (Op2.Mul w__1) (Term.mk (Kind.BitVec n) t__4) w__5) t__6))
   ((bv_zero ((to_ - from_) + (1 : Int))))
 
 def Bitvec.extract.r_mul_pow2.swap.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (from_ : Int) (to_ : Int) (w__1 : Checked) (w__5 : Term) (n : Int) (t__4 : Ty) (t__6 : Ty),
+  ∀ (from_ : Int) (to_ : Int) (w__1 : CoreMod.Checked) (w__5 : Term) (n : Int) (t__4 : Ty) (t__6 : Ty),
   ((Bitvec.is_pow2 n) && (decide (to_ < (log2 n)))) = true →
   Refines FS (Bitvec.extract.spec from_ to_ (Term.mk (Kind.Op2 (Op2.Mul w__1) w__5 (Term.mk (Kind.BitVec n) t__4)) t__6))
   ((bv_zero ((to_ - from_) + (1 : Int))))
 
 def Bitvec.extract.r_mul_low.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (from_ : Int) (to_ : Int) (w__1 : Checked) (l : Term) (r : Term) (t__5 : Ty),
+  ∀ (from_ : Int) (to_ : Int) (w__1 : CoreMod.Checked) (l : Term) (r : Term) (t__5 : Ty),
   (decide (from_ = (0 : Int))) = true →
   Refines FS (Bitvec.extract.spec from_ to_ (Term.mk (Kind.Op2 (Op2.Mul w__1) l r) t__5))
   ((O.bitvec_mul Bitvec.unchecked (O.bitvec_extract from_ to_ l) (O.bitvec_extract from_ to_ r)))

@@ -13,6 +13,8 @@ term on the nodes whose value is a function of their operands', and by
 
 namespace Kanon.Lib
 
+open CoreMod
+
 open Classical
 
 theorem evalBV_of_eval {FS ρ n t} {o : Option (BitVec n)}

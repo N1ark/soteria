@@ -34,6 +34,8 @@ noncomputable section
 
 namespace Kanon
 
+open CoreMod
+
 open Classical KanonBool
 
 /-! ## Types and values -/
@@ -155,7 +157,7 @@ theorem WT_exists {bs body T} : (Term.mk (.Exists bs body) T).WT ↔
 /-- The width of a bit-vector (or location, or pointer) type. -/
 def Ty.width (t : Ty) : Nat := (size_of_ty t).toNat
 
-def Float.sem (f : Float) : Val := .float f.prec f.val
+def _root_.CoreMod.Float.sem (f : CoreMod.Float) : Val := .float f.prec f.val
 
 /-- Binary bit-vector operations, on operands of the same width. -/
 def bvBin (f : ∀ {n : Nat}, BitVec n → BitVec n → Option Val) :
@@ -330,17 +332,17 @@ def Zero (t : Term) : Prop := ∀ FS ρ n (x : BitVec n), eval FS ρ t = some (.
 
 /-! ## Assumptions on the oracles -/
 
-def Float.WF (f : Float) : Prop := f.bits < 2 ^ f.prec.size
+def _root_.CoreMod.Float.WF (f : CoreMod.Float) : Prop := f.bits < 2 ^ f.prec.size
 
 /-- The literal term of a float. -/
-def Float.term (f : Float) : Term := .mk (.Float f) (.TFloat f.prec)
+def _root_.CoreMod.Float.term (f : CoreMod.Float) : Term := .mk (.Float f) (.TFloat f.prec)
 
 /-- What the proofs assume of the oracles: that sorting by tags permutes a list,
 and that Floatml computes, on literals, the same values (bit patterns) as the
 float operations (of the same precision). -/
 structure Oracle.Compat (orc : Oracle) (FS : FloatSem) : Prop where
   bool : KanonBool.Oracle.Compat orc.sort_by_tag
-  bin : ∀ (op : Op2) (lit : Float → Float → Float),
+  bin : ∀ (op : Op2) (lit : CoreMod.Float → CoreMod.Float → CoreMod.Float),
     (op, lit) ∈ [(.FAdd, orc.f_add), (.FSub, orc.f_sub), (.FMul, orc.f_mul),
       (.FDiv, orc.f_div), (.FRem, orc.f_rem), (.FMin, orc.f_min), (.FMax, orc.f_max)] →
     ∀ f1 f2, f1.WF → f2.WF → f1.prec = f2.prec →

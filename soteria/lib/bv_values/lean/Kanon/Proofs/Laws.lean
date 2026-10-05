@@ -7,6 +7,8 @@ operands of `Add`, `Mul`, `AddOvf`, `MulOvf`, `BitAnd`, `BitOr`, `BitXor` and
 
 namespace Kanon
 
+open CoreMod
+
 open Lib
 
 @[kanon_arm] theorem Op2.Add.comm.proof : Op2.Add.comm.Stmt :=

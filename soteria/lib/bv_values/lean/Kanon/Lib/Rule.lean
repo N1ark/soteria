@@ -9,6 +9,8 @@ import Kanon.Lib.Arith
 
 namespace Kanon.Lib
 
+open CoreMod
+
 /-- The rule tactics of the libraries, in turn. -/
 macro_rules | `(tactic| kanon_auto) => `(tactic| first
   | (kanon_rule_bv; done)

@@ -18,14 +18,14 @@ namespace Kanon
 
 open Classical Kanon
 
-def Bitvec.add.r_lits (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
+def Bitvec.add.r_lits (O : Ops) (checked : CoreMod.Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | lit_i1@(Term.mk (Kind.BitVec i1) _), lit_i2@(Term.mk (Kind.BitVec i2) _) =>
     (whenSome true
     ((Term.mk (Kind.BitVec (lit_add (ty lit_i1) (ty lit_i2) i1 i2)) (ty v1))))
     | _, _ => none)
 
-def Bitvec.add.r_neg (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
+def Bitvec.add.r_neg (O : Ops) (checked : CoreMod.Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | x, (Term.mk (Kind.Op1 (Op1.Neg _) y) _) =>
     (whenSome true ((O.bitvec_sub Bitvec.unchecked x y)))
@@ -35,7 +35,7 @@ def Bitvec.add.r_neg (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Opt
         (whenSome true ((O.bitvec_sub Bitvec.unchecked x y)))
         | _, _ => none)
 
-def Bitvec.add.r_zero (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
+def Bitvec.add.r_zero (O : Ops) (checked : CoreMod.Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | x, (Term.mk (Kind.BitVec kanon__2) _) =>
     (whenSome (decide (kanon__2 = (0 : Int))) (x))
@@ -45,7 +45,7 @@ def Bitvec.add.r_zero (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Op
         (whenSome (decide (kanon__2 = (0 : Int))) (x))
         | _, _ => none)
 
-def Bitvec.add.r_not_one (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
+def Bitvec.add.r_not_one (O : Ops) (checked : CoreMod.Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | (Term.mk (Kind.Op1 Op1.BvNot x) _), (Term.mk (Kind.BitVec kanon__4) _) =>
     (whenSome (decide (kanon__4 = (1 : Int))) ((O.bitvec_neg false x)))
@@ -55,7 +55,7 @@ def Bitvec.add.r_not_one (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) :
         (whenSome (decide (kanon__4 = (1 : Int))) ((O.bitvec_neg false x)))
         | _, _ => none)
 
-def Bitvec.add.r_add_const (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
+def Bitvec.add.r_add_const (O : Ops) (checked : CoreMod.Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | (Term.mk (Kind.Op2 (Op2.Add c) (Term.mk (Kind.BitVec k1) _) r) _), (Term.mk (Kind.BitVec k2) _) =>
     (whenSome true
@@ -89,7 +89,7 @@ def Bitvec.add.r_add_const (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term)
          (O.bitvec_add checked (mk_bv n (lit_add sty sty k1 k2)) r))))))
         | _, _ => none)
 
-def Bitvec.add.r_sub_const_r (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
+def Bitvec.add.r_sub_const_r (O : Ops) (checked : CoreMod.Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | (Term.mk (Kind.Op2 (Op2.Sub c) l (Term.mk (Kind.BitVec k1) _)) _), (Term.mk (Kind.BitVec k2) _) =>
     (whenSome true
@@ -107,7 +107,7 @@ def Bitvec.add.r_sub_const_r (O : Ops) (checked : Checked) (v1 : Term) (v2 : Ter
          (O.bitvec_add checked l (mk_bv n (lit_sub sty sty k2 k1))))))))
         | _, _ => none)
 
-def Bitvec.add.r_sub_const_l (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
+def Bitvec.add.r_sub_const_l (O : Ops) (checked : CoreMod.Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | (Term.mk (Kind.Op2 (Op2.Sub c) (Term.mk (Kind.BitVec k1) _) r) _), (Term.mk (Kind.BitVec k2) _) =>
     (whenSome true
@@ -125,7 +125,7 @@ def Bitvec.add.r_sub_const_l (O : Ops) (checked : Checked) (v1 : Term) (v2 : Ter
          (O.bitvec_sub checked (mk_bv n (lit_add sty sty k1 k2)) r))))))
         | _, _ => none)
 
-def Bitvec.add.r_sub_cancel (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
+def Bitvec.add.r_sub_cancel (O : Ops) (checked : CoreMod.Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | r, (Term.mk (Kind.Op2 (Op2.Sub _) l kanon__5) _) =>
     (whenSome (decide (r = kanon__5)) (l))
@@ -135,7 +135,7 @@ def Bitvec.add.r_sub_cancel (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term
         (whenSome (decide (r = kanon__5)) (l))
         | _, _ => none)
 
-def Bitvec.add.r_add_sub (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
+def Bitvec.add.r_add_sub (O : Ops) (checked : CoreMod.Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | (Term.mk (Kind.Op2 (Op2.Add _) a b) _), (Term.mk (Kind.Op2 (Op2.Sub _) c kanon__10) _) =>
     (whenSome (decide (a = kanon__10)) ((O.bitvec_add Bitvec.unchecked b c)))
@@ -156,7 +156,7 @@ def Bitvec.add.r_add_sub (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) :
         ((O.bitvec_add Bitvec.unchecked b c)))
         | _, _ => none)
 
-def Bitvec.add.r_factor (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
+def Bitvec.add.r_factor (O : Ops) (checked : CoreMod.Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | (Term.mk (Kind.Op2 (Op2.Mul ck1) a b) _), (Term.mk (Kind.Op2 (Op2.Mul ck2) kanon__9 c) _) =>
     (whenSome (decide (a = kanon__9))
@@ -186,7 +186,7 @@ def Bitvec.add.r_factor (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : 
          else (O.bitvec_mul Bitvec.unchecked a (O.bitvec_add Bitvec.unchecked b c)))))
         | _, _ => none)
 
-def Bitvec.add.r_factor_const (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
+def Bitvec.add.r_factor_const (O : Ops) (checked : CoreMod.Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | (Term.mk (Kind.Op2 (Op2.Mul ck1) v_k1@(Term.mk (Kind.BitVec k1) _) r1) _), (Term.mk (Kind.Op2 (Op2.Mul ck2) v_k2@(Term.mk (Kind.BitVec k2) _) r2) _) =>
     (whenSome ((Bitvec.checked_meet (Bitvec.checked_meet checked ck1) ck2).unsigned && (((decide (k1 ≠ (0 : Int))) || (decide (k2 ≠ (0 : Int)))) && ((Bitvec.udivides k1 k2) || (Bitvec.udivides k2 k1))))
@@ -236,7 +236,7 @@ def Bitvec.add.r_factor_const (O : Ops) (checked : Checked) (v1 : Term) (v2 : Te
               (O.bitvec_mul checked v_k2 (O.bitvec_add checked r2 (O.bitvec_mul checked common r1))))))))))
         | _, _ => none)
 
-def Bitvec.add.r_ite (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
+def Bitvec.add.r_ite (O : Ops) (checked : CoreMod.Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | (Term.mk (Kind.Op3 Op3.Ite b l r) _), x@(Term.mk (Kind.BitVec _) _) =>
     (whenSome true
@@ -248,13 +248,13 @@ def Bitvec.add.r_ite (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Opt
         ((O.bool_ite b (O.bitvec_add checked l x) (O.bitvec_add checked r x))))
         | _, _ => none)
 
-def Bitvec.add.r_default (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Option Term :=
+def Bitvec.add.r_default (O : Ops) (checked : CoreMod.Checked) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | _, _ =>
     (whenSome true
     ((Term.mk (mk_commut_binop O (Op2.Add (Bitvec.no_wrap checked v1 v2)) v1 v2) (ty v1)))))
 
-def Bitvec.add.step (O : Ops) (checked : Checked) (v1 : Term) (v2 : Term) : Term :=
+def Bitvec.add.step (O : Ops) (checked : CoreMod.Checked) (v1 : Term) (v2 : Term) : Term :=
   (firstSome [Bitvec.add.r_lits O checked v1 v2, Bitvec.add.r_neg O checked v1 v2, Bitvec.add.r_zero O checked v1 v2, Bitvec.add.r_not_one O checked v1 v2, Bitvec.add.r_add_const O checked v1 v2, Bitvec.add.r_sub_const_r O checked v1 v2, Bitvec.add.r_sub_const_l O checked v1 v2, Bitvec.add.r_sub_cancel O checked v1 v2, Bitvec.add.r_add_sub O checked v1 v2, Bitvec.add.r_factor O checked v1 v2, Bitvec.add.r_factor_const O checked v1 v2, Bitvec.add.r_ite O checked v1 v2, Bitvec.add.r_default O checked v1 v2]).getD (Bitvec.add.spec checked v1 v2)
 
 end Kanon

@@ -33,7 +33,7 @@ def Float.eq.r_default.Stmt : Prop :=
 
 def Float.eq.r_lits.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (f1 : Float) (t__2 : Ty) (f2 : Float) (t__4 : Ty),
+  ∀ (f1 : CoreMod.Float) (t__2 : Ty) (f2 : CoreMod.Float) (t__4 : Ty),
   Refines FS (Float.eq.spec (Term.mk (Kind.Float f1) t__2) (Term.mk (Kind.Float f2) t__4))
   ((Term.mk (Kind.Bool (f_eq f1 f2)) Ty.TBool))
 
@@ -42,26 +42,26 @@ def Float.eq.r_same.main.Stmt : Prop :=
   ∀ (v1 : Term) (v2 : Term),
   (decide (v1 = v2)) = true →
   Refines FS (Float.eq.spec v1 v2)
-  ((O.bool_not_ (O.float_is_floatclass Fc.NaN v1)))
+  ((O.bool_not_ (O.float_is_floatclass CoreMod.Fc.NaN v1)))
 
 def Float.eq.r_lit.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (v2 : Term) (f : Float) (t__2 : Ty),
+  ∀ (v2 : Term) (f : CoreMod.Float) (t__2 : Ty),
   Refines FS (Float.eq.spec (Term.mk (Kind.Float f) t__2) v2)
   ((if (f_is_nan f)
    then v_false
    else (if (f_is_zero f)
-        then (O.float_is_floatclass Fc.Zero v2)
+        then (O.float_is_floatclass CoreMod.Fc.Zero v2)
         else (O.bool_eq (Term.mk (Kind.Float f) t__2) v2))))
 
 def Float.eq.r_lit.swap.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (v1 : Term) (f : Float) (t__2 : Ty),
+  ∀ (v1 : Term) (f : CoreMod.Float) (t__2 : Ty),
   Refines FS (Float.eq.spec v1 (Term.mk (Kind.Float f) t__2))
   ((if (f_is_nan f)
    then v_false
    else (if (f_is_zero f)
-        then (O.float_is_floatclass Fc.Zero v1)
+        then (O.float_is_floatclass CoreMod.Fc.Zero v1)
         else (O.bool_eq (Term.mk (Kind.Float f) t__2) v1))))
 
 def Float.eq.r_default.main.Stmt : Prop :=

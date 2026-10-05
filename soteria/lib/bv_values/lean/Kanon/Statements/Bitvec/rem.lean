@@ -97,7 +97,7 @@ def Bitvec.rem.r_pow2.main.Stmt : Prop :=
 
 def Bitvec.rem.r_add.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (signed : Bool) (ck : Checked) (d : Int) (t__4 : Ty) (r : Term) (t__6 : Ty) (d2 : Int) (t__9 : Ty),
+  ∀ (signed : Bool) (ck : CoreMod.Checked) (d : Int) (t__4 : Ty) (r : Term) (t__6 : Ty) (d2 : Int) (t__9 : Ty),
   Nonzero (Term.mk (Kind.BitVec d2) t__9) →
   ((! signed) && (ck.unsigned && (decide (d = d2)))) = true →
   Refines FS (Bitvec.rem.spec signed (Term.mk (Kind.Op2 (Op2.Add ck) (Term.mk (Kind.BitVec d) t__4) r) t__6) (Term.mk (Kind.BitVec d2) t__9))
@@ -105,7 +105,7 @@ def Bitvec.rem.r_add.main.Stmt : Prop :=
 
 def Bitvec.rem.r_add.swap.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (signed : Bool) (ck : Checked) (r : Term) (d : Int) (t__4 : Ty) (t__6 : Ty) (d2 : Int) (t__9 : Ty),
+  ∀ (signed : Bool) (ck : CoreMod.Checked) (r : Term) (d : Int) (t__4 : Ty) (t__6 : Ty) (d2 : Int) (t__9 : Ty),
   Nonzero (Term.mk (Kind.BitVec d2) t__9) →
   ((! signed) && (ck.unsigned && (decide (d = d2)))) = true →
   Refines FS (Bitvec.rem.spec signed (Term.mk (Kind.Op2 (Op2.Add ck) r (Term.mk (Kind.BitVec d) t__4)) t__6) (Term.mk (Kind.BitVec d2) t__9))

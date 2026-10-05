@@ -13,24 +13,24 @@ open Classical Kanon
 
 def Float.round.r_lit.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (rm : Rm) (sv : Term) (res : Term), Float.round.r_lit O rm sv = some res →
+  ∀ (rm : CoreMod.Rm) (sv : Term) (res : Term), Float.round.r_lit O rm sv = some res →
   Refines FS (Float.round.spec rm sv) res
 
 def Float.round.r_default.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (rm : Rm) (sv : Term) (res : Term), Float.round.r_default O rm sv = some res →
+  ∀ (rm : CoreMod.Rm) (sv : Term) (res : Term), Float.round.r_default O rm sv = some res →
   Refines FS (Float.round.spec rm sv) res
 
 def Float.round.r_lit.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (rm : Rm) (f : Float) (t__2 : Ty),
+  ∀ (rm : CoreMod.Rm) (f : CoreMod.Float) (t__2 : Ty),
   Refines FS (Float.round.spec rm (Term.mk (Kind.Float f) t__2))
   ((let kanon__a1 := (O.orc.f_round rm f);
    (Term.mk (Kind.Float kanon__a1) (Ty.TFloat (f_prec kanon__a1)))))
 
 def Float.round.r_default.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (rm : Rm) (sv : Term),
+  ∀ (rm : CoreMod.Rm) (sv : Term),
   Refines FS (Float.round.spec rm sv)
   ((Term.mk (Kind.Op1 (Op1.FRound rm) sv) (ty sv)))
 

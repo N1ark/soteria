@@ -10,7 +10,7 @@ namespace Kanon
 
 open Classical Kanon
 
-def Float.cast.r_lit (O : Ops) (rounding : Rm) (fp : Fp) (v : Term) : Option Term :=
+def Float.cast.r_lit (O : Ops) (rounding : CoreMod.Rm) (fp : CoreMod.Fp) (v : Term) : Option Term :=
   (match v with
     | (Term.mk (Kind.Float f) _) =>
     (whenSome true
@@ -18,13 +18,13 @@ def Float.cast.r_lit (O : Ops) (rounding : Rm) (fp : Fp) (v : Term) : Option Ter
      (Term.mk (Kind.Float kanon__a1) (Ty.TFloat (f_prec kanon__a1))))))
     | _ => none)
 
-def Float.cast.r_default (O : Ops) (rounding : Rm) (fp : Fp) (v : Term) : Option Term :=
+def Float.cast.r_default (O : Ops) (rounding : CoreMod.Rm) (fp : CoreMod.Fp) (v : Term) : Option Term :=
   (match v with
     | _ =>
     (whenSome true
     ((Term.mk (Kind.Op1 (Op1.FloatOfFloat rounding fp) v) (Ty.TFloat fp)))))
 
-def Float.cast.step (O : Ops) (rounding : Rm) (fp : Fp) (v : Term) : Term :=
+def Float.cast.step (O : Ops) (rounding : CoreMod.Rm) (fp : CoreMod.Fp) (v : Term) : Term :=
   (firstSome [Float.cast.r_lit O rounding fp v, Float.cast.r_default O rounding fp v]).getD (Float.cast.spec rounding fp v)
 
 end Kanon

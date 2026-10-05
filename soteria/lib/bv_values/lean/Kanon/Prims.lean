@@ -1,5 +1,6 @@
 import KanonCore
 import Kanon.Float
+import Kanon.Syntax
 
 /-!
 # Primitives of the rule language
@@ -12,6 +13,8 @@ does return, so this over-approximates it.
 -/
 
 namespace Kanon
+
+open CoreMod
 
 open Classical
 
@@ -192,25 +195,25 @@ def fp_size (p : Fp) : Int := p.size
 def fp_of_size (n : Int) : Fp :=
   if n = 16 then .F16 else if n = 64 then .F64 else if n = 128 then .F128 else .F32
 
-@[simp] def f_prec (f : Float) : Fp := f.prec
-def f_equal (a b : Float) : Bool := decide (a = b)
-def f_bits_equal (a b : Float) : Bool := decide (a = b)
-def f_to_bits (f : Float) : Int := f.bits
-def f_of_bits (p : Fp) (z : Int) : Float := ⟨p, (z % 2 ^ p.size).toNat⟩
-def f_nan (p : Fp) : Float := ⟨p, (FBits.nan p).toNat⟩
-def f_is_class (fc : Fc) (f : Float) : Bool := f.val.isClass fc
-def f_is_nan (f : Float) : Bool := f.val.isNaN
-def f_is_zero (f : Float) : Bool := f.val.isZero
-def f_is_negative (f : Float) : Bool := f.val.isNeg
-def f_is_positive (f : Float) : Bool := f.val.isPos
+@[simp] def f_prec (f : CoreMod.Float) : Fp := f.prec
+def f_equal (a b : CoreMod.Float) : Bool := decide (a = b)
+def f_bits_equal (a b : CoreMod.Float) : Bool := decide (a = b)
+def f_to_bits (f : CoreMod.Float) : Int := f.bits
+def f_of_bits (p : Fp) (z : Int) : CoreMod.Float := ⟨p, (z % 2 ^ p.size).toNat⟩
+def f_nan (p : Fp) : CoreMod.Float := ⟨p, (FBits.nan p).toNat⟩
+def f_is_class (fc : Fc) (f : CoreMod.Float) : Bool := f.val.isClass fc
+def f_is_nan (f : CoreMod.Float) : Bool := f.val.isNaN
+def f_is_zero (f : CoreMod.Float) : Bool := f.val.isZero
+def f_is_negative (f : CoreMod.Float) : Bool := f.val.isNeg
+def f_is_positive (f : CoreMod.Float) : Bool := f.val.isPos
 
-def Float.cmp (c : ∀ {p}, FBits p → FBits p → Bool) (a b : Float) : Bool :=
+def _root_.CoreMod.Float.cmp (c : ∀ {p}, FBits p → FBits p → Bool) (a b : CoreMod.Float) : Bool :=
   if h : b.prec = a.prec then c a.val (h ▸ b.val) else false
 
-def f_eq : Float → Float → Bool := Float.cmp FBits.eq
-def f_lt : Float → Float → Bool := Float.cmp FBits.lt
-def f_le : Float → Float → Bool := Float.cmp FBits.le
-def f_abs (f : Float) : Float := ⟨f.prec, (FBits.abs f.val).toNat⟩
-def f_neg (f : Float) : Float := ⟨f.prec, (FBits.neg f.val).toNat⟩
+def f_eq : CoreMod.Float → CoreMod.Float → Bool := Float.cmp FBits.eq
+def f_lt : CoreMod.Float → CoreMod.Float → Bool := Float.cmp FBits.lt
+def f_le : CoreMod.Float → CoreMod.Float → Bool := Float.cmp FBits.le
+def f_abs (f : CoreMod.Float) : CoreMod.Float := ⟨f.prec, (FBits.abs f.val).toNat⟩
+def f_neg (f : CoreMod.Float) : CoreMod.Float := ⟨f.prec, (FBits.neg f.val).toNat⟩
 
 end Kanon

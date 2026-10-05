@@ -10,7 +10,7 @@ namespace Kanon
 
 open Classical Kanon
 
-def Bitvec.checked_meet (a : Checked) (b : Checked) : Checked :=
-  ({ signed := (a.signed && b.signed), unsigned := (a.unsigned && b.unsigned) } : Checked)
+def Bitvec.checked_meet (a : CoreMod.Checked) (b : CoreMod.Checked) : CoreMod.Checked :=
+  ({ signed := (a.signed && b.signed), unsigned := (a.unsigned && b.unsigned) } : CoreMod.Checked)
 
 end Kanon

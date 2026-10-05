@@ -8,6 +8,8 @@ import Kanon.Model.Bitvec.zmin
 
 namespace Kanon.Lib
 
+open CoreMod
+
 open Classical
 
 variable {FS : FloatSem}

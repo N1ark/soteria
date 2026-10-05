@@ -5,6 +5,8 @@ import Kanon.Model.Bool.of_bool
 
 namespace Kanon.Lib
 
+open CoreMod
+
 open Classical
 
 
@@ -53,7 +55,7 @@ theorem eval_float {FS ρ f t} (h : (Term.mk (.Float f) t).WT) :
     eval FS ρ (.mk (.Float f) t) = some f.sem := by
   rw [eval_eq_ev h, ev]
 
-theorem Float.WF_of_WT {f t} (h : (Term.mk (.Float f) t).WT) : f.WF := (WT_float.1 h).2
+theorem _root_.CoreMod.Float.WF_of_WT {f t} (h : (Term.mk (.Float f) t).WT) : f.WF := (WT_float.1 h).2
 
 theorem WT_ptr {l o t} : (Term.mk (.Op2 .Ptr l o) t).WT ↔ ∃ n : Int, 0 < n ∧ t = .TPointer n ∧
     l.ty = .TLoc n ∧ o.ty = .TBitVector n ∧ l.WT ∧ o.WT := by
@@ -90,7 +92,7 @@ theorem eval_ptr_eq_some {FS ρ l o t v} (h : (Term.mk (.Op2 .Ptr l o) t).WT) :
 
 end Kanon.Lib
 
-namespace Kanon.FBits
+namespace CoreMod.FBits
 
 variable {p : Fp}
 
@@ -128,9 +130,11 @@ theorem abs_abs (x : FBits p) : x.abs.abs = x.abs := by
 theorem neg_neg (x : FBits p) : x.neg.neg = x := by
   simp [neg, BitVec.xor_assoc]
 
-end Kanon.FBits
+end CoreMod.FBits
 
 namespace Kanon.Lib
+
+open CoreMod
 
 theorem WT_fcmp {op a b t} (hop : op = .FEq ∨ op = .FLt ∨ op = .FLeq) :
     (Term.mk (.Op2 op a b) t).WT ↔
@@ -158,7 +162,7 @@ theorem WT_ftest {op a t}
 theorem Refines.float_bin_lits {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {op lit}
     (hmem : (op, lit) ∈ [(.FAdd, O.orc.f_add), (.FSub, O.orc.f_sub), (.FMul, O.orc.f_mul),
       (.FDiv, O.orc.f_div), (.FRem, O.orc.f_rem), (.FMin, O.orc.f_min), (.FMax, O.orc.f_max)])
-    {f1 f2 : Float} {T1 T2 : Ty} :
+    {f1 f2 : CoreMod.Float} {T1 T2 : Ty} :
     Refines FS (.mk (.Op2 op (.mk (.Float f1) T1) (.mk (.Float f2) T2)) T1)
       (.mk (.Float (lit f1 f2)) (.TFloat (lit f1 f2).prec)) := by
   have hop : op = .FAdd ∨ op = .FSub ∨ op = .FMul ∨ op = .FDiv ∨ op = .FRem ∨ op = .FMin ∨
@@ -187,7 +191,7 @@ theorem Refines.float_bin_lits {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {op l
     rw [eval_float w']; exact e
 
 /-- Constant folding of a unary operation on a float literal. -/
-theorem Refines.lit_of_unop {FS : FloatSem} {op : Op1} {f g : Float} {T T' : Ty}
+theorem Refines.lit_of_unop {FS : FloatSem} {op : Op1} {f g : CoreMod.Float} {T T' : Ty}
     (hsyn : (Term.mk (.Op1 op (.mk (.Float f) T)) T').WT → T' = .TFloat g.prec ∧ g.WF)
     (hsem : f.WF → evOp1 FS op (some f.sem) = some g.sem) :
     Refines FS (.mk (.Op1 op (.mk (.Float f) T)) T') (.mk (.Float g) T') := by
@@ -198,7 +202,7 @@ theorem Refines.lit_of_unop {FS : FloatSem} {op : Op1} {f g : Float} {T T' : Ty}
   rw [eval_float w']; exact e
 
 /-- `Refines.lit_of_unop`, for a result typed by its precision. -/
-theorem Refines.lit_of_unop_prec {FS : FloatSem} {op : Op1} {f g : Float} {T T' : Ty}
+theorem Refines.lit_of_unop_prec {FS : FloatSem} {op : Op1} {f g : CoreMod.Float} {T T' : Ty}
     (hsyn : (Term.mk (.Op1 op (.mk (.Float f) T)) T').WT → T' = .TFloat g.prec ∧ g.WF)
     (hsem : f.WF → evOp1 FS op (some f.sem) = some g.sem) :
     Refines FS (.mk (.Op1 op (.mk (.Float f) T)) T') (.mk (.Float g) (.TFloat g.prec)) := by
@@ -210,7 +214,7 @@ theorem Refines.lit_of_unop_prec {FS : FloatSem} {op : Op1} {f g : Float} {T T' 
   rw [eval_float w']; exact e
 
 /-- A unary test on a float literal. -/
-theorem Refines.test_of_unop {FS : FloatSem} {op : Op1} {f : Float} {T T' : Ty} {b : Bool}
+theorem Refines.test_of_unop {FS : FloatSem} {op : Op1} {f : CoreMod.Float} {T T' : Ty} {b : Bool}
     (hsyn : (Term.mk (.Op1 op (.mk (.Float f) T)) T').WT → T' = .TBool)
     (hsem : evOp1 FS op (some f.sem) = some (.bool b)) :
     Refines FS (.mk (.Op1 op (.mk (.Float f) T)) T') (.mk (.Bool b) .TBool) := by
@@ -221,8 +225,8 @@ theorem Refines.test_of_unop {FS : FloatSem} {op : Op1} {f : Float} {T T' : Ty} 
   rw [eval_op1 w, eval_float w1, hsem] at e
   rw [eval_of_bool]; exact e
 
-theorem Float.val_ofNat_toNat {p : Fp} (x : FBits p) :
-    (⟨p, x.toNat⟩ : Float).val = x := by
+theorem _root_.CoreMod.Float.val_ofNat_toNat {p : Fp} (x : FBits p) :
+    (⟨p, x.toNat⟩ : CoreMod.Float).val = x := by
   simp [Float.val]
 
 /-! ## Bit-vector operations -/
@@ -343,7 +347,7 @@ theorem Refines.eq_locLits {z1 z2 : Int} {T1 T2 t : Ty} :
     simp [← BitVec.toNat_inj, e1, e2]
     omega
 
-theorem Refines.eq_floats {f1 f2 : Float} {T1 T2 t : Ty} :
+theorem Refines.eq_floats {f1 f2 : CoreMod.Float} {T1 T2 t : Ty} :
     Refines FS (.mk (.Op2 .Eq (.mk (.Float f1) T1) (.mk (.Float f2) T2)) t)
       (Bool.of_bool (f_bits_equal f1 f2)) := by
   refine Sem.Refines.intro_eval (fun w => ?_) (fun ρ x w _ e => ?_)

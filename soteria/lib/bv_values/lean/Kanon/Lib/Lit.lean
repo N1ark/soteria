@@ -14,6 +14,8 @@ modulo `2 ^ width`.
 
 namespace Kanon.Lib
 
+open CoreMod
+
 open Classical
 
 /-! ## Constants in range -/

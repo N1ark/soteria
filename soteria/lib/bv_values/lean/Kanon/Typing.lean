@@ -23,23 +23,23 @@ def Op1.WT : Op1 → Ty → Ty → Prop
   | .Neg _, kanon__a, kanon__t =>
       (∃ n : Int, 0 < n ∧ kanon__a = (Ty.TBitVector n)) ∧ kanon__t = kanon__a
   | .BvOfFloat _ _ n, kanon__a, kanon__t =>
-      0 < n ∧ (∃ p : Fp, kanon__a = (Ty.TFloat p)) ∧ kanon__t = (Ty.TBitVector n)
+      0 < n ∧ (∃ p : CoreMod.Fp, kanon__a = (Ty.TFloat p)) ∧ kanon__t = (Ty.TBitVector n)
   | .FloatOfBv _ _ p, kanon__a, kanon__t =>
       (∃ n : Int, 0 < n ∧ kanon__a = (Ty.TBitVector n)) ∧ kanon__t = (Ty.TFloat p)
   | .FloatOfBvRaw p, kanon__a, kanon__t =>
       kanon__a = (Ty.TBitVector (fp_size p)) ∧ kanon__t = (Ty.TFloat p)
   | .FloatOfFloat _ p, kanon__a, kanon__t =>
-      (∃ q : Fp, kanon__a = (Ty.TFloat q)) ∧ kanon__t = (Ty.TFloat p)
+      (∃ q : CoreMod.Fp, kanon__a = (Ty.TFloat q)) ∧ kanon__t = (Ty.TFloat p)
   | .FAbs, kanon__a, kanon__t
   | .FNeg, kanon__a, kanon__t
   | .FSqrt, kanon__a, kanon__t =>
-      (∃ p : Fp, kanon__a = (Ty.TFloat p)) ∧ kanon__t = kanon__a
+      (∃ p : CoreMod.Fp, kanon__a = (Ty.TFloat p)) ∧ kanon__t = kanon__a
   | .FIs _, kanon__a, kanon__t
   | .FIsNeg, kanon__a, kanon__t
   | .FIsPos, kanon__a, kanon__t =>
-      (∃ p : Fp, kanon__a = (Ty.TFloat p)) ∧ kanon__t = Ty.TBool
+      (∃ p : CoreMod.Fp, kanon__a = (Ty.TFloat p)) ∧ kanon__t = Ty.TBool
   | .FRound _, kanon__a, kanon__t =>
-      (∃ p : Fp, kanon__a = (Ty.TFloat p)) ∧ kanon__t = kanon__a
+      (∃ p : CoreMod.Fp, kanon__a = (Ty.TFloat p)) ∧ kanon__t = kanon__a
   | .GetPtrLoc, kanon__a, kanon__t =>
       ∃ n : Int, 0 < n ∧ kanon__a = (Ty.TPointer n) ∧ kanon__t = (Ty.TLoc n)
   | .GetPtrOfs, kanon__a, kanon__t =>
@@ -76,7 +76,7 @@ def Op2.WT : Op2 → Ty → Ty → Ty → Prop
   | .FEq, kanon__a, kanon__b, kanon__t
   | .FLeq, kanon__a, kanon__b, kanon__t
   | .FLt, kanon__a, kanon__b, kanon__t =>
-      (∃ p : Fp, kanon__a = (Ty.TFloat p)) ∧ kanon__b = kanon__a ∧ kanon__t = Ty.TBool
+      (∃ p : CoreMod.Fp, kanon__a = (Ty.TFloat p)) ∧ kanon__b = kanon__a ∧ kanon__t = Ty.TBool
   | .FAdd, kanon__a, kanon__b, kanon__t
   | .FSub, kanon__a, kanon__b, kanon__t
   | .FMul, kanon__a, kanon__b, kanon__t
@@ -84,7 +84,7 @@ def Op2.WT : Op2 → Ty → Ty → Ty → Prop
   | .FRem, kanon__a, kanon__b, kanon__t
   | .FMin, kanon__a, kanon__b, kanon__t
   | .FMax, kanon__a, kanon__b, kanon__t =>
-      (∃ p : Fp, kanon__a = (Ty.TFloat p)) ∧ kanon__b = kanon__a ∧ kanon__t = kanon__a
+      (∃ p : CoreMod.Fp, kanon__a = (Ty.TFloat p)) ∧ kanon__b = kanon__a ∧ kanon__t = kanon__a
   | .Ptr, kanon__a, kanon__b, kanon__t =>
       ∃ n : Int, 0 < n ∧ kanon__a = (Ty.TLoc n) ∧ kanon__b = (Ty.TBitVector n) ∧ kanon__t = (Ty.TPointer n)
 
@@ -92,7 +92,7 @@ def Op3.WT : Op3 → Ty → Ty → Ty → Ty → Prop
   | .Ite, kanon__a, kanon__b, kanon__c, kanon__t =>
       kanon__a = Ty.TBool ∧ kanon__c = kanon__b ∧ kanon__t = kanon__b
   | .Fma, kanon__a, kanon__b, kanon__c, kanon__t =>
-      (∃ p : Fp, kanon__a = (Ty.TFloat p)) ∧ kanon__b = kanon__a ∧ kanon__c = kanon__a ∧ kanon__t = kanon__a
+      (∃ p : CoreMod.Fp, kanon__a = (Ty.TFloat p)) ∧ kanon__b = kanon__a ∧ kanon__c = kanon__a ∧ kanon__t = kanon__a
 
 def OpN.WT : OpN → Ty → Ty → Prop
   | .Distinct, kanon__a, kanon__t =>

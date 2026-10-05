@@ -10,18 +10,18 @@ namespace Kanon
 
 open Classical Kanon
 
-def Float.is_floatclass.r_lit (O : Ops) (fc : Fc) (sv : Term) : Option Term :=
+def Float.is_floatclass.r_lit (O : Ops) (fc : CoreMod.Fc) (sv : Term) : Option Term :=
   (match sv with
     | (Term.mk (Kind.Float f) _) =>
     (whenSome true ((Term.mk (Kind.Bool (f_is_class fc f)) Ty.TBool)))
     | _ => none)
 
-def Float.is_floatclass.r_default (O : Ops) (fc : Fc) (sv : Term) : Option Term :=
+def Float.is_floatclass.r_default (O : Ops) (fc : CoreMod.Fc) (sv : Term) : Option Term :=
   (match sv with
     | _ =>
     (whenSome true ((Term.mk (Kind.Op1 (Op1.FIs fc) sv) Ty.TBool))))
 
-def Float.is_floatclass.step (O : Ops) (fc : Fc) (sv : Term) : Term :=
+def Float.is_floatclass.step (O : Ops) (fc : CoreMod.Fc) (sv : Term) : Term :=
   (firstSome [Float.is_floatclass.r_lit O fc sv, Float.is_floatclass.r_default O fc sv]).getD (Float.is_floatclass.spec fc sv)
 
 end Kanon

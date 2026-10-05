@@ -13,24 +13,24 @@ open Classical Kanon
 
 def Float.cast.r_lit.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (rounding : Rm) (fp : Fp) (v : Term) (res : Term), Float.cast.r_lit O rounding fp v = some res →
+  ∀ (rounding : CoreMod.Rm) (fp : CoreMod.Fp) (v : Term) (res : Term), Float.cast.r_lit O rounding fp v = some res →
   Refines FS (Float.cast.spec rounding fp v) res
 
 def Float.cast.r_default.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (rounding : Rm) (fp : Fp) (v : Term) (res : Term), Float.cast.r_default O rounding fp v = some res →
+  ∀ (rounding : CoreMod.Rm) (fp : CoreMod.Fp) (v : Term) (res : Term), Float.cast.r_default O rounding fp v = some res →
   Refines FS (Float.cast.spec rounding fp v) res
 
 def Float.cast.r_lit.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (rounding : Rm) (fp : Fp) (f : Float) (t__2 : Ty),
+  ∀ (rounding : CoreMod.Rm) (fp : CoreMod.Fp) (f : CoreMod.Float) (t__2 : Ty),
   Refines FS (Float.cast.spec rounding fp (Term.mk (Kind.Float f) t__2))
   ((let kanon__a1 := (O.orc.f_convert rounding fp f);
    (Term.mk (Kind.Float kanon__a1) (Ty.TFloat (f_prec kanon__a1)))))
 
 def Float.cast.r_default.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (rounding : Rm) (fp : Fp) (v : Term),
+  ∀ (rounding : CoreMod.Rm) (fp : CoreMod.Fp) (v : Term),
   Refines FS (Float.cast.spec rounding fp v)
   ((Term.mk (Kind.Op1 (Op1.FloatOfFloat rounding fp) v) (Ty.TFloat fp)))
 

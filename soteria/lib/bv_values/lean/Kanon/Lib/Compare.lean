@@ -29,6 +29,8 @@ Three helpers of the rules have their own lemmas: `Bitvec.unsigned_ub`
 
 namespace Kanon.Lib
 
+open CoreMod
+
 open Classical
 
 /-! ## Booleans and widths -/
@@ -614,7 +616,7 @@ elab "kanon_clear_flags" : tactic => liftMetaTactic fun g => g.withContext do
     let ty ← instantiateMVars d.type
     if let .forallE _ dom _ _ := ty then
       if let some (_, lhs, _) := dom.eq? then
-        if lhs.isAppOfArity ``Kanon.Checked.signed 1 || lhs.isAppOfArity ``Kanon.Checked.unsigned 1 then
+        if lhs.isAppOfArity ``CoreMod.Checked.signed 1 || lhs.isAppOfArity ``CoreMod.Checked.unsigned 1 then
           g ← g.clear d.fvarId
   return [g]
 

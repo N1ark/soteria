@@ -5,6 +5,8 @@ import Kanon.Statements.Bitvec.to_bool
 
 namespace Kanon
 
+open CoreMod
+
 open Classical Lib
 
 @[kanon_arm] theorem Bitvec.to_bool.r_lit.main.proof : Bitvec.to_bool.r_lit.main.Stmt := by

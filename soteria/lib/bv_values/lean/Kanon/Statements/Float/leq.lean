@@ -23,7 +23,7 @@ def Float.leq.r_default.Stmt : Prop :=
 
 def Float.leq.r_lits.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (f1 : Float) (t__2 : Ty) (f2 : Float) (t__4 : Ty),
+  ∀ (f1 : CoreMod.Float) (t__2 : Ty) (f2 : CoreMod.Float) (t__4 : Ty),
   Refines FS (Float.leq.spec (Term.mk (Kind.Float f1) t__2) (Term.mk (Kind.Float f2) t__4))
   ((Term.mk (Kind.Bool (f_le f1 f2)) Ty.TBool))
 

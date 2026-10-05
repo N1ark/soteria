@@ -13,6 +13,8 @@ their first operand.
 
 namespace Kanon.Lib
 
+open CoreMod
+
 open Classical
 
 theorem ofInt_masked {n : Nat} {w : Int} (h : w = n) (z : Int) :

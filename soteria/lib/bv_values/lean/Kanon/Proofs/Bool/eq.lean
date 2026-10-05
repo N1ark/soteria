@@ -5,6 +5,8 @@ import Kanon.Statements.Bool.eq
 
 namespace Kanon
 
+open CoreMod
+
 open Classical Lib SemEq
 
 @[kanon_arm] theorem Bool.eq.r_mul_const.main.proof : Bool.eq.r_mul_const.main.Stmt := by

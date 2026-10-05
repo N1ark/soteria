@@ -13,6 +13,8 @@ refinement into an equation on `Option (BitVec n)`.
 
 namespace Kanon.Lib
 
+open CoreMod
+
 open Classical
 
 noncomputable def evalBV (FS : FloatSem) (ρ : Env) (n : Nat) (t : Term) : Option (BitVec n) :=

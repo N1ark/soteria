@@ -70,7 +70,7 @@ def Bitvec.div.r_one.main.Stmt : Prop :=
 
 def Bitvec.div.r_mul_lits.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (signed : Bool) (checked : Checked) (w__3 : Int) (t__4 : Ty) (w__6 : Int) (t__7 : Ty) (t__9 : Ty) (w__11 : Int) (t__12 : Ty),
+  ∀ (signed : Bool) (checked : CoreMod.Checked) (w__3 : Int) (t__4 : Ty) (w__6 : Int) (t__7 : Ty) (t__9 : Ty) (w__11 : Int) (t__12 : Ty),
   Nonzero (Term.mk (Kind.BitVec w__11) t__12) →
   Refines FS (Bitvec.div.spec signed (Term.mk (Kind.Op2 (Op2.Mul checked) (Term.mk (Kind.BitVec w__3) t__4) (Term.mk (Kind.BitVec w__6) t__7)) t__9) (Term.mk (Kind.BitVec w__11) t__12))
   ((O.bitvec_div signed (O.bitvec_mul checked (Term.mk (Kind.BitVec w__3) t__4) (Term.mk (Kind.BitVec w__6) t__7)) (Term.mk (Kind.BitVec w__11) t__12)))

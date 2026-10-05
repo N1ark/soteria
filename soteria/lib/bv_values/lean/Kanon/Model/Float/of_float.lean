@@ -10,7 +10,7 @@ namespace Kanon
 
 open Classical Kanon
 
-def Float.of_float.r_lit (O : Ops) (rounding : Rm) (signed : Bool) (sz : Int) (v : Term) : Option Term :=
+def Float.of_float.r_lit (O : Ops) (rounding : CoreMod.Rm) (signed : Bool) (sz : Int) (v : Term) : Option Term :=
   (match v with
     | (Term.mk (Kind.Float f) _) =>
     (whenSome true
@@ -26,13 +26,13 @@ def Float.of_float.r_lit (O : Ops) (rounding : Rm) (signed : Bool) (sz : Int) (v
        Inhabited.default)))
     | _ => none)
 
-def Float.of_float.r_default (O : Ops) (rounding : Rm) (signed : Bool) (sz : Int) (v : Term) : Option Term :=
+def Float.of_float.r_default (O : Ops) (rounding : CoreMod.Rm) (signed : Bool) (sz : Int) (v : Term) : Option Term :=
   (match v with
     | _ =>
     (whenSome true
     ((Term.mk (Kind.Op1 (Op1.BvOfFloat rounding signed sz) v) (Ty.TBitVector sz)))))
 
-def Float.of_float.step (O : Ops) (rounding : Rm) (signed : Bool) (sz : Int) (v : Term) : Term :=
+def Float.of_float.step (O : Ops) (rounding : CoreMod.Rm) (signed : Bool) (sz : Int) (v : Term) : Term :=
   (firstSome [Float.of_float.r_lit O rounding signed sz v, Float.of_float.r_default O rounding signed sz v]).getD (Float.of_float.spec rounding signed sz v)
 
 end Kanon

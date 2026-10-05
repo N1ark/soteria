@@ -8,6 +8,8 @@ import Kanon.Model.Bitvec.lsb
 
 namespace Kanon.Lib
 
+open CoreMod
+
 open Classical
 
 /-- The type of a literal whose width is its own size, as in `bv_zero (Bitvec.size v)`
@@ -134,7 +136,7 @@ variable {FS : FloatSem}
 
 /-- A comparison of float literals. -/
 theorem Refines.fcmp_lits {op : Op2} (hop : op = .FEq ∨ op = .FLt ∨ op = .FLeq)
-    {f1 f2 : Float} {T1 T2 T : Ty} {b : Bool}
+    {f1 f2 : CoreMod.Float} {T1 T2 T : Ty} {b : Bool}
     (hsem : f2.prec = f1.prec → evOp2 FS op (some f1.sem) (some f2.sem) = some (.bool b)) :
     Refines FS (.mk (.Op2 op (.mk (.Float f1) T1) (.mk (.Float f2) T2)) T) (.mk (.Bool b) .TBool) := by
   rw [← of_bool_eq]
@@ -148,7 +150,7 @@ theorem Refines.fcmp_lits {op : Op2} (hop : op = .FEq ∨ op = .FLt ∨ op = .FL
 
 /-- A unary operation on a float literal, of the precision of the literal. -/
 theorem Refines.funop_lit {op : Op1} (hop : op = .FAbs ∨ op = .FNeg ∨ op = .FSqrt ∨ ∃ rm, op = .FRound rm)
-    {f g : Float} {T : Ty}
+    {f g : CoreMod.Float} {T : Ty}
     (hg : f.WF → g.prec = f.prec ∧ g.WF ∧ evOp1 FS op (some f.sem) = some g.sem) :
     Refines FS (.mk (.Op1 op (.mk (.Float f) T)) T) (.mk (.Float g) (.TFloat g.prec)) :=
   Refines.lit_of_unop_prec (fun w => by
@@ -160,7 +162,7 @@ theorem Refines.funop_lit {op : Op1} (hop : op = .FAbs ∨ op = .FNeg ∨ op = .
 /-- A unary operation on floats that only reads the bits of its operand. -/
 theorem Refines.funop_bits {op : Op1} (hop : op = .FAbs ∨ op = .FNeg)
     {F : ∀ {p}, FBits p → FBits p} (hF : ∀ p (x : FBits p), evOp1 FS op (some (.float p x)) = some (.float p (F x)))
-    {f : Float} {T : Ty} :
+    {f : CoreMod.Float} {T : Ty} :
     Refines FS (.mk (.Op1 op (.mk (.Float f) T)) T) (.mk (.Float ⟨f.prec, (F f.val).toNat⟩) (.TFloat f.prec)) :=
   Refines.funop_lit (by rcases hop with h | h <;> simp [h]) fun _ =>
     ⟨rfl, BitVec.isLt _, by simp [Float.sem, hF, Float.val_ofNat_toNat]⟩
@@ -185,7 +187,7 @@ theorem Refines.funop_invol {op : Op1} (hop : op = .FAbs ∨ op = .FNeg ∨ op =
     rw [eval_op1 w, eval_op1 (WT_op1.1 w).2] at e; exact hinv _ _ e
 
 /-- `fp.eq` against a float literal, given how the general case is decided. -/
-theorem Refines.feq_lit {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {f : Float} {T : Ty}
+theorem Refines.feq_lit {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {f : CoreMod.Float} {T : Ty}
     {v2 E : Term} (hE : Refines FS (Bool.eq.spec (.mk (.Float f) T) v2) E) :
     Refines FS (Float.eq.spec (.mk (.Float f) T) v2)
       (if f_is_nan f then v_false

@@ -10,6 +10,8 @@ in `Proofs/Laws.lean`.
 
 namespace Kanon.Lib
 
+open CoreMod
+
 open Classical
 
 /-! ## Commutativity

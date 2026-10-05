@@ -10,7 +10,7 @@ namespace Kanon
 
 open Classical Kanon
 
-def Float.fp_of (v : Term) : Fp :=
+def Float.fp_of (v : Term) : CoreMod.Fp :=
   (fp_of_ty (ty v))
 
 end Kanon

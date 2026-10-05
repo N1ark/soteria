@@ -6,6 +6,8 @@ which `kanon_refl` (up to reducible definitions) does not unfold. -/
 
 namespace Kanon
 
+open CoreMod
+
 open Classical Lib
 
 attribute [local kanon_body] Float.raw_fmod_of_rem in

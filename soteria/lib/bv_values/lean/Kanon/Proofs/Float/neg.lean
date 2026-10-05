@@ -5,6 +5,8 @@ import Kanon.Statements.Float.neg
 
 namespace Kanon
 
+open CoreMod
+
 open Classical Lib
 
 @[kanon_arm] theorem Float.neg.r_neg.main.proof : Float.neg.r_neg.main.Stmt := by

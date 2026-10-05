@@ -13,17 +13,17 @@ open Classical Kanon
 
 def Float.to_float.r_lit.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (rounding : Rm) (signed : Bool) (fp : Fp) (v : Term) (res : Term), Float.to_float.r_lit O rounding signed fp v = some res →
+  ∀ (rounding : CoreMod.Rm) (signed : Bool) (fp : CoreMod.Fp) (v : Term) (res : Term), Float.to_float.r_lit O rounding signed fp v = some res →
   Refines FS (Float.to_float.spec rounding signed fp v) res
 
 def Float.to_float.r_default.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (rounding : Rm) (signed : Bool) (fp : Fp) (v : Term) (res : Term), Float.to_float.r_default O rounding signed fp v = some res →
+  ∀ (rounding : CoreMod.Rm) (signed : Bool) (fp : CoreMod.Fp) (v : Term) (res : Term), Float.to_float.r_default O rounding signed fp v = some res →
   Refines FS (Float.to_float.spec rounding signed fp v) res
 
 def Float.to_float.r_lit.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (rounding : Rm) (signed : Bool) (fp : Fp) (z : Int) (t__2 : Ty),
+  ∀ (rounding : CoreMod.Rm) (signed : Bool) (fp : CoreMod.Fp) (z : Int) (t__2 : Ty),
   Refines FS (Float.to_float.spec rounding signed fp (Term.mk (Kind.BitVec z) t__2))
   (((firstSome [(match (O.orc.f_of_int rounding signed fp (Bitvec.size (Term.mk (Kind.BitVec z) t__2)) z) with
                   | (some f) =>
@@ -37,7 +37,7 @@ def Float.to_float.r_lit.main.Stmt : Prop :=
 
 def Float.to_float.r_default.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (rounding : Rm) (signed : Bool) (fp : Fp) (v : Term),
+  ∀ (rounding : CoreMod.Rm) (signed : Bool) (fp : CoreMod.Fp) (v : Term),
   Refines FS (Float.to_float.spec rounding signed fp v)
   ((Term.mk (Kind.Op1 (Op1.FloatOfBv rounding signed fp) v) (Ty.TFloat fp)))
 

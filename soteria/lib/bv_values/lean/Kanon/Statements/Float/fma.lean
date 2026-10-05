@@ -23,7 +23,7 @@ def Float.fma.r_default.Stmt : Prop :=
 
 def Float.fma.r_lits.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (fa : Float) (t__2 : Ty) (fb : Float) (t__4 : Ty) (fc : Float) (t__6 : Ty),
+  ∀ (fa : CoreMod.Float) (t__2 : Ty) (fb : CoreMod.Float) (t__4 : Ty) (fc : CoreMod.Float) (t__6 : Ty),
   Refines FS (Float.fma.spec (Term.mk (Kind.Float fa) t__2) (Term.mk (Kind.Float fb) t__4) (Term.mk (Kind.Float fc) t__6))
   ((let kanon__a1 := (O.orc.f_fma fa fb fc);
    (Term.mk (Kind.Float kanon__a1) (Ty.TFloat (f_prec kanon__a1)))))

@@ -15,6 +15,8 @@ rules on masks, shifts and concatenations.
 
 namespace Kanon.Lib
 
+open CoreMod
+
 open Classical
 
 /-! ## Typing of the resizing nodes

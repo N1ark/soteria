@@ -1,4 +1,4 @@
-import Kanon.Syntax
+import CoreMod.Abstract
 
 /-!
 # IEEE floats, at the bit level
@@ -8,7 +8,7 @@ comparisons, `abs` and `neg` (which only touch the sign bit) are defined here;
 arithmetic is abstract (see `FloatSem`).
 -/
 
-namespace Kanon
+namespace CoreMod
 
 def Fp.size : Fp → Nat
   | .F16 => 16 | .F32 => 32 | .F64 => 64 | .F128 => 128
@@ -78,4 +78,4 @@ end FBits
 /-- The bit pattern of a concrete float. -/
 def Float.val (f : Float) : FBits f.prec := BitVec.ofNat _ f.bits
 
-end Kanon
+end CoreMod

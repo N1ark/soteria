@@ -10,7 +10,7 @@ namespace Kanon
 
 open Classical Kanon
 
-def Float.to_float_bits.r_lit (O : Ops) (fp : Fp) (v : Term) : Option Term :=
+def Float.to_float_bits.r_lit (O : Ops) (fp : CoreMod.Fp) (v : Term) : Option Term :=
   (match v with
     | (Term.mk (Kind.BitVec z) _) =>
     (whenSome true
@@ -18,13 +18,13 @@ def Float.to_float_bits.r_lit (O : Ops) (fp : Fp) (v : Term) : Option Term :=
      (Term.mk (Kind.Float kanon__a1) (Ty.TFloat (f_prec kanon__a1))))))
     | _ => none)
 
-def Float.to_float_bits.r_default (O : Ops) (fp : Fp) (v : Term) : Option Term :=
+def Float.to_float_bits.r_default (O : Ops) (fp : CoreMod.Fp) (v : Term) : Option Term :=
   (match v with
     | _ =>
     (whenSome true
     ((Term.mk (Kind.Op1 (Op1.FloatOfBvRaw fp) v) (Ty.TFloat fp)))))
 
-def Float.to_float_bits.step (O : Ops) (fp : Fp) (v : Term) : Term :=
+def Float.to_float_bits.step (O : Ops) (fp : CoreMod.Fp) (v : Term) : Term :=
   (firstSome [Float.to_float_bits.r_lit O fp v, Float.to_float_bits.r_default O fp v]).getD (Float.to_float_bits.spec fp v)
 
 end Kanon

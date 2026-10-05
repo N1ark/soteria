@@ -5,6 +5,8 @@ import Kanon.Statements.Bitvec.div
 
 namespace Kanon
 
+open CoreMod
+
 open Classical Lib
 
 /-- Division of a zero-extended value by a constant that fits in the value. -/

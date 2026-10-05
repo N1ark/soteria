@@ -182,7 +182,7 @@ def Bitvec.leq.r_neg_r.main.Stmt : Prop :=
 
 def Bitvec.leq.r_const_add.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (signed : Bool) (c : Int) (t__2 : Ty) (checked : Checked) (r : Int) (t__6 : Ty) (x : Term) (t__8 : Ty),
+  ∀ (signed : Bool) (c : Int) (t__2 : Ty) (checked : CoreMod.Checked) (r : Int) (t__6 : Ty) (x : Term) (t__8 : Ty),
   (Bitvec.checked_has signed checked) = true →
   Refines FS (Bitvec.leq.spec signed (Term.mk (Kind.BitVec c) t__2) (Term.mk (Kind.Op2 (Op2.Add checked) (Term.mk (Kind.BitVec r) t__6) x) t__8))
   ((if (Bitvec.overflows_sub signed (Bitvec.size (Term.mk (Kind.BitVec c) t__2)) c r)
@@ -193,7 +193,7 @@ def Bitvec.leq.r_const_add.main.Stmt : Prop :=
 
 def Bitvec.leq.r_const_add.swap.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (signed : Bool) (c : Int) (t__2 : Ty) (checked : Checked) (x : Term) (r : Int) (t__6 : Ty) (t__8 : Ty),
+  ∀ (signed : Bool) (c : Int) (t__2 : Ty) (checked : CoreMod.Checked) (x : Term) (r : Int) (t__6 : Ty) (t__8 : Ty),
   (Bitvec.checked_has signed checked) = true →
   Refines FS (Bitvec.leq.spec signed (Term.mk (Kind.BitVec c) t__2) (Term.mk (Kind.Op2 (Op2.Add checked) x (Term.mk (Kind.BitVec r) t__6)) t__8))
   ((if (Bitvec.overflows_sub signed (Bitvec.size (Term.mk (Kind.BitVec c) t__2)) c r)
@@ -204,7 +204,7 @@ def Bitvec.leq.r_const_add.swap.Stmt : Prop :=
 
 def Bitvec.leq.r_add_const.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (signed : Bool) (checked : Checked) (l : Int) (t__4 : Ty) (x : Term) (t__6 : Ty) (c : Int) (t__9 : Ty),
+  ∀ (signed : Bool) (checked : CoreMod.Checked) (l : Int) (t__4 : Ty) (x : Term) (t__6 : Ty) (c : Int) (t__9 : Ty),
   (Bitvec.checked_has signed checked) = true →
   Refines FS (Bitvec.leq.spec signed (Term.mk (Kind.Op2 (Op2.Add checked) (Term.mk (Kind.BitVec l) t__4) x) t__6) (Term.mk (Kind.BitVec c) t__9))
   ((if (Bitvec.overflows_sub signed (Bitvec.size (Term.mk (Kind.Op2 (Op2.Add checked) (Term.mk (Kind.BitVec l) t__4) x) t__6)) c l)
@@ -215,7 +215,7 @@ def Bitvec.leq.r_add_const.main.Stmt : Prop :=
 
 def Bitvec.leq.r_add_const.swap.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (signed : Bool) (checked : Checked) (x : Term) (l : Int) (t__4 : Ty) (t__6 : Ty) (c : Int) (t__9 : Ty),
+  ∀ (signed : Bool) (checked : CoreMod.Checked) (x : Term) (l : Int) (t__4 : Ty) (t__6 : Ty) (c : Int) (t__9 : Ty),
   (Bitvec.checked_has signed checked) = true →
   Refines FS (Bitvec.leq.spec signed (Term.mk (Kind.Op2 (Op2.Add checked) x (Term.mk (Kind.BitVec l) t__4)) t__6) (Term.mk (Kind.BitVec c) t__9))
   ((if (Bitvec.overflows_sub signed (Bitvec.size (Term.mk (Kind.Op2 (Op2.Add checked) x (Term.mk (Kind.BitVec l) t__4)) t__6)) c l)
@@ -226,7 +226,7 @@ def Bitvec.leq.r_add_const.swap.Stmt : Prop :=
 
 def Bitvec.leq.r_add_add.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (signed : Bool) (checked_l : Checked) (l : Int) (t__4 : Ty) (y : Term) (t__6 : Ty) (checked_r : Checked) (r : Int) (t__11 : Ty) (x : Term) (t__13 : Ty),
+  ∀ (signed : Bool) (checked_l : CoreMod.Checked) (l : Int) (t__4 : Ty) (y : Term) (t__6 : Ty) (checked_r : CoreMod.Checked) (r : Int) (t__11 : Ty) (x : Term) (t__13 : Ty),
   ((Bitvec.checked_has signed checked_l) && (Bitvec.checked_has signed checked_r)) = true →
   Refines FS (Bitvec.leq.spec signed (Term.mk (Kind.Op2 (Op2.Add checked_l) (Term.mk (Kind.BitVec l) t__4) y) t__6) (Term.mk (Kind.Op2 (Op2.Add checked_r) (Term.mk (Kind.BitVec r) t__11) x) t__13))
   ((let n := (Bitvec.size (Term.mk (Kind.Op2 (Op2.Add checked_l) (Term.mk (Kind.BitVec l) t__4) y) t__6));
@@ -239,7 +239,7 @@ def Bitvec.leq.r_add_add.main.Stmt : Prop :=
 
 def Bitvec.leq.r_add_add.swap2.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (signed : Bool) (checked_l : Checked) (l : Int) (t__4 : Ty) (y : Term) (t__6 : Ty) (checked_r : Checked) (x : Term) (r : Int) (t__11 : Ty) (t__13 : Ty),
+  ∀ (signed : Bool) (checked_l : CoreMod.Checked) (l : Int) (t__4 : Ty) (y : Term) (t__6 : Ty) (checked_r : CoreMod.Checked) (x : Term) (r : Int) (t__11 : Ty) (t__13 : Ty),
   ((Bitvec.checked_has signed checked_l) && (Bitvec.checked_has signed checked_r)) = true →
   Refines FS (Bitvec.leq.spec signed (Term.mk (Kind.Op2 (Op2.Add checked_l) (Term.mk (Kind.BitVec l) t__4) y) t__6) (Term.mk (Kind.Op2 (Op2.Add checked_r) x (Term.mk (Kind.BitVec r) t__11)) t__13))
   ((let n := (Bitvec.size (Term.mk (Kind.Op2 (Op2.Add checked_l) (Term.mk (Kind.BitVec l) t__4) y) t__6));
@@ -252,7 +252,7 @@ def Bitvec.leq.r_add_add.swap2.Stmt : Prop :=
 
 def Bitvec.leq.r_add_add.swap1.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (signed : Bool) (checked_l : Checked) (y : Term) (l : Int) (t__4 : Ty) (t__6 : Ty) (checked_r : Checked) (r : Int) (t__11 : Ty) (x : Term) (t__13 : Ty),
+  ∀ (signed : Bool) (checked_l : CoreMod.Checked) (y : Term) (l : Int) (t__4 : Ty) (t__6 : Ty) (checked_r : CoreMod.Checked) (r : Int) (t__11 : Ty) (x : Term) (t__13 : Ty),
   ((Bitvec.checked_has signed checked_l) && (Bitvec.checked_has signed checked_r)) = true →
   Refines FS (Bitvec.leq.spec signed (Term.mk (Kind.Op2 (Op2.Add checked_l) y (Term.mk (Kind.BitVec l) t__4)) t__6) (Term.mk (Kind.Op2 (Op2.Add checked_r) (Term.mk (Kind.BitVec r) t__11) x) t__13))
   ((let n := (Bitvec.size (Term.mk (Kind.Op2 (Op2.Add checked_l) y (Term.mk (Kind.BitVec l) t__4)) t__6));
@@ -265,7 +265,7 @@ def Bitvec.leq.r_add_add.swap1.Stmt : Prop :=
 
 def Bitvec.leq.r_add_add.swap1_swap2.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (signed : Bool) (checked_l : Checked) (y : Term) (l : Int) (t__4 : Ty) (t__6 : Ty) (checked_r : Checked) (x : Term) (r : Int) (t__11 : Ty) (t__13 : Ty),
+  ∀ (signed : Bool) (checked_l : CoreMod.Checked) (y : Term) (l : Int) (t__4 : Ty) (t__6 : Ty) (checked_r : CoreMod.Checked) (x : Term) (r : Int) (t__11 : Ty) (t__13 : Ty),
   ((Bitvec.checked_has signed checked_l) && (Bitvec.checked_has signed checked_r)) = true →
   Refines FS (Bitvec.leq.spec signed (Term.mk (Kind.Op2 (Op2.Add checked_l) y (Term.mk (Kind.BitVec l) t__4)) t__6) (Term.mk (Kind.Op2 (Op2.Add checked_r) x (Term.mk (Kind.BitVec r) t__11)) t__13))
   ((let n := (Bitvec.size (Term.mk (Kind.Op2 (Op2.Add checked_l) y (Term.mk (Kind.BitVec l) t__4)) t__6));
@@ -278,28 +278,28 @@ def Bitvec.leq.r_add_add.swap1_swap2.Stmt : Prop :=
 
 def Bitvec.leq.r_self_add_r.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (signed : Bool) (v1 : Term) (checked : Checked) (kanon__4 : Term) (b : Term) (t__6 : Ty),
+  ∀ (signed : Bool) (v1 : Term) (checked : CoreMod.Checked) (kanon__4 : Term) (b : Term) (t__6 : Ty),
   ((decide (v1 = kanon__4)) && (Bitvec.checked_has signed checked)) = true →
   Refines FS (Bitvec.leq.spec signed v1 (Term.mk (Kind.Op2 (Op2.Add checked) kanon__4 b) t__6))
   ((O.bitvec_leq signed (bv_zero (Bitvec.size v1)) b))
 
 def Bitvec.leq.r_self_add_r.swap.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (signed : Bool) (v1 : Term) (checked : Checked) (b : Term) (kanon__4 : Term) (t__6 : Ty),
+  ∀ (signed : Bool) (v1 : Term) (checked : CoreMod.Checked) (b : Term) (kanon__4 : Term) (t__6 : Ty),
   ((decide (v1 = kanon__4)) && (Bitvec.checked_has signed checked)) = true →
   Refines FS (Bitvec.leq.spec signed v1 (Term.mk (Kind.Op2 (Op2.Add checked) b kanon__4) t__6))
   ((O.bitvec_leq signed (bv_zero (Bitvec.size v1)) b))
 
 def Bitvec.leq.r_self_add_l.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (signed : Bool) (v2 : Term) (checked : Checked) (a : Term) (b : Term) (t__5 : Ty),
+  ∀ (signed : Bool) (v2 : Term) (checked : CoreMod.Checked) (a : Term) (b : Term) (t__5 : Ty),
   ((decide (a = v2)) && (Bitvec.checked_has signed checked)) = true →
   Refines FS (Bitvec.leq.spec signed (Term.mk (Kind.Op2 (Op2.Add checked) a b) t__5) v2)
   ((O.bitvec_leq signed b (bv_zero (Bitvec.size (Term.mk (Kind.Op2 (Op2.Add checked) a b) t__5)))))
 
 def Bitvec.leq.r_self_add_l.swap.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (signed : Bool) (v2 : Term) (checked : Checked) (b : Term) (a : Term) (t__5 : Ty),
+  ∀ (signed : Bool) (v2 : Term) (checked : CoreMod.Checked) (b : Term) (a : Term) (t__5 : Ty),
   ((decide (a = v2)) && (Bitvec.checked_has signed checked)) = true →
   Refines FS (Bitvec.leq.spec signed (Term.mk (Kind.Op2 (Op2.Add checked) b a) t__5) v2)
   ((O.bitvec_leq signed b (bv_zero (Bitvec.size (Term.mk (Kind.Op2 (Op2.Add checked) b a) t__5)))))
@@ -320,7 +320,7 @@ def Bitvec.leq.r_max_r.main.Stmt : Prop :=
 
 def Bitvec.leq.r_const_mul.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (signed : Bool) (c2 : Int) (t__2 : Ty) (checked : Checked) (x : Term) (c1 : Int) (t__7 : Ty) (t__9 : Ty),
+  ∀ (signed : Bool) (c2 : Int) (t__2 : Ty) (checked : CoreMod.Checked) (x : Term) (c1 : Int) (t__7 : Ty) (t__9 : Ty),
   ((Bitvec.checked_has signed checked) && (! (decide (c1 = (0 : Int))))) = true →
   Refines FS (Bitvec.leq.spec signed (Term.mk (Kind.BitVec c2) t__2) (Term.mk (Kind.Op2 (Op2.Mul checked) x (Term.mk (Kind.BitVec c1) t__7)) t__9))
   ((let z1 := (Bitvec.to_z signed (Bitvec.size (Term.mk (Kind.BitVec c2) t__2)) c1);
@@ -341,7 +341,7 @@ def Bitvec.leq.r_const_mul.main.Stmt : Prop :=
 
 def Bitvec.leq.r_const_mul.swap.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (signed : Bool) (c2 : Int) (t__2 : Ty) (checked : Checked) (c1 : Int) (t__7 : Ty) (x : Term) (t__9 : Ty),
+  ∀ (signed : Bool) (c2 : Int) (t__2 : Ty) (checked : CoreMod.Checked) (c1 : Int) (t__7 : Ty) (x : Term) (t__9 : Ty),
   ((Bitvec.checked_has signed checked) && (! (decide (c1 = (0 : Int))))) = true →
   Refines FS (Bitvec.leq.spec signed (Term.mk (Kind.BitVec c2) t__2) (Term.mk (Kind.Op2 (Op2.Mul checked) (Term.mk (Kind.BitVec c1) t__7) x) t__9))
   ((let z1 := (Bitvec.to_z signed (Bitvec.size (Term.mk (Kind.BitVec c2) t__2)) c1);
@@ -362,7 +362,7 @@ def Bitvec.leq.r_const_mul.swap.Stmt : Prop :=
 
 def Bitvec.leq.r_mul_const.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (signed : Bool) (checked : Checked) (x : Term) (c1 : Int) (t__5 : Ty) (t__7 : Ty) (c2 : Int) (t__10 : Ty),
+  ∀ (signed : Bool) (checked : CoreMod.Checked) (x : Term) (c1 : Int) (t__5 : Ty) (t__7 : Ty) (c2 : Int) (t__10 : Ty),
   ((Bitvec.checked_has signed checked) && (! (decide (c1 = (0 : Int))))) = true →
   Refines FS (Bitvec.leq.spec signed (Term.mk (Kind.Op2 (Op2.Mul checked) x (Term.mk (Kind.BitVec c1) t__5)) t__7) (Term.mk (Kind.BitVec c2) t__10))
   ((let z1 := (Bitvec.to_z signed (Bitvec.size (Term.mk (Kind.Op2 (Op2.Mul checked) x (Term.mk (Kind.BitVec c1) t__5)) t__7)) c1);
@@ -383,7 +383,7 @@ def Bitvec.leq.r_mul_const.main.Stmt : Prop :=
 
 def Bitvec.leq.r_mul_const.swap.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (signed : Bool) (checked : Checked) (c1 : Int) (t__5 : Ty) (x : Term) (t__7 : Ty) (c2 : Int) (t__10 : Ty),
+  ∀ (signed : Bool) (checked : CoreMod.Checked) (c1 : Int) (t__5 : Ty) (x : Term) (t__7 : Ty) (c2 : Int) (t__10 : Ty),
   ((Bitvec.checked_has signed checked) && (! (decide (c1 = (0 : Int))))) = true →
   Refines FS (Bitvec.leq.spec signed (Term.mk (Kind.Op2 (Op2.Mul checked) (Term.mk (Kind.BitVec c1) t__5) x) t__7) (Term.mk (Kind.BitVec c2) t__10))
   ((let z1 := (Bitvec.to_z signed (Bitvec.size (Term.mk (Kind.Op2 (Op2.Mul checked) (Term.mk (Kind.BitVec c1) t__5) x) t__7)) c1);
@@ -404,28 +404,28 @@ def Bitvec.leq.r_mul_const.swap.Stmt : Prop :=
 
 def Bitvec.leq.r_mul_mul.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (signed : Bool) (checked_l : Checked) (a : Term) (x : Term) (t__5 : Ty) (checked_r : Checked) (kanon__9 : Term) (y : Term) (t__11 : Ty),
+  ∀ (signed : Bool) (checked_l : CoreMod.Checked) (a : Term) (x : Term) (t__5 : Ty) (checked_r : CoreMod.Checked) (kanon__9 : Term) (y : Term) (t__11 : Ty),
   ((decide (a = kanon__9)) && ((Bitvec.checked_has signed checked_l) && ((Bitvec.checked_has signed checked_r) && (Bitvec.cancellable signed a)))) = true →
   Refines FS (Bitvec.leq.spec signed (Term.mk (Kind.Op2 (Op2.Mul checked_l) a x) t__5) (Term.mk (Kind.Op2 (Op2.Mul checked_r) kanon__9 y) t__11))
   ((O.bitvec_leq signed x y))
 
 def Bitvec.leq.r_mul_mul.swap2.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (signed : Bool) (checked_l : Checked) (a : Term) (x : Term) (t__5 : Ty) (checked_r : Checked) (y : Term) (kanon__9 : Term) (t__11 : Ty),
+  ∀ (signed : Bool) (checked_l : CoreMod.Checked) (a : Term) (x : Term) (t__5 : Ty) (checked_r : CoreMod.Checked) (y : Term) (kanon__9 : Term) (t__11 : Ty),
   ((decide (a = kanon__9)) && ((Bitvec.checked_has signed checked_l) && ((Bitvec.checked_has signed checked_r) && (Bitvec.cancellable signed a)))) = true →
   Refines FS (Bitvec.leq.spec signed (Term.mk (Kind.Op2 (Op2.Mul checked_l) a x) t__5) (Term.mk (Kind.Op2 (Op2.Mul checked_r) y kanon__9) t__11))
   ((O.bitvec_leq signed x y))
 
 def Bitvec.leq.r_mul_mul.swap1.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (signed : Bool) (checked_l : Checked) (x : Term) (a : Term) (t__5 : Ty) (checked_r : Checked) (kanon__9 : Term) (y : Term) (t__11 : Ty),
+  ∀ (signed : Bool) (checked_l : CoreMod.Checked) (x : Term) (a : Term) (t__5 : Ty) (checked_r : CoreMod.Checked) (kanon__9 : Term) (y : Term) (t__11 : Ty),
   ((decide (a = kanon__9)) && ((Bitvec.checked_has signed checked_l) && ((Bitvec.checked_has signed checked_r) && (Bitvec.cancellable signed a)))) = true →
   Refines FS (Bitvec.leq.spec signed (Term.mk (Kind.Op2 (Op2.Mul checked_l) x a) t__5) (Term.mk (Kind.Op2 (Op2.Mul checked_r) kanon__9 y) t__11))
   ((O.bitvec_leq signed x y))
 
 def Bitvec.leq.r_mul_mul.swap1_swap2.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (signed : Bool) (checked_l : Checked) (x : Term) (a : Term) (t__5 : Ty) (checked_r : Checked) (y : Term) (kanon__9 : Term) (t__11 : Ty),
+  ∀ (signed : Bool) (checked_l : CoreMod.Checked) (x : Term) (a : Term) (t__5 : Ty) (checked_r : CoreMod.Checked) (y : Term) (kanon__9 : Term) (t__11 : Ty),
   ((decide (a = kanon__9)) && ((Bitvec.checked_has signed checked_l) && ((Bitvec.checked_has signed checked_r) && (Bitvec.cancellable signed a)))) = true →
   Refines FS (Bitvec.leq.spec signed (Term.mk (Kind.Op2 (Op2.Mul checked_l) x a) t__5) (Term.mk (Kind.Op2 (Op2.Mul checked_r) y kanon__9) t__11))
   ((O.bitvec_leq signed x y))
@@ -451,7 +451,7 @@ def Bitvec.leq.r_ite_r.main.Stmt : Prop :=
 
 def Bitvec.leq.r_const_sub1.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (signed : Bool) (c : Int) (t__2 : Ty) (checked : Checked) (x : Term) (k : Int) (t__7 : Ty) (t__8 : Ty),
+  ∀ (signed : Bool) (c : Int) (t__2 : Ty) (checked : CoreMod.Checked) (x : Term) (k : Int) (t__7 : Ty) (t__8 : Ty),
   (Bitvec.checked_has signed checked) = true →
   Refines FS (Bitvec.leq.spec signed (Term.mk (Kind.BitVec c) t__2) (Term.mk (Kind.Op2 (Op2.Sub checked) x (Term.mk (Kind.BitVec k) t__7)) t__8))
   ((if (Bitvec.overflows_add signed (Bitvec.size (Term.mk (Kind.BitVec c) t__2)) c k)
@@ -462,7 +462,7 @@ def Bitvec.leq.r_const_sub1.main.Stmt : Prop :=
 
 def Bitvec.leq.r_const_sub2.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (signed : Bool) (c : Int) (t__2 : Ty) (checked : Checked) (k : Int) (t__6 : Ty) (x : Term) (t__8 : Ty),
+  ∀ (signed : Bool) (c : Int) (t__2 : Ty) (checked : CoreMod.Checked) (k : Int) (t__6 : Ty) (x : Term) (t__8 : Ty),
   (Bitvec.checked_has signed checked) = true →
   Refines FS (Bitvec.leq.spec signed (Term.mk (Kind.BitVec c) t__2) (Term.mk (Kind.Op2 (Op2.Sub checked) (Term.mk (Kind.BitVec k) t__6) x) t__8))
   ((if (Bitvec.overflows_sub signed (Bitvec.size (Term.mk (Kind.BitVec c) t__2)) k c)
@@ -473,7 +473,7 @@ def Bitvec.leq.r_const_sub2.main.Stmt : Prop :=
 
 def Bitvec.leq.r_sub_const1.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (signed : Bool) (checked : Checked) (x : Term) (k : Int) (t__5 : Ty) (t__6 : Ty) (c : Int) (t__8 : Ty),
+  ∀ (signed : Bool) (checked : CoreMod.Checked) (x : Term) (k : Int) (t__5 : Ty) (t__6 : Ty) (c : Int) (t__8 : Ty),
   (Bitvec.checked_has signed checked) = true →
   Refines FS (Bitvec.leq.spec signed (Term.mk (Kind.Op2 (Op2.Sub checked) x (Term.mk (Kind.BitVec k) t__5)) t__6) (Term.mk (Kind.BitVec c) t__8))
   ((if (Bitvec.overflows_add signed (Bitvec.size (Term.mk (Kind.Op2 (Op2.Sub checked) x (Term.mk (Kind.BitVec k) t__5)) t__6)) c k)
@@ -484,7 +484,7 @@ def Bitvec.leq.r_sub_const1.main.Stmt : Prop :=
 
 def Bitvec.leq.r_sub_const2.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (signed : Bool) (checked : Checked) (k : Int) (t__4 : Ty) (x : Term) (t__6 : Ty) (c : Int) (t__8 : Ty),
+  ∀ (signed : Bool) (checked : CoreMod.Checked) (k : Int) (t__4 : Ty) (x : Term) (t__6 : Ty) (c : Int) (t__8 : Ty),
   (Bitvec.checked_has signed checked) = true →
   Refines FS (Bitvec.leq.spec signed (Term.mk (Kind.Op2 (Op2.Sub checked) (Term.mk (Kind.BitVec k) t__4) x) t__6) (Term.mk (Kind.BitVec c) t__8))
   ((if (Bitvec.overflows_sub signed (Bitvec.size (Term.mk (Kind.Op2 (Op2.Sub checked) (Term.mk (Kind.BitVec k) t__4) x) t__6)) k c)

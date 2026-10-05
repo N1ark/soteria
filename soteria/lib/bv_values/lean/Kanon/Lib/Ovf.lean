@@ -23,6 +23,8 @@ are then proved through `toInt` and `toNat` (`kanon_ovf`).
 
 namespace Kanon.Lib
 
+open CoreMod
+
 open Classical
 
 theorem min_for_true {n : Nat} (hn : 0 < n) : Bitvec.min_for true n = -2 ^ (n - 1) := by
@@ -287,7 +289,7 @@ partial def splitBools (g : MVarId) : MetaM (List MVarId) := g.withContext do
   for d in (← getLCtx) do
     if d.isImplementationDetail then continue
     let ty ← whnfR (← instantiateMVars d.type)
-    if ty.isConstOf ``Bool || ty.isConstOf ``Kanon.Checked then
+    if ty.isConstOf ``Bool || ty.isConstOf ``CoreMod.Checked then
       let subgoals ← g.cases d.fvarId
       return ← subgoals.toList.foldlM (init := []) fun acc sg =>
         return acc ++ (← splitBools sg.mvarId)

@@ -17,20 +17,20 @@ open Classical Kanon
 structure Oracle where
   tag_le : Term → Term → Bool
   sort_by_tag : (List Term) → (List Term)
-  f_add : Float → Float → Float
-  f_sub : Float → Float → Float
-  f_mul : Float → Float → Float
-  f_div : Float → Float → Float
-  f_rem : Float → Float → Float
-  f_fmod : Float → Float → Float
-  f_min : Float → Float → Float
-  f_max : Float → Float → Float
-  f_fma : Float → Float → Float → Float
-  f_sqrt : Float → Float
-  f_round : Rm → Float → Float
-  f_convert : Rm → Fp → Float → Float
-  f_to_int : Rm → Bool → Int → Float → (Option Int)
-  f_of_int : Rm → Bool → Fp → Int → Int → (Option Float)
+  f_add : CoreMod.Float → CoreMod.Float → CoreMod.Float
+  f_sub : CoreMod.Float → CoreMod.Float → CoreMod.Float
+  f_mul : CoreMod.Float → CoreMod.Float → CoreMod.Float
+  f_div : CoreMod.Float → CoreMod.Float → CoreMod.Float
+  f_rem : CoreMod.Float → CoreMod.Float → CoreMod.Float
+  f_fmod : CoreMod.Float → CoreMod.Float → CoreMod.Float
+  f_min : CoreMod.Float → CoreMod.Float → CoreMod.Float
+  f_max : CoreMod.Float → CoreMod.Float → CoreMod.Float
+  f_fma : CoreMod.Float → CoreMod.Float → CoreMod.Float → CoreMod.Float
+  f_sqrt : CoreMod.Float → CoreMod.Float
+  f_round : CoreMod.Rm → CoreMod.Float → CoreMod.Float
+  f_convert : CoreMod.Rm → CoreMod.Fp → CoreMod.Float → CoreMod.Float
+  f_to_int : CoreMod.Rm → Bool → Int → CoreMod.Float → (Option Int)
+  f_of_int : CoreMod.Rm → Bool → CoreMod.Fp → Int → Int → (Option CoreMod.Float)
 
 /-- The rule functions, as used by the rules. -/
 structure Ops where
@@ -46,8 +46,8 @@ structure Ops where
   bitvec_of_bool : Int → Term → Term
   bitvec_to_bool : Term → Term
   bitvec_not_bool : Term → Term
-  bitvec_add : Checked → Term → Term → Term
-  bitvec_sub : Checked → Term → Term → Term
+  bitvec_add : CoreMod.Checked → Term → Term → Term
+  bitvec_sub : CoreMod.Checked → Term → Term → Term
   bitvec_neg : Bool → Term → Term
   bitvec_mod_ : Term → Term → Term
   bitvec_rem : Bool → Term → Term → Term
@@ -61,7 +61,7 @@ structure Ops where
   bitvec_shl : Term → Term → Term
   bitvec_lshr : Term → Term → Term
   bitvec_ashr : Term → Term → Term
-  bitvec_mul : Checked → Term → Term → Term
+  bitvec_mul : CoreMod.Checked → Term → Term → Term
   bitvec_div : Bool → Term → Term → Term
   bitvec_lt_zero : Term → Term
   bitvec_lt : Bool → Term → Term → Term
@@ -70,10 +70,10 @@ structure Ops where
   bitvec_mul_overflows : Bool → Term → Term → Term
   bitvec_neg_overflows : Term → Term
   bitvec_sub_overflows : Bool → Term → Term → Term
-  float_is_floatclass : Fc → Term → Term
+  float_is_floatclass : CoreMod.Fc → Term → Term
   float_is_negative : Term → Term
   float_is_positive : Term → Term
-  float_cast : Rm → Fp → Term → Term
+  float_cast : CoreMod.Rm → CoreMod.Fp → Term → Term
   float_eq : Term → Term → Term
   float_lt : Term → Term → Term
   float_leq : Term → Term → Term
@@ -90,10 +90,10 @@ structure Ops where
   float_min : Term → Term → Term
   float_max : Term → Term → Term
   float_sqrt : Term → Term
-  float_round : Rm → Term → Term
-  float_of_float : Rm → Bool → Int → Term → Term
-  float_to_float : Rm → Bool → Fp → Term → Term
-  float_to_float_bits : Fp → Term → Term
+  float_round : CoreMod.Rm → Term → Term
+  float_of_float : CoreMod.Rm → Bool → Int → Term → Term
+  float_to_float : CoreMod.Rm → Bool → CoreMod.Fp → Term → Term
+  float_to_float_bits : CoreMod.Fp → Term → Term
   ptr_loc : Term → Term
   ptr_ofs : Term → Term
 
@@ -130,10 +130,10 @@ def Bitvec.to_bool.spec (v : Term) : Term :=
 def Bitvec.not_bool.spec (v : Term) : Term :=
   (Term.mk (Kind.Op1 (Op1.BvOfBool (Bitvec.size v)) (Term.mk (Kind.Op2 Op2.Eq v (bv_zero (Bitvec.size v))) Ty.TBool)) (Ty.TBitVector (Bitvec.size v)))
 
-def Bitvec.add.spec (checked : Checked) (v1 : Term) (v2 : Term) : Term :=
+def Bitvec.add.spec (checked : CoreMod.Checked) (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.Op2 (Op2.Add checked) v1 v2) (ty v1))
 
-def Bitvec.sub.spec (checked : Checked) (v1 : Term) (v2 : Term) : Term :=
+def Bitvec.sub.spec (checked : CoreMod.Checked) (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.Op2 (Op2.Sub checked) v1 v2) (ty v1))
 
 def Bitvec.neg.spec (checked : Bool) (v : Term) : Term :=
@@ -175,7 +175,7 @@ def Bitvec.lshr.spec (v1 : Term) (v2 : Term) : Term :=
 def Bitvec.ashr.spec (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.Op2 Op2.AShr v1 v2) (ty v1))
 
-def Bitvec.mul.spec (checked : Checked) (v1 : Term) (v2 : Term) : Term :=
+def Bitvec.mul.spec (checked : CoreMod.Checked) (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.Op2 (Op2.Mul checked) v1 v2) (ty v1))
 
 def Bitvec.div.spec (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
@@ -202,7 +202,7 @@ def Bitvec.neg_overflows.spec (v : Term) : Term :=
 def Bitvec.sub_overflows.spec (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.Op2 (Op2.SubOvf signed) v1 v2) Ty.TBool)
 
-def Float.is_floatclass.spec (fc : Fc) (sv : Term) : Term :=
+def Float.is_floatclass.spec (fc : CoreMod.Fc) (sv : Term) : Term :=
   (Term.mk (Kind.Op1 (Op1.FIs fc) sv) Ty.TBool)
 
 def Float.is_negative.spec (v : Term) : Term :=
@@ -211,7 +211,7 @@ def Float.is_negative.spec (v : Term) : Term :=
 def Float.is_positive.spec (v : Term) : Term :=
   (Term.mk (Kind.Op1 Op1.FIsPos v) Ty.TBool)
 
-def Float.cast.spec (rounding : Rm) (fp : Fp) (v : Term) : Term :=
+def Float.cast.spec (rounding : CoreMod.Rm) (fp : CoreMod.Fp) (v : Term) : Term :=
   (Term.mk (Kind.Op1 (Op1.FloatOfFloat rounding fp) v) (Ty.TFloat fp))
 
 def Float.eq.spec (v1 : Term) (v2 : Term) : Term :=
@@ -262,16 +262,16 @@ def Float.max.spec (v1 : Term) (v2 : Term) : Term :=
 def Float.sqrt.spec (v : Term) : Term :=
   (Term.mk (Kind.Op1 Op1.FSqrt v) (ty v))
 
-def Float.round.spec (rm : Rm) (sv : Term) : Term :=
+def Float.round.spec (rm : CoreMod.Rm) (sv : Term) : Term :=
   (Term.mk (Kind.Op1 (Op1.FRound rm) sv) (ty sv))
 
-def Float.of_float.spec (rounding : Rm) (signed : Bool) (sz : Int) (v : Term) : Term :=
+def Float.of_float.spec (rounding : CoreMod.Rm) (signed : Bool) (sz : Int) (v : Term) : Term :=
   (Term.mk (Kind.Op1 (Op1.BvOfFloat rounding signed sz) v) (Ty.TBitVector sz))
 
-def Float.to_float.spec (rounding : Rm) (signed : Bool) (fp : Fp) (v : Term) : Term :=
+def Float.to_float.spec (rounding : CoreMod.Rm) (signed : Bool) (fp : CoreMod.Fp) (v : Term) : Term :=
   (Term.mk (Kind.Op1 (Op1.FloatOfBv rounding signed fp) v) (Ty.TFloat fp))
 
-def Float.to_float_bits.spec (fp : Fp) (v : Term) : Term :=
+def Float.to_float_bits.spec (fp : CoreMod.Fp) (v : Term) : Term :=
   (Term.mk (Kind.Op1 (Op1.FloatOfBvRaw fp) v) (Ty.TFloat fp))
 
 def Ptr.loc.spec (p : Term) : Term :=

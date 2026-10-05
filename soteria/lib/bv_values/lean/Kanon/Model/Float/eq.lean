@@ -21,7 +21,7 @@ def Float.eq.r_same (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
     | v, kanon__2 =>
     (whenSome (decide (v = kanon__2))
-    ((O.bool_not_ (O.float_is_floatclass Fc.NaN v)))))
+    ((O.bool_not_ (O.float_is_floatclass CoreMod.Fc.NaN v)))))
 
 def Float.eq.r_lit (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
   (match v1, v2 with
@@ -30,7 +30,7 @@ def Float.eq.r_lit (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
     ((if (f_is_nan f)
      then v_false
      else (if (f_is_zero f)
-          then (O.float_is_floatclass Fc.Zero x)
+          then (O.float_is_floatclass CoreMod.Fc.Zero x)
           else (O.bool_eq l x)))))
     | _, _ => none)
   <|> (match v1, v2 with
@@ -39,7 +39,7 @@ def Float.eq.r_lit (O : Ops) (v1 : Term) (v2 : Term) : Option Term :=
         ((if (f_is_nan f)
          then v_false
          else (if (f_is_zero f)
-              then (O.float_is_floatclass Fc.Zero x)
+              then (O.float_is_floatclass CoreMod.Fc.Zero x)
               else (O.bool_eq l x)))))
         | _, _ => none)
 

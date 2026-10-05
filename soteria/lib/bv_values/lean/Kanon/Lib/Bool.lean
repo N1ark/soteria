@@ -18,6 +18,8 @@ here and in `Proofs/Bool/and_.lean`.
 
 namespace Kanon.Lib
 
+open CoreMod
+
 open Classical
 
 /-! ## Bounds -/

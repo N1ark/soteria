@@ -39,6 +39,8 @@ their attributes, with the rule tactics of its own:
 
 namespace Kanon.Lib
 
+open CoreMod
+
 open Lean Meta Elab Tactic
 
 @[simp] theorem two_pow_pos_int (n : Nat) : (0 : Int) < 2 ^ n := Int.pow_pos (by decide)

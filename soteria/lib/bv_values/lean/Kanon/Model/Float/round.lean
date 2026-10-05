@@ -10,7 +10,7 @@ namespace Kanon
 
 open Classical Kanon
 
-def Float.round.r_lit (O : Ops) (rm : Rm) (sv : Term) : Option Term :=
+def Float.round.r_lit (O : Ops) (rm : CoreMod.Rm) (sv : Term) : Option Term :=
   (match sv with
     | (Term.mk (Kind.Float f) _) =>
     (whenSome true
@@ -18,12 +18,12 @@ def Float.round.r_lit (O : Ops) (rm : Rm) (sv : Term) : Option Term :=
      (Term.mk (Kind.Float kanon__a1) (Ty.TFloat (f_prec kanon__a1))))))
     | _ => none)
 
-def Float.round.r_default (O : Ops) (rm : Rm) (sv : Term) : Option Term :=
+def Float.round.r_default (O : Ops) (rm : CoreMod.Rm) (sv : Term) : Option Term :=
   (match sv with
     | _ =>
     (whenSome true ((Term.mk (Kind.Op1 (Op1.FRound rm) sv) (ty sv)))))
 
-def Float.round.step (O : Ops) (rm : Rm) (sv : Term) : Term :=
+def Float.round.step (O : Ops) (rm : CoreMod.Rm) (sv : Term) : Term :=
   (firstSome [Float.round.r_lit O rm sv, Float.round.r_default O rm sv]).getD (Float.round.spec rm sv)
 
 end Kanon

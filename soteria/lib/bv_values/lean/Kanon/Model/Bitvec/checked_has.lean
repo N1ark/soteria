@@ -10,7 +10,7 @@ namespace Kanon
 
 open Classical Kanon
 
-def Bitvec.checked_has (signed : Bool) (c : Checked) : Bool :=
+def Bitvec.checked_has (signed : Bool) (c : CoreMod.Checked) : Bool :=
   (if signed then c.signed else c.unsigned)
 
 end Kanon

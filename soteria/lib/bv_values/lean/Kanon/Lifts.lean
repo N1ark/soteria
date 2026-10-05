@@ -74,13 +74,13 @@ theorem lift_bitvec_not_bool (hO : O.Sound FS) {v v' : Term}
   Refines FS (Bitvec.not_bool.spec v) (O.bitvec_not_bool v') :=
   Refinement.trans (by simp only [kanon_spec, Bitvec.size]; kanon_congr) (hO.bitvec_not_bool v')
 
-theorem lift_bitvec_add (hO : O.Sound FS) {checked : Checked} {v1 v1' : Term} {v2 v2' : Term}
+theorem lift_bitvec_add (hO : O.Sound FS) {checked : CoreMod.Checked} {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
   Refines FS (Bitvec.add.spec checked v1 v2) (O.bitvec_add checked v1' v2') :=
   Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bitvec_add checked v1' v2')
 
-theorem lift_bitvec_sub (hO : O.Sound FS) {checked : Checked} {v1 v1' : Term} {v2 v2' : Term}
+theorem lift_bitvec_sub (hO : O.Sound FS) {checked : CoreMod.Checked} {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
   Refines FS (Bitvec.sub.spec checked v1 v2) (O.bitvec_sub checked v1' v2') :=
@@ -160,7 +160,7 @@ theorem lift_bitvec_ashr (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
   Refines FS (Bitvec.ashr.spec v1 v2) (O.bitvec_ashr v1' v2') :=
   Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bitvec_ashr v1' v2')
 
-theorem lift_bitvec_mul (hO : O.Sound FS) {checked : Checked} {v1 v1' : Term} {v2 v2' : Term}
+theorem lift_bitvec_mul (hO : O.Sound FS) {checked : CoreMod.Checked} {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
   Refines FS (Bitvec.mul.spec checked v1 v2) (O.bitvec_mul checked v1' v2') :=
@@ -212,7 +212,7 @@ theorem lift_bitvec_sub_overflows (hO : O.Sound FS) {signed : Bool} {v1 v1' : Te
   Refines FS (Bitvec.sub_overflows.spec signed v1 v2) (O.bitvec_sub_overflows signed v1' v2') :=
   Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bitvec_sub_overflows signed v1' v2')
 
-theorem lift_float_is_floatclass (hO : O.Sound FS) {fc : Fc} {sv sv' : Term}
+theorem lift_float_is_floatclass (hO : O.Sound FS) {fc : CoreMod.Fc} {sv sv' : Term}
   (h_sv : Refines FS sv sv') :
   Refines FS (Float.is_floatclass.spec fc sv) (O.float_is_floatclass fc sv') :=
   Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.float_is_floatclass fc sv')
@@ -227,7 +227,7 @@ theorem lift_float_is_positive (hO : O.Sound FS) {v v' : Term}
   Refines FS (Float.is_positive.spec v) (O.float_is_positive v') :=
   Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.float_is_positive v')
 
-theorem lift_float_cast (hO : O.Sound FS) {rounding : Rm} {fp : Fp} {v v' : Term}
+theorem lift_float_cast (hO : O.Sound FS) {rounding : CoreMod.Rm} {fp : CoreMod.Fp} {v v' : Term}
   (h_v : Refines FS v v') :
   Refines FS (Float.cast.spec rounding fp v) (O.float_cast rounding fp v') :=
   Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.float_cast rounding fp v')
@@ -327,22 +327,22 @@ theorem lift_float_sqrt (hO : O.Sound FS) {v v' : Term}
   Refines FS (Float.sqrt.spec v) (O.float_sqrt v') :=
   Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.float_sqrt v')
 
-theorem lift_float_round (hO : O.Sound FS) {rm : Rm} {sv sv' : Term}
+theorem lift_float_round (hO : O.Sound FS) {rm : CoreMod.Rm} {sv sv' : Term}
   (h_sv : Refines FS sv sv') :
   Refines FS (Float.round.spec rm sv) (O.float_round rm sv') :=
   Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.float_round rm sv')
 
-theorem lift_float_of_float (hO : O.Sound FS) {rounding : Rm} {signed : Bool} {sz : Int} {v v' : Term}
+theorem lift_float_of_float (hO : O.Sound FS) {rounding : CoreMod.Rm} {signed : Bool} {sz : Int} {v v' : Term}
   (h_v : Refines FS v v') :
   Refines FS (Float.of_float.spec rounding signed sz v) (O.float_of_float rounding signed sz v') :=
   Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.float_of_float rounding signed sz v')
 
-theorem lift_float_to_float (hO : O.Sound FS) {rounding : Rm} {signed : Bool} {fp : Fp} {v v' : Term}
+theorem lift_float_to_float (hO : O.Sound FS) {rounding : CoreMod.Rm} {signed : Bool} {fp : CoreMod.Fp} {v v' : Term}
   (h_v : Refines FS v v') :
   Refines FS (Float.to_float.spec rounding signed fp v) (O.float_to_float rounding signed fp v') :=
   Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.float_to_float rounding signed fp v')
 
-theorem lift_float_to_float_bits (hO : O.Sound FS) {fp : Fp} {v v' : Term}
+theorem lift_float_to_float_bits (hO : O.Sound FS) {fp : CoreMod.Fp} {v v' : Term}
   (h_v : Refines FS v v') :
   Refines FS (Float.to_float_bits.spec fp v) (O.float_to_float_bits fp v') :=
   Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.float_to_float_bits fp v')

@@ -5,6 +5,8 @@ import Kanon.Statements.Bitvec.sub_overflows
 
 namespace Kanon
 
+open CoreMod
+
 open Classical Lib
 
 @[kanon_arm] theorem Bitvec.sub_overflows.r_unsigned.main.proof :

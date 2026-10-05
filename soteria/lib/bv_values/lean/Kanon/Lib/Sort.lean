@@ -4,6 +4,8 @@ import Kanon.Lemmas
 
 namespace Kanon.Lib
 
+open CoreMod
+
 
 open Classical KanonBool
 

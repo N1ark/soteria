@@ -13,7 +13,7 @@ open Lib.BvEq
   case hl.hs_v2 =>
     bveq_side_facts
     exact nonzero_masked_zext ‹_› ‹_› ‹_› ‹_› ‹_›
-  all_goals bveq_on_refines bv_apply_den
+  all_goals kanon_on_refines bv_apply_den
   all_goals first | (bveq_wt; done) | bveq_sem_core
   all_goals
     rename_i hmsb

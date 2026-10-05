@@ -10,7 +10,7 @@ open Lib.BvEq
 /-- The unsigned remainder by a power of two keeps the low bits. -/
 @[kanon_arm] theorem Bitvec.rem.r_pow2.main.proof : Bitvec.rem.r_pow2.main.Stmt := by
   bveq_rule_lift
-  all_goals bveq_on_refines bv_apply_den
+  all_goals kanon_on_refines bv_apply_den
   case hm.refine_2 =>
     intro w; bveq_facts; bv_nat_widths
     simp only [Int.toNat_natCast] at *

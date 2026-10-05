@@ -140,7 +140,7 @@ def Syntax.lit {S : Kanon.Sem} [DecidableEq S.Term] [DecidableEq S.Ty] {B : Kano
 the same precision, which fit it, they compute what the arithmetic of the
 language does (a float of that precision, which fits it); `f_to_int` and
 `f_of_int` the conversions, where they return; and `f_fmod` the emulation of
-C's `fmod` (`raw_fmod_of_rem`). -/
+C's `fmod` (`raw_fmod_of_rem`), in any environment. -/
 structure Oracle.Compat {S : Kanon.Sem} [DecidableEq S.Term] [DecidableEq S.Ty]
     {B : Kanon.Base S} {LBool : KanonBool.Syntax B} {LCore : CoreMod.Syntax B}
     {LBitvec : BitvecMod.Syntax B LBool LCore} (L : Syntax B LBool LCore LBitvec)
@@ -181,8 +181,8 @@ structure Oracle.Compat {S : Kanon.Sem} [DecidableEq S.Term] [DecidableEq S.Ty]
     f.prec = p ∧ f.WF ∧
       Sem.vfloat L p (Sem.fofBv L rm s p n.toNat (BitVec.ofInt _ z)) = Sem.vfloat L f.prec f.val
   /-- C's `fmod` agrees with its emulation from the IEEE remainder. -/
-  fmod : ∀ f1 f2 ρ, f1.WF → f2.WF → f1.prec = f2.prec →
-    (f_fmod f1 f2).prec = f1.prec ∧ (f_fmod f1 f2).WF ∧
+  fmod : ∀ f1 f2, f1.WF → f2.WF → f1.prec = f2.prec →
+    (f_fmod f1 f2).prec = f1.prec ∧ (f_fmod f1 f2).WF ∧ ∀ ρ,
       S.eval ρ (L.float_raw_fmod_of_rem (B.node (L.FRemK (L.lit f1) (L.lit f2)) (L.TFloat f1.prec))
         (L.lit f1) (L.lit f2)) = some (Sem.vfloat L (f_fmod f1 f2).prec (f_fmod f1 f2).val)
 

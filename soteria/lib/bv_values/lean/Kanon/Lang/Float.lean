@@ -203,6 +203,8 @@ theorem Oracle.Compat.float {FS : FloatSem} {orc : Oracle} (h : orc.Compat FS) :
   of_int rm s p n z f hn h0 h1 e := by
     obtain ⟨e1, e2, e3⟩ := h.of_int rm s p n z f hn h0 h1 e
     exact ⟨e1, e2, Option.some.inj e3⟩
-  fmod f1 f2 ρ w1 w2 hp := h.fmod f1 f2 ρ w1 w2 hp
+  fmod f1 f2 w1 w2 hp :=
+    ⟨(h.fmod f1 f2 ⟨fun _ => none⟩ w1 w2 hp).1, (h.fmod f1 f2 ⟨fun _ => none⟩ w1 w2 hp).2.1,
+      fun ρ => (h.fmod f1 f2 ρ w1 w2 hp).2.2⟩
 
 end Kanon

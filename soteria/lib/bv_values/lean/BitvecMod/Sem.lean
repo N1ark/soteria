@@ -218,8 +218,5 @@ class Sem {S : Kanon.Sem} [DecidableEq S.Term] [DecidableEq S.Ty] {B : Kanon.Bas
   terms, whose induction the interface does not give). -/
   den_msb : ∀ ρ v (n : Nat) x, S.WT v → S.ty v = L.TBitVector n → den ρ n v = some x →
     x.toNat < 2 ^ (L.bitvec_msb_of v + 1).toNat
-  -- temporary, until Kanon gives the matchers on the other kinds: `Lt` and `Leq` differ
-  asLt_Leq : ∀ s a b t, L.asLt (B.node (L.LeqK s a b) t) = none
-  asLeq_Lt : ∀ s a b t, L.asLeq (B.node (L.LtK s a b) t) = none
 
 end BitvecMod

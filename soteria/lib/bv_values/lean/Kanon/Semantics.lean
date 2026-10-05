@@ -116,6 +116,15 @@ def Term.WTList (e : Ty) : List Term → Prop
   | x :: xs => x.ty = e ∧ x.WT ∧ Term.WTList e xs
 end
 
+-- Unfolded by their equations only (generated first): a failed unification of two terms
+-- (a commutativity lemma that `kanon_comm` tries on another operator) would otherwise
+-- evaluate both.
+open Lean Meta in
+run_meta for n in [``Term.WT, ``Term.WTList] do
+  let _ ← getEqnsFor? n
+  let _ ← getUnfoldEqnFor? n (nonRec := true)
+attribute [irreducible] Term.WT Term.WTList
+
 /-! ## Evaluation -/
 
 /-- The width of a bit-vector (or location, or pointer) type. -/
@@ -261,6 +270,12 @@ def evList (FS : FloatSem) : Env → List Term → Option (List Val)
       | some v, some vs => some (v :: vs)
       | _, _ => none
 end
+
+open Lean Meta in
+run_meta for n in [``ev, ``evList] do
+  let _ ← getEqnsFor? n
+  let _ ← getUnfoldEqnFor? n (nonRec := true)
+attribute [irreducible] ev evList
 
 /-! ## Refinement
 

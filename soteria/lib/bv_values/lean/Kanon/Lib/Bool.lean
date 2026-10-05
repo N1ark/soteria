@@ -192,7 +192,7 @@ theorem WTList_iff {e : Ty} : ∀ {l : List Term}, Term.WTList e l ↔ ∀ t ∈
   | t :: ts => by simp [Term.WTList, WTList_iff (l := ts), and_assoc]
 
 theorem evList_eq {FS : FloatSem} {ρ : Env} : ∀ l, evList FS ρ l = l.mapM (ev FS ρ)
-  | [] => rfl
+  | [] => by simp [evList]
   | t :: ts => by
     rw [evList, List.mapM_cons, evList_eq ts]
     cases ev FS ρ t <;> cases ts.mapM (ev FS ρ) <;> rfl
@@ -451,12 +451,12 @@ noncomputable def boolLang (FS : FloatSem) : BoolMod.Lang (sem FS) where
   WT_eq _ _ _ := by simp only [Term.WT, Op2.WT]; grind
   WT_ite _ _ _ _ := by simp [Term.WT, Op3.WT]; grind
   WT_distinct _ _ := by simp [Term.WT, OpN.WT, WTList_iff]
-  ev_lit _ _ _ := rfl
-  ev_not _ _ _ := rfl
-  ev_and _ _ _ _ := rfl
-  ev_or _ _ _ _ := rfl
-  ev_eq _ _ _ _ := rfl
-  ev_ite _ _ _ _ _ := rfl
+  ev_lit _ _ _ := by simp only [ev] <;> rfl
+  ev_not _ _ _ := by simp only [ev] <;> rfl
+  ev_and _ _ _ _ := by simp only [ev] <;> rfl
+  ev_or _ _ _ _ := by simp only [ev] <;> rfl
+  ev_eq _ _ _ _ := by simp only [ev] <;> rfl
+  ev_ite _ _ _ _ _ := by simp only [ev] <;> rfl
   ev_distinct _ _ _ := by simp [ev, evOpN, evList_eq]
   ev_bool _ t v w ht e := by
     have := ev_hasSort t w v e

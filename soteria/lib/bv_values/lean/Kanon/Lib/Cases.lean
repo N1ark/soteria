@@ -84,7 +84,7 @@ theorem Refines.comm {FS : FloatSem} {op : Op2} (hc : op.Comm) {a b : Term} {t t
   · have ⟨w1, wa, wb⟩ := WT_op2.1 w
     have e := ht w; subst e
     exact ⟨WT_op2.2 ⟨(Op2.WT_comm hc w1).1, wb, wa⟩, rfl⟩
-  · show evOp2 FS op (ev FS ρ b) (ev FS ρ a) = some v
+  · simp only [ev] at e ⊢
     rw [evOp2_comm hc]; exact e
 
 end Kanon.Lib

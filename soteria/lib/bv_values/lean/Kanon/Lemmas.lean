@@ -132,7 +132,8 @@ theorem Refines.op1 {FS op a a' t t'} (ha : Refines FS a a')
     obtain ⟨w3, s3⟩ : a'.WT ∧ a'.ty = a.ty := ha.syn w2
     refine ⟨WT_op1.2 ⟨?_, w3⟩, ht w⟩
     rw [s3, ht w]; exact w1
-  · exact evUnop_mono (ha.ev (WT_op1.1 w).2 ρ) v e
+  · simp only [ev] at e ⊢
+    exact evUnop_mono (ha.ev (WT_op1.1 w).2 ρ) v e
 
 theorem Refines.op2 {FS op a a' b b' t t'} (ha : Refines FS a a') (hb : Refines FS b b')
     (ht : (Term.mk (.Op2 op a b) t).WT → t' = t) :
@@ -144,6 +145,7 @@ theorem Refines.op2 {FS op a a' b b' t t'} (ha : Refines FS a a') (hb : Refines 
     refine ⟨WT_op2.2 ⟨?_, wa', wb'⟩, ht w⟩
     rw [sa, sb, ht w]; exact w1
   · have ⟨_, wa, wb⟩ := WT_op2.1 w
+    simp only [ev] at e ⊢
     exact evBinop_mono (ha.ev wa ρ) (hb.ev wb ρ) v e
 
 theorem Refines.ite {FS g g' a a' b b' t t'} (hg : Refines FS g g') (ha : Refines FS a a')
@@ -171,6 +173,7 @@ theorem Refines.fma {FS a a' b b' c c' t t'} (ha : Refines FS a a') (hb : Refine
     refine ⟨WT_op3.2 ⟨?_, wa', wb', wc'⟩, ht w⟩
     rw [sa, sb, sc, ht w]; exact w1
   · have ⟨_, wa, wb, wc⟩ := WT_op3.1 w
+    simp only [ev, evOp3] at e ⊢
     exact evFma_mono (ha.ev wa ρ) (hb.ev wb ρ) (hc.ev wc ρ) v e
 
 attribute [kanon_congr_lemma] Refines.op1 Refines.op2 Refines.ite Refines.fma

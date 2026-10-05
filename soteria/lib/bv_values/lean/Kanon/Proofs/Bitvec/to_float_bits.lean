@@ -16,7 +16,9 @@ open Classical Lib
   all_goals have := emod_two_pow_lt z p.size
   all_goals have := emod_two_pow_nonneg z p.size
   all_goals have e1 : ((2 ^ p.size : Nat) : Int) = (2 : Int) ^ p.size := by push_cast; rfl
-  · refine ⟨⟨rfl, ?_⟩, rfl⟩
+  · refine ⟨?_, rfl⟩
+    simp only [Term.WT]
+    refine ⟨rfl, ?_⟩
     simp only [f_of_bits]; omega
   · rw [← eval] at e ⊢
     rw [eval_op1 w, eval_bitVec' w2 w1.1] at e

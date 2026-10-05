@@ -2712,63 +2712,6 @@ module Kanon_flat = struct
       | _ -> (node (Op2 ((SubOvf (signed)), v1, v2)) TBool)
       ))
   
-  let bitvec_of_float (rounding : rm) (signed : bool) (sz : Z.t) (v : t) : t =
-      (assert ((match v.ty with
-               | (TFloat (kanon__p)) -> true
-               | _ -> false
-               ) [@warning "-11"]);
-      (match v with
-      | { kind = Float (f); _ } ->
-        (match (Rust_prims.f_to_int rounding signed sz f) with
-        | (Some z) -> (Rust_prims.mk_masked sz z)
-        | None ->
-          (node (Op1 ((BvOfFloat (rounding, signed, (Z.to_int sz))), v)) (TBitVector ((Z.to_int sz))))
-        )
-      | _ ->
-        (node (Op1 ((BvOfFloat (rounding, signed, (Z.to_int sz))), v)) (TBitVector ((Z.to_int sz))))
-      ))
-  
-  let bitvec_to_float (rounding : rm) (signed : bool) (fp : fp) (v : t) : t =
-      (assert ((match v.ty with
-               | (TBitVector (kanon__n)) -> true
-               | _ -> false
-               ) [@warning "-11"]);
-      (match v with
-      | { kind = BitVec (z); _ } ->
-        (match (Rust_prims.f_of_int rounding signed fp (bitvec_size v) z) with
-        | (Some f) -> (node (Float (f)) (TFloat ((Rust_prims.f_prec f))))
-        | None ->
-          (node (Op1 ((FloatOfBv (rounding, signed, fp)), v)) (TFloat (fp)))
-        )
-      | _ ->
-        (node (Op1 ((FloatOfBv (rounding, signed, fp)), v)) (TFloat (fp)))
-      ))
-  
-  let bitvec_to_float_bits (fp : fp) (v : t) : t =
-      (assert ((match v.ty with
-               | (TBitVector (kanon__s1))
-                 when (let kanon__s1 = Z.of_int kanon__s1 in
-                 ((Z.equal kanon__s1 (Rust_prims.fp_size fp)))) ->
-                 true
-               | _ -> false
-               ) [@warning "-11"]);
-      (match v with
-      | { kind = BitVec (z); _ } ->
-        (let kanon__a1 = (Rust_prims.f_of_bits fp z) in
-        (node (Float (kanon__a1)) (TFloat ((Rust_prims.f_prec kanon__a1)))))
-      | _ -> (node (Op1 ((FloatOfBvRaw (fp)), v)) (TFloat (fp)))
-      ))
-  
-  let bitvec_to_float_raw (v : t) : t =
-      (let n = (bitvec_size v) in
-      (let kanon__result = (assert ((match v.ty with
-                                    | (TBitVector (kanon__v_n)) -> true
-                                    | _ -> false
-                                    ) [@warning "-11"]);
-                           (bitvec_to_float_bits (Rust_prims.fp_of_size n) v)) in
-      (assert (((equal_ty kanon__result.ty (TFloat ((Rust_prims.fp_of_size n))))) [@warning "-11"]);
-      kanon__result)))
-  
   let bitvec_wrapping_add (a : t) (b : t) : t =
       (let n = (bitvec_size a) in
       (let n = (bitvec_size b) in
@@ -3130,6 +3073,63 @@ module Kanon_flat = struct
         (node (Float (kanon__a1)) (TFloat ((Rust_prims.f_prec kanon__a1)))))
       | _ -> (node (Op1 ((FRound (rm)), sv)) sv.ty)
       ))
+  
+  let float_of_float (rounding : rm) (signed : bool) (sz : Z.t) (v : t) : t =
+      (assert ((match v.ty with
+               | (TFloat (kanon__p)) -> true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v with
+      | { kind = Float (f); _ } ->
+        (match (Rust_prims.f_to_int rounding signed sz f) with
+        | (Some z) -> (Rust_prims.mk_masked sz z)
+        | None ->
+          (node (Op1 ((BvOfFloat (rounding, signed, (Z.to_int sz))), v)) (TBitVector ((Z.to_int sz))))
+        )
+      | _ ->
+        (node (Op1 ((BvOfFloat (rounding, signed, (Z.to_int sz))), v)) (TBitVector ((Z.to_int sz))))
+      ))
+  
+  let float_to_float (rounding : rm) (signed : bool) (fp : fp) (v : t) : t =
+      (assert ((match v.ty with
+               | (TBitVector (kanon__n)) -> true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v with
+      | { kind = BitVec (z); _ } ->
+        (match (Rust_prims.f_of_int rounding signed fp (bitvec_size v) z) with
+        | (Some f) -> (node (Float (f)) (TFloat ((Rust_prims.f_prec f))))
+        | None ->
+          (node (Op1 ((FloatOfBv (rounding, signed, fp)), v)) (TFloat (fp)))
+        )
+      | _ ->
+        (node (Op1 ((FloatOfBv (rounding, signed, fp)), v)) (TFloat (fp)))
+      ))
+  
+  let float_to_float_bits (fp : fp) (v : t) : t =
+      (assert ((match v.ty with
+               | (TBitVector (kanon__s1))
+                 when (let kanon__s1 = Z.of_int kanon__s1 in
+                 ((Z.equal kanon__s1 (Rust_prims.fp_size fp)))) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v with
+      | { kind = BitVec (z); _ } ->
+        (let kanon__a1 = (Rust_prims.f_of_bits fp z) in
+        (node (Float (kanon__a1)) (TFloat ((Rust_prims.f_prec kanon__a1)))))
+      | _ -> (node (Op1 ((FloatOfBvRaw (fp)), v)) (TFloat (fp)))
+      ))
+  
+  let float_to_float_raw (v : t) : t =
+      (let n = (bitvec_size v) in
+      (let kanon__result = (assert ((match v.ty with
+                                    | (TBitVector (kanon__v_n)) -> true
+                                    | _ -> false
+                                    ) [@warning "-11"]);
+                           (float_to_float_bits (Rust_prims.fp_of_size n) v)) in
+      (assert (((equal_ty kanon__result.ty (TFloat ((Rust_prims.fp_of_size n))))) [@warning "-11"]);
+      kanon__result)))
   
   let float_is_normal (v : t) : t =
       (let kanon__result = (assert ((match v.ty with
@@ -4133,13 +4133,13 @@ module Kanon_flat = struct
       (bitvec_ashr x1 x2)
   
   let[@inline] kanon__rebuild_BvOfFloat (p1 : rm) (p2 : bool) (p3 : Z.t) (x1 : t) : t =
-      (bitvec_of_float p1 p2 p3 x1)
+      (float_of_float p1 p2 p3 x1)
   
   let[@inline] kanon__rebuild_FloatOfBv (p1 : rm) (p2 : bool) (p3 : fp) (x1 : t) : t =
-      (bitvec_to_float p1 p2 p3 x1)
+      (float_to_float p1 p2 p3 x1)
   
   let[@inline] kanon__rebuild_FloatOfBvRaw (p1 : fp) (x1 : t) : t =
-      (bitvec_to_float_bits p1 x1)
+      (float_to_float_bits p1 x1)
   
   let[@inline] kanon__rebuild_FloatOfFloat (p1 : rm) (p2 : fp) (x1 : t) : t =
       (float_cast p1 p2 x1)
@@ -4971,6 +4971,7 @@ end
 (** The Kanon module bitvec. *)
 module Bitvec = struct
   let t_bitvector (a1 : int) : ty = TBitVector (a1)
+  let t_loc (a1 : int) : ty = TLoc (a1)
   let size = Kanon_flat.bitvec_size
   let is_bv = Kanon_flat.bitvec_is_bv
   let zmin = Kanon_flat.bitvec_zmin
@@ -5042,10 +5043,6 @@ module Bitvec = struct
   let mul_overflows = Kanon_flat.bitvec_mul_overflows
   let neg_overflows = Kanon_flat.bitvec_neg_overflows
   let sub_overflows = Kanon_flat.bitvec_sub_overflows
-  let of_float = Kanon_flat.bitvec_of_float
-  let to_float = Kanon_flat.bitvec_to_float
-  let to_float_bits = Kanon_flat.bitvec_to_float_bits
-  let to_float_raw = Kanon_flat.bitvec_to_float_raw
   let wrapping_add = Kanon_flat.bitvec_wrapping_add
   let wrapping_sub = Kanon_flat.bitvec_wrapping_sub
   let wrapping_mul = Kanon_flat.bitvec_wrapping_mul
@@ -5208,6 +5205,12 @@ module Bitvec = struct
   
   let is_tbitvector (t : ty) =
     match[@warning "-11"] t with TBitVector (_) -> true | _ -> false
+  
+  let as_tloc (t : ty) =
+    match[@warning "-11"] t with TLoc (p1) -> Some p1 | _ -> None
+  
+  let is_tloc (t : ty) =
+    match[@warning "-11"] t with TLoc (_) -> true | _ -> false
 end
 
 (** The Kanon module float. *)
@@ -5236,6 +5239,10 @@ module Float = struct
   let max = Kanon_flat.float_max
   let sqrt = Kanon_flat.float_sqrt
   let round = Kanon_flat.float_round
+  let of_float = Kanon_flat.float_of_float
+  let to_float = Kanon_flat.float_to_float
+  let to_float_bits = Kanon_flat.float_to_float_bits
+  let to_float_raw = Kanon_flat.float_to_float_raw
   let is_normal = Kanon_flat.float_is_normal
   let is_subnormal = Kanon_flat.float_is_subnormal
   let is_zero = Kanon_flat.float_is_zero
@@ -5391,7 +5398,6 @@ end
 
 (** The Kanon module ptr. *)
 module Ptr = struct
-  let t_loc (a1 : int) : ty = TLoc (a1)
   let t_pointer (a1 : int) : ty = TPointer (a1)
   let loc = Kanon_flat.ptr_loc
   let ofs = Kanon_flat.ptr_ofs
@@ -5413,12 +5419,6 @@ module Ptr = struct
   
   let is_getptrofs (t : t) =
     match[@warning "-11"] t with { kind = Op1 (GetPtrOfs, _); _ } -> true | _ -> false
-  
-  let as_tloc (t : ty) =
-    match[@warning "-11"] t with TLoc (p1) -> Some p1 | _ -> None
-  
-  let is_tloc (t : ty) =
-    match[@warning "-11"] t with TLoc (_) -> true | _ -> false
   
   let as_tpointer (t : ty) =
     match[@warning "-11"] t with TPointer (p1) -> Some p1 | _ -> None

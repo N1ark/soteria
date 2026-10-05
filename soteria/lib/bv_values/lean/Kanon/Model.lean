@@ -34,9 +34,6 @@ import Kanon.Model.Bitvec.add_overflows
 import Kanon.Model.Bitvec.mul_overflows
 import Kanon.Model.Bitvec.neg_overflows
 import Kanon.Model.Bitvec.sub_overflows
-import Kanon.Model.Bitvec.of_float
-import Kanon.Model.Bitvec.to_float
-import Kanon.Model.Bitvec.to_float_bits
 import Kanon.Model.Float.is_floatclass
 import Kanon.Model.Float.is_negative
 import Kanon.Model.Float.is_positive
@@ -58,6 +55,9 @@ import Kanon.Model.Float.min
 import Kanon.Model.Float.max
 import Kanon.Model.Float.sqrt
 import Kanon.Model.Float.round
+import Kanon.Model.Float.of_float
+import Kanon.Model.Float.to_float
+import Kanon.Model.Float.to_float_bits
 import Kanon.Model.Ptr.loc
 import Kanon.Model.Ptr.ofs
 
@@ -107,9 +107,6 @@ def opsStep (O : Ops) : Ops :=
     bitvec_mul_overflows := Bitvec.mul_overflows.step O,
     bitvec_neg_overflows := Bitvec.neg_overflows.step O,
     bitvec_sub_overflows := Bitvec.sub_overflows.step O,
-    bitvec_of_float := Bitvec.of_float.step O,
-    bitvec_to_float := Bitvec.to_float.step O,
-    bitvec_to_float_bits := Bitvec.to_float_bits.step O,
     float_is_floatclass := Float.is_floatclass.step O,
     float_is_negative := Float.is_negative.step O,
     float_is_positive := Float.is_positive.step O,
@@ -131,6 +128,9 @@ def opsStep (O : Ops) : Ops :=
     float_max := Float.max.step O,
     float_sqrt := Float.sqrt.step O,
     float_round := Float.round.step O,
+    float_of_float := Float.of_float.step O,
+    float_to_float := Float.to_float.step O,
+    float_to_float_bits := Float.to_float_bits.step O,
     ptr_loc := Ptr.loc.step O,
     ptr_ofs := Ptr.ofs.step O }
 

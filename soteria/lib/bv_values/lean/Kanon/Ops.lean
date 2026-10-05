@@ -70,9 +70,6 @@ structure Ops where
   bitvec_mul_overflows : Bool → Term → Term → Term
   bitvec_neg_overflows : Term → Term
   bitvec_sub_overflows : Bool → Term → Term → Term
-  bitvec_of_float : Rm → Bool → Int → Term → Term
-  bitvec_to_float : Rm → Bool → Fp → Term → Term
-  bitvec_to_float_bits : Fp → Term → Term
   float_is_floatclass : Fc → Term → Term
   float_is_negative : Term → Term
   float_is_positive : Term → Term
@@ -94,6 +91,9 @@ structure Ops where
   float_max : Term → Term → Term
   float_sqrt : Term → Term
   float_round : Rm → Term → Term
+  float_of_float : Rm → Bool → Int → Term → Term
+  float_to_float : Rm → Bool → Fp → Term → Term
+  float_to_float_bits : Fp → Term → Term
   ptr_loc : Term → Term
   ptr_ofs : Term → Term
 
@@ -202,15 +202,6 @@ def Bitvec.neg_overflows.spec (v : Term) : Term :=
 def Bitvec.sub_overflows.spec (signed : Bool) (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.Op2 (Op2.SubOvf signed) v1 v2) Ty.TBool)
 
-def Bitvec.of_float.spec (rounding : Rm) (signed : Bool) (sz : Int) (v : Term) : Term :=
-  (Term.mk (Kind.Op1 (Op1.BvOfFloat rounding signed sz) v) (Ty.TBitVector sz))
-
-def Bitvec.to_float.spec (rounding : Rm) (signed : Bool) (fp : Fp) (v : Term) : Term :=
-  (Term.mk (Kind.Op1 (Op1.FloatOfBv rounding signed fp) v) (Ty.TFloat fp))
-
-def Bitvec.to_float_bits.spec (fp : Fp) (v : Term) : Term :=
-  (Term.mk (Kind.Op1 (Op1.FloatOfBvRaw fp) v) (Ty.TFloat fp))
-
 def Float.is_floatclass.spec (fc : Fc) (sv : Term) : Term :=
   (Term.mk (Kind.Op1 (Op1.FIs fc) sv) Ty.TBool)
 
@@ -274,6 +265,15 @@ def Float.sqrt.spec (v : Term) : Term :=
 def Float.round.spec (rm : Rm) (sv : Term) : Term :=
   (Term.mk (Kind.Op1 (Op1.FRound rm) sv) (ty sv))
 
+def Float.of_float.spec (rounding : Rm) (signed : Bool) (sz : Int) (v : Term) : Term :=
+  (Term.mk (Kind.Op1 (Op1.BvOfFloat rounding signed sz) v) (Ty.TBitVector sz))
+
+def Float.to_float.spec (rounding : Rm) (signed : Bool) (fp : Fp) (v : Term) : Term :=
+  (Term.mk (Kind.Op1 (Op1.FloatOfBv rounding signed fp) v) (Ty.TFloat fp))
+
+def Float.to_float_bits.spec (fp : Fp) (v : Term) : Term :=
+  (Term.mk (Kind.Op1 (Op1.FloatOfBvRaw fp) v) (Ty.TFloat fp))
+
 def Ptr.loc.spec (p : Term) : Term :=
   (Term.mk (Kind.Op1 Op1.GetPtrLoc p) (Ty.TLoc (Bitvec.size p)))
 
@@ -317,9 +317,6 @@ def opsRaw (orc : Oracle) : Ops :=
     bitvec_mul_overflows := fun signed v1 v2 => Bitvec.mul_overflows.spec signed v1 v2,
     bitvec_neg_overflows := fun v => Bitvec.neg_overflows.spec v,
     bitvec_sub_overflows := fun signed v1 v2 => Bitvec.sub_overflows.spec signed v1 v2,
-    bitvec_of_float := fun rounding signed sz v => Bitvec.of_float.spec rounding signed sz v,
-    bitvec_to_float := fun rounding signed fp v => Bitvec.to_float.spec rounding signed fp v,
-    bitvec_to_float_bits := fun fp v => Bitvec.to_float_bits.spec fp v,
     float_is_floatclass := fun fc sv => Float.is_floatclass.spec fc sv,
     float_is_negative := fun v => Float.is_negative.spec v,
     float_is_positive := fun v => Float.is_positive.spec v,
@@ -341,6 +338,9 @@ def opsRaw (orc : Oracle) : Ops :=
     float_max := fun v1 v2 => Float.max.spec v1 v2,
     float_sqrt := fun v => Float.sqrt.spec v,
     float_round := fun rm sv => Float.round.spec rm sv,
+    float_of_float := fun rounding signed sz v => Float.of_float.spec rounding signed sz v,
+    float_to_float := fun rounding signed fp v => Float.to_float.spec rounding signed fp v,
+    float_to_float_bits := fun fp v => Float.to_float_bits.spec fp v,
     ptr_loc := fun p => Ptr.loc.spec p,
     ptr_ofs := fun p => Ptr.ofs.spec p }
 

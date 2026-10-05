@@ -36,9 +36,6 @@ import Kanon.Soundness.Bitvec.add_overflows
 import Kanon.Soundness.Bitvec.mul_overflows
 import Kanon.Soundness.Bitvec.neg_overflows
 import Kanon.Soundness.Bitvec.sub_overflows
-import Kanon.Soundness.Bitvec.of_float
-import Kanon.Soundness.Bitvec.to_float
-import Kanon.Soundness.Bitvec.to_float_bits
 import Kanon.Soundness.Float.is_floatclass
 import Kanon.Soundness.Float.is_negative
 import Kanon.Soundness.Float.is_positive
@@ -60,6 +57,9 @@ import Kanon.Soundness.Float.min
 import Kanon.Soundness.Float.max
 import Kanon.Soundness.Float.sqrt
 import Kanon.Soundness.Float.round
+import Kanon.Soundness.Float.of_float
+import Kanon.Soundness.Float.to_float
+import Kanon.Soundness.Float.to_float_bits
 import Kanon.Soundness.Ptr.loc
 import Kanon.Soundness.Ptr.ofs
 
@@ -112,9 +112,6 @@ theorem opsN_sound (FS : FloatSem) (orc : Oracle) (h : orc.Compat FS) :
       bitvec_mul_overflows := fun signed v1 v2 => Refinement.refl,
       bitvec_neg_overflows := fun v => Refinement.refl,
       bitvec_sub_overflows := fun signed v1 v2 => Refinement.refl,
-      bitvec_of_float := fun rounding signed sz v => Refinement.refl,
-      bitvec_to_float := fun rounding signed fp v => Refinement.refl,
-      bitvec_to_float_bits := fun fp v => Refinement.refl,
       float_is_floatclass := fun fc sv => Refinement.refl,
       float_is_negative := fun v => Refinement.refl,
       float_is_positive := fun v => Refinement.refl,
@@ -136,6 +133,9 @@ theorem opsN_sound (FS : FloatSem) (orc : Oracle) (h : orc.Compat FS) :
       float_max := fun v1 v2 => Refinement.refl,
       float_sqrt := fun v => Refinement.refl,
       float_round := fun rm sv => Refinement.refl,
+      float_of_float := fun rounding signed sz v => Refinement.refl,
+      float_to_float := fun rounding signed fp v => Refinement.refl,
+      float_to_float_bits := fun fp v => Refinement.refl,
       ptr_loc := fun p => Refinement.refl,
       ptr_ofs := fun p => Refinement.refl }
   | n + 1 =>
@@ -176,9 +176,6 @@ theorem opsN_sound (FS : FloatSem) (orc : Oracle) (h : orc.Compat FS) :
       bitvec_mul_overflows := Bitvec.mul_overflows.step_sound FS _ hO,
       bitvec_neg_overflows := Bitvec.neg_overflows.step_sound FS _ hO,
       bitvec_sub_overflows := Bitvec.sub_overflows.step_sound FS _ hO,
-      bitvec_of_float := Bitvec.of_float.step_sound FS _ hO,
-      bitvec_to_float := Bitvec.to_float.step_sound FS _ hO,
-      bitvec_to_float_bits := Bitvec.to_float_bits.step_sound FS _ hO,
       float_is_floatclass := Float.is_floatclass.step_sound FS _ hO,
       float_is_negative := Float.is_negative.step_sound FS _ hO,
       float_is_positive := Float.is_positive.step_sound FS _ hO,
@@ -200,6 +197,9 @@ theorem opsN_sound (FS : FloatSem) (orc : Oracle) (h : orc.Compat FS) :
       float_max := Float.max.step_sound FS _ hO,
       float_sqrt := Float.sqrt.step_sound FS _ hO,
       float_round := Float.round.step_sound FS _ hO,
+      float_of_float := Float.of_float.step_sound FS _ hO,
+      float_to_float := Float.to_float.step_sound FS _ hO,
+      float_to_float_bits := Float.to_float_bits.step_sound FS _ hO,
       ptr_loc := Ptr.loc.step_sound FS _ hO,
       ptr_ofs := Ptr.ofs.step_sound FS _ hO }
 

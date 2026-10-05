@@ -47,9 +47,6 @@ attribute [kanon_spec]
   Bitvec.mul_overflows.spec
   Bitvec.neg_overflows.spec
   Bitvec.sub_overflows.spec
-  Bitvec.of_float.spec
-  Bitvec.to_float.spec
-  Bitvec.to_float_bits.spec
   Float.is_floatclass.spec
   Float.is_negative.spec
   Float.is_positive.spec
@@ -71,6 +68,9 @@ attribute [kanon_spec]
   Float.max.spec
   Float.sqrt.spec
   Float.round.spec
+  Float.of_float.spec
+  Float.to_float.spec
+  Float.to_float_bits.spec
   Ptr.loc.spec
   Ptr.ofs.spec
 
@@ -112,9 +112,6 @@ structure Ops.Sound (FS : FloatSem) (O : Ops) : Prop where
   bitvec_mul_overflows : ∀ (signed : Bool) (v1 : Term) (v2 : Term), Refines FS (Bitvec.mul_overflows.spec signed v1 v2) (O.bitvec_mul_overflows signed v1 v2)
   bitvec_neg_overflows : ∀ (v : Term), Refines FS (Bitvec.neg_overflows.spec v) (O.bitvec_neg_overflows v)
   bitvec_sub_overflows : ∀ (signed : Bool) (v1 : Term) (v2 : Term), Refines FS (Bitvec.sub_overflows.spec signed v1 v2) (O.bitvec_sub_overflows signed v1 v2)
-  bitvec_of_float : ∀ (rounding : Rm) (signed : Bool) (sz : Int) (v : Term), Refines FS (Bitvec.of_float.spec rounding signed sz v) (O.bitvec_of_float rounding signed sz v)
-  bitvec_to_float : ∀ (rounding : Rm) (signed : Bool) (fp : Fp) (v : Term), Refines FS (Bitvec.to_float.spec rounding signed fp v) (O.bitvec_to_float rounding signed fp v)
-  bitvec_to_float_bits : ∀ (fp : Fp) (v : Term), Refines FS (Bitvec.to_float_bits.spec fp v) (O.bitvec_to_float_bits fp v)
   float_is_floatclass : ∀ (fc : Fc) (sv : Term), Refines FS (Float.is_floatclass.spec fc sv) (O.float_is_floatclass fc sv)
   float_is_negative : ∀ (v : Term), Refines FS (Float.is_negative.spec v) (O.float_is_negative v)
   float_is_positive : ∀ (v : Term), Refines FS (Float.is_positive.spec v) (O.float_is_positive v)
@@ -136,6 +133,9 @@ structure Ops.Sound (FS : FloatSem) (O : Ops) : Prop where
   float_max : ∀ (v1 : Term) (v2 : Term), Refines FS (Float.max.spec v1 v2) (O.float_max v1 v2)
   float_sqrt : ∀ (v : Term), Refines FS (Float.sqrt.spec v) (O.float_sqrt v)
   float_round : ∀ (rm : Rm) (sv : Term), Refines FS (Float.round.spec rm sv) (O.float_round rm sv)
+  float_of_float : ∀ (rounding : Rm) (signed : Bool) (sz : Int) (v : Term), Refines FS (Float.of_float.spec rounding signed sz v) (O.float_of_float rounding signed sz v)
+  float_to_float : ∀ (rounding : Rm) (signed : Bool) (fp : Fp) (v : Term), Refines FS (Float.to_float.spec rounding signed fp v) (O.float_to_float rounding signed fp v)
+  float_to_float_bits : ∀ (fp : Fp) (v : Term), Refines FS (Float.to_float_bits.spec fp v) (O.float_to_float_bits fp v)
   ptr_loc : ∀ (p : Term), Refines FS (Ptr.loc.spec p) (O.ptr_loc p)
   ptr_ofs : ∀ (p : Term), Refines FS (Ptr.ofs.spec p) (O.ptr_ofs p)
 

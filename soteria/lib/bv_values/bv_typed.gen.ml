@@ -9,8 +9,8 @@ module Tag = struct
   type tnonzero = [ `TNonzero ]
   type tzero = [ `TZero ]
   type tbitvector = [ `TBitVector | tnonzero | tzero ]
-  type tfloat = [ `TFloat ]
   type tloc = [ `TLoc ]
+  type tfloat = [ `TFloat ]
   type tpointer = [ `TPointer ]
 end
 
@@ -83,6 +83,7 @@ module type S = sig
   (** The Kanon module bitvec. *)
   module Bitvec : sig
     val t_bitvector : int -> [> Tag.tbitvector ] ty
+    val t_loc : int -> [> Tag.tloc ] ty
     val of_bool : Z.t -> [< Tag.tbool ] t -> [> Tag.tbitvector ] t
     val to_bool : _ t -> [> Tag.tbool ] t
     val not_bool : _ t -> [> Tag.tbitvector ] t
@@ -130,12 +131,6 @@ module type S = sig
     val neg_overflows : 'a t -> [> Tag.tbool ] t
     val sub_overflows : bool -> [< Tag.tbitvector ] t ->
       [< Tag.tbitvector ] t -> [> Tag.tbool ] t
-    val of_float : rm -> bool -> Z.t -> [< Tag.tfloat ] t ->
-      [> Tag.tbitvector ] t
-    val to_float : rm -> bool -> fp -> [< Tag.tbitvector ] t ->
-      [> Tag.tfloat ] t
-    val to_float_bits : fp -> [< Tag.tbitvector ] t -> [> Tag.tfloat ] t
-    val to_float_raw : [< Tag.tbitvector ] t -> [> Tag.tfloat ] t
     val wrapping_add : [< Tag.tbitvector ] t -> [< Tag.tbitvector ] t ->
       [> Tag.tbitvector ] t
     val wrapping_sub : [< Tag.tbitvector ] t -> [< Tag.tbitvector ] t ->
@@ -217,6 +212,8 @@ module type S = sig
     val is_ashr : _ t -> bool
     val as_tbitvector : _ ty -> int option
     val is_tbitvector : _ ty -> bool
+    val as_tloc : _ ty -> int option
+    val is_tloc : _ ty -> bool
   end
   
   (** The Kanon module float. *)
@@ -244,6 +241,12 @@ module type S = sig
     val max : [< Tag.tfloat ] t -> [< Tag.tfloat ] t -> [> Tag.tfloat ] t
     val sqrt : [< Tag.tfloat ] t -> [> Tag.tfloat ] t
     val round : rm -> [< Tag.tfloat ] t -> [> Tag.tfloat ] t
+    val of_float : rm -> bool -> Z.t -> [< Tag.tfloat ] t ->
+      [> Tag.tbitvector ] t
+    val to_float : rm -> bool -> fp -> [< Tag.tbitvector ] t ->
+      [> Tag.tfloat ] t
+    val to_float_bits : fp -> [< Tag.tbitvector ] t -> [> Tag.tfloat ] t
+    val to_float_raw : [< Tag.tbitvector ] t -> [> Tag.tfloat ] t
     val is_normal : [< Tag.tfloat ] t -> [> Tag.tbool ] t
     val is_subnormal : [< Tag.tfloat ] t -> [> Tag.tbool ] t
     val is_zero : [< Tag.tfloat ] t -> [> Tag.tbool ] t
@@ -304,7 +307,6 @@ module type S = sig
   
   (** The Kanon module ptr. *)
   module Ptr : sig
-    val t_loc : int -> [> Tag.tloc ] ty
     val t_pointer : int -> [> Tag.tpointer ] ty
     val loc : [< Tag.tpointer ] t -> [> Tag.tloc ] t
     val ofs : [< Tag.tpointer ] t -> [> Tag.tbitvector ] t
@@ -314,8 +316,6 @@ module type S = sig
     val is_getptrloc : _ t -> bool
     val as_getptrofs : _ t -> [> Tag.tpointer ] t option
     val is_getptrofs : _ t -> bool
-    val as_tloc : _ ty -> int option
-    val is_tloc : _ ty -> bool
     val as_tpointer : _ ty -> int option
     val is_tpointer : _ ty -> bool
   end

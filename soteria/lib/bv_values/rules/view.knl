@@ -14,6 +14,11 @@
    of bitvec). *)
 
 use "core"
+use builtin "bool"
+use "exists"
+use "bitvec"
+use "float"
+use "ptr"
 
 (* The SMT operator of the encoding of a term and of a sort: they apply to the
    encoders and to the operands, and own the order of their calls (see

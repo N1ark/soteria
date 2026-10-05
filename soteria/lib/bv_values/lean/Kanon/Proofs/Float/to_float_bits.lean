@@ -1,15 +1,15 @@
 import Kanon.Lib.Resize
-import Kanon.Statements.Bitvec.to_float_bits
+import Kanon.Statements.Float.to_float_bits
 
-/-! The arms of `Bitvec.to_float_bits` that the default tactics do not prove. -/
+/-! The arms of `Float.to_float_bits` that the default tactics do not prove. -/
 
 namespace Kanon
 
 open Classical Lib
 
-@[kanon_arm] theorem Bitvec.to_float_bits.r_lit.main.proof : Bitvec.to_float_bits.r_lit.main.Stmt := by
+@[kanon_arm] theorem Float.to_float_bits.r_lit.main.proof : Float.to_float_bits.r_lit.main.Stmt := by
   intro FS O hO p z T
-  simp only [Bitvec.to_float_bits.spec, Term.ty_mk]
+  simp only [Float.to_float_bits.spec, Term.ty_mk]
   refine Sem.Refines.intro_eval (fun w => ?_) (fun ρ v w w' e => ?_)
   all_goals have ⟨w1, w2⟩ := WT_op1.1 w
   all_goals simp only [Op1.WT, Term.ty_mk, fp_size] at w1

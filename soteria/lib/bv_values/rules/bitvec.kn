@@ -1019,30 +1019,6 @@ rule sub_overflows : SubOvf (signed, v1, v2) =
   | same: v, v -> Bool.v_false
   | unsigned: _ when not signed -> lt signed v1 v2
 
-(* Float-bit-vector conversions *)
-
-rule of_float : BvOfFloat (rounding, signed, sz, v) =
-  | lit: Float f -> (
-      match Float.f_to_int rounding signed sz f with
-      | Some z -> mk_masked sz z
-      (* NaN, infinite, or out of range: SMT-Lib leaves the result unspecified,
-         so we keep the term symbolic. *)
-      | None -> BvOfFloat (rounding, signed, sz, v))
-
-rule to_float : FloatOfBv (rounding, signed, fp, v) =
-  | lit: #z -> (
-      match Float.f_of_int rounding signed fp (size v) z with
-      | Some f -> Float f
-      | None -> FloatOfBv (rounding, signed, fp, v))
-
-(* [v] read as the bits of a float of the precision [fp], of the size of [v] *)
-rule to_float_bits : FloatOfBvRaw (fp, v) =
-  | lit: BitVec z -> Float (Float.f_of_bits fp z)
-
-(* [v] read as the bits of a float of its size *)
-fn to_float_raw (v : TBitVector n) : TFloat (Float.fp_of_size n) =
-  to_float_bits (Float.fp_of_size n) v
-
 (* {1 Typed helpers}
 
    The operations of the typed interface that are derived from the rules: the

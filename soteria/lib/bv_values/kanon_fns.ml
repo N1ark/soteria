@@ -99,6 +99,7 @@ module type Kanon_fns = sig
 
   module Bitvec : sig
     val t_bitvector : int -> ty
+    val t_loc : int -> ty
     val add : Bv_base.checked -> t -> t -> t
     val sub : Bv_base.checked -> t -> t -> t
     val mul : Bv_base.checked -> t -> t -> t
@@ -125,12 +126,6 @@ module type Kanon_fns = sig
     val of_bool : Z.t -> t -> t
     val to_bool : t -> t
     val not_bool : t -> t
-    val of_float : Bv_base.RoundingMode.t -> bool -> Z.t -> t -> t
-
-    val to_float :
-      Bv_base.RoundingMode.t -> bool -> Bv_base.FloatPrecision.t -> t -> t
-
-    val to_float_raw : t -> t
 
     (** The index of the most significant bit that can be set *)
     val msb_of : t -> Z.t
@@ -174,6 +169,12 @@ module type Kanon_fns = sig
     val sqrt : t -> t
     val fma : t -> t -> t -> t
     val round : Bv_base.RoundingMode.t -> t -> t
+    val of_float : Bv_base.RoundingMode.t -> bool -> Z.t -> t -> t
+
+    val to_float :
+      Bv_base.RoundingMode.t -> bool -> Bv_base.FloatPrecision.t -> t -> t
+
+    val to_float_raw : t -> t
 
     (** [Some p] iff the sort is [TFloat p]. *)
     val as_tfloat : ty -> Bv_base.FloatPrecision.t option
@@ -183,7 +184,6 @@ module type Kanon_fns = sig
   end
 
   module Ptr : sig
-    val t_loc : int -> ty
     val t_pointer : int -> ty
     val loc : t -> t
     val ofs : t -> t

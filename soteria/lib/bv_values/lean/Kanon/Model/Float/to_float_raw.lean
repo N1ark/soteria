@@ -11,9 +11,9 @@ namespace Kanon
 
 open Classical Kanon
 
-def Bitvec.to_float_raw (O : Ops) (v : Term) : Term :=
+def Float.to_float_raw (O : Ops) (v : Term) : Term :=
   (let n := (Bitvec.size v);
-  (let kanon__result := (O.bitvec_to_float_bits (fp_of_size n) v);
+  (let kanon__result := (O.float_to_float_bits (fp_of_size n) v);
   kanon__result))
 
 end Kanon

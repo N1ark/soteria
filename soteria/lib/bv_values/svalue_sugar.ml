@@ -322,7 +322,7 @@ module Make (V : Value_lang.S) : S with type t = V.t and type ty = V.ty = struct
   let t_f32 = t_float F32
   let t_f64 = t_float F64
   let t_f128 = t_float F128
-  let t_loc n = K.Ptr.t_loc n
+  let t_loc n = K.Bitvec.t_loc n
   let t_ptr n = K.Ptr.t_pointer n
   let t_seq = K.Core.t_seq
   let t_bv = V.t_bv
@@ -469,12 +469,10 @@ module Make (V : Value_lang.S) : S with type t = V.t and type ty = V.ty = struct
     let not_bool = K.Bitvec.not_bool
 
     let of_float ~rounding ~signed ~size v =
-      K.Bitvec.of_float rounding signed (Z.of_int size) v
+      K.Float.of_float rounding signed (Z.of_int size) v
 
-    let to_float ~rounding ~signed ~fp v =
-      K.Bitvec.to_float rounding signed fp v
-
-    let to_float_raw = K.Bitvec.to_float_raw
+    let to_float ~rounding ~signed ~fp v = K.Float.to_float rounding signed fp v
+    let to_float_raw = K.Float.to_float_raw
   end
 
   (* {2 Floating point} *)

@@ -616,7 +616,7 @@ let cast_literal ~(from_ty : Types.literal_type) ~(to_ty : Types.literal_type)
       Typed.ite (Typed.Float.is_nan sv) (BV.mk_masked size Z.zero)
       @@ Typed.ite (sv <=.@ min_f) (BV.mk_masked size min_z)
       @@ Typed.ite (sv >=.@ max_f) (BV.mk_masked size max_z)
-      @@ BV.of_float Truncate signed (Z.of_int size) sv
+      @@ Typed.Float.of_float Truncate signed (Z.of_int size) sv
   | (TInt _ | TUInt _), TFloat fp ->
       let sv = Typed.cast_lit from_ty v in
       let signed = Layout.is_signed from_ty in
@@ -654,7 +654,7 @@ let float_to_bv_bits (f : Typed.([< T.sfloat ] t)) :
       let fp = Typed.Float.fp_of f in
       let size = Typed.FloatPrecision.size fp in
       let* bv = nondet (Typed.Bitvec.t_bitvector size) in
-      let bv_f = BV.to_float_raw bv in
+      let bv_f = Typed.Float.to_float_raw bv in
       (* here we use structural equality rather than float equality; this is
          intended. *)
       let+ () = assume [ bv_f ==@ f ] in
@@ -706,7 +706,7 @@ let rec transmute_one ~(to_ty : Types.ty) (v : [< Typed.T.scalar ] Typed.t) :
       return (Typed.as_any v)
   | TFloat _, TLiteral (TFloat _) -> return (Typed.as_any v)
   | TFullPtr, (TRawPtr _ | TRef _ | TFnPtr _) -> return (Typed.as_any v)
-  | TBitVector _, TLiteral (TFloat _) -> return (BV.to_float_raw v)
+  | TBitVector _, TLiteral (TFloat _) -> return (Typed.Float.to_float_raw v)
   | TFullPtr, TLiteral (TInt _ | TUInt _ | TBool | TChar) ->
       let ptr = Typed.Ptr.ptr_of v in
       Sptr.decay ptr

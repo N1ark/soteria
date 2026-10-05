@@ -123,8 +123,8 @@ and ty =
   | TSeq of ty
   | TBool
   | TBitVector of int
-  | TFloat of fp
   | TLoc of int
+  | TFloat of fp
   | TPointer of int
 
 and t = {
@@ -446,8 +446,8 @@ and equal_ty (a : ty) (b : ty) =
   | TSeq a1, TSeq b1 -> equal_ty a1 b1
   | TBool, TBool -> true
   | TBitVector a1, TBitVector b1 -> Int.equal a1 b1
-  | TFloat a1, TFloat b1 -> equal_fp a1 b1
   | TLoc a1, TLoc b1 -> Int.equal a1 b1
+  | TFloat a1, TFloat b1 -> equal_fp a1 b1
   | TPointer a1, TPointer b1 -> Int.equal a1 b1
   | _ -> false
 
@@ -456,8 +456,8 @@ and hash_ty (a : ty) =
   | TSeq a1 -> hash_combine (0) (hash_ty a1)
   | TBool -> 1
   | TBitVector a1 -> hash_combine (2) (a1)
-  | TFloat a1 -> hash_combine (3) (hash_fp a1)
-  | TLoc a1 -> hash_combine (4) (a1)
+  | TLoc a1 -> hash_combine (3) (a1)
+  | TFloat a1 -> hash_combine (4) (hash_fp a1)
   | TPointer a1 -> hash_combine (5) (a1)
 
 (* Not safe across domains (TODO). *)

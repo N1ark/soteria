@@ -10,7 +10,7 @@ let c_int_bits =
        (Signed Int_))
   * 8
 
-let t_loc = Ptr.t_loc ptr_bits
+let t_loc = Bitvec.t_loc ptr_bits
 let t_ptr = Ptr.t_pointer ptr_bits
 let t_usize = Bitvec.t_bitvector ptr_bits
 

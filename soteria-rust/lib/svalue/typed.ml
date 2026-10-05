@@ -116,7 +116,7 @@ let of_float_precision :
 let t_ptr () = Ptr.t_pointer (8 * size_of_uint_ty Usize)
 let t_ptr_f () : _ ty = R.TFullPtr
 let t_ptr_t () : _ ty = R.TThinPtr
-let t_loc () = Ptr.t_loc (8 * size_of_uint_ty Usize)
+let t_loc () = Bitvec.t_loc (8 * size_of_uint_ty Usize)
 let t_usize () = Bitvec.t_bitvector (8 * size_of_uint_ty Usize)
 
 let t_lit : Types.literal_type -> [> T.sint ] ty = function
@@ -250,7 +250,7 @@ module Bitvec = struct
   let sure_is_zero v = Option.is_some_and Z.(equal zero) (to_z v)
 
   let to_float ~rounding ~signed ~fp v =
-    to_float rounding signed (float_precision fp) v
+    Float.to_float rounding signed (float_precision fp) v
 end
 
 module BV = Bitvec

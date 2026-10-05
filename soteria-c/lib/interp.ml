@@ -394,7 +394,7 @@ module Make (State : State_intf.S) = struct
           let+ v = cast_to_int v in
           let fp = Layout.precision fty in
           let signed = Layout.is_int_ty_signed ity in
-          BV.to_float NearestTiesToEven signed fp v
+          Typed.Float.to_float NearestTiesToEven signed fp v
       | Basic (Floating from_fty), Basic (Floating to_fty) ->
           let from_fp = Layout.precision from_fty in
           let+ v =
@@ -410,7 +410,7 @@ module Make (State : State_intf.S) = struct
             @@ Typed.cast_checked v (Typed.Float.t_float fp)
           in
           let signed = Layout.is_int_ty_signed ity in
-          BV.of_float Truncate signed (Z.of_int (size * 8)) v
+          Typed.Float.of_float Truncate signed (Z.of_int (size * 8)) v
       | _, Ctype.Void -> return U8.(0s)
       | _ ->
           Fmt.kstr Csymex.not_impl "Cast %a -> %a" Fmt_ail.pp_ty old_ty

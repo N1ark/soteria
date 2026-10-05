@@ -45,8 +45,8 @@ inductive Ty where
   | TSeq : Ty → Ty
   | TBool
   | TBitVector : Int → Ty
-  | TFloat : Fp → Ty
   | TLoc : Int → Ty
+  | TFloat : Fp → Ty
   | TPointer : Int → Ty
   deriving DecidableEq, Repr, Inhabited
 

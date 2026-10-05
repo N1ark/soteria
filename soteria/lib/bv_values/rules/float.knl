@@ -1,6 +1,8 @@
 (* The float module: floating-point numbers. *)
 
 use "core"
+use builtin "bool"
+use "bitvec"
 
 node Float of float (f) : TFloat (f_prec f)
 node BvOfFloat of rm * bool * nat (_, _, n) : TFloat p -> TBitVector n

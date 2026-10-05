@@ -129,6 +129,30 @@ rule sqrt : FSqrt v
 
 rule round : FRound (rm, sv)
 
+(* Float-bit-vector conversions *)
+
+rule of_float : BvOfFloat (rounding, signed, sz, v) =
+  | lit: Float f -> (
+      match f_to_int rounding signed sz f with
+      | Some z -> Bitvec.mk_masked sz z
+      (* NaN, infinite, or out of range: SMT-Lib leaves the result unspecified,
+         so we keep the term symbolic. *)
+      | None -> BvOfFloat (rounding, signed, sz, v))
+
+rule to_float : FloatOfBv (rounding, signed, fp, v) =
+  | lit: #z -> (
+      match f_of_int rounding signed fp (Bitvec.size v) z with
+      | Some f -> Float f
+      | None -> FloatOfBv (rounding, signed, fp, v))
+
+(* [v] read as the bits of a float of the precision [fp], of the size of [v] *)
+rule to_float_bits : FloatOfBvRaw (fp, v) =
+  | lit: BitVec z -> Float (f_of_bits fp z)
+
+(* [v] read as the bits of a float of its size *)
+fn to_float_raw (v : TBitVector n) : TFloat (fp_of_size n) =
+  to_float_bits (fp_of_size n) v
+
 (* {1 Typed helpers}
 
    The classes of a float and the reversed comparisons, for the typed

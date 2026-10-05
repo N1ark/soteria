@@ -122,7 +122,7 @@ constructors in the same order, `[@noeq]`, `[@no_lean]` where Kanon allows: K6 o
 ### 3.1 RULES (generated from bool/bitvec/float/ptr/exists, in the module of each: `Bv_rules.Bitvec.add`)
 `Bool`: `sure_neq of_bool and_ or_ not_ ite eq eq_untyped distinct`; `Exists.mk`; `Bitvec`: `add/sub/mul : checked -> ..`,
 `div rem : bool -> ..`, `mod_ neg *_overflows lt leq concat extend_ extract and_ or_ xor shl lshr ashr not_ of_bool
-to_bool not_bool of_float to_float to_float_raw msb_of`; `Float` (21 fns); `Ptr.loc Ptr.ofs`. Integers are `Z.t`.
+to_bool not_bool msb_of`; `Float` (24 fns, with `of_float to_float to_float_raw`); `Ptr.loc Ptr.ofs`. Integers are `Z.t`.
 
 ### 3.2 HOST (glue/prims: Kanon cannot express them; `Lang`/`Bv_prims` have them for C)
 | item | type | why not Kanon | replaces |

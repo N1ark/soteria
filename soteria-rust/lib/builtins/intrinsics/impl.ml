@@ -455,12 +455,14 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).Impl = struct
       else ok (Typed.Float.zero fp)
     else
       let res_lead =
-        BV.wrapping_add (BV.of_float Truncate true (Z.of_int word) mult) base
+        BV.wrapping_add
+          (Typed.Float.of_float Truncate true (Z.of_int word) mult)
+          base
       in
       let res_bits =
         if shift = 0 then res_lead else BV.concat res_lead (BV.zero shift)
       in
-      ok (BV.to_float_raw res_bits)
+      ok (Typed.Float.to_float_raw res_bits)
 
   let pow_ fp x y =
     let* () = Core.floating_inaccuracy_warn () in
@@ -925,7 +927,7 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).Impl = struct
         (min <.@ f &&@ (f <.@ max))
         (`StdErr "float_to_int_unchecked out of int range")
     in
-    BV.of_float Truncate signed (Z.of_int size) f
+    Typed.Float.of_float Truncate signed (Z.of_int size) f
 
   let fmul_add ~a ~b ~c = ok (Typed.Float.fma a b c)
   let fmaf16 = fmul_add

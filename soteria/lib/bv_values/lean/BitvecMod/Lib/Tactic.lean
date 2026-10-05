@@ -110,18 +110,24 @@ def tyHyps (g : MVarId) : MetaM (Array FVarId) := g.withContext do
         out := out.push d.fvarId
   return out
 
-/-- Rewrites, everywhere, the sorts of the term variables that a hypothesis
-gives (`S.ty x = e`), so that the matches on them reduce. -/
-elab "bv_rw_tys" : tactic => withMainContext do
+/-- Rewrites, in the other hypotheses and the goal, the sorts of the term
+variables that a hypothesis gives (`S.ty x = e`), so that the matches on them
+reduce; the hypothesis is kept. -/
+elab "bv_rw_tys" : tactic => do
   for h in ← tyHyps (← getMainGoal) do
-    let some d := (← getLCtx).find? h | continue
-    let ty ← instantiateMVars d.type
-    let some (_, a, _) := ty.eq? | continue
-    let hs := mkIdent d.userName
-    if a.isAppOfArity ``Kanon.Sem.ty 2 then
-      evalTactic (← `(tactic| try simp only [$hs:ident] at *))
-    else
-      evalTactic (← `(tactic| try simp only [← $hs:ident] at *))
+    withMainContext do
+    let some d := (← getLCtx).find? h | return
+    let some (_, a, _) := (← instantiateMVars d.type).eq? | return
+    let hs ← Term.exprToSyntax d.toExpr
+    let stx ← if a.isAppOfArity ``Kanon.Sem.ty 2 then `(tactic| simp only [$hs:term])
+      else `(tactic| simp only [← $hs:term])
+    let { ctx, simprocs, dischargeWrapper, .. } ← mkSimpContext stx (eraseLocal := false)
+    let others := (← (← getMainGoal).getNondepPropHyps).filter (· != h)
+    try
+      dischargeWrapper.with fun dis? => do
+        let (r, _) ← simpGoal (← getMainGoal) ctx simprocs dis? true others
+        replaceMainGoal (match r with | none => [] | some (_, g) => [g])
+    catch _ => pure ()
 
 open Lean Meta Elab Tactic in
 /-- Splits the goal on the boolean variables of the context. -/
@@ -204,9 +210,9 @@ elab "bv_apply_den" : tactic => withMainContext do
   let l ← Term.exprToSyntax (← findSyntax)
   evalTactic (← `(tactic| first
     | (refine BitvecMod.Lib.Refines.denB (L := $l) ?_ ?_ ?_
-       · intro w; bv_facts; first | rfl | (simp_all; done))
+       · intro w; bv_facts; all_goals first | rfl | (simp_all; done))
     | (refine BitvecMod.Lib.Refines.den (L := $l) ?_ ?_ ?_
-       · intro w; bv_facts; exact ⟨_, rfl⟩)))
+       · intro w; bv_facts; all_goals exact ⟨_, rfl⟩)))
 
 end Lib
 

@@ -1,5 +1,5 @@
 import KanonCore
-import Kanon.Float
+import CoreMod.FBits
 import Kanon.Syntax
 
 /-!
@@ -206,9 +206,6 @@ def f_is_nan (f : CoreMod.Float) : Bool := f.val.isNaN
 def f_is_zero (f : CoreMod.Float) : Bool := f.val.isZero
 def f_is_negative (f : CoreMod.Float) : Bool := f.val.isNeg
 def f_is_positive (f : CoreMod.Float) : Bool := f.val.isPos
-
-def _root_.CoreMod.Float.cmp (c : ∀ {p}, FBits p → FBits p → Bool) (a b : CoreMod.Float) : Bool :=
-  if h : b.prec = a.prec then c a.val (h ▸ b.val) else false
 
 def f_eq : CoreMod.Float → CoreMod.Float → Bool := Float.cmp FBits.eq
 def f_lt : CoreMod.Float → CoreMod.Float → Bool := Float.cmp FBits.lt

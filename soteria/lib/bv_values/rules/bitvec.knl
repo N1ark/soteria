@@ -6,11 +6,11 @@ use builtin "bool"
 
 (* A bit-vector literal stores its value as an integer in [0, 2^n), whatever
    its signedness. *)
-node BitVec of int : TBitVector n
+node BitVec of int : TBitVector n [@lean_inv "bv_wf"]
 notation BitVec
 
 (* A location literal: the integer of a location of [n] bits. *)
-node LocLit of int : TLoc n
+node LocLit of int : TLoc n [@lean_inv "bv_wf"]
 
 node BvOfBool of nat (n) : TBool -> TBitVector n
 node BvExtract of nat * nat (from_, to_) : TBitVector n -> TBitVector (to_ - from_ + 1)

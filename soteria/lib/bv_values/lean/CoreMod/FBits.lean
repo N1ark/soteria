@@ -78,4 +78,11 @@ end FBits
 /-- The bit pattern of a concrete float. -/
 def Float.val (f : Float) : FBits f.prec := BitVec.ofNat _ f.bits
 
+/-- A concrete float is well-formed when its bits fit its precision. -/
+def Float.WF (f : Float) : Prop := f.bits < 2 ^ f.prec.size
+
+/-- A comparison of concrete floats, `false` on different precisions. -/
+def Float.cmp (c : ∀ {p}, FBits p → FBits p → Bool) (a b : Float) : Bool :=
+  if h : b.prec = a.prec then c a.val (h ▸ b.val) else false
+
 end CoreMod

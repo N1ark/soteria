@@ -36,4 +36,12 @@ instance boolSem : KanonBool.Sem (S := sem FS) (boolSyntax FS) where
   sure_neq_sound _ _ _ _ h ht wa wb ea eb :=
     sure_neq_sound h ht (by rw [eval_eq_ev wa]; exact ea) (by rw [eval_eq_ev wb]; exact eb)
 
+@[simp] theorem boolSem_vbool (b : Bool) : KanonBool.Sem.vbool (boolSyntax FS) b = Val.bool b := rfl
+@[simp] theorem boolSem_vbool' : KanonBool.Sem.vbool (boolSyntax FS) = Val.bool := rfl
+
+/-- What the bool module assumes of the oracle `sort_by_tag`. -/
+theorem Oracle.Compat.bool {orc : Oracle} (h : orc.Compat FS) :
+    KanonBool.Oracle.Compat (S := sem FS) (boolSyntax FS) orc.sort_by_tag :=
+  { sort_by_tag := h.sort_by_tag }
+
 end Kanon

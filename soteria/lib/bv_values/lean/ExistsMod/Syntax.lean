@@ -19,13 +19,13 @@ structure Syntax {S : Kanon.Sem} [DecidableEq S.Term] [DecidableEq S.Ty] (B : Ka
   ExistsK : (List (Int × S.Ty)) → S.Term → B.Kind
   /-- The invariant of the terms of `Exists`. -/
   exists_wf : S.Term → Prop
+  exists_used_binders : (List (Int × S.Ty)) → S.Term → (List (Int × S.Ty))
+  exists_no_binders : (List (Int × S.Ty)) → Bool
   WT_Exists : ∀ (x1 : (List (Int × S.Ty))) (x2 : S.Term) (t : S.Ty), S.WT (B.node (ExistsK x1 x2) t) ↔ t = LBool.TBool ∧ S.WT x2 ∧ exists_wf (B.node (ExistsK x1 x2) t)
   /-- The arguments of a `Exists` node. -/
   asExists : S.Term → Option ((List (Int × S.Ty)) × S.Term)
   asExists_node : ∀ (x1 : (List (Int × S.Ty))) (x2 : S.Term) (t : S.Ty), asExists (B.node (ExistsK x1 x2) t) = some (x1, x2)
   asExists_sound : ∀ (v : S.Term) (x1 : (List (Int × S.Ty))) (x2 : S.Term), asExists v = some (x1, x2) → v = (B.node (ExistsK x1 x2) (S.ty v))
-  exists_used_binders : (List (Int × S.Ty)) → S.Term → (List (Int × S.Ty))
-  exists_no_binders : (List (Int × S.Ty)) → Bool
   exists_no_binders_eq : ∀ (l : (List (Int × S.Ty))), (exists_no_binders l) =
       ((firstSome [(match l with | [] => some (true) | _ => none)]).getD
         (match l with | _ => false))

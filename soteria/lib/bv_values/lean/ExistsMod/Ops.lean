@@ -27,7 +27,7 @@ structure Ops {S : Kanon.Sem} [DecidableEq S.Term] [DecidableEq S.Ty] {B : Kanon
 
 /-- What the proofs assume of the model: its rule functions refine their specs, and the
 equations of its helpers. -/
-structure Ops.Sound {S : Kanon.Sem} [DecidableEq S.Term] [DecidableEq S.Ty] {B : Kanon.Base S} {LBool : KanonBool.Syntax B} {LCore : CoreMod.Syntax B} {L : ExistsMod.Syntax B LBool LCore} (O : Ops L) : Prop extends
+structure Ops.Sound {S : Kanon.Sem} [DecidableEq S.Term] [DecidableEq S.Ty] {B : Kanon.Base S} {LBool : KanonBool.Syntax B} {LCore : CoreMod.Syntax B} {L : ExistsMod.Syntax B LBool LCore} [KanonBool.Sem LBool] [CoreMod.Sem LCore] [Sem L] (O : Ops L) : Prop extends
     toBoolSound : KanonBool.Ops.Sound O.toBoolOps, toCoreSound : CoreMod.Ops.Sound O.toCoreOps where
   exists_mk : ∀ (binders : (List (Int × S.Ty))) (body : S.Term), S.Refines (ExistsMod.Exists.mk.spec L binders body) (O.exists_mk binders body)
 

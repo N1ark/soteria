@@ -108,6 +108,18 @@ def exists_wf : Term → Prop
   | .mk (.Exists bs body) _ => (bs.map Prod.fst).Nodup ∧ (∀ b ∈ bs, b.2.WF) ∧ body.ty = .TBool
   | _ => True
 
+/-- The invariant of bit-vector and location literals (`[@lean_inv "bv_wf"]`):
+their integer is in range. -/
+def bv_wf : Term → Prop
+  | .mk (.BitVec z) t | .mk (.LocLit z) t => 0 ≤ z ∧ z < 2 ^ (size_of_ty t).toNat
+  | _ => True
+
+/-- The invariant of float literals (`[@lean_inv "float_wf"]`): their bits fit
+their precision. -/
+def float_wf : Term → Prop
+  | .mk (.Float f) _ => f.bits < 2 ^ f.prec.size
+  | _ => True
+
 mutual
 /-- Syntactic well-typedness. -/
 def Term.WT : Term → Prop
@@ -142,6 +154,30 @@ end
 @[kanon_law] theorem WTAll_iff : ∀ {l : List Term}, Term.WTAll l ↔ ∀ t ∈ l, t.WT
   | [] => by simp [Term.WTAll]
   | t :: ts => by simp [Term.WTAll, WTAll_iff (l := ts)]
+
+/-- The typing of the literals, as the interfaces of their modules state it
+(with their invariants `bv_wf` and `float_wf`). -/
+@[kanon_law] theorem WT_bitVec_wf {z t} : (Term.mk (.BitVec z) t).WT ↔
+    (∃ n : Int, 0 < n ∧ t = .TBitVector n) ∧ bv_wf (.mk (.BitVec z) t) := by
+  simp only [Term.WT, bv_wf]
+  constructor
+  · rintro ⟨n, hn, rfl, h1, h2⟩
+    exact ⟨⟨n, by omega, rfl⟩, h1, by simpa [size_of_ty] using h2⟩
+  · rintro ⟨⟨n, hn, rfl⟩, h1, h2⟩
+    exact ⟨n.toNat, by omega, by simp; omega, h1, by simpa [size_of_ty] using h2⟩
+
+@[kanon_law] theorem WT_locLit_wf {z t} : (Term.mk (.LocLit z) t).WT ↔
+    (∃ n : Int, 0 < n ∧ t = .TLoc n) ∧ bv_wf (.mk (.LocLit z) t) := by
+  simp only [Term.WT, bv_wf]
+  constructor
+  · rintro ⟨n, hn, rfl, h1, h2⟩
+    exact ⟨⟨n, by omega, rfl⟩, h1, by simpa [size_of_ty] using h2⟩
+  · rintro ⟨⟨n, hn, rfl⟩, h1, h2⟩
+    exact ⟨n.toNat, by omega, by simp; omega, h1, by simpa [size_of_ty] using h2⟩
+
+@[kanon_law] theorem WT_float_wf {f t} : (Term.mk (.Float f) t).WT ↔
+    t = .TFloat (f_prec f) ∧ float_wf (.mk (.Float f) t) := by
+  simp [Term.WT, float_wf]
 
 theorem WT_seq {l t} : (Term.mk (.Seq l) t).WT ↔ ∃ e, t = .TSeq e ∧ Term.WTList e l := by
   simp only [Term.WT, seq_wt, WTAll_iff, WTList_iff]
@@ -332,8 +368,6 @@ def Zero (t : Term) : Prop := ∀ FS ρ n (x : BitVec n), eval FS ρ t = some (.
 
 /-! ## Assumptions on the oracles -/
 
-def _root_.CoreMod.Float.WF (f : CoreMod.Float) : Prop := f.bits < 2 ^ f.prec.size
-
 /-- The literal term of a float. -/
 def _root_.CoreMod.Float.term (f : CoreMod.Float) : Term := .mk (.Float f) (.TFloat f.prec)
 
@@ -341,7 +375,7 @@ def _root_.CoreMod.Float.term (f : CoreMod.Float) : Term := .mk (.Float f) (.TFl
 and that Floatml computes, on literals, the same values (bit patterns) as the
 float operations (of the same precision). -/
 structure Oracle.Compat (orc : Oracle) (FS : FloatSem) : Prop where
-  bool : KanonBool.Oracle.Compat orc.sort_by_tag
+  sort_by_tag : ∀ l, (orc.sort_by_tag l).Perm l
   bin : ∀ (op : Op2) (lit : CoreMod.Float → CoreMod.Float → CoreMod.Float),
     (op, lit) ∈ [(.FAdd, orc.f_add), (.FSub, orc.f_sub), (.FMul, orc.f_mul),
       (.FDiv, orc.f_div), (.FRem, orc.f_rem), (.FMin, orc.f_min), (.FMax, orc.f_max)] →

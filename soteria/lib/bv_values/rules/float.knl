@@ -4,7 +4,7 @@ use "core"
 use builtin "bool"
 use "bitvec"
 
-node Float of float (f) : TFloat (f_prec f)
+node Float of float (f) : TFloat (f_prec f) [@lean_inv "float_wf"]
 node BvOfFloat of rm * bool * nat (_, _, n) : TFloat p -> TBitVector n
 node FloatOfBv of rm * bool * fp (_, _, p) : TBitVector n -> TFloat p
 node FloatOfBvRaw of fp (p) : TBitVector (Float.fp_size p) -> TFloat p

@@ -394,7 +394,7 @@ structure Ops where
   bitvec_sub_overflows : Bool → Term → Term → Term
   bitvec_of_float : Rm → Bool → Int → Term → Term
   bitvec_to_float : Rm → Bool → Fp → Term → Term
-  bitvec_to_float_raw : Term → Term
+  bitvec_to_float_bits : Fp → Term → Term
   float_is_floatclass : Fc → Term → Term
   float_is_negative : Term → Term
   float_is_positive : Term → Term
@@ -438,6 +438,11 @@ def Bitvec.signed_to_unsigned_cmp (O : Ops) (is_leq : Bool) (c_on_left : Bool) (
        (if nonneg
        then (O.bool_or_ c_cmp in_neg)
        else (O.bool_and_ in_neg c_cmp))))))))
+
+def Bitvec.to_float_raw (O : Ops) (v : Term) : Term :=
+  (let n := (Bitvec.size v);
+  (let kanon__result := (O.bitvec_to_float_bits (fp_of_size n) v);
+  kanon__result))
 
 @[kanon_spec] def Bool.and_.spec (v1 : Term) (v2 : Term) : Term :=
   (Term.mk (Kind.Op2 Op2.And v1 v2) Ty.TBool)
@@ -550,8 +555,8 @@ def Bitvec.signed_to_unsigned_cmp (O : Ops) (is_leq : Bool) (c_on_left : Bool) (
 @[kanon_spec] def Bitvec.to_float.spec (rounding : Rm) (signed : Bool) (fp : Fp) (v : Term) : Term :=
   (Term.mk (Kind.Op1 (Op1.FloatOfBv rounding signed fp) v) (Ty.TFloat fp))
 
-@[kanon_spec] def Bitvec.to_float_raw.spec (v : Term) : Term :=
-  (Term.mk (Kind.Op1 (Op1.FloatOfBvRaw (fp_of_size (Bitvec.size v))) v) (Ty.TFloat (fp_of_size (Bitvec.size v))))
+@[kanon_spec] def Bitvec.to_float_bits.spec (fp : Fp) (v : Term) : Term :=
+  (Term.mk (Kind.Op1 (Op1.FloatOfBvRaw fp) v) (Ty.TFloat fp))
 
 @[kanon_spec] def Float.is_floatclass.spec (fc : Fc) (sv : Term) : Term :=
   (Term.mk (Kind.Op1 (Op1.FIs fc) sv) Ty.TBool)
@@ -4375,24 +4380,22 @@ def Bitvec.to_float.r_default (O : Ops) (rounding : Rm) (signed : Bool) (fp : Fp
 def Bitvec.to_float.step (O : Ops) (rounding : Rm) (signed : Bool) (fp : Fp) (v : Term) : Term :=
   (firstSome [Bitvec.to_float.r_lit O rounding signed fp v, Bitvec.to_float.r_default O rounding signed fp v]).getD (Bitvec.to_float.spec rounding signed fp v)
 
-def Bitvec.to_float_raw.r_lit (O : Ops) (v : Term) : Option Term :=
+def Bitvec.to_float_bits.r_lit (O : Ops) (fp : Fp) (v : Term) : Option Term :=
   (match v with
     | (Term.mk (Kind.BitVec z) _) =>
     (whenSome true
-    ((let fp := (fp_of_size (Bitvec.size v));
-     (let kanon__a1 := (f_of_bits fp z);
-     (Term.mk (Kind.Float kanon__a1) (Ty.TFloat (f_prec kanon__a1)))))))
+    ((let kanon__a1 := (f_of_bits fp z);
+     (Term.mk (Kind.Float kanon__a1) (Ty.TFloat (f_prec kanon__a1))))))
     | _ => none)
 
-def Bitvec.to_float_raw.r_default (O : Ops) (v : Term) : Option Term :=
+def Bitvec.to_float_bits.r_default (O : Ops) (fp : Fp) (v : Term) : Option Term :=
   (match v with
     | _ =>
     (whenSome true
-    ((let kanon__a2 := (fp_of_size (Bitvec.size v));
-     (Term.mk (Kind.Op1 (Op1.FloatOfBvRaw kanon__a2) v) (Ty.TFloat kanon__a2))))))
+    ((Term.mk (Kind.Op1 (Op1.FloatOfBvRaw fp) v) (Ty.TFloat fp)))))
 
-def Bitvec.to_float_raw.step (O : Ops) (v : Term) : Term :=
-  (firstSome [Bitvec.to_float_raw.r_lit O v, Bitvec.to_float_raw.r_default O v]).getD (Bitvec.to_float_raw.spec v)
+def Bitvec.to_float_bits.step (O : Ops) (fp : Fp) (v : Term) : Term :=
+  (firstSome [Bitvec.to_float_bits.r_lit O fp v, Bitvec.to_float_bits.r_default O fp v]).getD (Bitvec.to_float_bits.spec fp v)
 
 def Float.is_floatclass.r_lit (O : Ops) (fc : Fc) (sv : Term) : Option Term :=
   (match sv with
@@ -4817,7 +4820,7 @@ def opsRaw (orc : Oracle) : Ops :=
     bitvec_sub_overflows := fun signed v1 v2 => Bitvec.sub_overflows.spec signed v1 v2,
     bitvec_of_float := fun rounding signed sz v => Bitvec.of_float.spec rounding signed sz v,
     bitvec_to_float := fun rounding signed fp v => Bitvec.to_float.spec rounding signed fp v,
-    bitvec_to_float_raw := fun v => Bitvec.to_float_raw.spec v,
+    bitvec_to_float_bits := fun fp v => Bitvec.to_float_bits.spec fp v,
     float_is_floatclass := fun fc sv => Float.is_floatclass.spec fc sv,
     float_is_negative := fun v => Float.is_negative.spec v,
     float_is_positive := fun v => Float.is_positive.spec v,
@@ -4881,7 +4884,7 @@ def opsStep (O : Ops) : Ops :=
     bitvec_sub_overflows := Bitvec.sub_overflows.step O,
     bitvec_of_float := Bitvec.of_float.step O,
     bitvec_to_float := Bitvec.to_float.step O,
-    bitvec_to_float_raw := Bitvec.to_float_raw.step O,
+    bitvec_to_float_bits := Bitvec.to_float_bits.step O,
     float_is_floatclass := Float.is_floatclass.step O,
     float_is_negative := Float.is_negative.step O,
     float_is_positive := Float.is_positive.step O,

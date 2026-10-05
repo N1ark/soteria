@@ -43,6 +43,10 @@ let distinct_range (l : t list) : (int * int) option =
           let max = List.hd (List.rev l) in
           if max - hd + 1 = List.length l then Some (hd, max) else None)
 
+let pp_meta_part ft = function
+  | PartLen -> Fmt.string ft "len"
+  | PartVTable -> Fmt.string ft "vtable"
+
 let pp_op1 ft = function
   | Not -> Fmt.string ft "!"
   | FAbs -> Fmt.string ft "abs."
@@ -71,6 +75,11 @@ let pp_op1 ft = function
   | FullPtrMeta -> Fmt.string ft "meta"
   | IsVariant var -> Fmt.pf ft "is<%a>" Charon.Types.pp_variant_id var
   | ArrayField i -> Fmt.pf ft "[%d]" i
+  | ThinPtrPart part -> Rust_encoding.pp_ptr_part ft part
+  | PtrMetaAs part -> Fmt.pf ft "as<%a>" pp_meta_part part
+  | Field i -> Fmt.int ft i
+  | VariantField (var, i) ->
+      Fmt.pf ft "as<%a>.%d" Charon.Types.pp_variant_id var i
 
 let pp_op2 ft = function
   | Ptr -> Fmt.string ft "&"
@@ -106,10 +115,6 @@ let pp_op2 ft = function
   | LShr -> Fmt.string ft "l>>"
   | AShr -> Fmt.string ft "a>>"
 
-let pp_meta_part ft = function
-  | PartLen -> Fmt.string ft "len"
-  | PartVTable -> Fmt.string ft "vtable"
-
 let rec pp ft (t : t) =
   match t.kind with
   | Var x -> Fmt.pf ft "V%a" Var.pp x
@@ -123,6 +128,12 @@ let rec pp ft (t : t) =
   | Op1 (IsVariant var, a) ->
       Fmt.pf ft "%a.is<%a>" pp a Charon.Types.pp_variant_id var
   | Op1 (ArrayField i, a) -> Fmt.pf ft "%a[%d]" pp a i
+  | Op1 (ThinPtrPart part, a) ->
+      Fmt.pf ft "%a.%a" pp a Rust_encoding.pp_ptr_part part
+  | Op1 (PtrMetaAs part, a) -> Fmt.pf ft "%a.as<%a>" pp a pp_meta_part part
+  | Op1 (Field i, a) -> Fmt.pf ft "%a.%d" pp a i
+  | Op1 (VariantField (var, i), a) ->
+      Fmt.pf ft "%a.as<%a>.%d" pp a Charon.Types.pp_variant_id var i
   | Op1 (op, a) -> Fmt.pf ft "%a(%a)" pp_op1 op pp a
   | Op2 (Ptr, a, b) -> Fmt.pf ft "%a(%a, %a)" pp_op2 Ptr pp a pp b
   | Op2 (op, a, b) -> Fmt.pf ft "(%a %a %a)" pp a pp_op2 op pp b
@@ -154,12 +165,6 @@ let rec pp ft (t : t) =
       List.iteri (fun i b -> pp_block ft ~first:(i = 0) b) bs;
       Fmt.string ft ")"
   | PolyVal id -> Fmt.pf ft "PolyVal(%a)" Charon.Types.pp_type_var_id id
-  | ThinPtrPart (part, a) ->
-      Fmt.pf ft "%a.%a" pp a Rust_encoding.pp_ptr_part part
-  | PtrMetaAs (part, a) -> Fmt.pf ft "%a.as<%a>" pp a pp_meta_part part
-  | Field (i, a) -> Fmt.pf ft "%a.%d" pp a i
-  | VariantField (var, i, a) ->
-      Fmt.pf ft "%a.as<%a>.%d" pp a Charon.Types.pp_variant_id var i
 
 and pp_block ft ~first (b : block) =
   if not first then Fmt.string ft ", ";

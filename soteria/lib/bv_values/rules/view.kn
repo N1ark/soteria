@@ -5,13 +5,6 @@
 
 (* {1 Primitives of the view} *)
 
-(* The terms that no function of Kanon builds: a pointer (no simplification;
-   the sizes of its operands must be equal), a sequence at a given sort, and
-   the failure of [rebuild] on the wrong number of operands *)
-prim mk_ptr : t -> t -> t [@no_lean]
-prim mk_seq : ty -> t list -> t [@no_lean]
-prim bad_operands : t -> t [@no_lean]
-
 (* {2 SMT operators}
 
    Each applies to the encodings of the operands, and encodes them in the
@@ -225,120 +218,7 @@ fn as_range (v : t) : (var * int * (range_sign * (int * int))) option [@no_lean]
       | None -> None)
   | _ -> None
 
-(* {1 Operands and rebuilding} *)
-
-(* The operands of a term, left to right: [Seq] its elements, [Distinct] its
-   list, [Exists] its body and [Ptr] its location and offset. None for a leaf. *)
-fn operands (v : t) : t list [@no_lean] [@total] =
-  match v with
-  | Var _ | Bool _ | BitVec _ | LocLit _ | Float _ -> []
-  | Seq l -> l
-  | Exists (_, a) -> [ a ]
-  | Not a | FAbs a | FNeg a | FSqrt a | GetPtrLoc a | GetPtrOfs a
-  | BvOfBool (_, a) | BvOfFloat (_, _, _, a) | FloatOfBv (_, _, _, a)
-  | FloatOfBvRaw (_, a) | FloatOfFloat (_, _, a) | BvExtract (_, _, a)
-  | BvExtend (_, _, a) | BvNot a | Neg (_, a) | FIs (_, a) | FIsNeg a
-  | FIsPos a | FRound (_, a) ->
-      [ a ]
-  | Ptr (a, b) | Eq (a, b) | And (a, b) | Or (a, b) | FEq (a, b) | FLeq (a, b)
-  | FLt (a, b) | FAdd (a, b) | FSub (a, b) | FMul (a, b) | FDiv (a, b)
-  | FRem (a, b) | FMin (a, b) | FMax (a, b) | BitAnd (a, b) | BitOr (a, b)
-  | BitXor (a, b) | Shl (a, b) | LShr (a, b) | AShr (a, b) | Add (_, a, b)
-  | Sub (_, a, b) | Mul (_, a, b) | Div (_, a, b) | Rem (_, a, b) | Mod (a, b)
-  | AddOvf (_, a, b) | SubOvf (_, a, b) | MulOvf (_, a, b) | Lt (_, a, b)
-  | Leq (_, a, b) | BvConcat (a, b) ->
-      [ a; b ]
-  | Fma (a, b, c) | Ite (a, b, c) -> [ a; b; c ]
-  | Distinct l -> l
-
-(* [rebuild v cs] is [v] with its operands replaced by [cs], rebuilt with the
-   same operator through its smart constructor ([Ptr] with [mk_ptr], which does
-   not simplify). A leaf gives [v]. The wrong number of operands fails. *)
-fn rebuild (v : t) (cs : t list) : t [@no_lean] [@total] =
-  match v with
-  | Var _ | Bool _ | BitVec _ | LocLit _ | Float _ -> (
-      match cs with [] -> v | _ -> bad_operands v)
-  | Seq _ -> mk_seq (type_of v) cs
-  | Exists (bs, _) -> (
-      match cs with [ a ] -> Exists.mk bs a | _ -> bad_operands v)
-  | Not _ -> ( match cs with [ a ] -> Bool.not_ a | _ -> bad_operands v)
-  | FAbs _ -> ( match cs with [ a ] -> Float.abs a | _ -> bad_operands v)
-  | FNeg _ -> ( match cs with [ a ] -> Float.neg a | _ -> bad_operands v)
-  | FSqrt _ -> ( match cs with [ a ] -> Float.sqrt a | _ -> bad_operands v)
-  | GetPtrLoc _ -> ( match cs with [ a ] -> Ptr.loc a | _ -> bad_operands v)
-  | GetPtrOfs _ -> ( match cs with [ a ] -> Ptr.ofs a | _ -> bad_operands v)
-  | BvOfBool (n, _) -> (
-      match cs with [ a ] -> Bitvec.of_bool n a | _ -> bad_operands v)
-  | BvOfFloat (rm, s, n, _) -> (
-      match cs with [ a ] -> Bitvec.of_float rm s n a | _ -> bad_operands v)
-  | FloatOfBv (rm, s, p, _) -> (
-      match cs with [ a ] -> Bitvec.to_float rm s p a | _ -> bad_operands v)
-  | FloatOfBvRaw _ -> (
-      match cs with [ a ] -> Bitvec.to_float_raw a | _ -> bad_operands v)
-  | FloatOfFloat (rm, p, _) -> (
-      match cs with [ a ] -> Float.cast rm p a | _ -> bad_operands v)
-  | BvExtract (f, t, _) -> (
-      match cs with [ a ] -> Bitvec.extract f t a | _ -> bad_operands v)
-  | BvExtend (s, k, _) -> (
-      match cs with [ a ] -> Bitvec.extend_ s k a | _ -> bad_operands v)
-  | BvNot _ -> ( match cs with [ a ] -> Bitvec.not_ a | _ -> bad_operands v)
-  | Neg (c, _) -> ( match cs with [ a ] -> Bitvec.neg c a | _ -> bad_operands v)
-  | FIs (fc, _) -> (
-      match cs with [ a ] -> Float.is_floatclass fc a | _ -> bad_operands v)
-  | FIsNeg _ -> (
-      match cs with [ a ] -> Float.is_negative a | _ -> bad_operands v)
-  | FIsPos _ -> (
-      match cs with [ a ] -> Float.is_positive a | _ -> bad_operands v)
-  | FRound (rm, _) -> (
-      match cs with [ a ] -> Float.round rm a | _ -> bad_operands v)
-  | And _ -> ( match cs with [ a; b ] -> Bool.and_ a b | _ -> bad_operands v)
-  | Or _ -> ( match cs with [ a; b ] -> Bool.or_ a b | _ -> bad_operands v)
-  | Eq _ -> ( match cs with [ a; b ] -> Bool.eq a b | _ -> bad_operands v)
-  | Add (c, _, _) -> (
-      match cs with [ a; b ] -> Bitvec.add c a b | _ -> bad_operands v)
-  | Sub (c, _, _) -> (
-      match cs with [ a; b ] -> Bitvec.sub c a b | _ -> bad_operands v)
-  | Mul (c, _, _) -> (
-      match cs with [ a; b ] -> Bitvec.mul c a b | _ -> bad_operands v)
-  | Div (s, _, _) -> (
-      match cs with [ a; b ] -> Bitvec.div s a b | _ -> bad_operands v)
-  | Rem (s, _, _) -> (
-      match cs with [ a; b ] -> Bitvec.rem s a b | _ -> bad_operands v)
-  | Mod _ -> ( match cs with [ a; b ] -> Bitvec.mod_ a b | _ -> bad_operands v)
-  | AddOvf (s, _, _) -> (
-      match cs with [ a; b ] -> Bitvec.add_overflows s a b | _ -> bad_operands v)
-  | SubOvf (s, _, _) -> (
-      match cs with [ a; b ] -> Bitvec.sub_overflows s a b | _ -> bad_operands v)
-  | MulOvf (s, _, _) -> (
-      match cs with [ a; b ] -> Bitvec.mul_overflows s a b | _ -> bad_operands v)
-  | Lt (s, _, _) -> (
-      match cs with [ a; b ] -> Bitvec.lt s a b | _ -> bad_operands v)
-  | Leq (s, _, _) -> (
-      match cs with [ a; b ] -> Bitvec.leq s a b | _ -> bad_operands v)
-  | BvConcat _ -> (
-      match cs with [ a; b ] -> Bitvec.concat a b | _ -> bad_operands v)
-  | BitAnd _ -> ( match cs with [ a; b ] -> Bitvec.and_ a b | _ -> bad_operands v)
-  | BitOr _ -> ( match cs with [ a; b ] -> Bitvec.or_ a b | _ -> bad_operands v)
-  | BitXor _ -> ( match cs with [ a; b ] -> Bitvec.xor a b | _ -> bad_operands v)
-  | Shl _ -> ( match cs with [ a; b ] -> Bitvec.shl a b | _ -> bad_operands v)
-  | LShr _ -> ( match cs with [ a; b ] -> Bitvec.lshr a b | _ -> bad_operands v)
-  | AShr _ -> ( match cs with [ a; b ] -> Bitvec.ashr a b | _ -> bad_operands v)
-  | FEq _ -> ( match cs with [ a; b ] -> Float.eq a b | _ -> bad_operands v)
-  | FLeq _ -> ( match cs with [ a; b ] -> Float.leq a b | _ -> bad_operands v)
-  | FLt _ -> ( match cs with [ a; b ] -> Float.lt a b | _ -> bad_operands v)
-  | FAdd _ -> ( match cs with [ a; b ] -> Float.add a b | _ -> bad_operands v)
-  | FSub _ -> ( match cs with [ a; b ] -> Float.sub a b | _ -> bad_operands v)
-  | FMul _ -> ( match cs with [ a; b ] -> Float.mul a b | _ -> bad_operands v)
-  | FDiv _ -> ( match cs with [ a; b ] -> Float.div a b | _ -> bad_operands v)
-  | FRem _ -> ( match cs with [ a; b ] -> Float.rem a b | _ -> bad_operands v)
-  | FMin _ -> ( match cs with [ a; b ] -> Float.min a b | _ -> bad_operands v)
-  | FMax _ -> ( match cs with [ a; b ] -> Float.max a b | _ -> bad_operands v)
-  | Ptr _ -> ( match cs with [ a; b ] -> mk_ptr a b | _ -> bad_operands v)
-  | Ite _ -> (
-      match cs with [ a; b; c ] -> Bool.ite a b c | _ -> bad_operands v)
-  | Fma _ -> (
-      match cs with [ a; b; c ] -> Float.fma a b c | _ -> bad_operands v)
-  | Distinct _ -> Bool.distinct cs
+(* {1 Operands} *)
 
 (* Whether [map_operands] of the solver maps over the operands: the unary and
    binary operators, but not [Ptr]. A language that adds nodes extends this. *)
@@ -357,52 +237,53 @@ fn maps_operands (v : t) : bool [@no_lean] =
 
 (* {1 Cost} *)
 
-(* The estimated cost of bit-blasting a term: the cost of its head plus the
-   cost of its operands, except for a pointer, which costs 1. One unit is
-   roughly a thousand bytes of Z3's bit-blasted encoding of the operator,
-   measured at 32 bits with [(then simplify fpa2bv simplify bit-blast)]. *)
-fn cost (v : t) : int [@no_lean] [@total] =
+(* The estimated cost of bit-blasting the head of a term, to which the cost of
+   its operands is added when [costs_operands]. One unit is roughly a thousand
+   bytes of Z3's bit-blasted encoding of the operator, measured at 32 bits with
+   [(then simplify fpa2bv simplify bit-blast)]. *)
+fn head_cost (v : t) : int [@no_lean] [@total] =
   match v with
-  | FRem _ -> 12900 + costs (operands v)
-  | Mod _ -> 12700 + costs (operands v)
-  | Div (s, _, _) -> (if s then 12700 else 3600) + costs (operands v)
-  | Rem (s, _, _) -> (if s then 12700 else 7100) + costs (operands v)
-  | Mul _ -> 1900 + costs (operands v)
-  | FDiv _ -> 1300 + costs (operands v)
-  | FMul _ -> 345 + costs (operands v)
-  | MulOvf _ -> 200 + costs (operands v)
-  | FAdd _ | FSub _ -> 130 + costs (operands v)
-  | Sub _ -> 97 + costs (operands v)
-  | Add _ -> 75 + costs (operands v)
-  | Shl _ | LShr _ | AShr _ -> 35 + costs (operands v)
-  | FMin _ | FMax _ -> 24 + costs (operands v)
-  | FLt _ | FLeq _ -> 12 + costs (operands v)
-  | SubOvf (s, _, _) -> (if s then 12 else 5) + costs (operands v)
-  | AddOvf (s, _, _) -> (if s then 9 else 5) + costs (operands v)
-  | Lt _ | Leq _ -> 5 + costs (operands v)
-  | FEq _ -> 3 + costs (operands v)
+  | FRem _ -> 12900
+  | Mod _ -> 12700
+  | Div (s, _, _) -> if s then 12700 else 3600
+  | Rem (s, _, _) -> if s then 12700 else 7100
+  | Mul _ -> 1900
+  | FDiv _ -> 1300
+  | FMul _ -> 345
+  | MulOvf _ -> 200
+  | FAdd _ | FSub _ -> 130
+  | Sub _ -> 97
+  | Add _ -> 75
+  | Shl _ | LShr _ | AShr _ -> 35
+  | FMin _ | FMax _ -> 24
+  | FLt _ | FLeq _ -> 12
+  | SubOvf (s, _, _) -> if s then 12 else 5
+  | AddOvf (s, _, _) -> if s then 9 else 5
+  | Lt _ | Leq _ -> 5
+  | FEq _ -> 3
   | And _ | Or _ | Eq _ | BitAnd _ | BitOr _ | BitXor _ | BvConcat _ ->
-      1 + costs (operands v)
-  | BvOfFloat _ -> 1400 + costs (operands v)
-  | FSqrt _ -> 280 + costs (operands v)
-  | FloatOfFloat _ -> 255 + costs (operands v)
-  | FloatOfBv _ -> 78 + costs (operands v)
-  | FRound _ -> 65 + costs (operands v)
-  | Neg _ -> 10 + costs (operands v)
-  | FAbs _ | FNeg _ | FloatOfBvRaw _ -> 4 + costs (operands v)
+      1
+  | BvOfFloat _ -> 1400
+  | FSqrt _ -> 280
+  | FloatOfFloat _ -> 255
+  | FloatOfBv _ -> 78
+  | FRound _ -> 65
+  | Neg _ -> 10
+  | FAbs _ | FNeg _ | FloatOfBvRaw _ -> 4
   | Not _ | GetPtrLoc _ | GetPtrOfs _ | BvNot _ | BvOfBool _ | BvExtend _
   | BvExtract _ | FIs _ | FIsNeg _ | FIsPos _ ->
-      1 + costs (operands v)
-  | Fma _ -> 400 + costs (operands v)
-  | Ite _ | Distinct _ | Seq _ -> costs (operands v)
+      1
+  | Fma _ -> 400
+  | Ite _ | Distinct _ | Seq _ -> 0
   | Var _ -> 3
   | Float _ -> 2
   (* quantifiers escape the bit-blasting that the costs above measure *)
-  | Exists _ -> 100000 + costs (operands v)
+  | Exists _ -> 100000
   | Ptr _ | Bool _ | BitVec _ | LocLit _ -> 1
 
-fn costs (l : t list) : int [@no_lean] =
-  match l with [] -> 0 | x :: rest -> cost x + costs rest
+(* Whether the cost of the operands of a term counts: not those of a pointer *)
+fn costs_operands (v : t) : bool [@no_lean] =
+  match v with Ptr _ -> false | _ -> true
 
 (* {1 Model search} *)
 

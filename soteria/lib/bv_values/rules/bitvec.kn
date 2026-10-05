@@ -1035,11 +1035,13 @@ rule to_float : FloatOfBv (rounding, signed, fp, v) =
       | Some f -> Float f
       | None -> FloatOfBv (rounding, signed, fp, v))
 
-rule to_float_raw (v : t) :
-    FloatOfBvRaw (Float.fp_of_size (size v), v) =
-  | lit: BitVec z ->
-      let fp = Float.fp_of_size (size v) in
-      Float (Float.f_of_bits fp z)
+(* [v] read as the bits of a float of the precision [fp], of the size of [v] *)
+rule to_float_bits : FloatOfBvRaw (fp, v) =
+  | lit: BitVec z -> Float (Float.f_of_bits fp z)
+
+(* [v] read as the bits of a float of its size *)
+fn to_float_raw (v : TBitVector n) : TFloat (Float.fp_of_size n) =
+  to_float_bits (Float.fp_of_size n) v
 
 (* The rules of the bool module on bit-vectors *)
 

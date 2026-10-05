@@ -110,10 +110,9 @@ open Classical Lib
       rw [Bitvec.to_float.spec, eval_op1 w, eval_bitVec' (WT_op1.1 w).2 rfl, he] at e
       rw [eval_eq_ev w']; simp only [ev]; exact e
 
-@[kanon_arm] theorem Bitvec.to_float_raw.r_lit.main.proof : Bitvec.to_float_raw.r_lit.main.Stmt := by
-  intro FS O hO z T
-  simp only [Bitvec.to_float_raw.spec, size_eq, Term.ty_mk]
-  generalize fp_of_size (size_of_ty T) = p
+@[kanon_arm] theorem Bitvec.to_float_bits.r_lit.main.proof : Bitvec.to_float_bits.r_lit.main.Stmt := by
+  intro FS O hO p z T
+  simp only [Bitvec.to_float_bits.spec, Term.ty_mk]
   refine Sem.Refines.intro_eval (fun w => ?_) (fun ρ v w w' e => ?_)
   all_goals have ⟨w1, w2⟩ := WT_op1.1 w
   all_goals simp only [Op1.WT, Term.ty_mk, fp_size] at w1

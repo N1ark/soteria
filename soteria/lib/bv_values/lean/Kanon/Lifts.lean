@@ -222,10 +222,10 @@ theorem lift_bitvec_to_float (hO : O.Sound FS) {rounding : Rm} {signed : Bool} {
   Refines FS (Bitvec.to_float.spec rounding signed fp v) (O.bitvec_to_float rounding signed fp v') :=
   Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bitvec_to_float rounding signed fp v')
 
-theorem lift_bitvec_to_float_raw (hO : O.Sound FS) {v v' : Term}
+theorem lift_bitvec_to_float_bits (hO : O.Sound FS) {fp : Fp} {v v' : Term}
   (h_v : Refines FS v v') :
-  Refines FS (Bitvec.to_float_raw.spec v) (O.bitvec_to_float_raw v') :=
-  Refinement.trans (by simp only [kanon_spec, Bitvec.size]; kanon_congr) (hO.bitvec_to_float_raw v')
+  Refines FS (Bitvec.to_float_bits.spec fp v) (O.bitvec_to_float_bits fp v') :=
+  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bitvec_to_float_bits fp v')
 
 theorem lift_float_is_floatclass (hO : O.Sound FS) {fc : Fc} {sv sv' : Term}
   (h_sv : Refines FS sv sv') :

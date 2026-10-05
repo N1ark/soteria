@@ -4468,21 +4468,21 @@ theorem Bitvec.to_float.r_default.proof : Bitvec.to_float.r_default.Stmt := by
   repeat' rcases orElse_some h with h | h
   · kanon_arm h (Bitvec.to_float.r_default.main.ok FS O hO)
 
-theorem Bitvec.to_float_raw.r_lit.main.ok : Bitvec.to_float_raw.r_lit.main.Stmt := kanon_proof% Bitvec.to_float_raw.r_lit.main
+theorem Bitvec.to_float_bits.r_lit.main.ok : Bitvec.to_float_bits.r_lit.main.Stmt := kanon_proof% Bitvec.to_float_bits.r_lit.main
 
-theorem Bitvec.to_float_raw.r_lit.proof : Bitvec.to_float_raw.r_lit.Stmt := by
-  intro FS O hO v res h
-  simp only [Bitvec.to_float_raw.r_lit] at h
+theorem Bitvec.to_float_bits.r_lit.proof : Bitvec.to_float_bits.r_lit.Stmt := by
+  intro FS O hO fp v res h
+  simp only [Bitvec.to_float_bits.r_lit] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (Bitvec.to_float_raw.r_lit.main.ok FS O hO)
+  · kanon_arm h (Bitvec.to_float_bits.r_lit.main.ok FS O hO)
 
-theorem Bitvec.to_float_raw.r_default.main.ok : Bitvec.to_float_raw.r_default.main.Stmt := kanon_proof% Bitvec.to_float_raw.r_default.main
+theorem Bitvec.to_float_bits.r_default.main.ok : Bitvec.to_float_bits.r_default.main.Stmt := kanon_proof% Bitvec.to_float_bits.r_default.main
 
-theorem Bitvec.to_float_raw.r_default.proof : Bitvec.to_float_raw.r_default.Stmt := by
-  intro FS O hO v res h
-  simp only [Bitvec.to_float_raw.r_default] at h
+theorem Bitvec.to_float_bits.r_default.proof : Bitvec.to_float_bits.r_default.Stmt := by
+  intro FS O hO fp v res h
+  simp only [Bitvec.to_float_bits.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (Bitvec.to_float_raw.r_default.main.ok FS O hO)
+  · kanon_arm h (Bitvec.to_float_bits.r_default.main.ok FS O hO)
 
 theorem Float.is_floatclass.r_lit.main.ok : Float.is_floatclass.r_lit.main.Stmt := kanon_proof% Float.is_floatclass.r_lit.main
 
@@ -5403,11 +5403,11 @@ theorem Bitvec.to_float.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (
   refine Refinement.firstSome_cons (fun res h => Bitvec.to_float.r_default.proof FS O hO rounding signed fp v res h) ?_
   exact Refinement.firstSome_nil
 
-theorem Bitvec.to_float_raw.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v : Term) :
-  Refines FS (Bitvec.to_float_raw.spec v) (Bitvec.to_float_raw.step O v) := by
-  unfold Bitvec.to_float_raw.step
-  refine Refinement.firstSome_cons (fun res h => Bitvec.to_float_raw.r_lit.proof FS O hO v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => Bitvec.to_float_raw.r_default.proof FS O hO v res h) ?_
+theorem Bitvec.to_float_bits.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (fp : Fp) (v : Term) :
+  Refines FS (Bitvec.to_float_bits.spec fp v) (Bitvec.to_float_bits.step O fp v) := by
+  unfold Bitvec.to_float_bits.step
+  refine Refinement.firstSome_cons (fun res h => Bitvec.to_float_bits.r_lit.proof FS O hO fp v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.to_float_bits.r_default.proof FS O hO fp v res h) ?_
   exact Refinement.firstSome_nil
 
 theorem Float.is_floatclass.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (fc : Fc) (sv : Term) :
@@ -5616,7 +5616,7 @@ theorem opsN_sound (FS : FloatSem) (orc : Oracle) (h : orc.Compat FS) :
       bitvec_sub_overflows := fun signed v1 v2 => Refinement.refl,
       bitvec_of_float := fun rounding signed sz v => Refinement.refl,
       bitvec_to_float := fun rounding signed fp v => Refinement.refl,
-      bitvec_to_float_raw := fun v => Refinement.refl,
+      bitvec_to_float_bits := fun fp v => Refinement.refl,
       float_is_floatclass := fun fc sv => Refinement.refl,
       float_is_negative := fun v => Refinement.refl,
       float_is_positive := fun v => Refinement.refl,
@@ -5680,7 +5680,7 @@ theorem opsN_sound (FS : FloatSem) (orc : Oracle) (h : orc.Compat FS) :
       bitvec_sub_overflows := Bitvec.sub_overflows.step_sound FS _ hO,
       bitvec_of_float := Bitvec.of_float.step_sound FS _ hO,
       bitvec_to_float := Bitvec.to_float.step_sound FS _ hO,
-      bitvec_to_float_raw := Bitvec.to_float_raw.step_sound FS _ hO,
+      bitvec_to_float_bits := Bitvec.to_float_bits.step_sound FS _ hO,
       float_is_floatclass := Float.is_floatclass.step_sound FS _ hO,
       float_is_negative := Float.is_negative.step_sound FS _ hO,
       float_is_positive := Float.is_positive.step_sound FS _ hO,

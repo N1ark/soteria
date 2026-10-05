@@ -134,6 +134,7 @@ module type S = sig
       [> Tag.tbitvector ] t
     val to_float : rm -> bool -> fp -> [< Tag.tbitvector ] t ->
       [> Tag.tfloat ] t
+    val to_float_bits : fp -> [< Tag.tbitvector ] t -> [> Tag.tfloat ] t
     val to_float_raw : [< Tag.tbitvector ] t -> [> Tag.tfloat ] t
     val as_bitvec : _ t -> Z.t option
     val is_bitvec : _ t -> bool

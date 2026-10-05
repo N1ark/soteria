@@ -101,10 +101,6 @@ and kind =
   | Array of (t Iarray.t)
   | Union of (block list)
   | PolyVal of tyvar_id
-  | ThinPtrPart of ptr_part * t
-  | PtrMetaAs of meta_part * t
-  | Field of int * t
-  | VariantField of variant_id * int * t
   | Op1 of op1 * t
   | Op2 of op2 * t * t
   | Op3 of op3 * t * t * t
@@ -130,8 +126,12 @@ and op1 =
   | FRound of rm
   | GetPtrLoc
   | GetPtrOfs
+  | ThinPtrPart of ptr_part
   | FullPtrInner
   | FullPtrMeta
+  | PtrMetaAs of meta_part
+  | Field of int
+  | VariantField of variant_id * int
   | IsVariant of variant_id
   | ArrayField of int
 
@@ -416,13 +416,6 @@ and equal_kind (a : kind) (b : kind) =
   | Array a1, Array b1 -> (Stdlib.Iarray.equal equal_t) a1 b1
   | Union a1, Union b1 -> (Stdlib.List.equal equal_block) a1 b1
   | PolyVal a1, PolyVal b1 -> equal_tyvar_id a1 b1
-  | ThinPtrPart (a1, a2), ThinPtrPart (b1, b2) ->
-      equal_ptr_part a1 b1 && equal_t a2 b2
-  | PtrMetaAs (a1, a2), PtrMetaAs (b1, b2) ->
-      equal_meta_part a1 b1 && equal_t a2 b2
-  | Field (a1, a2), Field (b1, b2) -> Int.equal a1 b1 && equal_t a2 b2
-  | VariantField (a1, a2, a3), VariantField (b1, b2, b3) ->
-      equal_variant_id a1 b1 && Int.equal a2 b2 && equal_t a3 b3
   | Op1 (a1, a2), Op1 (b1, b2) -> equal_op1 a1 b1 && equal_t a2 b2
   | Op2 (a1, a2, a3), Op2 (b1, b2, b3) ->
       equal_op2 a1 b1 && equal_t a2 b2 && equal_t a3 b3
@@ -464,28 +457,19 @@ and hash_kind (a : kind) =
       hash_combine (13)
         ((Stdlib.List.fold_left (fun acc x -> hash_combine acc (hash_block x)) 0) a1)
   | PolyVal a1 -> hash_combine (14) (hash_tyvar_id a1)
-  | ThinPtrPart (a1, a2) ->
-      hash_combine (hash_combine (15) (hash_ptr_part a1)) (hash_t a2)
-  | PtrMetaAs (a1, a2) ->
-      hash_combine (hash_combine (16) (hash_meta_part a1)) (hash_t a2)
-  | Field (a1, a2) -> hash_combine (hash_combine (17) (a1)) (hash_t a2)
-  | VariantField (a1, a2, a3) ->
-      hash_combine
-        (hash_combine (hash_combine (18) (hash_variant_id a1)) (a2))
-        (hash_t a3)
   | Op1 (a1, a2) ->
-      hash_combine (hash_combine (19) (hash_op1 a1)) (hash_t a2)
+      hash_combine (hash_combine (15) (hash_op1 a1)) (hash_t a2)
   | Op2 (a1, a2, a3) ->
       hash_combine
-        (hash_combine (hash_combine (20) (hash_op2 a1)) (hash_t a2))
+        (hash_combine (hash_combine (16) (hash_op2 a1)) (hash_t a2))
         (hash_t a3)
   | Op3 (a1, a2, a3, a4) ->
       hash_combine
         (hash_combine
-           (hash_combine (hash_combine (21) (hash_op3 a1)) (hash_t a2))
+           (hash_combine (hash_combine (17) (hash_op3 a1)) (hash_t a2))
            (hash_t a3)) (hash_t a4)
   | OpN (a1, a2) ->
-      hash_combine (hash_combine (22) (hash_opn a1))
+      hash_combine (hash_combine (18) (hash_opn a1))
         ((Stdlib.List.fold_left (fun acc x -> hash_combine acc (hash_t x)) 0) a2)
 
 and equal_op1 (a : op1) (b : op1) =
@@ -514,8 +498,13 @@ and equal_op1 (a : op1) (b : op1) =
   | FRound a1, FRound b1 -> equal_rm a1 b1
   | GetPtrLoc, GetPtrLoc -> true
   | GetPtrOfs, GetPtrOfs -> true
+  | ThinPtrPart a1, ThinPtrPart b1 -> equal_ptr_part a1 b1
   | FullPtrInner, FullPtrInner -> true
   | FullPtrMeta, FullPtrMeta -> true
+  | PtrMetaAs a1, PtrMetaAs b1 -> equal_meta_part a1 b1
+  | Field a1, Field b1 -> Int.equal a1 b1
+  | VariantField (a1, a2), VariantField (b1, b2) ->
+      equal_variant_id a1 b1 && Int.equal a2 b2
   | IsVariant a1, IsVariant b1 -> equal_variant_id a1 b1
   | ArrayField a1, ArrayField b1 -> Int.equal a1 b1
   | _ -> false
@@ -549,10 +538,15 @@ and hash_op1 (a : op1) =
   | FRound a1 -> hash_combine (16) (hash_rm a1)
   | GetPtrLoc -> 17
   | GetPtrOfs -> 18
-  | FullPtrInner -> 19
-  | FullPtrMeta -> 20
-  | IsVariant a1 -> hash_combine (21) (hash_variant_id a1)
-  | ArrayField a1 -> hash_combine (22) (a1)
+  | ThinPtrPart a1 -> hash_combine (19) (hash_ptr_part a1)
+  | FullPtrInner -> 20
+  | FullPtrMeta -> 21
+  | PtrMetaAs a1 -> hash_combine (22) (hash_meta_part a1)
+  | Field a1 -> hash_combine (23) (a1)
+  | VariantField (a1, a2) ->
+      hash_combine (hash_combine (24) (hash_variant_id a1)) (a2)
+  | IsVariant a1 -> hash_combine (25) (hash_variant_id a1)
+  | ArrayField a1 -> hash_combine (26) (a1)
 
 and equal_op2 (a : op2) (b : op2) =
   match (a, b) with

@@ -19,9 +19,6 @@ namespace Kanon
 
 open Classical Kanon
 
-@[kanon_arm] theorem Float.sqrt.r_lit.main.proof : Float.sqrt.r_lit.main.Stmt := by
-  first | (kanon_float; done) | kanon_auto
-
 @[kanon_arm] theorem Float.sqrt.r_default.main.proof : Float.sqrt.r_default.main.Stmt := by
   first | (kanon_float; done) | kanon_auto
 
@@ -42,3 +39,5 @@ open Classical Kanon
 
 @[kanon_arm] theorem Ptr.ofs.r_default.main.proof : Ptr.ofs.r_default.main.Stmt := by
   first | (kanon_ptr Ptr.ofs.spec; done) | kanon_auto
+
+@[kanon_arm] theorem Bitvec.to_float_bits.r_default.main.proof : Bitvec.to_float_bits.r_default.main.Stmt := kanon_proof% Bitvec.to_float_bits.r_default.main

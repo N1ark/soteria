@@ -142,6 +142,7 @@ module type S = sig
       [> Tag.tbitvector ] t
     val to_float : rm -> bool -> fp -> [< Tag.tbitvector ] t ->
       [> Tag.tfloat ] t
+    val to_float_bits : fp -> [< Tag.tbitvector ] t -> [> Tag.tfloat ] t
     val to_float_raw : [< Tag.tbitvector ] t -> [> Tag.tfloat ] t
     val as_bitvec : _ t -> Z.t option
     val is_bitvec : _ t -> bool
@@ -319,8 +320,12 @@ module type S = sig
     val t_fullptr : [> Tag.tfullptr ] ty
     val t_ptrmeta : [> Tag.tptrmeta ] ty
     val t_polytype : [> Tag.tpolytype ] ty
+    val thin_ptr_part : ptr_part -> [< Tag.tthinptr ] t -> _ t
     val full_ptr_inner : [< Tag.tfullptr ] t -> [> Tag.tthinptr ] t
     val full_ptr_meta_raw : [< Tag.tfullptr ] t -> [> Tag.tptrmeta ] t
+    val ptr_meta_as : meta_part -> [< Tag.tptrmeta ] t -> _ t
+    val field_of : Z.t -> [< Tag.ttuple ] t -> _ t
+    val field_of_variant : variant_id -> Z.t -> [< Tag.tenum ] t -> _ t
     val is_variant : variant_id -> [< Tag.tenum ] t -> [> Tag.tbool ] t
     val array_field_of : Z.t -> [< Tag.tarray ] t -> 'e t
     val as_thinptr : _ t -> thin option
@@ -339,18 +344,18 @@ module type S = sig
     val is_union : _ t -> bool
     val as_polyval : _ t -> tyvar_id option
     val is_polyval : _ t -> bool
-    val as_thinptrpart : _ t -> (ptr_part * _ t) option
+    val as_thinptrpart : _ t -> (ptr_part * [> Tag.tthinptr ] t) option
     val is_thinptrpart : _ t -> bool
-    val as_ptrmetaas : _ t -> (meta_part * _ t) option
-    val is_ptrmetaas : _ t -> bool
-    val as_field : _ t -> (int * _ t) option
-    val is_field : _ t -> bool
-    val as_variantfield : _ t -> (variant_id * int * _ t) option
-    val is_variantfield : _ t -> bool
     val as_fullptrinner : _ t -> [> Tag.tfullptr ] t option
     val is_fullptrinner : _ t -> bool
     val as_fullptrmeta : _ t -> [> Tag.tfullptr ] t option
     val is_fullptrmeta : _ t -> bool
+    val as_ptrmetaas : _ t -> (meta_part * [> Tag.tptrmeta ] t) option
+    val is_ptrmetaas : _ t -> bool
+    val as_field : _ t -> (int * [> Tag.ttuple ] t) option
+    val is_field : _ t -> bool
+    val as_variantfield : _ t -> (variant_id * int * [> Tag.tenum ] t) option
+    val is_variantfield : _ t -> bool
     val as_isvariant : _ t -> (variant_id * [> Tag.tenum ] t) option
     val is_isvariant : _ t -> bool
     val as_arrayfield : _ t -> (int * [> Tag.tarray ] t) option

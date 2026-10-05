@@ -6,7 +6,6 @@
 
 include Iface.Prim.Make (struct
   include Rust_types
-  module Var = Soteria.Symex.Var
 
   let t_bool = TBool
   let t_bv n = TBitVector n
@@ -24,51 +23,10 @@ include Iface.Prim.Make (struct
     | TFloat fp -> fp
     | _ -> Soteria.Logs.Import.L.failwith "Unsupported float type"
 
-  let used_binders_iter_vars (sv : t) (f : Var.t * ty -> unit) : unit =
-    let rec aux ~ignore (sv : t) : unit =
-      let aux' = aux ~ignore in
-      match sv.kind with
-      | Var v -> if Var.Set.mem v ignore then () else f (v, sv.ty)
-      | Bool _ | Float _ | BitVec _ | LocLit _ | PolyVal _ | PtrMeta MetaUnit ->
-          ()
-      | Op2 (_, l, r) ->
-          aux' l;
-          aux' r
-      | Op1 (_, sv) -> aux' sv
-      | Op3 (_, a, b, c) ->
-          aux' a;
-          aux' b;
-          aux' c
-      | OpN (_, l) | Seq l -> List.iter aux' l
-      | Exists (vs, sv) ->
-          let ignore =
-            List.fold_left (fun ignore (v, _) -> Var.Set.add v ignore) ignore vs
-          in
-          aux ~ignore sv
-      | ThinPtr { ptr; psize; palign; _ } ->
-          aux' ptr;
-          aux' psize;
-          aux' palign
-      | FullPtr (p, m) ->
-          aux' p;
-          aux' m
-      | PtrMeta (MetaLen l | MetaVTable l) -> aux' l
-      | Enum (_, vs) | Tuple vs -> List.iter aux' vs
-      | Array vs -> Iarray.iter aux' vs
-      | Union bs ->
-          List.iter
-            (fun { bvalue; boffset; bsize } ->
-              aux' (match bvalue with Scalar v | Aggregate (v, _) -> v);
-              aux' boffset;
-              aux' bsize)
-            bs
-      | ThinPtrPart (_, a)
-      | PtrMetaAs (_, a)
-      | Field (_, a)
-      | VariantField (_, _, a) ->
-          aux' a
-    in
-    aux ~ignore:Var.Set.empty sv
+  let as_var (t : t) = match t.kind with Var v -> Some v | _ -> None
+
+  let as_exists (t : t) =
+    match t.kind with Exists (vs, body) -> Some (vs, body) | _ -> None
 end)
 
 open Rust_types
@@ -131,9 +89,6 @@ let enum_field (cur : variant_id) (var : variant_id) (vs : t list) (idx : Z.t) :
 let enum_fields (cur : variant_id) (var : variant_id) (vs : t list) : t list =
   assert (Types.equal_variant_id cur var);
   vs
-
-let bad_blocks (_ : t) : block list =
-  L.failwith "rebuild: wrong number of operands"
 
 (* {1 SMT} *)
 

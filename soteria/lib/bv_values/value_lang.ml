@@ -126,17 +126,25 @@ module type Base = sig
       size as an [int]. *)
   val as_range : t -> (Var.t * int * (sign * (Z.t * Z.t))) option
 
-  (** The old [map_operands]: [K.View.maps_operands v], else [v] itself; the
-      operands [cs] of [v] are mapped left to right and [v] is rebuilt with
-      [K.View.rebuild] iff one changed. *)
+  (** The children of [v], left to right ([K.iter_children]). *)
+  val children : t -> t list
+
+  (** [f] applied to the children of [v], left to right, and [v] rebuilt from
+      them with [K.map_children] if [force] or one changed (physically); [v]
+      itself otherwise, and if it has no children. *)
+  val map_children_changed : force:bool -> (t -> t) -> t -> t
+
+  (** The old [map_operands]: [map_children_changed ~force:false f v] if
+      [K.View.maps_operands v], else [v] itself. *)
   val map_operands : (t -> t) -> t -> t
 
   (** Replaces [Svalue.iter_vars] ([svalue.ml:71-93]): the free variables,
       binder aware, via [K.Core.as_var], [K.Exists.as_exists] and
-      [K.View.operands], left to right. *)
+      [K.iter_children], left to right. *)
   val iter_vars : t -> (Var.t * ty -> unit) -> unit
 
-  (** [= Z.to_int (K.View.cost v)] *)
+  (** [K.View.head_cost v], plus the costs of the children of [v] if
+      [K.View.costs_operands v] *)
   val cost : t -> int
 
   (** From [K.View.random_bound] and [K.View.random_of_z], see there. *)
@@ -145,8 +153,8 @@ module type Base = sig
   (** [= (K.View.encode_sort ty) ~sort_of_ty (K.View.sort_operands ty)] *)
   val encode_ty : sort_of_ty:(ty -> Smt.sexp) -> ty -> Smt.sexp
 
-  (** [= (K.View.encode_head v) ~sort_of_ty ~encode_child (K.View.operands v)]
-  *)
+  (** [= (K.View.encode_head v) ~sort_of_ty ~encode_child cs], [cs] the children
+      of [v] *)
   val encode_node :
     sort_of_ty:(ty -> Smt.sexp) -> encode_child:(t -> Smt.sexp) -> t -> Smt.sexp
 end
@@ -236,20 +244,40 @@ module Make
         let sign : sign = match side with Inside -> Pos | Outside -> Neg in
         Some (x, Z.to_int size, (sign, range))
 
+  (* the children of [v], left to right *)
+  let children (v : t) : t list =
+    let cs = ref [] in
+    K.iter_children (fun c -> cs := c :: !cs) v;
+    List.rev !cs
+
+  let map_children_changed ~force (f : t -> t) (v : t) : t =
+    let changed = ref false in
+    let cs = ref [] in
+    K.iter_children
+      (fun c ->
+        let c' = f c in
+        if c' != c then changed := true;
+        cs := c' :: !cs)
+      v;
+    match !cs with
+    | [] -> v
+    | _ when not (force || !changed) -> v
+    | rev_cs ->
+        (* [map_children] replaces the children in the order of
+           [iter_children] *)
+        let cs = ref (List.rev rev_cs) in
+        K.map_children
+          (fun _ ->
+            match !cs with
+            | c :: rest ->
+                cs := rest;
+                c
+            | [] -> assert false)
+          v
+
   let map_operands (f : t -> t) (v : t) : t =
     if not (K.View.maps_operands v) then v
-    else
-      let cs = K.View.operands v in
-      let rec map_changed = function
-        | [] -> ([], false)
-        | x :: rest ->
-            let x' = f x in
-            let rest', changed = map_changed rest in
-            (x' :: rest', changed || not (equal x x'))
-      in
-      (* [f] is applied left to right: [x'] is computed before [rest'] *)
-      let cs', changed = map_changed cs in
-      if changed then K.View.rebuild v cs' else v
+    else map_children_changed ~force:false f v
 
   let iter_vars (sv : t) (f : Var.t * ty -> unit) : unit =
     let rec aux ~ignore (sv : t) : unit =
@@ -264,11 +292,17 @@ module Make
                   ignore vs
               in
               aux ~ignore body
-          | None -> List.iter (aux ~ignore) (K.View.operands sv))
+          | None -> K.iter_children (aux ~ignore) sv)
     in
     aux ~ignore:Var.Set.empty sv
 
-  let cost (v : t) : int = Z.to_int (K.View.cost v)
+  let rec cost (v : t) : int =
+    let c = Z.to_int (K.View.head_cost v) in
+    if K.View.costs_operands v then (
+      let c = ref c in
+      K.iter_children (fun x -> c := !c + cost x) v;
+      !c)
+    else c
 
   let random_value (ty : ty) : (unit -> t) option =
     match K.View.random_bound ty with
@@ -287,5 +321,5 @@ module Make
     (K.View.encode_sort s) ~sort_of_ty (K.View.sort_operands s)
 
   let encode_node ~sort_of_ty ~encode_child (v : t) : Smt.sexp =
-    (K.View.encode_head v) ~sort_of_ty ~encode_child (K.View.operands v)
+    (K.View.encode_head v) ~sort_of_ty ~encode_child (children v)
 end

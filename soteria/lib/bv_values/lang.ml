@@ -14,6 +14,8 @@ module Prims = Bv_prims
 module Rules = Bv_rules
 open Bv_types
 
+let () = Prims.set_iter_children Rules.iter_children
+
 (** {1 Sorts} *)
 
 let t_bool = TBool

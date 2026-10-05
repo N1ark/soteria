@@ -8,6 +8,8 @@ module Prims = Rust_prims
 module Rules = Rust_rules
 open Rust_types
 
+let () = Prims.set_iter_children Rules.iter_children
+
 type t = Types.t
 type ty = Types.ty
 type smt_op = (t, ty) Iface.View_host.smt_op

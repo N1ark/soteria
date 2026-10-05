@@ -50,7 +50,7 @@ structure Ops.Sound (FS : FloatSem) (O : Ops) : Prop where
   bitvec_sub_overflows : ∀ (signed : Bool) (v1 : Term) (v2 : Term), Refines FS (Bitvec.sub_overflows.spec signed v1 v2) (O.bitvec_sub_overflows signed v1 v2)
   bitvec_of_float : ∀ (rounding : Rm) (signed : Bool) (sz : Int) (v : Term), Refines FS (Bitvec.of_float.spec rounding signed sz v) (O.bitvec_of_float rounding signed sz v)
   bitvec_to_float : ∀ (rounding : Rm) (signed : Bool) (fp : Fp) (v : Term), Refines FS (Bitvec.to_float.spec rounding signed fp v) (O.bitvec_to_float rounding signed fp v)
-  bitvec_to_float_raw : ∀ (v : Term), Refines FS (Bitvec.to_float_raw.spec v) (O.bitvec_to_float_raw v)
+  bitvec_to_float_bits : ∀ (fp : Fp) (v : Term), Refines FS (Bitvec.to_float_bits.spec fp v) (O.bitvec_to_float_bits fp v)
   float_is_floatclass : ∀ (fc : Fc) (sv : Term), Refines FS (Float.is_floatclass.spec fc sv) (O.float_is_floatclass fc sv)
   float_is_negative : ∀ (v : Term), Refines FS (Float.is_negative.spec v) (O.float_is_negative v)
   float_is_positive : ∀ (v : Term), Refines FS (Float.is_positive.spec v) (O.float_is_positive v)
@@ -5922,30 +5922,28 @@ def Bitvec.to_float.r_default.main.Stmt : Prop :=
   Refines FS (Bitvec.to_float.spec rounding signed fp v)
   ((Term.mk (Kind.Op1 (Op1.FloatOfBv rounding signed fp) v) (Ty.TFloat fp)))
 
-def Bitvec.to_float_raw.r_lit.Stmt : Prop :=
+def Bitvec.to_float_bits.r_lit.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (v : Term) (res : Term), Bitvec.to_float_raw.r_lit O v = some res →
-  Refines FS (Bitvec.to_float_raw.spec v) res
+  ∀ (fp : Fp) (v : Term) (res : Term), Bitvec.to_float_bits.r_lit O fp v = some res →
+  Refines FS (Bitvec.to_float_bits.spec fp v) res
 
-def Bitvec.to_float_raw.r_default.Stmt : Prop :=
+def Bitvec.to_float_bits.r_default.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (v : Term) (res : Term), Bitvec.to_float_raw.r_default O v = some res →
-  Refines FS (Bitvec.to_float_raw.spec v) res
+  ∀ (fp : Fp) (v : Term) (res : Term), Bitvec.to_float_bits.r_default O fp v = some res →
+  Refines FS (Bitvec.to_float_bits.spec fp v) res
 
-def Bitvec.to_float_raw.r_lit.main.Stmt : Prop :=
+def Bitvec.to_float_bits.r_lit.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (z : Int) (t__2 : Ty),
-  Refines FS (Bitvec.to_float_raw.spec (Term.mk (Kind.BitVec z) t__2))
-  ((let fp := (fp_of_size (Bitvec.size (Term.mk (Kind.BitVec z) t__2)));
-   (let kanon__a1 := (f_of_bits fp z);
-   (Term.mk (Kind.Float kanon__a1) (Ty.TFloat (f_prec kanon__a1))))))
+  ∀ (fp : Fp) (z : Int) (t__2 : Ty),
+  Refines FS (Bitvec.to_float_bits.spec fp (Term.mk (Kind.BitVec z) t__2))
+  ((let kanon__a1 := (f_of_bits fp z);
+   (Term.mk (Kind.Float kanon__a1) (Ty.TFloat (f_prec kanon__a1)))))
 
-def Bitvec.to_float_raw.r_default.main.Stmt : Prop :=
+def Bitvec.to_float_bits.r_default.main.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →
-  ∀ (v : Term),
-  Refines FS (Bitvec.to_float_raw.spec v)
-  ((let kanon__a2 := (fp_of_size (Bitvec.size v));
-   (Term.mk (Kind.Op1 (Op1.FloatOfBvRaw kanon__a2) v) (Ty.TFloat kanon__a2))))
+  ∀ (fp : Fp) (v : Term),
+  Refines FS (Bitvec.to_float_bits.spec fp v)
+  ((Term.mk (Kind.Op1 (Op1.FloatOfBvRaw fp) v) (Ty.TFloat fp)))
 
 def Float.is_floatclass.r_lit.Stmt : Prop :=
   ∀ (FS : FloatSem) (O : Ops), O.Sound FS →

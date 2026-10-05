@@ -7,13 +7,12 @@
    [TExtension of ext_ty]; they are now nodes and sorts of the language, and
    [TExtension X] is the sort [X] itself.
 
-   Every aggregate and pointer node is a LEAF with an explicit sort: its
-   operands are the terms inside its arguments ([Tuple of t list]), and the
-   sort of the node is given where it is built, by the functions of rust.kn
-   ([(Tuple vs : TTuple (types_of vs))]). The nodes that read a component of an
-   aggregate ([Field], [VariantField], ...) are leaves too, at the sort of the
-   component that they read (a computed sort), except where the typing of an
-   operator gives it ([ArrayField], [IsVariant], [FullPtrInner], [FullPtrMeta]).
+   Every aggregate and pointer node is a LEAF: its operands are the terms
+   inside its arguments ([Tuple of t list]), and its sort is computed by its
+   typing ([Tuple vs] is a [TTuple (types_of vs)]) or given where it is built
+   ([(Enum (var, vs) : TEnum adt)]). The nodes that read a component of an
+   aggregate ([Field], [VariantField], ...) are operators, whose typing computes
+   the sort of the component that they read, and their reductions are rules.
 
    There is no Lean semantics for these nodes (the old Lean model took the
    extension as opaque): every function of the module is [@no_lean], and the
@@ -90,23 +89,21 @@ node FullPtr of t * t
 node PtrMeta of ptr_meta
 (* the variant and its fields *)
 node Enum of variant_id * t list
-node Tuple of t list
+node Tuple of t list (vs) : TTuple (types_of vs)
 node Array of t array
 node Union of block list
 (* the opaque value of a type variable *)
 node PolyVal of tyvar_id
 
-(* The nodes that read a part of a value, at the sort of that part. The sort of
-   [ThinPtrPart], [PtrMetaAs], [Field] and [VariantField] is computed from their
-   arguments and the crate, which a typing cannot express: they are leaves with
-   an explicit sort. The others are operators with a typing, and their
-   reductions are rules. *)
-node ThinPtrPart of ptr_part * t
+(* The nodes that read a part of a value, at the sort of that part, which the
+   typing computes from their arguments (and the crate). Their reductions are
+   rules. *)
+node ThinPtrPart of ptr_part (part) : TThinPtr -> thin_part_ty part
 node FullPtrInner : TFullPtr -> TThinPtr
 node FullPtrMeta : TFullPtr -> TPtrMeta
-node PtrMetaAs of meta_part * t
-node Field of nat * t
-node VariantField of variant_id * nat * t
+node PtrMetaAs of meta_part (part) : TPtrMeta -> meta_part_ty part
+node Field of nat (i) : TTuple tys -> nth_ty tys i
+node VariantField of variant_id * nat (var, i) : TEnum adt -> variant_field_ty adt var i
 node IsVariant of variant_id : TEnum d -> TBool
 (* TODO: this could be a binary node, with a (possibly symbolic) index, to allow
    symbolically sized arrays *)

@@ -14,6 +14,7 @@
 [@@@ocaml_prims "Bv_prims"]
 [@@@ocaml_types "Bv_types"]
 [@@@ocaml_rules "Bv_rules"]
+[@@@traversals]
 
 
 use "core"

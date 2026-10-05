@@ -35,8 +35,6 @@ open Classical Kanon
 
 @[kanon_arm] theorem Bitvec.to_float.r_default.main.proof : Bitvec.to_float.r_default.main.Stmt := kanon_proof% Bitvec.to_float.r_default.main
 
-@[kanon_arm] theorem Bitvec.to_float_raw.r_default.main.proof : Bitvec.to_float_raw.r_default.main.Stmt := kanon_proof% Bitvec.to_float_raw.r_default.main
-
 @[kanon_arm] theorem Float.is_floatclass.r_lit.main.proof : Float.is_floatclass.r_lit.main.Stmt := by
   first | (kanon_float; done) | kanon_auto
 
@@ -44,4 +42,7 @@ open Classical Kanon
   first | (kanon_float; done) | kanon_auto
 
 @[kanon_arm] theorem Float.is_negative.r_lit.main.proof : Float.is_negative.r_lit.main.Stmt := by
+  first | (kanon_float; done) | kanon_auto
+
+@[kanon_arm] theorem Float.is_negative.r_default.main.proof : Float.is_negative.r_default.main.Stmt := by
   first | (kanon_float; done) | kanon_auto

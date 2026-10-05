@@ -1,9 +1,9 @@
 (** Substitution and equational learning over any language {!Value_lang.S}.
-    [Subst.apply] is generic over [operands]/[rebuild]/[as_var]/[as_exists];
-    [Subst.learn] over [learn_alts]/[learn_value] ({!View_host.learn_plan}). The
-    extensions of a language are the [rebuild], [operands] and [learn_*] cases
-    of its [extend fn]. It was written as a port of [expr.ml] ([fab3ed5]), with
-    two textual differences, neither behavioural:
+    [Subst.apply] is generic over the traversal [map_children] and
+    [as_var]/[as_exists]; [Subst.learn] over [learn_alts]/[learn_value]
+    ({!View_host.learn_plan}). The extensions of a language are the [learn_*]
+    cases of its [extend fn]. It was written as a port of [expr.ml] ([fab3ed5]),
+    with two textual differences, neither behavioural:
     - the binders of [apply_bound] are compared with [Var.equal] and [equal_ty]
       instead of the polymorphic [List.mem];
     - [learn] reads the inverse of a node in its {!View_host.learn_plan}. *)
@@ -65,20 +65,20 @@ struct
               | Some (vs, sv) ->
                   let (vs, sv), s = apply_bound ~missing_var s vs sv in
                   (K.Exists.mk vs sv, s)
-              | None -> (
-                  match K.View.operands v with
-                  | [] -> (v, s)
-                  | cs ->
-                      let cs, s = apply_list ~missing_var s cs in
-                      (K.View.rebuild v cs, s))))
-
-    and apply_list ~missing_var s vs =
-      match vs with
-      | [] -> ([], s)
-      | v :: vs ->
-          let v, s = apply ~missing_var s v in
-          let vs, s = apply_list ~missing_var s vs in
-          (v :: vs, s)
+              | None ->
+                  if not (K.exists_child (fun _ -> true) v) then (v, s)
+                  else
+                    (* the children left to right, threading [s] *)
+                    let s = ref s in
+                    let v =
+                      K.map_children
+                        (fun c ->
+                          let c, s' = apply ~missing_var !s c in
+                          s := s';
+                          c)
+                        v
+                    in
+                    (v, !s)))
 
     and apply_bound ~missing_var s vs sv =
       (* [max_var_ind] returns the index of the freshest semantic variable used
@@ -151,7 +151,7 @@ struct
           match K.View.learn_alts e with
           | View_host.LNone -> None
           | LAlts alts ->
-              let ops = Array.of_list (K.View.operands e) in
+              let ops = Array.of_list (V.children e) in
               let rec first = function
                 | [] -> None
                 | (known, target) :: rest ->
@@ -163,7 +163,7 @@ struct
               in
               first alts
           | LAll (eager, order) ->
-              let ops = Array.of_list (K.View.operands e) in
+              let ops = Array.of_list (V.children e) in
               let values = Array.make (Array.length ops) None in
               (* the eager values, in their order, before anything is learned *)
               let* () =

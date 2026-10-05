@@ -75,9 +75,6 @@ module _ : sig
   val f_convert : rm -> fp -> float -> float
   val f_to_int : rm -> bool -> Z.t -> float -> (Z.t option)
   val f_of_int : rm -> bool -> fp -> Z.t -> Z.t -> (float option)
-  val mk_ptr : t -> t -> t
-  val mk_seq : ty -> (t list) -> t
-  val bad_operands : t -> t
   val h_var : var -> smt_op
   val h_float : ty -> float -> smt_op
   val h_bool : bool -> smt_op
@@ -159,7 +156,6 @@ module _ : sig
   val list_length : (t list) -> Z.t
   val enum_field : variant_id -> variant_id -> (t list) -> Z.t -> t
   val enum_fields : variant_id -> variant_id -> (t list) -> (t list)
-  val bad_blocks : t -> (block list)
   val so_tuple : smt_sort_op
   val so_enum : decl_ref -> smt_sort_op
   val so_thin_ptr : smt_sort_op
@@ -2748,23 +2744,30 @@ module Kanon_flat = struct
         (node (Op1 ((FloatOfBv (rounding, signed, fp)), v)) (TFloat (fp)))
       ))
   
-  let bitvec_to_float_raw (v : t) : t =
+  let bitvec_to_float_bits (fp : fp) (v : t) : t =
       (assert ((match v.ty with
                | (TBitVector (kanon__s1))
                  when (let kanon__s1 = Z.of_int kanon__s1 in
-                 ((Z.equal kanon__s1 (Rust_prims.fp_size (Rust_prims.fp_of_size (bitvec_size v)))))) ->
+                 ((Z.equal kanon__s1 (Rust_prims.fp_size fp)))) ->
                  true
                | _ -> false
                ) [@warning "-11"]);
       (match v with
       | { kind = BitVec (z); _ } ->
-        (let fp = (Rust_prims.fp_of_size (bitvec_size v)) in
         (let kanon__a1 = (Rust_prims.f_of_bits fp z) in
-        (node (Float (kanon__a1)) (TFloat ((Rust_prims.f_prec kanon__a1))))))
-      | _ ->
-        (let kanon__a2 = (Rust_prims.fp_of_size (bitvec_size v)) in
-        (node (Op1 ((FloatOfBvRaw (kanon__a2)), v)) (TFloat (kanon__a2))))
+        (node (Float (kanon__a1)) (TFloat ((Rust_prims.f_prec kanon__a1)))))
+      | _ -> (node (Op1 ((FloatOfBvRaw (fp)), v)) (TFloat (fp)))
       ))
+  
+  let bitvec_to_float_raw (v : t) : t =
+      (let n = (bitvec_size v) in
+      (let kanon__result = (assert ((match v.ty with
+                                    | (TBitVector (kanon__v_n)) -> true
+                                    | _ -> false
+                                    ) [@warning "-11"]);
+                           (bitvec_to_float_bits (Rust_prims.fp_of_size n) v)) in
+      (assert (((equal_ty kanon__result.ty (TFloat ((Rust_prims.fp_of_size n))))) [@warning "-11"]);
+      kanon__result)))
   
   let[@inline] float_fp_of (v : t) : fp = (Rust_prims.fp_of_ty v.ty)
   
@@ -3209,672 +3212,6 @@ module Kanon_flat = struct
       | _ -> None
       )
   
-  let[@inline] rust_block_value_term (b : block_value) : t =
-      (match b with
-      | (Scalar (x)) -> x
-      | (Aggregate (x, _)) -> x
-      )
-  
-  let rec rust_block_operands (bs : (block list)) : (t list) =
-      (match bs with
-      | [] -> []
-      | ({ bvalue = bv; boffset = o; bsize = s; _ } :: rest) ->
-        ((rust_block_value_term bv) :: (o :: (s :: (rust_block_operands rest))))
-      )
-  
-  let[@inline] rust_meta_operands (m : ptr_meta) : (t list) =
-      (match m with
-      | (MetaLen (l)) -> (l :: [])
-      | (MetaVTable (l)) -> (l :: [])
-      | (MetaUnit) -> []
-      )
-  
-  let view_operands (v : t) : (t list) =
-      (match v with
-      | { kind = Var (_); _ } -> []
-      | { kind = Bool (_); _ } -> []
-      | { kind = BitVec (_); _ } -> []
-      | { kind = LocLit (_); _ } -> []
-      | { kind = Float (_); _ } -> []
-      | { kind = Seq (l); _ } -> l
-      | { kind = Exists (_, a); _ } -> (a :: [])
-      | { kind = Op1 ((Not), a); _ } -> (a :: [])
-      | { kind = Op1 ((FAbs), a); _ } -> (a :: [])
-      | { kind = Op1 ((FNeg), a); _ } -> (a :: [])
-      | { kind = Op1 ((FSqrt), a); _ } -> (a :: [])
-      | { kind = Op1 ((GetPtrLoc), a); _ } -> (a :: [])
-      | { kind = Op1 ((GetPtrOfs), a); _ } -> (a :: [])
-      | { kind = Op1 ((BvOfBool (_)), a); _ } -> (a :: [])
-      | { kind = Op1 ((BvOfFloat (_, _, _)), a); _ } -> (a :: [])
-      | { kind = Op1 ((FloatOfBv (_, _, _)), a); _ } -> (a :: [])
-      | { kind = Op1 ((FloatOfBvRaw (_)), a); _ } -> (a :: [])
-      | { kind = Op1 ((FloatOfFloat (_, _)), a); _ } -> (a :: [])
-      | { kind = Op1 ((BvExtract (_, _)), a); _ } -> (a :: [])
-      | { kind = Op1 ((BvExtend (_, _)), a); _ } -> (a :: [])
-      | { kind = Op1 ((BvNot), a); _ } -> (a :: [])
-      | { kind = Op1 ((Neg (_)), a); _ } -> (a :: [])
-      | { kind = Op1 ((FIs (_)), a); _ } -> (a :: [])
-      | { kind = Op1 ((FIsNeg), a); _ } -> (a :: [])
-      | { kind = Op1 ((FIsPos), a); _ } -> (a :: [])
-      | { kind = Op1 ((FRound (_)), a); _ } -> (a :: [])
-      | { kind = Op2 ((Ptr), a, b); _ } -> (a :: (b :: []))
-      | { kind = Op2 ((Eq), a, b); _ } -> (a :: (b :: []))
-      | { kind = Op2 ((And), a, b); _ } -> (a :: (b :: []))
-      | { kind = Op2 ((Or), a, b); _ } -> (a :: (b :: []))
-      | { kind = Op2 ((FEq), a, b); _ } -> (a :: (b :: []))
-      | { kind = Op2 ((FLeq), a, b); _ } -> (a :: (b :: []))
-      | { kind = Op2 ((FLt), a, b); _ } -> (a :: (b :: []))
-      | { kind = Op2 ((FAdd), a, b); _ } -> (a :: (b :: []))
-      | { kind = Op2 ((FSub), a, b); _ } -> (a :: (b :: []))
-      | { kind = Op2 ((FMul), a, b); _ } -> (a :: (b :: []))
-      | { kind = Op2 ((FDiv), a, b); _ } -> (a :: (b :: []))
-      | { kind = Op2 ((FRem), a, b); _ } -> (a :: (b :: []))
-      | { kind = Op2 ((FMin), a, b); _ } -> (a :: (b :: []))
-      | { kind = Op2 ((FMax), a, b); _ } -> (a :: (b :: []))
-      | { kind = Op2 ((BitAnd), a, b); _ } -> (a :: (b :: []))
-      | { kind = Op2 ((BitOr), a, b); _ } -> (a :: (b :: []))
-      | { kind = Op2 ((BitXor), a, b); _ } -> (a :: (b :: []))
-      | { kind = Op2 ((Shl), a, b); _ } -> (a :: (b :: []))
-      | { kind = Op2 ((LShr), a, b); _ } -> (a :: (b :: []))
-      | { kind = Op2 ((AShr), a, b); _ } -> (a :: (b :: []))
-      | { kind = Op2 ((Add (_)), a, b); _ } -> (a :: (b :: []))
-      | { kind = Op2 ((Sub (_)), a, b); _ } -> (a :: (b :: []))
-      | { kind = Op2 ((Mul (_)), a, b); _ } -> (a :: (b :: []))
-      | { kind = Op2 ((Div (_)), a, b); _ } -> (a :: (b :: []))
-      | { kind = Op2 ((Rem (_)), a, b); _ } -> (a :: (b :: []))
-      | { kind = Op2 ((Mod), a, b); _ } -> (a :: (b :: []))
-      | { kind = Op2 ((AddOvf (_)), a, b); _ } -> (a :: (b :: []))
-      | { kind = Op2 ((SubOvf (_)), a, b); _ } -> (a :: (b :: []))
-      | { kind = Op2 ((MulOvf (_)), a, b); _ } -> (a :: (b :: []))
-      | { kind = Op2 ((Lt (_)), a, b); _ } -> (a :: (b :: []))
-      | { kind = Op2 ((Leq (_)), a, b); _ } -> (a :: (b :: []))
-      | { kind = Op2 ((BvConcat), a, b); _ } -> (a :: (b :: []))
-      | { kind = Op3 ((Fma), a, b, c); _ } -> (a :: (b :: (c :: [])))
-      | { kind = Op3 ((Ite), a, b, c); _ } -> (a :: (b :: (c :: [])))
-      | { kind = OpN ((Distinct), l); _ } -> l
-      | { kind = ThinPtr ({ ptr = p; psize = s; palign = a; _ }); _ } ->
-        (p :: (s :: (a :: [])))
-      | { kind = FullPtr (p, m); _ } -> (p :: (m :: []))
-      | { kind = PtrMeta (m); _ } -> (rust_meta_operands m)
-      | { kind = Enum (_, vs); _ } -> vs
-      | { kind = Tuple (vs); _ } -> vs
-      | { kind = Array (vs); _ } -> (Stdlib.Iarray.to_list vs)
-      | { kind = Union (bs); _ } -> (rust_block_operands bs)
-      | { kind = PolyVal (_); _ } -> []
-      | { kind = ThinPtrPart (_, a); _ } -> (a :: [])
-      | { kind = Op1 ((FullPtrInner), a); _ } -> (a :: [])
-      | { kind = Op1 ((FullPtrMeta), a); _ } -> (a :: [])
-      | { kind = PtrMetaAs (_, a); _ } -> (a :: [])
-      | { kind = Field (_, a); _ } -> (a :: [])
-      | { kind = VariantField (_, _, a); _ } -> (a :: [])
-      | { kind = Op1 ((IsVariant (_)), a); _ } -> (a :: [])
-      | { kind = Op1 ((ArrayField (_)), a); _ } -> (a :: [])
-      )
-  
-  let[@inline] rust_array_elem_ty (s : ty) : ty =
-      (match s with
-      | (TArray (e, _)) -> e
-      | _ -> (Rust_prims.fail_array_elem s)
-      )
-  
-  let rust_array_field_of (idx : Z.t) (v : t) : t =
-      (assert ((match v.ty with
-               | (TArray (kanon__e, kanon__n)) -> true
-               | _ -> false
-               ) [@warning "-11"]);
-      (match v with
-      | { kind = Array (vs); _ } -> (Stdlib.Iarray.get vs (Z.to_int idx))
-      | _ ->
-        (node (Op1 ((ArrayField ((Z.to_int idx))), v)) (match v.ty with
-                                                       | (TArray (kanon__e, kanon__n)) ->
-                                                         kanon__e
-                                                       | _ -> v.ty
-                                                       ))
-      ))
-  
-  let[@inline] rust_t_as_tuple (s : ty) : (ty list) =
-      (match s with
-      | (TTuple (tys)) -> tys
-      | _ -> (Rust_prims.fail_tuple_ty s)
-      )
-  
-  let rust_field_of (idx : Z.t) (v : t) : t =
-      (match v with
-      | { kind = Tuple (vs); _ } -> (Rust_prims.nth_term vs idx)
-      | _ ->
-        (node (Field ((Z.to_int idx), v)) (Rust_prims.nth_ty (rust_t_as_tuple v.ty) idx))
-      )
-  
-  let[@inline] rust_t_as_enum (s : ty) : decl_ref =
-      (match s with
-      | (TEnum (adt)) -> adt
-      | _ -> (Rust_prims.fail_enum_ty s)
-      )
-  
-  let rust_field_of_variant (var : variant_id) (idx : Z.t) (v : t) : t =
-      (match v with
-      | { kind = Enum (cur, vs); _ } ->
-        (Rust_prims.enum_field cur var vs idx)
-      | _ ->
-        (node (VariantField (var, (Z.to_int idx), v)) (Rust_prims.variant_field_ty (rust_t_as_enum v.ty) var idx))
-      )
-  
-  let rust_full_ptr_inner (v : t) : t =
-      (assert ((match v.ty with
-               | (TFullPtr) -> true
-               | _ -> false
-               ) [@warning "-11"]);
-      (match v with
-      | { kind = FullPtr (p, _); _ } -> p
-      | _ -> (node (Op1 (FullPtrInner, v)) TThinPtr)
-      ))
-  
-  let rust_full_ptr_meta_raw (v : t) : t =
-      (assert ((match v.ty with
-               | (TFullPtr) -> true
-               | _ -> false
-               ) [@warning "-11"]);
-      (match v with
-      | { kind = FullPtr (_, m); _ } -> m
-      | _ -> (node (Op1 (FullPtrMeta, v)) TPtrMeta)
-      ))
-  
-  let rust_is_variant (var : variant_id) (v : t) : t =
-      (assert ((match v.ty with
-               | (TEnum (kanon__d)) -> true
-               | _ -> false
-               ) [@warning "-11"]);
-      (match v with
-      | { kind = Enum (cur, _); _ } ->
-        (bool_of_bool ((equal_variant_id var cur)))
-      | _ -> (node (Op1 ((IsVariant (var)), v)) TBool)
-      ))
-  
-  let[@inline] rust_mk_array_of_svty (elem : ty) (vs : (t Iarray.t)) : t =
-      (node (Array (vs)) (TArray (elem, (Z.of_int (Stdlib.Iarray.length vs)))))
-  
-  let[@inline] rust_mk_enum (adt : decl_ref) (var : variant_id) (vs : (t list)) : t =
-      (node (Enum (var, vs)) (TEnum (adt)))
-  
-  let[@inline] rust_mk_full_ptr (p : t) (m : t) : t =
-      (node (FullPtr (p, m)) TFullPtr)
-  
-  let[@inline] rust_mk_len_meta (len : t) : t =
-      (node (PtrMeta ((MetaLen (len)))) TPtrMeta)
-  
-  let[@inline] rust_mk_poly (id : tyvar_id) : t =
-      (node (PolyVal (id)) TPolyType)
-  
-  let[@inline] rust_mk_thin_ptr (p : thin) : t =
-      (node (ThinPtr (p)) TThinPtr)
-  
-  let rec rust_types_of (vs : (t list)) : (ty list) =
-      (match vs with
-      | [] -> []
-      | (v :: rest) -> (v.ty :: (rust_types_of rest))
-      )
-  
-  let[@inline] rust_mk_tuple (vs : (t list)) : t =
-      (node (Tuple (vs)) (TTuple ((rust_types_of vs))))
-  
-  let[@inline] rust_mk_union (adt : decl_ref) (blocks : (block list)) : t =
-      (node (Union (blocks)) (TUnion (adt)))
-  
-  let[@inline] rust_mk_unit_meta (u : unit) : t =
-      (node (PtrMeta (MetaUnit)) TPtrMeta)
-  
-  let[@inline] rust_mk_vtable_meta (vtable : t) : t =
-      (node (PtrMeta ((MetaVTable (vtable)))) TPtrMeta)
-  
-  let[@inline] rust_meta_part_ty (part : meta_part) : ty =
-      (match part with
-      | (PartLen) -> (TBitVector ((Z.to_int (Rust_prims.usize_bits ()))))
-      | (PartVTable) -> TThinPtr
-      )
-  
-  let rust_ptr_meta_as (part : meta_part) (v : t) : t =
-      (match v with
-      | { kind = PtrMeta (m); _ } ->
-        (match part, m with
-        | ((PartLen), (MetaLen (len))) -> len
-        | ((PartVTable), (MetaVTable (vtable))) -> vtable
-        | (_, _) -> (Rust_prims.fail_meta part m)
-        )
-      | _ -> (node (PtrMetaAs (part, v)) (rust_meta_part_ty part))
-      )
-  
-  let rec rust_rebuild_blocks (v : t) (bs : (block list)) (cs : (t list)) : (block list) =
-      (match bs with
-      | [] -> (match cs with
-              | [] -> []
-              | _ -> (Rust_prims.bad_blocks v)
-              )
-      | ({ bvalue = bv; _ } :: rest) ->
-        (match cs with
-        | (value :: (o :: (s :: cs_rest))) ->
-          (let value2 = (match bv with
-                        | (Scalar (_)) -> (Scalar (value))
-                        | (Aggregate (_, ty)) -> (Aggregate (value, ty))
-                        ) in
-          ({ bvalue = value2; boffset = o; bsize = s } :: (rust_rebuild_blocks v rest cs_rest)))
-        | _ -> (Rust_prims.bad_blocks v)
-        )
-      )
-  
-  let[@inline] rust_t_as_union (s : ty) : decl_ref =
-      (match s with
-      | (TUnion (adt)) -> adt
-      | _ -> (Rust_prims.fail_union_ty s)
-      )
-  
-  let[@inline] rust_thin_part_ty (part : ptr_part) : ty =
-      (match part with
-      | (PtrInner) -> (TPointer ((Z.to_int (Rust_prims.usize_bits ()))))
-      | (PtrSize) -> (TBitVector ((Z.to_int (Rust_prims.usize_bits ()))))
-      | (PtrAlign) -> (TBitVector ((Z.to_int (Rust_prims.usize_bits ()))))
-      )
-  
-  let rust_thin_ptr_part (part : ptr_part) (v : t) : t =
-      (match v with
-      | { kind = ThinPtr ({ ptr = p; psize = s; palign = a; _ }); _ } ->
-        (match part with
-        | (PtrInner) -> p
-        | (PtrSize) -> s
-        | (PtrAlign) -> a
-        )
-      | _ -> (node (ThinPtrPart (part, v)) (rust_thin_part_ty part))
-      )
-  
-  let view_rebuild (v : t) (cs : (t list)) : t =
-      (match v with
-      | { kind = Var (_); _ } ->
-        (match cs with
-        | [] -> v
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Bool (_); _ } ->
-        (match cs with
-        | [] -> v
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = BitVec (_); _ } ->
-        (match cs with
-        | [] -> v
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = LocLit (_); _ } ->
-        (match cs with
-        | [] -> v
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Float (_); _ } ->
-        (match cs with
-        | [] -> v
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Seq (_); _ } -> (Rust_prims.mk_seq v.ty cs)
-      | { kind = Exists (bs, _); _ } ->
-        (match cs with
-        | (a :: []) -> (exists_mk bs a)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op1 ((Not), _); _ } ->
-        (match cs with
-        | (a :: []) -> (bool_not_ a)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op1 ((FAbs), _); _ } ->
-        (match cs with
-        | (a :: []) -> (float_abs a)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op1 ((FNeg), _); _ } ->
-        (match cs with
-        | (a :: []) -> (float_neg a)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op1 ((FSqrt), _); _ } ->
-        (match cs with
-        | (a :: []) -> (float_sqrt a)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op1 ((GetPtrLoc), _); _ } ->
-        (match cs with
-        | (a :: []) -> (ptr_loc a)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op1 ((GetPtrOfs), _); _ } ->
-        (match cs with
-        | (a :: []) -> (ptr_ofs a)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op1 ((BvOfBool (n)), _); _ } ->
-        let n = Z.of_int n in
-        (match cs with
-        | (a :: []) -> (bitvec_of_bool n a)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op1 ((BvOfFloat (rm, s, n)), _); _ } ->
-        let n = Z.of_int n in
-        (match cs with
-        | (a :: []) -> (bitvec_of_float rm s n a)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op1 ((FloatOfBv (rm, s, p)), _); _ } ->
-        (match cs with
-        | (a :: []) -> (bitvec_to_float rm s p a)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op1 ((FloatOfBvRaw (_)), _); _ } ->
-        (match cs with
-        | (a :: []) -> (bitvec_to_float_raw a)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op1 ((FloatOfFloat (rm, p)), _); _ } ->
-        (match cs with
-        | (a :: []) -> (float_cast rm p a)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op1 ((BvExtract (f, t)), _); _ } ->
-        let f = Z.of_int f in
-        let t = Z.of_int t in
-        (match cs with
-        | (a :: []) -> (bitvec_extract f t a)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op1 ((BvExtend (s, k)), _); _ } ->
-        let k = Z.of_int k in
-        (match cs with
-        | (a :: []) -> (bitvec_extend_ s k a)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op1 ((BvNot), _); _ } ->
-        (match cs with
-        | (a :: []) -> (bitvec_not_ a)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op1 ((Neg (c)), _); _ } ->
-        (match cs with
-        | (a :: []) -> (bitvec_neg c a)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op1 ((FIs (fc)), _); _ } ->
-        (match cs with
-        | (a :: []) -> (float_is_floatclass fc a)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op1 ((FIsNeg), _); _ } ->
-        (match cs with
-        | (a :: []) -> (float_is_negative a)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op1 ((FIsPos), _); _ } ->
-        (match cs with
-        | (a :: []) -> (float_is_positive a)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op1 ((FRound (rm)), _); _ } ->
-        (match cs with
-        | (a :: []) -> (float_round rm a)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op2 ((And), _, _); _ } ->
-        (match cs with
-        | (a :: (b :: [])) -> (bool_and_ a b)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op2 ((Or), _, _); _ } ->
-        (match cs with
-        | (a :: (b :: [])) -> (bool_or_ a b)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op2 ((Eq), _, _); _ } ->
-        (match cs with
-        | (a :: (b :: [])) -> (bool_eq a b)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op2 ((Add (c)), _, _); _ } ->
-        (match cs with
-        | (a :: (b :: [])) -> (bitvec_add c a b)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op2 ((Sub (c)), _, _); _ } ->
-        (match cs with
-        | (a :: (b :: [])) -> (bitvec_sub c a b)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op2 ((Mul (c)), _, _); _ } ->
-        (match cs with
-        | (a :: (b :: [])) -> (bitvec_mul c a b)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op2 ((Div (s)), _, _); _ } ->
-        (match cs with
-        | (a :: (b :: [])) -> (bitvec_div s a b)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op2 ((Rem (s)), _, _); _ } ->
-        (match cs with
-        | (a :: (b :: [])) -> (bitvec_rem s a b)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op2 ((Mod), _, _); _ } ->
-        (match cs with
-        | (a :: (b :: [])) -> (bitvec_mod_ a b)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op2 ((AddOvf (s)), _, _); _ } ->
-        (match cs with
-        | (a :: (b :: [])) -> (bitvec_add_overflows s a b)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op2 ((SubOvf (s)), _, _); _ } ->
-        (match cs with
-        | (a :: (b :: [])) -> (bitvec_sub_overflows s a b)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op2 ((MulOvf (s)), _, _); _ } ->
-        (match cs with
-        | (a :: (b :: [])) -> (bitvec_mul_overflows s a b)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op2 ((Lt (s)), _, _); _ } ->
-        (match cs with
-        | (a :: (b :: [])) -> (bitvec_lt s a b)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op2 ((Leq (s)), _, _); _ } ->
-        (match cs with
-        | (a :: (b :: [])) -> (bitvec_leq s a b)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op2 ((BvConcat), _, _); _ } ->
-        (match cs with
-        | (a :: (b :: [])) -> (bitvec_concat a b)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op2 ((BitAnd), _, _); _ } ->
-        (match cs with
-        | (a :: (b :: [])) -> (bitvec_and_ a b)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op2 ((BitOr), _, _); _ } ->
-        (match cs with
-        | (a :: (b :: [])) -> (bitvec_or_ a b)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op2 ((BitXor), _, _); _ } ->
-        (match cs with
-        | (a :: (b :: [])) -> (bitvec_xor a b)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op2 ((Shl), _, _); _ } ->
-        (match cs with
-        | (a :: (b :: [])) -> (bitvec_shl a b)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op2 ((LShr), _, _); _ } ->
-        (match cs with
-        | (a :: (b :: [])) -> (bitvec_lshr a b)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op2 ((AShr), _, _); _ } ->
-        (match cs with
-        | (a :: (b :: [])) -> (bitvec_ashr a b)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op2 ((FEq), _, _); _ } ->
-        (match cs with
-        | (a :: (b :: [])) -> (float_eq a b)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op2 ((FLeq), _, _); _ } ->
-        (match cs with
-        | (a :: (b :: [])) -> (float_leq a b)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op2 ((FLt), _, _); _ } ->
-        (match cs with
-        | (a :: (b :: [])) -> (float_lt a b)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op2 ((FAdd), _, _); _ } ->
-        (match cs with
-        | (a :: (b :: [])) -> (float_add a b)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op2 ((FSub), _, _); _ } ->
-        (match cs with
-        | (a :: (b :: [])) -> (float_sub a b)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op2 ((FMul), _, _); _ } ->
-        (match cs with
-        | (a :: (b :: [])) -> (float_mul a b)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op2 ((FDiv), _, _); _ } ->
-        (match cs with
-        | (a :: (b :: [])) -> (float_div a b)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op2 ((FRem), _, _); _ } ->
-        (match cs with
-        | (a :: (b :: [])) -> (float_rem a b)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op2 ((FMin), _, _); _ } ->
-        (match cs with
-        | (a :: (b :: [])) -> (float_min a b)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op2 ((FMax), _, _); _ } ->
-        (match cs with
-        | (a :: (b :: [])) -> (float_max a b)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op2 ((Ptr), _, _); _ } ->
-        (match cs with
-        | (a :: (b :: [])) -> (Rust_prims.mk_ptr a b)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op3 ((Ite), _, _, _); _ } ->
-        (match cs with
-        | (a :: (b :: (c :: []))) -> (bool_ite a b c)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op3 ((Fma), _, _, _); _ } ->
-        (match cs with
-        | (a :: (b :: (c :: []))) -> (float_fma a b c)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = OpN ((Distinct), _); _ } -> (bool_distinct cs)
-      | { kind = ThinPtr ({ ptag = g; _ }); _ } ->
-        (match cs with
-        | (p :: (s :: (a :: []))) ->
-          (rust_mk_thin_ptr { ptr = p; ptag = g; psize = s; palign = a })
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = FullPtr (_, _); _ } ->
-        (match cs with
-        | (p :: (m :: [])) -> (rust_mk_full_ptr p m)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = PtrMeta (m); _ } ->
-        (match m with
-        | (MetaUnit) ->
-          (match cs with
-          | [] -> (rust_mk_unit_meta ())
-          | _ -> (Rust_prims.bad_operands v)
-          )
-        | (MetaLen (_)) ->
-          (match cs with
-          | (l :: []) -> (rust_mk_len_meta l)
-          | _ -> (Rust_prims.bad_operands v)
-          )
-        | (MetaVTable (_)) ->
-          (match cs with
-          | (l :: []) -> (rust_mk_vtable_meta l)
-          | _ -> (Rust_prims.bad_operands v)
-          )
-        )
-      | { kind = Enum (var, _); _ } ->
-        (rust_mk_enum (rust_t_as_enum v.ty) var cs)
-      | { kind = Tuple (_); _ } -> (rust_mk_tuple cs)
-      | { kind = Array (_); _ } ->
-        (rust_mk_array_of_svty (rust_array_elem_ty v.ty) (Stdlib.Iarray.of_list cs))
-      | { kind = Union (bs); _ } ->
-        (rust_mk_union (rust_t_as_union v.ty) (rust_rebuild_blocks v bs cs))
-      | { kind = PolyVal (id); _ } ->
-        (match cs with
-        | [] -> (rust_mk_poly id)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = ThinPtrPart (part, _); _ } ->
-        (match cs with
-        | (a :: []) -> (rust_thin_ptr_part part a)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op1 ((FullPtrInner), _); _ } ->
-        (match cs with
-        | (a :: []) -> (rust_full_ptr_inner a)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op1 ((FullPtrMeta), _); _ } ->
-        (match cs with
-        | (a :: []) -> (rust_full_ptr_meta_raw a)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = PtrMetaAs (part, _); _ } ->
-        (match cs with
-        | (a :: []) -> (rust_ptr_meta_as part a)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Field (i, _); _ } ->
-        let i = Z.of_int i in
-        (match cs with
-        | (a :: []) -> (rust_field_of i a)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = VariantField (var, i, _); _ } ->
-        let i = Z.of_int i in
-        (match cs with
-        | (a :: []) -> (rust_field_of_variant var i a)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op1 ((IsVariant (var)), _); _ } ->
-        (match cs with
-        | (a :: []) -> (rust_is_variant var a)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      | { kind = Op1 ((ArrayField (i)), _); _ } ->
-        let i = Z.of_int i in
-        (match cs with
-        | (a :: []) -> (rust_array_field_of i a)
-        | _ -> (Rust_prims.bad_operands v)
-        )
-      )
-  
   let view_maps_operands (v : t) : bool =
       (match v with
       | { kind = Op2 ((Ptr), _, _); _ } -> false
@@ -3931,117 +3268,69 @@ module Kanon_flat = struct
       | _ -> false
       )
   
-  let rec view_cost (v : t) : Z.t =
+  let view_head_cost (v : t) : Z.t =
       (match v with
-      | { kind = Op2 ((FRem), _, _); _ } ->
-        (Z.add (Z.of_int (12900)) (view_costs (view_operands v)))
-      | { kind = Op2 ((Mod), _, _); _ } ->
-        (Z.add (Z.of_int (12700)) (view_costs (view_operands v)))
+      | { kind = Op2 ((FRem), _, _); _ } -> (Z.of_int (12900))
+      | { kind = Op2 ((Mod), _, _); _ } -> (Z.of_int (12700))
       | { kind = Op2 ((Div (s)), _, _); _ } ->
-        (Z.add (if s then (Z.of_int (12700)) else (Z.of_int (3600))) (view_costs (view_operands v)))
+        (if s then (Z.of_int (12700)) else (Z.of_int (3600)))
       | { kind = Op2 ((Rem (s)), _, _); _ } ->
-        (Z.add (if s then (Z.of_int (12700)) else (Z.of_int (7100))) (view_costs (view_operands v)))
-      | { kind = Op2 ((Mul (_)), _, _); _ } ->
-        (Z.add (Z.of_int (1900)) (view_costs (view_operands v)))
-      | { kind = Op2 ((FDiv), _, _); _ } ->
-        (Z.add (Z.of_int (1300)) (view_costs (view_operands v)))
-      | { kind = Op2 ((FMul), _, _); _ } ->
-        (Z.add (Z.of_int (345)) (view_costs (view_operands v)))
-      | { kind = Op2 ((MulOvf (_)), _, _); _ } ->
-        (Z.add (Z.of_int (200)) (view_costs (view_operands v)))
-      | { kind = Op2 ((FAdd), _, _); _ } ->
-        (Z.add (Z.of_int (130)) (view_costs (view_operands v)))
-      | { kind = Op2 ((FSub), _, _); _ } ->
-        (Z.add (Z.of_int (130)) (view_costs (view_operands v)))
-      | { kind = Op2 ((Sub (_)), _, _); _ } ->
-        (Z.add (Z.of_int (97)) (view_costs (view_operands v)))
-      | { kind = Op2 ((Add (_)), _, _); _ } ->
-        (Z.add (Z.of_int (75)) (view_costs (view_operands v)))
-      | { kind = Op2 ((Shl), _, _); _ } ->
-        (Z.add (Z.of_int (35)) (view_costs (view_operands v)))
-      | { kind = Op2 ((LShr), _, _); _ } ->
-        (Z.add (Z.of_int (35)) (view_costs (view_operands v)))
-      | { kind = Op2 ((AShr), _, _); _ } ->
-        (Z.add (Z.of_int (35)) (view_costs (view_operands v)))
-      | { kind = Op2 ((FMin), _, _); _ } ->
-        (Z.add (Z.of_int (24)) (view_costs (view_operands v)))
-      | { kind = Op2 ((FMax), _, _); _ } ->
-        (Z.add (Z.of_int (24)) (view_costs (view_operands v)))
-      | { kind = Op2 ((FLt), _, _); _ } ->
-        (Z.add (Z.of_int (12)) (view_costs (view_operands v)))
-      | { kind = Op2 ((FLeq), _, _); _ } ->
-        (Z.add (Z.of_int (12)) (view_costs (view_operands v)))
+        (if s then (Z.of_int (12700)) else (Z.of_int (7100)))
+      | { kind = Op2 ((Mul (_)), _, _); _ } -> (Z.of_int (1900))
+      | { kind = Op2 ((FDiv), _, _); _ } -> (Z.of_int (1300))
+      | { kind = Op2 ((FMul), _, _); _ } -> (Z.of_int (345))
+      | { kind = Op2 ((MulOvf (_)), _, _); _ } -> (Z.of_int (200))
+      | { kind = Op2 ((FAdd), _, _); _ } -> (Z.of_int (130))
+      | { kind = Op2 ((FSub), _, _); _ } -> (Z.of_int (130))
+      | { kind = Op2 ((Sub (_)), _, _); _ } -> (Z.of_int (97))
+      | { kind = Op2 ((Add (_)), _, _); _ } -> (Z.of_int (75))
+      | { kind = Op2 ((Shl), _, _); _ } -> (Z.of_int (35))
+      | { kind = Op2 ((LShr), _, _); _ } -> (Z.of_int (35))
+      | { kind = Op2 ((AShr), _, _); _ } -> (Z.of_int (35))
+      | { kind = Op2 ((FMin), _, _); _ } -> (Z.of_int (24))
+      | { kind = Op2 ((FMax), _, _); _ } -> (Z.of_int (24))
+      | { kind = Op2 ((FLt), _, _); _ } -> (Z.of_int (12))
+      | { kind = Op2 ((FLeq), _, _); _ } -> (Z.of_int (12))
       | { kind = Op2 ((SubOvf (s)), _, _); _ } ->
-        (Z.add (if s then (Z.of_int (12)) else (Z.of_int (5))) (view_costs (view_operands v)))
+        (if s then (Z.of_int (12)) else (Z.of_int (5)))
       | { kind = Op2 ((AddOvf (s)), _, _); _ } ->
-        (Z.add (if s then (Z.of_int (9)) else (Z.of_int (5))) (view_costs (view_operands v)))
-      | { kind = Op2 ((Lt (_)), _, _); _ } ->
-        (Z.add (Z.of_int (5)) (view_costs (view_operands v)))
-      | { kind = Op2 ((Leq (_)), _, _); _ } ->
-        (Z.add (Z.of_int (5)) (view_costs (view_operands v)))
-      | { kind = Op2 ((FEq), _, _); _ } ->
-        (Z.add (Z.of_int (3)) (view_costs (view_operands v)))
-      | { kind = Op2 ((And), _, _); _ } ->
-        (Z.add Z.one (view_costs (view_operands v)))
-      | { kind = Op2 ((Or), _, _); _ } ->
-        (Z.add Z.one (view_costs (view_operands v)))
-      | { kind = Op2 ((Eq), _, _); _ } ->
-        (Z.add Z.one (view_costs (view_operands v)))
-      | { kind = Op2 ((BitAnd), _, _); _ } ->
-        (Z.add Z.one (view_costs (view_operands v)))
-      | { kind = Op2 ((BitOr), _, _); _ } ->
-        (Z.add Z.one (view_costs (view_operands v)))
-      | { kind = Op2 ((BitXor), _, _); _ } ->
-        (Z.add Z.one (view_costs (view_operands v)))
-      | { kind = Op2 ((BvConcat), _, _); _ } ->
-        (Z.add Z.one (view_costs (view_operands v)))
-      | { kind = Op1 ((BvOfFloat (_, _, _)), _); _ } ->
-        (Z.add (Z.of_int (1400)) (view_costs (view_operands v)))
-      | { kind = Op1 ((FSqrt), _); _ } ->
-        (Z.add (Z.of_int (280)) (view_costs (view_operands v)))
-      | { kind = Op1 ((FloatOfFloat (_, _)), _); _ } ->
-        (Z.add (Z.of_int (255)) (view_costs (view_operands v)))
-      | { kind = Op1 ((FloatOfBv (_, _, _)), _); _ } ->
-        (Z.add (Z.of_int (78)) (view_costs (view_operands v)))
-      | { kind = Op1 ((FRound (_)), _); _ } ->
-        (Z.add (Z.of_int (65)) (view_costs (view_operands v)))
-      | { kind = Op1 ((Neg (_)), _); _ } ->
-        (Z.add (Z.of_int (10)) (view_costs (view_operands v)))
-      | { kind = Op1 ((FAbs), _); _ } ->
-        (Z.add (Z.of_int (4)) (view_costs (view_operands v)))
-      | { kind = Op1 ((FNeg), _); _ } ->
-        (Z.add (Z.of_int (4)) (view_costs (view_operands v)))
-      | { kind = Op1 ((FloatOfBvRaw (_)), _); _ } ->
-        (Z.add (Z.of_int (4)) (view_costs (view_operands v)))
-      | { kind = Op1 ((Not), _); _ } ->
-        (Z.add Z.one (view_costs (view_operands v)))
-      | { kind = Op1 ((GetPtrLoc), _); _ } ->
-        (Z.add Z.one (view_costs (view_operands v)))
-      | { kind = Op1 ((GetPtrOfs), _); _ } ->
-        (Z.add Z.one (view_costs (view_operands v)))
-      | { kind = Op1 ((BvNot), _); _ } ->
-        (Z.add Z.one (view_costs (view_operands v)))
-      | { kind = Op1 ((BvOfBool (_)), _); _ } ->
-        (Z.add Z.one (view_costs (view_operands v)))
-      | { kind = Op1 ((BvExtend (_, _)), _); _ } ->
-        (Z.add Z.one (view_costs (view_operands v)))
-      | { kind = Op1 ((BvExtract (_, _)), _); _ } ->
-        (Z.add Z.one (view_costs (view_operands v)))
-      | { kind = Op1 ((FIs (_)), _); _ } ->
-        (Z.add Z.one (view_costs (view_operands v)))
-      | { kind = Op1 ((FIsNeg), _); _ } ->
-        (Z.add Z.one (view_costs (view_operands v)))
-      | { kind = Op1 ((FIsPos), _); _ } ->
-        (Z.add Z.one (view_costs (view_operands v)))
-      | { kind = Op3 ((Fma), _, _, _); _ } ->
-        (Z.add (Z.of_int (400)) (view_costs (view_operands v)))
-      | { kind = Op3 ((Ite), _, _, _); _ } -> (view_costs (view_operands v))
-      | { kind = OpN ((Distinct), _); _ } -> (view_costs (view_operands v))
-      | { kind = Seq (_); _ } -> (view_costs (view_operands v))
+        (if s then (Z.of_int (9)) else (Z.of_int (5)))
+      | { kind = Op2 ((Lt (_)), _, _); _ } -> (Z.of_int (5))
+      | { kind = Op2 ((Leq (_)), _, _); _ } -> (Z.of_int (5))
+      | { kind = Op2 ((FEq), _, _); _ } -> (Z.of_int (3))
+      | { kind = Op2 ((And), _, _); _ } -> Z.one
+      | { kind = Op2 ((Or), _, _); _ } -> Z.one
+      | { kind = Op2 ((Eq), _, _); _ } -> Z.one
+      | { kind = Op2 ((BitAnd), _, _); _ } -> Z.one
+      | { kind = Op2 ((BitOr), _, _); _ } -> Z.one
+      | { kind = Op2 ((BitXor), _, _); _ } -> Z.one
+      | { kind = Op2 ((BvConcat), _, _); _ } -> Z.one
+      | { kind = Op1 ((BvOfFloat (_, _, _)), _); _ } -> (Z.of_int (1400))
+      | { kind = Op1 ((FSqrt), _); _ } -> (Z.of_int (280))
+      | { kind = Op1 ((FloatOfFloat (_, _)), _); _ } -> (Z.of_int (255))
+      | { kind = Op1 ((FloatOfBv (_, _, _)), _); _ } -> (Z.of_int (78))
+      | { kind = Op1 ((FRound (_)), _); _ } -> (Z.of_int (65))
+      | { kind = Op1 ((Neg (_)), _); _ } -> (Z.of_int (10))
+      | { kind = Op1 ((FAbs), _); _ } -> (Z.of_int (4))
+      | { kind = Op1 ((FNeg), _); _ } -> (Z.of_int (4))
+      | { kind = Op1 ((FloatOfBvRaw (_)), _); _ } -> (Z.of_int (4))
+      | { kind = Op1 ((Not), _); _ } -> Z.one
+      | { kind = Op1 ((GetPtrLoc), _); _ } -> Z.one
+      | { kind = Op1 ((GetPtrOfs), _); _ } -> Z.one
+      | { kind = Op1 ((BvNot), _); _ } -> Z.one
+      | { kind = Op1 ((BvOfBool (_)), _); _ } -> Z.one
+      | { kind = Op1 ((BvExtend (_, _)), _); _ } -> Z.one
+      | { kind = Op1 ((BvExtract (_, _)), _); _ } -> Z.one
+      | { kind = Op1 ((FIs (_)), _); _ } -> Z.one
+      | { kind = Op1 ((FIsNeg), _); _ } -> Z.one
+      | { kind = Op1 ((FIsPos), _); _ } -> Z.one
+      | { kind = Op3 ((Fma), _, _, _); _ } -> (Z.of_int (400))
+      | { kind = Op3 ((Ite), _, _, _); _ } -> Z.zero
+      | { kind = OpN ((Distinct), _); _ } -> Z.zero
+      | { kind = Seq (_); _ } -> Z.zero
       | { kind = Var (_); _ } -> (Z.of_int (3))
       | { kind = Float (_); _ } -> (Z.of_int (2))
-      | { kind = Exists (_, _); _ } ->
-        (Z.add (Z.of_int (100000)) (view_costs (view_operands v)))
+      | { kind = Exists (_, _); _ } -> (Z.of_int (100000))
       | { kind = Op2 ((Ptr), _, _); _ } -> Z.one
       | { kind = Bool (_); _ } -> Z.one
       | { kind = BitVec (_); _ } -> Z.one
@@ -4054,19 +3343,36 @@ module Kanon_flat = struct
       | { kind = Array (_); _ } -> (Z.of_int (100000))
       | { kind = Union (_); _ } -> (Z.of_int (100000))
       | { kind = PolyVal (_); _ } -> (Z.of_int (100000))
-      | { kind = ThinPtrPart (_, _); _ } -> (Z.of_int (100000))
+      | { kind = Op1 ((ThinPtrPart (_)), _); _ } -> (Z.of_int (100000))
       | { kind = Op1 ((FullPtrInner), _); _ } -> (Z.of_int (100000))
       | { kind = Op1 ((FullPtrMeta), _); _ } -> (Z.of_int (100000))
-      | { kind = PtrMetaAs (_, _); _ } -> (Z.of_int (100000))
-      | { kind = Field (_, _); _ } -> (Z.of_int (100000))
-      | { kind = VariantField (_, _, _); _ } -> (Z.of_int (100000))
+      | { kind = Op1 ((PtrMetaAs (_)), _); _ } -> (Z.of_int (100000))
+      | { kind = Op1 ((Field (_)), _); _ } -> (Z.of_int (100000))
+      | { kind = Op1 ((VariantField (_, _)), _); _ } -> (Z.of_int (100000))
       | { kind = Op1 ((IsVariant (_)), _); _ } -> (Z.of_int (100000))
       | { kind = Op1 ((ArrayField (_)), _); _ } -> (Z.of_int (100000))
       )
-  and view_costs (l : (t list)) : Z.t =
-      (match l with
-      | [] -> Z.zero
-      | (x :: rest) -> (Z.add (view_cost x) (view_costs rest))
+  
+  let view_costs_operands (v : t) : bool =
+      (match v with
+      | { kind = Op2 ((Ptr), _, _); _ } -> false
+      | { kind = ThinPtr (_); _ } -> false
+      | { kind = FullPtr (_, _); _ } -> false
+      | { kind = PtrMeta (_); _ } -> false
+      | { kind = Enum (_, _); _ } -> false
+      | { kind = Tuple (_); _ } -> false
+      | { kind = Array (_); _ } -> false
+      | { kind = Union (_); _ } -> false
+      | { kind = PolyVal (_); _ } -> false
+      | { kind = Op1 ((ThinPtrPart (_)), _); _ } -> false
+      | { kind = Op1 ((FullPtrInner), _); _ } -> false
+      | { kind = Op1 ((FullPtrMeta), _); _ } -> false
+      | { kind = Op1 ((PtrMetaAs (_)), _); _ } -> false
+      | { kind = Op1 ((Field (_)), _); _ } -> false
+      | { kind = Op1 ((VariantField (_, _)), _); _ } -> false
+      | { kind = Op1 ((IsVariant (_)), _); _ } -> false
+      | { kind = Op1 ((ArrayField (_)), _); _ } -> false
+      | _ -> true
       )
   
   let view_random_bound (s : ty) : (Z.t option) =
@@ -4210,14 +3516,16 @@ module Kanon_flat = struct
       | ({ kind = Array (_); _ } as x) -> (Rust_prims.h_array x.ty)
       | { kind = Union (_); _ } -> Rust_prims.h_union
       | { kind = PolyVal (_); _ } -> Rust_prims.h_poly
-      | { kind = ThinPtrPart (part, _); _ } -> (Rust_prims.h_thin_part part)
+      | { kind = Op1 ((ThinPtrPart (part)), _); _ } ->
+        (Rust_prims.h_thin_part part)
       | { kind = Op1 ((FullPtrInner), _); _ } -> Rust_prims.h_full_inner
       | { kind = Op1 ((FullPtrMeta), _); _ } -> Rust_prims.h_full_meta
-      | { kind = PtrMetaAs (part, _); _ } -> (Rust_prims.h_meta_as part)
-      | { kind = Field (i, _); _ } ->
+      | { kind = Op1 ((PtrMetaAs (part)), _); _ } ->
+        (Rust_prims.h_meta_as part)
+      | { kind = Op1 ((Field (i)), _); _ } ->
         let i = Z.of_int i in
         (Rust_prims.h_field i)
-      | { kind = VariantField (var, i, _); _ } ->
+      | { kind = Op1 ((VariantField (var, i)), _); _ } ->
         let i = Z.of_int i in
         (Rust_prims.h_variant_field var i)
       | { kind = Op1 ((IsVariant (var)), _); _ } ->
@@ -4254,6 +3562,21 @@ module Kanon_flat = struct
         (LAll ([], (rust_range_from Z.zero (Rust_prims.list_length vs))))
       | _ -> LNone
       )
+  
+  let rust_field_of (idx : Z.t) (v : t) : t =
+      (assert ((match v.ty with
+               | (TTuple (kanon__tys)) -> true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v with
+      | { kind = Tuple (vs); _ } -> (Rust_prims.nth_term vs idx)
+      | _ ->
+        (node (Op1 ((Field ((Z.to_int idx))), v)) (match v.ty with
+                                                  | (TTuple (kanon__tys)) ->
+                                                    (Rust_prims.nth_ty kanon__tys idx)
+                                                  | _ -> v.ty
+                                                  ))
+      ))
   
   let view_learn_value (e : t) (i : Z.t) (v : t) : (t option) =
       (match e, i with
@@ -4314,20 +3637,131 @@ module Kanon_flat = struct
       | _ -> None
       )
   
+  let rec rust_types_of (vs : (t list)) : (ty list) =
+      (match vs with
+      | [] -> []
+      | (v :: rest) -> (v.ty :: (rust_types_of rest))
+      )
+  
+  let[@inline] rust_t_as_tuple (s : ty) : (ty list) =
+      (match s with
+      | (TTuple (tys)) -> tys
+      | _ -> (Rust_prims.fail_tuple_ty s)
+      )
+  
   let[@inline] rust_array_ty_length (s : ty) : Z.t =
       (match s with
       | (TArray (_, n)) -> n
       | _ -> (Rust_prims.fail_array_len s)
       )
   
+  let[@inline] rust_array_elem_ty (s : ty) : ty =
+      (match s with
+      | (TArray (e, _)) -> e
+      | _ -> (Rust_prims.fail_array_elem s)
+      )
+  
+  let[@inline] rust_t_as_enum (s : ty) : decl_ref =
+      (match s with
+      | (TEnum (adt)) -> adt
+      | _ -> (Rust_prims.fail_enum_ty s)
+      )
+  
+  let[@inline] rust_t_as_union (s : ty) : decl_ref =
+      (match s with
+      | (TUnion (adt)) -> adt
+      | _ -> (Rust_prims.fail_union_ty s)
+      )
+  
+  let[@inline] rust_thin_part_ty (part : ptr_part) : ty =
+      (match part with
+      | (PtrInner) -> (TPointer ((Z.to_int (Rust_prims.usize_bits ()))))
+      | (PtrSize) -> (TBitVector ((Z.to_int (Rust_prims.usize_bits ()))))
+      | (PtrAlign) -> (TBitVector ((Z.to_int (Rust_prims.usize_bits ()))))
+      )
+  
+  let[@inline] rust_meta_part_ty (part : meta_part) : ty =
+      (match part with
+      | (PartLen) -> (TBitVector ((Z.to_int (Rust_prims.usize_bits ()))))
+      | (PartVTable) -> TThinPtr
+      )
+  
+  let[@inline] rust_mk_thin_ptr (p : thin) : t =
+      (node (ThinPtr (p)) TThinPtr)
+  
+  let rust_thin_ptr_part (part : ptr_part) (v : t) : t =
+      (assert ((match v.ty with
+               | (TThinPtr) -> true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v with
+      | { kind = ThinPtr ({ ptr = p; psize = s; palign = a; _ }); _ } ->
+        (match part with
+        | (PtrInner) -> p
+        | (PtrSize) -> s
+        | (PtrAlign) -> a
+        )
+      | _ -> (node (Op1 ((ThinPtrPart (part)), v)) (rust_thin_part_ty part))
+      ))
+  
+  let[@inline] rust_mk_full_ptr (p : t) (m : t) : t =
+      (node (FullPtr (p, m)) TFullPtr)
+  
+  let[@inline] rust_mk_unit_meta (u : unit) : t =
+      (node (PtrMeta (MetaUnit)) TPtrMeta)
+  
+  let[@inline] rust_mk_len_meta (len : t) : t =
+      (node (PtrMeta ((MetaLen (len)))) TPtrMeta)
+  
+  let[@inline] rust_mk_vtable_meta (vtable : t) : t =
+      (node (PtrMeta ((MetaVTable (vtable)))) TPtrMeta)
+  
+  let rust_full_ptr_inner (v : t) : t =
+      (assert ((match v.ty with
+               | (TFullPtr) -> true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v with
+      | { kind = FullPtr (p, _); _ } -> p
+      | _ -> (node (Op1 (FullPtrInner, v)) TThinPtr)
+      ))
+  
   let[@inline] rust_of_thin_ptr (v : t) : t =
       (rust_mk_full_ptr v (rust_mk_unit_meta ()))
+  
+  let rust_full_ptr_meta_raw (v : t) : t =
+      (assert ((match v.ty with
+               | (TFullPtr) -> true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v with
+      | { kind = FullPtr (_, m); _ } -> m
+      | _ -> (node (Op1 (FullPtrMeta, v)) TPtrMeta)
+      ))
+  
+  let rust_ptr_meta_as (part : meta_part) (v : t) : t =
+      (assert ((match v.ty with
+               | (TPtrMeta) -> true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v with
+      | { kind = PtrMeta (m); _ } ->
+        (match part, m with
+        | ((PartLen), (MetaLen (len))) -> len
+        | ((PartVTable), (MetaVTable (vtable))) -> vtable
+        | (_, _) -> (Rust_prims.fail_meta part m)
+        )
+      | _ -> (node (Op1 ((PtrMetaAs (part)), v)) (rust_meta_part_ty part))
+      ))
   
   let[@inline] rust_full_ptr_meta (part : meta_part) (v : t) : t =
       (rust_ptr_meta_as part (rust_full_ptr_meta_raw v))
   
   let[@inline] rust_full_ptr_set_inner (inner : t) (v : t) : t =
       (rust_mk_full_ptr inner (rust_full_ptr_meta_raw v))
+  
+  let[@inline] rust_mk_tuple (vs : (t list)) : t =
+      (node (Tuple (vs)) (TTuple ((rust_types_of vs))))
   
   let rec rust_fields_from (i : Z.t) (v : t) (tys : (ty list)) : (t list) =
       (match tys with
@@ -4346,6 +3780,25 @@ module Kanon_flat = struct
   let[@inline] rust_set_field (idx : Z.t) (x : t) (v : t) : t =
       (rust_mk_tuple (Rust_prims.set_nth (rust_tuple_fields v) idx x))
   
+  let[@inline] rust_mk_enum (adt : decl_ref) (var : variant_id) (vs : (t list)) : t =
+      (node (Enum (var, vs)) (TEnum (adt)))
+  
+  let rust_field_of_variant (var : variant_id) (idx : Z.t) (v : t) : t =
+      (assert ((match v.ty with
+               | (TEnum (kanon__adt)) -> true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v with
+      | { kind = Enum (cur, vs); _ } ->
+        (Rust_prims.enum_field cur var vs idx)
+      | _ ->
+        (node (Op1 ((VariantField (var, (Z.to_int idx))), v)) (match v.ty with
+                                                              | (TEnum (kanon__adt)) ->
+                                                                (Rust_prims.variant_field_ty kanon__adt var idx)
+                                                              | _ -> v.ty
+                                                              ))
+      ))
+  
   let rec rust_variant_fields_from (var : variant_id) (i : Z.t) (n : Z.t) (v : t) : (t list) =
       (if (Z.geq i n)
       then []
@@ -4363,10 +3816,39 @@ module Kanon_flat = struct
       (let vs = (Rust_prims.set_nth (rust_as_enum_of_variant var v) idx x) in
       (rust_mk_enum (rust_t_as_enum v.ty) var vs))
   
+  let rust_is_variant (var : variant_id) (v : t) : t =
+      (assert ((match v.ty with
+               | (TEnum (kanon__d)) -> true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v with
+      | { kind = Enum (cur, _); _ } ->
+        (bool_of_bool ((equal_variant_id var cur)))
+      | _ -> (node (Op1 ((IsVariant (var)), v)) TBool)
+      ))
+  
+  let[@inline] rust_mk_array_of_svty (elem : ty) (vs : (t Iarray.t)) : t =
+      (node (Array (vs)) (TArray (elem, (Z.of_int (Stdlib.Iarray.length vs)))))
+  
   let rust_mk_array (elem : rty) (vs : (t Iarray.t)) : t =
       (if ((Z.equal (Z.of_int (Stdlib.Iarray.length vs)) Z.zero))
       then (rust_mk_array_of_svty (Rust_prims.ty_of_rust elem) vs)
       else (rust_mk_array_of_svty (Stdlib.Iarray.get vs (Z.to_int Z.zero)).ty vs))
+  
+  let rust_array_field_of (idx : Z.t) (v : t) : t =
+      (assert ((match v.ty with
+               | (TArray (kanon__e, kanon__n)) -> true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v with
+      | { kind = Array (vs); _ } -> (Stdlib.Iarray.get vs (Z.to_int idx))
+      | _ ->
+        (node (Op1 ((ArrayField ((Z.to_int idx))), v)) (match v.ty with
+                                                       | (TArray (kanon__e, kanon__n)) ->
+                                                         kanon__e
+                                                       | _ -> v.ty
+                                                       ))
+      ))
   
   let rec rust_array_fields_from (i : Z.t) (n : Z.t) (v : t) : (t list) =
       (if (Z.geq i n)
@@ -4388,7 +3870,867 @@ module Kanon_flat = struct
                  c.(i) <- v;
                  Stdlib.Iarray.of_array c) in
       (rust_mk_array_of_svty (rust_array_elem_ty v.ty) vs2)))
+  
+  let[@inline] rust_mk_union (adt : decl_ref) (blocks : (block list)) : t =
+      (node (Union (blocks)) (TUnion (adt)))
+  
+  let[@inline] rust_mk_poly (id : tyvar_id) : t =
+      (node (PolyVal (id)) TPolyType)
+  
+  let[@inline] kanon__rebuild_Seq (s : ty) (p1 : (t list)) : t =
+      (node (Seq (p1)) s)
+  
+  let[@inline] kanon__rebuild_Exists (p1 : ((var * ty) list)) (p2 : t) : t =
+      (exists_mk p1 p2)
+  
+  let[@inline] kanon__rebuild_ThinPtr (s : ty) (p1 : thin) : t =
+      (node (ThinPtr (p1)) s)
+  
+  let[@inline] kanon__rebuild_FullPtr (s : ty) (p1 : t) (p2 : t) : t =
+      (node (FullPtr (p1, p2)) s)
+  
+  let[@inline] kanon__rebuild_PtrMeta (s : ty) (p1 : ptr_meta) : t =
+      (node (PtrMeta (p1)) s)
+  
+  let[@inline] kanon__rebuild_Enum (s : ty) (p1 : variant_id) (p2 : (t list)) : t =
+      (node (Enum (p1, p2)) s)
+  
+  let[@inline] kanon__rebuild_Tuple (p1 : (t list)) : t =
+      (node (Tuple (p1)) (TTuple ((rust_types_of p1))))
+  
+  let[@inline] kanon__rebuild_Array (s : ty) (p1 : (t Iarray.t)) : t =
+      (node (Array (p1)) s)
+  
+  let[@inline] kanon__rebuild_Union (s : ty) (p1 : (block list)) : t =
+      (node (Union (p1)) s)
+  
+  let[@inline] kanon__rebuild_Not (x1 : t) : t = (bool_not_ x1)
+  
+  let[@inline] kanon__rebuild_And (x1 : t) (x2 : t) : t = (bool_and_ x1 x2)
+  
+  let[@inline] kanon__rebuild_Or (x1 : t) (x2 : t) : t = (bool_or_ x1 x2)
+  
+  let[@inline] kanon__rebuild_Eq (x1 : t) (x2 : t) : t = (bool_eq x1 x2)
+  
+  let[@inline] kanon__rebuild_Ite (x1 : t) (x2 : t) (x3 : t) : t =
+      (bool_ite x1 x2 x3)
+  
+  let[@inline] kanon__rebuild_Distinct (x1 : (t list)) : t =
+      (bool_distinct x1)
+  
+  let[@inline] kanon__rebuild_BvOfBool (p1 : Z.t) (x1 : t) : t =
+      (bitvec_of_bool p1 x1)
+  
+  let[@inline] kanon__rebuild_BvExtract (p1 : Z.t) (p2 : Z.t) (x1 : t) : t =
+      (bitvec_extract p1 p2 x1)
+  
+  let[@inline] kanon__rebuild_BvExtend (p1 : bool) (p2 : Z.t) (x1 : t) : t =
+      (bitvec_extend_ p1 p2 x1)
+  
+  let[@inline] kanon__rebuild_BvNot (x1 : t) : t = (bitvec_not_ x1)
+  
+  let[@inline] kanon__rebuild_Neg (p1 : bool) (x1 : t) : t =
+      (bitvec_neg p1 x1)
+  
+  let[@inline] kanon__rebuild_Add (p1 : checked) (x1 : t) (x2 : t) : t =
+      (bitvec_add p1 x1 x2)
+  
+  let[@inline] kanon__rebuild_Sub (p1 : checked) (x1 : t) (x2 : t) : t =
+      (bitvec_sub p1 x1 x2)
+  
+  let[@inline] kanon__rebuild_Mul (p1 : checked) (x1 : t) (x2 : t) : t =
+      (bitvec_mul p1 x1 x2)
+  
+  let[@inline] kanon__rebuild_Div (p1 : bool) (x1 : t) (x2 : t) : t =
+      (bitvec_div p1 x1 x2)
+  
+  let[@inline] kanon__rebuild_Rem (p1 : bool) (x1 : t) (x2 : t) : t =
+      (bitvec_rem p1 x1 x2)
+  
+  let[@inline] kanon__rebuild_Mod (x1 : t) (x2 : t) : t = (bitvec_mod_ x1 x2)
+  
+  let[@inline] kanon__rebuild_AddOvf (p1 : bool) (x1 : t) (x2 : t) : t =
+      (bitvec_add_overflows p1 x1 x2)
+  
+  let[@inline] kanon__rebuild_SubOvf (p1 : bool) (x1 : t) (x2 : t) : t =
+      (bitvec_sub_overflows p1 x1 x2)
+  
+  let[@inline] kanon__rebuild_MulOvf (p1 : bool) (x1 : t) (x2 : t) : t =
+      (bitvec_mul_overflows p1 x1 x2)
+  
+  let[@inline] kanon__rebuild_Lt (p1 : bool) (x1 : t) (x2 : t) : t =
+      (bitvec_lt p1 x1 x2)
+  
+  let[@inline] kanon__rebuild_Leq (p1 : bool) (x1 : t) (x2 : t) : t =
+      (bitvec_leq p1 x1 x2)
+  
+  let[@inline] kanon__rebuild_BvConcat (x1 : t) (x2 : t) : t =
+      (bitvec_concat x1 x2)
+  
+  let[@inline] kanon__rebuild_BitAnd (x1 : t) (x2 : t) : t =
+      (bitvec_and_ x1 x2)
+  
+  let[@inline] kanon__rebuild_BitOr (x1 : t) (x2 : t) : t =
+      (bitvec_or_ x1 x2)
+  
+  let[@inline] kanon__rebuild_BitXor (x1 : t) (x2 : t) : t =
+      (bitvec_xor x1 x2)
+  
+  let[@inline] kanon__rebuild_Shl (x1 : t) (x2 : t) : t = (bitvec_shl x1 x2)
+  
+  let[@inline] kanon__rebuild_LShr (x1 : t) (x2 : t) : t =
+      (bitvec_lshr x1 x2)
+  
+  let[@inline] kanon__rebuild_AShr (x1 : t) (x2 : t) : t =
+      (bitvec_ashr x1 x2)
+  
+  let[@inline] kanon__rebuild_BvOfFloat (p1 : rm) (p2 : bool) (p3 : Z.t) (x1 : t) : t =
+      (bitvec_of_float p1 p2 p3 x1)
+  
+  let[@inline] kanon__rebuild_FloatOfBv (p1 : rm) (p2 : bool) (p3 : fp) (x1 : t) : t =
+      (bitvec_to_float p1 p2 p3 x1)
+  
+  let[@inline] kanon__rebuild_FloatOfBvRaw (p1 : fp) (x1 : t) : t =
+      (bitvec_to_float_bits p1 x1)
+  
+  let[@inline] kanon__rebuild_FloatOfFloat (p1 : rm) (p2 : fp) (x1 : t) : t =
+      (float_cast p1 p2 x1)
+  
+  let[@inline] kanon__rebuild_FAbs (x1 : t) : t = (float_abs x1)
+  
+  let[@inline] kanon__rebuild_FNeg (x1 : t) : t = (float_neg x1)
+  
+  let[@inline] kanon__rebuild_FSqrt (x1 : t) : t = (float_sqrt x1)
+  
+  let[@inline] kanon__rebuild_FIs (p1 : fc) (x1 : t) : t =
+      (float_is_floatclass p1 x1)
+  
+  let[@inline] kanon__rebuild_FIsNeg (x1 : t) : t = (float_is_negative x1)
+  
+  let[@inline] kanon__rebuild_FIsPos (x1 : t) : t = (float_is_positive x1)
+  
+  let[@inline] kanon__rebuild_FRound (p1 : rm) (x1 : t) : t =
+      (float_round p1 x1)
+  
+  let[@inline] kanon__rebuild_FEq (x1 : t) (x2 : t) : t = (float_eq x1 x2)
+  
+  let[@inline] kanon__rebuild_FLeq (x1 : t) (x2 : t) : t = (float_leq x1 x2)
+  
+  let[@inline] kanon__rebuild_FLt (x1 : t) (x2 : t) : t = (float_lt x1 x2)
+  
+  let[@inline] kanon__rebuild_FAdd (x1 : t) (x2 : t) : t = (float_add x1 x2)
+  
+  let[@inline] kanon__rebuild_FSub (x1 : t) (x2 : t) : t = (float_sub x1 x2)
+  
+  let[@inline] kanon__rebuild_FMul (x1 : t) (x2 : t) : t = (float_mul x1 x2)
+  
+  let[@inline] kanon__rebuild_FDiv (x1 : t) (x2 : t) : t = (float_div x1 x2)
+  
+  let[@inline] kanon__rebuild_FRem (x1 : t) (x2 : t) : t = (float_rem x1 x2)
+  
+  let[@inline] kanon__rebuild_FMin (x1 : t) (x2 : t) : t = (float_min x1 x2)
+  
+  let[@inline] kanon__rebuild_FMax (x1 : t) (x2 : t) : t = (float_max x1 x2)
+  
+  let[@inline] kanon__rebuild_Fma (x1 : t) (x2 : t) (x3 : t) : t =
+      (float_fma x1 x2 x3)
+  
+  let[@inline] kanon__rebuild_Ptr (x1 : t) (x2 : t) : t =
+      (node (Op2 (Ptr, x1, x2)) (TPointer ((Z.to_int (bitvec_size x1)))))
+  
+  let[@inline] kanon__rebuild_GetPtrLoc (x1 : t) : t = (ptr_loc x1)
+  
+  let[@inline] kanon__rebuild_GetPtrOfs (x1 : t) : t = (ptr_ofs x1)
+  
+  let[@inline] kanon__rebuild_ThinPtrPart (p1 : ptr_part) (x1 : t) : t =
+      (rust_thin_ptr_part p1 x1)
+  
+  let[@inline] kanon__rebuild_FullPtrInner (x1 : t) : t =
+      (rust_full_ptr_inner x1)
+  
+  let[@inline] kanon__rebuild_FullPtrMeta (x1 : t) : t =
+      (rust_full_ptr_meta_raw x1)
+  
+  let[@inline] kanon__rebuild_PtrMetaAs (p1 : meta_part) (x1 : t) : t =
+      (rust_ptr_meta_as p1 x1)
+  
+  let[@inline] kanon__rebuild_Field (p1 : Z.t) (x1 : t) : t =
+      (rust_field_of p1 x1)
+  
+  let[@inline] kanon__rebuild_VariantField (p1 : variant_id) (p2 : Z.t) (x1 : t) : t =
+      (rust_field_of_variant p1 p2 x1)
+  
+  let[@inline] kanon__rebuild_IsVariant (p1 : variant_id) (x1 : t) : t =
+      (rust_is_variant p1 x1)
+  
+  let[@inline] kanon__rebuild_ArrayField (p1 : Z.t) (x1 : t) : t =
+      (rust_array_field_of p1 x1)
 end
+
+(** The traversals of the terms and sorts, which are not in a module. *)
+open Kanon_flat
+
+let rec kanon__map_thin f (x : thin) : thin =
+  let y_x_ptr = f x.ptr in
+  let y_x_psize = f x.psize in
+  let y_x_palign = f x.palign in
+  { x with ptr = y_x_ptr; psize = y_x_psize; palign = y_x_palign }
+
+and kanon__map_block_value f (x : block_value) : block_value =
+  match x with
+  | Scalar (a1) ->
+      let y_a1 = f a1 in
+      Scalar (y_a1)
+  | Aggregate (a1, a2) ->
+      let y_a1 = f a1 in
+      Aggregate (y_a1, a2)
+
+and kanon__map_block f (x : block) : block =
+  let y_x_bvalue = (kanon__map_block_value f) x.bvalue in
+  let y_x_boffset = f x.boffset in
+  let y_x_bsize = f x.bsize in
+  { x with bvalue = y_x_bvalue; boffset = y_x_boffset; bsize = y_x_bsize }
+
+and kanon__map_ptr_meta f (x : ptr_meta) : ptr_meta =
+  match x with
+  | MetaLen (a1) ->
+      let y_a1 = f a1 in
+      MetaLen (y_a1)
+  | MetaVTable (a1) ->
+      let y_a1 = f a1 in
+      MetaVTable (y_a1)
+  | MetaUnit ->
+      MetaUnit
+
+let rec kanon__iter_thin f (x : thin) : unit =
+  f x.ptr; f x.psize; f x.palign
+
+and kanon__iter_block_value f (x : block_value) : unit =
+  match x with
+  | Scalar (a1) ->
+      f a1
+  | Aggregate (a1, a2) ->
+      f a1
+
+and kanon__iter_block f (x : block) : unit =
+  (kanon__iter_block_value f) x.bvalue; f x.boffset; f x.bsize
+
+and kanon__iter_ptr_meta f (x : ptr_meta) : unit =
+  match x with
+  | MetaLen (a1) ->
+      f a1
+  | MetaVTable (a1) ->
+      f a1
+  | MetaUnit ->
+      ()
+
+let rec kanon__exists_thin f (x : thin) : bool =
+  f x.ptr || f x.psize || f x.palign
+
+and kanon__exists_block_value f (x : block_value) : bool =
+  match x with
+  | Scalar (a1) ->
+      f a1
+  | Aggregate (a1, a2) ->
+      f a1
+
+and kanon__exists_block f (x : block) : bool =
+  (kanon__exists_block_value f) x.bvalue || f x.boffset || f x.bsize
+
+and kanon__exists_ptr_meta f (x : ptr_meta) : bool =
+  match x with
+  | MetaLen (a1) ->
+      f a1
+  | MetaVTable (a1) ->
+      f a1
+  | MetaUnit ->
+      false
+
+let map_children (f : t -> t) (v : t) : t =
+  match v with
+  | { kind = Seq (p1); _ } ->
+      let y_p1 = (List.map f) p1 in
+      kanon__rebuild_Seq v.ty y_p1
+  | { kind = Exists (p1, p2); _ } ->
+      let y_p2 = f p2 in
+      kanon__rebuild_Exists p1 y_p2
+  | { kind = ThinPtr (p1); _ } ->
+      let y_p1 = (kanon__map_thin f) p1 in
+      kanon__rebuild_ThinPtr v.ty y_p1
+  | { kind = FullPtr (p1, p2); _ } ->
+      let y_p1 = f p1 in
+      let y_p2 = f p2 in
+      kanon__rebuild_FullPtr v.ty y_p1 y_p2
+  | { kind = PtrMeta (p1); _ } ->
+      let y_p1 = (kanon__map_ptr_meta f) p1 in
+      kanon__rebuild_PtrMeta v.ty y_p1
+  | { kind = Enum (p1, p2); _ } ->
+      let y_p2 = (List.map f) p2 in
+      kanon__rebuild_Enum v.ty p1 y_p2
+  | { kind = Tuple (p1); _ } ->
+      let y_p1 = (List.map f) p1 in
+      kanon__rebuild_Tuple y_p1
+  | { kind = Array (p1); _ } ->
+      let y_p1 = (Iarray.map f) p1 in
+      kanon__rebuild_Array v.ty y_p1
+  | { kind = Union (p1); _ } ->
+      let y_p1 = (List.map (kanon__map_block f)) p1 in
+      kanon__rebuild_Union v.ty y_p1
+  | { kind = Op1 (Not, x1); _ } ->
+      let y_x1 = f x1 in
+      kanon__rebuild_Not y_x1
+  | { kind = Op2 (And, x1, x2); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      kanon__rebuild_And y_x1 y_x2
+  | { kind = Op2 (Or, x1, x2); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      kanon__rebuild_Or y_x1 y_x2
+  | { kind = Op2 (Eq, x1, x2); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      kanon__rebuild_Eq y_x1 y_x2
+  | { kind = Op3 (Ite, x1, x2, x3); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      let y_x3 = f x3 in
+      kanon__rebuild_Ite y_x1 y_x2 y_x3
+  | { kind = OpN (Distinct, x1); _ } ->
+      let y_x1 = (List.map f) x1 in
+      kanon__rebuild_Distinct y_x1
+  | { kind = Op1 (BvOfBool (p1), x1); _ } ->
+      let y_x1 = f x1 in
+      kanon__rebuild_BvOfBool (Z.of_int p1) y_x1
+  | { kind = Op1 (BvExtract (p1, p2), x1); _ } ->
+      let y_x1 = f x1 in
+      kanon__rebuild_BvExtract (Z.of_int p1) (Z.of_int p2) y_x1
+  | { kind = Op1 (BvExtend (p1, p2), x1); _ } ->
+      let y_x1 = f x1 in
+      kanon__rebuild_BvExtend p1 (Z.of_int p2) y_x1
+  | { kind = Op1 (BvNot, x1); _ } ->
+      let y_x1 = f x1 in
+      kanon__rebuild_BvNot y_x1
+  | { kind = Op1 (Neg (p1), x1); _ } ->
+      let y_x1 = f x1 in
+      kanon__rebuild_Neg p1 y_x1
+  | { kind = Op2 (Add (p1), x1, x2); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      kanon__rebuild_Add p1 y_x1 y_x2
+  | { kind = Op2 (Sub (p1), x1, x2); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      kanon__rebuild_Sub p1 y_x1 y_x2
+  | { kind = Op2 (Mul (p1), x1, x2); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      kanon__rebuild_Mul p1 y_x1 y_x2
+  | { kind = Op2 (Div (p1), x1, x2); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      kanon__rebuild_Div p1 y_x1 y_x2
+  | { kind = Op2 (Rem (p1), x1, x2); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      kanon__rebuild_Rem p1 y_x1 y_x2
+  | { kind = Op2 (Mod, x1, x2); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      kanon__rebuild_Mod y_x1 y_x2
+  | { kind = Op2 (AddOvf (p1), x1, x2); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      kanon__rebuild_AddOvf p1 y_x1 y_x2
+  | { kind = Op2 (SubOvf (p1), x1, x2); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      kanon__rebuild_SubOvf p1 y_x1 y_x2
+  | { kind = Op2 (MulOvf (p1), x1, x2); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      kanon__rebuild_MulOvf p1 y_x1 y_x2
+  | { kind = Op2 (Lt (p1), x1, x2); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      kanon__rebuild_Lt p1 y_x1 y_x2
+  | { kind = Op2 (Leq (p1), x1, x2); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      kanon__rebuild_Leq p1 y_x1 y_x2
+  | { kind = Op2 (BvConcat, x1, x2); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      kanon__rebuild_BvConcat y_x1 y_x2
+  | { kind = Op2 (BitAnd, x1, x2); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      kanon__rebuild_BitAnd y_x1 y_x2
+  | { kind = Op2 (BitOr, x1, x2); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      kanon__rebuild_BitOr y_x1 y_x2
+  | { kind = Op2 (BitXor, x1, x2); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      kanon__rebuild_BitXor y_x1 y_x2
+  | { kind = Op2 (Shl, x1, x2); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      kanon__rebuild_Shl y_x1 y_x2
+  | { kind = Op2 (LShr, x1, x2); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      kanon__rebuild_LShr y_x1 y_x2
+  | { kind = Op2 (AShr, x1, x2); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      kanon__rebuild_AShr y_x1 y_x2
+  | { kind = Op1 (BvOfFloat (p1, p2, p3), x1); _ } ->
+      let y_x1 = f x1 in
+      kanon__rebuild_BvOfFloat p1 p2 (Z.of_int p3) y_x1
+  | { kind = Op1 (FloatOfBv (p1, p2, p3), x1); _ } ->
+      let y_x1 = f x1 in
+      kanon__rebuild_FloatOfBv p1 p2 p3 y_x1
+  | { kind = Op1 (FloatOfBvRaw (p1), x1); _ } ->
+      let y_x1 = f x1 in
+      kanon__rebuild_FloatOfBvRaw p1 y_x1
+  | { kind = Op1 (FloatOfFloat (p1, p2), x1); _ } ->
+      let y_x1 = f x1 in
+      kanon__rebuild_FloatOfFloat p1 p2 y_x1
+  | { kind = Op1 (FAbs, x1); _ } ->
+      let y_x1 = f x1 in
+      kanon__rebuild_FAbs y_x1
+  | { kind = Op1 (FNeg, x1); _ } ->
+      let y_x1 = f x1 in
+      kanon__rebuild_FNeg y_x1
+  | { kind = Op1 (FSqrt, x1); _ } ->
+      let y_x1 = f x1 in
+      kanon__rebuild_FSqrt y_x1
+  | { kind = Op1 (FIs (p1), x1); _ } ->
+      let y_x1 = f x1 in
+      kanon__rebuild_FIs p1 y_x1
+  | { kind = Op1 (FIsNeg, x1); _ } ->
+      let y_x1 = f x1 in
+      kanon__rebuild_FIsNeg y_x1
+  | { kind = Op1 (FIsPos, x1); _ } ->
+      let y_x1 = f x1 in
+      kanon__rebuild_FIsPos y_x1
+  | { kind = Op1 (FRound (p1), x1); _ } ->
+      let y_x1 = f x1 in
+      kanon__rebuild_FRound p1 y_x1
+  | { kind = Op2 (FEq, x1, x2); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      kanon__rebuild_FEq y_x1 y_x2
+  | { kind = Op2 (FLeq, x1, x2); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      kanon__rebuild_FLeq y_x1 y_x2
+  | { kind = Op2 (FLt, x1, x2); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      kanon__rebuild_FLt y_x1 y_x2
+  | { kind = Op2 (FAdd, x1, x2); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      kanon__rebuild_FAdd y_x1 y_x2
+  | { kind = Op2 (FSub, x1, x2); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      kanon__rebuild_FSub y_x1 y_x2
+  | { kind = Op2 (FMul, x1, x2); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      kanon__rebuild_FMul y_x1 y_x2
+  | { kind = Op2 (FDiv, x1, x2); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      kanon__rebuild_FDiv y_x1 y_x2
+  | { kind = Op2 (FRem, x1, x2); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      kanon__rebuild_FRem y_x1 y_x2
+  | { kind = Op2 (FMin, x1, x2); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      kanon__rebuild_FMin y_x1 y_x2
+  | { kind = Op2 (FMax, x1, x2); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      kanon__rebuild_FMax y_x1 y_x2
+  | { kind = Op3 (Fma, x1, x2, x3); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      let y_x3 = f x3 in
+      kanon__rebuild_Fma y_x1 y_x2 y_x3
+  | { kind = Op2 (Ptr, x1, x2); _ } ->
+      let y_x1 = f x1 in
+      let y_x2 = f x2 in
+      kanon__rebuild_Ptr y_x1 y_x2
+  | { kind = Op1 (GetPtrLoc, x1); _ } ->
+      let y_x1 = f x1 in
+      kanon__rebuild_GetPtrLoc y_x1
+  | { kind = Op1 (GetPtrOfs, x1); _ } ->
+      let y_x1 = f x1 in
+      kanon__rebuild_GetPtrOfs y_x1
+  | { kind = Op1 (ThinPtrPart (p1), x1); _ } ->
+      let y_x1 = f x1 in
+      kanon__rebuild_ThinPtrPart p1 y_x1
+  | { kind = Op1 (FullPtrInner, x1); _ } ->
+      let y_x1 = f x1 in
+      kanon__rebuild_FullPtrInner y_x1
+  | { kind = Op1 (FullPtrMeta, x1); _ } ->
+      let y_x1 = f x1 in
+      kanon__rebuild_FullPtrMeta y_x1
+  | { kind = Op1 (PtrMetaAs (p1), x1); _ } ->
+      let y_x1 = f x1 in
+      kanon__rebuild_PtrMetaAs p1 y_x1
+  | { kind = Op1 (Field (p1), x1); _ } ->
+      let y_x1 = f x1 in
+      kanon__rebuild_Field (Z.of_int p1) y_x1
+  | { kind = Op1 (VariantField (p1, p2), x1); _ } ->
+      let y_x1 = f x1 in
+      kanon__rebuild_VariantField p1 (Z.of_int p2) y_x1
+  | { kind = Op1 (IsVariant (p1), x1); _ } ->
+      let y_x1 = f x1 in
+      kanon__rebuild_IsVariant p1 y_x1
+  | { kind = Op1 (ArrayField (p1), x1); _ } ->
+      let y_x1 = f x1 in
+      kanon__rebuild_ArrayField (Z.of_int p1) y_x1
+  | _ -> v
+
+let iter_children (f : t -> unit) (v : t) : unit =
+  match v with
+  | { kind = Seq (p1); _ } ->
+      (List.iter f) p1
+  | { kind = Exists (p1, p2); _ } ->
+      f p2
+  | { kind = ThinPtr (p1); _ } ->
+      (kanon__iter_thin f) p1
+  | { kind = FullPtr (p1, p2); _ } ->
+      f p1; f p2
+  | { kind = PtrMeta (p1); _ } ->
+      (kanon__iter_ptr_meta f) p1
+  | { kind = Enum (p1, p2); _ } ->
+      (List.iter f) p2
+  | { kind = Tuple (p1); _ } ->
+      (List.iter f) p1
+  | { kind = Array (p1); _ } ->
+      (Iarray.iter f) p1
+  | { kind = Union (p1); _ } ->
+      (List.iter (kanon__iter_block f)) p1
+  | { kind = Op1 (Not, x1); _ } ->
+      f x1
+  | { kind = Op2 (And, x1, x2); _ } ->
+      f x1; f x2
+  | { kind = Op2 (Or, x1, x2); _ } ->
+      f x1; f x2
+  | { kind = Op2 (Eq, x1, x2); _ } ->
+      f x1; f x2
+  | { kind = Op3 (Ite, x1, x2, x3); _ } ->
+      f x1; f x2; f x3
+  | { kind = OpN (Distinct, x1); _ } ->
+      (List.iter f) x1
+  | { kind = Op1 (BvOfBool (p1), x1); _ } ->
+      f x1
+  | { kind = Op1 (BvExtract (p1, p2), x1); _ } ->
+      f x1
+  | { kind = Op1 (BvExtend (p1, p2), x1); _ } ->
+      f x1
+  | { kind = Op1 (BvNot, x1); _ } ->
+      f x1
+  | { kind = Op1 (Neg (p1), x1); _ } ->
+      f x1
+  | { kind = Op2 (Add (p1), x1, x2); _ } ->
+      f x1; f x2
+  | { kind = Op2 (Sub (p1), x1, x2); _ } ->
+      f x1; f x2
+  | { kind = Op2 (Mul (p1), x1, x2); _ } ->
+      f x1; f x2
+  | { kind = Op2 (Div (p1), x1, x2); _ } ->
+      f x1; f x2
+  | { kind = Op2 (Rem (p1), x1, x2); _ } ->
+      f x1; f x2
+  | { kind = Op2 (Mod, x1, x2); _ } ->
+      f x1; f x2
+  | { kind = Op2 (AddOvf (p1), x1, x2); _ } ->
+      f x1; f x2
+  | { kind = Op2 (SubOvf (p1), x1, x2); _ } ->
+      f x1; f x2
+  | { kind = Op2 (MulOvf (p1), x1, x2); _ } ->
+      f x1; f x2
+  | { kind = Op2 (Lt (p1), x1, x2); _ } ->
+      f x1; f x2
+  | { kind = Op2 (Leq (p1), x1, x2); _ } ->
+      f x1; f x2
+  | { kind = Op2 (BvConcat, x1, x2); _ } ->
+      f x1; f x2
+  | { kind = Op2 (BitAnd, x1, x2); _ } ->
+      f x1; f x2
+  | { kind = Op2 (BitOr, x1, x2); _ } ->
+      f x1; f x2
+  | { kind = Op2 (BitXor, x1, x2); _ } ->
+      f x1; f x2
+  | { kind = Op2 (Shl, x1, x2); _ } ->
+      f x1; f x2
+  | { kind = Op2 (LShr, x1, x2); _ } ->
+      f x1; f x2
+  | { kind = Op2 (AShr, x1, x2); _ } ->
+      f x1; f x2
+  | { kind = Op1 (BvOfFloat (p1, p2, p3), x1); _ } ->
+      f x1
+  | { kind = Op1 (FloatOfBv (p1, p2, p3), x1); _ } ->
+      f x1
+  | { kind = Op1 (FloatOfBvRaw (p1), x1); _ } ->
+      f x1
+  | { kind = Op1 (FloatOfFloat (p1, p2), x1); _ } ->
+      f x1
+  | { kind = Op1 (FAbs, x1); _ } ->
+      f x1
+  | { kind = Op1 (FNeg, x1); _ } ->
+      f x1
+  | { kind = Op1 (FSqrt, x1); _ } ->
+      f x1
+  | { kind = Op1 (FIs (p1), x1); _ } ->
+      f x1
+  | { kind = Op1 (FIsNeg, x1); _ } ->
+      f x1
+  | { kind = Op1 (FIsPos, x1); _ } ->
+      f x1
+  | { kind = Op1 (FRound (p1), x1); _ } ->
+      f x1
+  | { kind = Op2 (FEq, x1, x2); _ } ->
+      f x1; f x2
+  | { kind = Op2 (FLeq, x1, x2); _ } ->
+      f x1; f x2
+  | { kind = Op2 (FLt, x1, x2); _ } ->
+      f x1; f x2
+  | { kind = Op2 (FAdd, x1, x2); _ } ->
+      f x1; f x2
+  | { kind = Op2 (FSub, x1, x2); _ } ->
+      f x1; f x2
+  | { kind = Op2 (FMul, x1, x2); _ } ->
+      f x1; f x2
+  | { kind = Op2 (FDiv, x1, x2); _ } ->
+      f x1; f x2
+  | { kind = Op2 (FRem, x1, x2); _ } ->
+      f x1; f x2
+  | { kind = Op2 (FMin, x1, x2); _ } ->
+      f x1; f x2
+  | { kind = Op2 (FMax, x1, x2); _ } ->
+      f x1; f x2
+  | { kind = Op3 (Fma, x1, x2, x3); _ } ->
+      f x1; f x2; f x3
+  | { kind = Op2 (Ptr, x1, x2); _ } ->
+      f x1; f x2
+  | { kind = Op1 (GetPtrLoc, x1); _ } ->
+      f x1
+  | { kind = Op1 (GetPtrOfs, x1); _ } ->
+      f x1
+  | { kind = Op1 (ThinPtrPart (p1), x1); _ } ->
+      f x1
+  | { kind = Op1 (FullPtrInner, x1); _ } ->
+      f x1
+  | { kind = Op1 (FullPtrMeta, x1); _ } ->
+      f x1
+  | { kind = Op1 (PtrMetaAs (p1), x1); _ } ->
+      f x1
+  | { kind = Op1 (Field (p1), x1); _ } ->
+      f x1
+  | { kind = Op1 (VariantField (p1, p2), x1); _ } ->
+      f x1
+  | { kind = Op1 (IsVariant (p1), x1); _ } ->
+      f x1
+  | { kind = Op1 (ArrayField (p1), x1); _ } ->
+      f x1
+  | _ -> ()
+
+let exists_child (f : t -> bool) (v : t) : bool =
+  match v with
+  | { kind = Seq (p1); _ } ->
+      (List.exists f) p1
+  | { kind = Exists (p1, p2); _ } ->
+      f p2
+  | { kind = ThinPtr (p1); _ } ->
+      (kanon__exists_thin f) p1
+  | { kind = FullPtr (p1, p2); _ } ->
+      f p1 || f p2
+  | { kind = PtrMeta (p1); _ } ->
+      (kanon__exists_ptr_meta f) p1
+  | { kind = Enum (p1, p2); _ } ->
+      (List.exists f) p2
+  | { kind = Tuple (p1); _ } ->
+      (List.exists f) p1
+  | { kind = Array (p1); _ } ->
+      (Iarray.exists f) p1
+  | { kind = Union (p1); _ } ->
+      (List.exists (kanon__exists_block f)) p1
+  | { kind = Op1 (Not, x1); _ } ->
+      f x1
+  | { kind = Op2 (And, x1, x2); _ } ->
+      f x1 || f x2
+  | { kind = Op2 (Or, x1, x2); _ } ->
+      f x1 || f x2
+  | { kind = Op2 (Eq, x1, x2); _ } ->
+      f x1 || f x2
+  | { kind = Op3 (Ite, x1, x2, x3); _ } ->
+      f x1 || f x2 || f x3
+  | { kind = OpN (Distinct, x1); _ } ->
+      (List.exists f) x1
+  | { kind = Op1 (BvOfBool (p1), x1); _ } ->
+      f x1
+  | { kind = Op1 (BvExtract (p1, p2), x1); _ } ->
+      f x1
+  | { kind = Op1 (BvExtend (p1, p2), x1); _ } ->
+      f x1
+  | { kind = Op1 (BvNot, x1); _ } ->
+      f x1
+  | { kind = Op1 (Neg (p1), x1); _ } ->
+      f x1
+  | { kind = Op2 (Add (p1), x1, x2); _ } ->
+      f x1 || f x2
+  | { kind = Op2 (Sub (p1), x1, x2); _ } ->
+      f x1 || f x2
+  | { kind = Op2 (Mul (p1), x1, x2); _ } ->
+      f x1 || f x2
+  | { kind = Op2 (Div (p1), x1, x2); _ } ->
+      f x1 || f x2
+  | { kind = Op2 (Rem (p1), x1, x2); _ } ->
+      f x1 || f x2
+  | { kind = Op2 (Mod, x1, x2); _ } ->
+      f x1 || f x2
+  | { kind = Op2 (AddOvf (p1), x1, x2); _ } ->
+      f x1 || f x2
+  | { kind = Op2 (SubOvf (p1), x1, x2); _ } ->
+      f x1 || f x2
+  | { kind = Op2 (MulOvf (p1), x1, x2); _ } ->
+      f x1 || f x2
+  | { kind = Op2 (Lt (p1), x1, x2); _ } ->
+      f x1 || f x2
+  | { kind = Op2 (Leq (p1), x1, x2); _ } ->
+      f x1 || f x2
+  | { kind = Op2 (BvConcat, x1, x2); _ } ->
+      f x1 || f x2
+  | { kind = Op2 (BitAnd, x1, x2); _ } ->
+      f x1 || f x2
+  | { kind = Op2 (BitOr, x1, x2); _ } ->
+      f x1 || f x2
+  | { kind = Op2 (BitXor, x1, x2); _ } ->
+      f x1 || f x2
+  | { kind = Op2 (Shl, x1, x2); _ } ->
+      f x1 || f x2
+  | { kind = Op2 (LShr, x1, x2); _ } ->
+      f x1 || f x2
+  | { kind = Op2 (AShr, x1, x2); _ } ->
+      f x1 || f x2
+  | { kind = Op1 (BvOfFloat (p1, p2, p3), x1); _ } ->
+      f x1
+  | { kind = Op1 (FloatOfBv (p1, p2, p3), x1); _ } ->
+      f x1
+  | { kind = Op1 (FloatOfBvRaw (p1), x1); _ } ->
+      f x1
+  | { kind = Op1 (FloatOfFloat (p1, p2), x1); _ } ->
+      f x1
+  | { kind = Op1 (FAbs, x1); _ } ->
+      f x1
+  | { kind = Op1 (FNeg, x1); _ } ->
+      f x1
+  | { kind = Op1 (FSqrt, x1); _ } ->
+      f x1
+  | { kind = Op1 (FIs (p1), x1); _ } ->
+      f x1
+  | { kind = Op1 (FIsNeg, x1); _ } ->
+      f x1
+  | { kind = Op1 (FIsPos, x1); _ } ->
+      f x1
+  | { kind = Op1 (FRound (p1), x1); _ } ->
+      f x1
+  | { kind = Op2 (FEq, x1, x2); _ } ->
+      f x1 || f x2
+  | { kind = Op2 (FLeq, x1, x2); _ } ->
+      f x1 || f x2
+  | { kind = Op2 (FLt, x1, x2); _ } ->
+      f x1 || f x2
+  | { kind = Op2 (FAdd, x1, x2); _ } ->
+      f x1 || f x2
+  | { kind = Op2 (FSub, x1, x2); _ } ->
+      f x1 || f x2
+  | { kind = Op2 (FMul, x1, x2); _ } ->
+      f x1 || f x2
+  | { kind = Op2 (FDiv, x1, x2); _ } ->
+      f x1 || f x2
+  | { kind = Op2 (FRem, x1, x2); _ } ->
+      f x1 || f x2
+  | { kind = Op2 (FMin, x1, x2); _ } ->
+      f x1 || f x2
+  | { kind = Op2 (FMax, x1, x2); _ } ->
+      f x1 || f x2
+  | { kind = Op3 (Fma, x1, x2, x3); _ } ->
+      f x1 || f x2 || f x3
+  | { kind = Op2 (Ptr, x1, x2); _ } ->
+      f x1 || f x2
+  | { kind = Op1 (GetPtrLoc, x1); _ } ->
+      f x1
+  | { kind = Op1 (GetPtrOfs, x1); _ } ->
+      f x1
+  | { kind = Op1 (ThinPtrPart (p1), x1); _ } ->
+      f x1
+  | { kind = Op1 (FullPtrInner, x1); _ } ->
+      f x1
+  | { kind = Op1 (FullPtrMeta, x1); _ } ->
+      f x1
+  | { kind = Op1 (PtrMetaAs (p1), x1); _ } ->
+      f x1
+  | { kind = Op1 (Field (p1), x1); _ } ->
+      f x1
+  | { kind = Op1 (VariantField (p1, p2), x1); _ } ->
+      f x1
+  | { kind = Op1 (IsVariant (p1), x1); _ } ->
+      f x1
+  | { kind = Op1 (ArrayField (p1), x1); _ } ->
+      f x1
+  | _ -> false
+
+let for_all_child (f : t -> bool) (v : t) : bool =
+  not (exists_child (fun c -> not (f c)) v)
+
+let map_ty_children (f : ty -> ty) (v : ty) : ty =
+  match v with
+  | TSeq (p1) ->
+      let y_p1 = f p1 in
+      TSeq (y_p1)
+  | TTuple (p1) ->
+      let y_p1 = (List.map f) p1 in
+      TTuple (y_p1)
+  | TArray (p1, p2) ->
+      let y_p1 = f p1 in
+      TArray (y_p1, p2)
+  | _ -> v
+
+let iter_ty_children (f : ty -> unit) (v : ty) : unit =
+  match v with
+  | TSeq (p1) ->
+      f p1
+  | TTuple (p1) ->
+      (List.iter f) p1
+  | TArray (p1, p2) ->
+      f p1
+  | _ -> ()
+
+let exists_ty_child (f : ty -> bool) (v : ty) : bool =
+  match v with
+  | TSeq (p1) ->
+      f p1
+  | TTuple (p1) ->
+      (List.exists f) p1
+  | TArray (p1, p2) ->
+      f p1
+  | _ -> false
+
+let for_all_ty_child (f : ty -> bool) (v : ty) : bool =
+  not (exists_ty_child (fun c -> not (f c)) v)
+
 
 (** The Kanon module core. *)
 module Core = struct
@@ -4554,6 +4896,7 @@ module Bitvec = struct
   let sub_overflows = Kanon_flat.bitvec_sub_overflows
   let of_float = Kanon_flat.bitvec_of_float
   let to_float = Kanon_flat.bitvec_to_float
+  let to_float_bits = Kanon_flat.bitvec_to_float_bits
   let to_float_raw = Kanon_flat.bitvec_to_float_raw
   
   let as_bitvec (t : t) =
@@ -4972,10 +5315,6 @@ module Rust = struct
   let set_array_field = Kanon_flat.rust_set_array_field
   let mk_union = Kanon_flat.rust_mk_union
   let mk_poly = Kanon_flat.rust_mk_poly
-  let meta_operands = Kanon_flat.rust_meta_operands
-  let block_value_term = Kanon_flat.rust_block_value_term
-  let block_operands = Kanon_flat.rust_block_operands
-  let rebuild_blocks = Kanon_flat.rust_rebuild_blocks
   let range_from = Kanon_flat.rust_range_from
   
   let as_thinptr (t : t) =
@@ -5027,28 +5366,10 @@ module Rust = struct
     match[@warning "-11"] t with { kind = PolyVal (_); _ } -> true | _ -> false
   
   let as_thinptrpart (t : t) =
-    match[@warning "-11"] t with { kind = ThinPtrPart (p1, p2); _ } -> Some (p1, p2) | _ -> None
+    match[@warning "-11"] t with { kind = Op1 (ThinPtrPart (p1), x1); _ } -> Some (p1, x1) | _ -> None
   
   let is_thinptrpart (t : t) =
-    match[@warning "-11"] t with { kind = ThinPtrPart (_, _); _ } -> true | _ -> false
-  
-  let as_ptrmetaas (t : t) =
-    match[@warning "-11"] t with { kind = PtrMetaAs (p1, p2); _ } -> Some (p1, p2) | _ -> None
-  
-  let is_ptrmetaas (t : t) =
-    match[@warning "-11"] t with { kind = PtrMetaAs (_, _); _ } -> true | _ -> false
-  
-  let as_field (t : t) =
-    match[@warning "-11"] t with { kind = Field (p1, p2); _ } -> Some (p1, p2) | _ -> None
-  
-  let is_field (t : t) =
-    match[@warning "-11"] t with { kind = Field (_, _); _ } -> true | _ -> false
-  
-  let as_variantfield (t : t) =
-    match[@warning "-11"] t with { kind = VariantField (p1, p2, p3); _ } -> Some (p1, p2, p3) | _ -> None
-  
-  let is_variantfield (t : t) =
-    match[@warning "-11"] t with { kind = VariantField (_, _, _); _ } -> true | _ -> false
+    match[@warning "-11"] t with { kind = Op1 (ThinPtrPart (_), _); _ } -> true | _ -> false
   
   let as_fullptrinner (t : t) =
     match[@warning "-11"] t with { kind = Op1 (FullPtrInner, x1); _ } -> Some x1 | _ -> None
@@ -5061,6 +5382,24 @@ module Rust = struct
   
   let is_fullptrmeta (t : t) =
     match[@warning "-11"] t with { kind = Op1 (FullPtrMeta, _); _ } -> true | _ -> false
+  
+  let as_ptrmetaas (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (PtrMetaAs (p1), x1); _ } -> Some (p1, x1) | _ -> None
+  
+  let is_ptrmetaas (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (PtrMetaAs (_), _); _ } -> true | _ -> false
+  
+  let as_field (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (Field (p1), x1); _ } -> Some (p1, x1) | _ -> None
+  
+  let is_field (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (Field (_), _); _ } -> true | _ -> false
+  
+  let as_variantfield (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (VariantField (p1, p2), x1); _ } -> Some (p1, p2, x1) | _ -> None
+  
+  let is_variantfield (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (VariantField (_, _), _); _ } -> true | _ -> false
   
   let as_isvariant (t : t) =
     match[@warning "-11"] t with { kind = Op1 (IsVariant (p1), x1); _ } -> Some (p1, x1) | _ -> None
@@ -5151,11 +5490,9 @@ module View = struct
   let range_slt_var = Kanon_flat.view_range_slt_var
   let flip = Kanon_flat.view_flip
   let as_range = Kanon_flat.view_as_range
-  let operands = Kanon_flat.view_operands
-  let rebuild = Kanon_flat.view_rebuild
   let maps_operands = Kanon_flat.view_maps_operands
-  let cost = Kanon_flat.view_cost
-  let costs = Kanon_flat.view_costs
+  let head_cost = Kanon_flat.view_head_cost
+  let costs_operands = Kanon_flat.view_costs_operands
   let random_bound = Kanon_flat.view_random_bound
   let random_of_z = Kanon_flat.view_random_of_z
   let sort_operands = Kanon_flat.view_sort_operands

@@ -14,8 +14,7 @@
    operands. *)
 
 (** What the primitives need of a language: its terms, a few of its sorts and
-    nodes, and the traversal of the free variables of a term, which has to match
-    every node of the language. *)
+    nodes, and its variables and binders. *)
 module type Lang = sig
   include Value_lang.Term
 
@@ -34,9 +33,8 @@ module type Lang = sig
   (** The precision of a float sort; fails on the others. *)
   val fp_of_ty : ty -> Bv_base.FloatPrecision.t
 
-  (** [iter_vars t f] calls [f] on the variables of [t] that are not bound in
-      it, left to right. *)
-  val used_binders_iter_vars : t -> (Symex.Var.t * ty -> unit) -> unit
+  val as_var : t -> Symex.Var.t option
+  val as_exists : t -> ((Symex.Var.t * ty) list * t) option
 end
 
 module Make (V : Lang) = struct
@@ -95,7 +93,32 @@ module Make (V : Lang) = struct
 
   (* {1 Primitives of the rules} *)
 
-  let used_binders_iter_vars = V.used_binders_iter_vars
+  (* The traversal of the children of a term ([Rules.iter_children]), which
+     Kanon generates in the rules module, which calls this one: the language
+     gives it once, when it is initialised ([Lang], [Rust_lang]), before its
+     rules build any term. *)
+  let iter_children : ((t -> unit) -> t -> unit) ref =
+    ref (fun _ _ -> L.failwith "Prim: the traversal of the terms is not set")
+
+  let set_iter_children f = iter_children := f
+
+  (* The variables of [sv] that are not bound in it, left to right *)
+  let used_binders_iter_vars (sv : t) (f : Var.t * ty -> unit) : unit =
+    let rec aux ~ignore (sv : t) : unit =
+      match V.as_var sv with
+      | Some v -> if Var.Set.mem v ignore then () else f (v, sv.V.ty)
+      | None -> (
+          match V.as_exists sv with
+          | Some (vs, sv) ->
+              let ignore =
+                List.fold_left
+                  (fun ignore (v, _) -> Var.Set.add v ignore)
+                  ignore vs
+              in
+              aux ~ignore sv
+          | None -> !iter_children (aux ~ignore) sv)
+    in
+    aux ~ignore:Var.Set.empty sv
 
   let used_binders binders body =
     let body_vars =
@@ -253,7 +276,6 @@ module Make (V : Lang) = struct
     V.node (V.k_ptr l o) (V.t_ptr n)
 
   let mk_seq (s : ty) (l : t list) : t = V.node (V.k_seq l) s
-  let bad_operands (_ : t) : t = L.failwith "rebuild: wrong number of operands"
 
   (* {1 SMT encoding}
 

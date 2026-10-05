@@ -1,8 +1,8 @@
-(** The generic normaliser, over any language: it rebuilds a term from the
-    normalised {!Kanon_fns.Kanon_fns.operands} with [rebuild]. It substitutes
-    under [Exists], compares the guard of [Ite], and keeps [force], the
-    [eval_var] closure, the laziness of [Ite] and the [Division_by_zero] catch
-    of the first generation of the value language ([eval.ml:73-125] of
+(** The generic normaliser, over any language: it rebuilds a term from its
+    normalised children ({!Value_lang.Base.map_children_changed}). It
+    substitutes under [Exists], compares the guard of [Ite], and keeps [force],
+    the [eval_var] closure, the laziness of [Ite] and the [Division_by_zero]
+    catch of the first generation of the value language ([eval.ml:73-125] of
     [fab3ed5]). *)
 
 open Deps
@@ -53,13 +53,7 @@ struct
                     && else_ == nelse
                   then x
                   else K.Bool.ite guard nthen nelse
-            | None -> (
-                match K.View.operands x with
-                | [] -> x
-                | cs ->
-                    let cs', changed = Soteria_std.List.map_changed eval cs in
-                    if (not force) && not changed then x
-                    else K.View.rebuild x cs')))
+            | None -> map_children_changed ~force eval x))
 
   let eval ?(force = false) ?(eval_var : t -> Var.t -> ty -> t = fun x _ _ -> x)
       (x : t) : t =

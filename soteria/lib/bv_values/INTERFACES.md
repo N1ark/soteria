@@ -119,11 +119,10 @@ Types: `t`, `ty` (generated), `smt_op`, `smt_sort_op`, `View_host.range_sign`,
 `learn_plan` (declared in `view_host.ml`; `view.knl` re-declares them `[@ocaml "View_host.X"]` with the same
 constructors in the same order, `[@noeq]`, `[@no_lean]` where Kanon allows: K6 open, see section 8).
 
-### 3.1 RULES (generated from bool/bitvec/float/ptr/exists; exist today in `Bv_rules`; not WP3a)
-`sure_neq`, `of_bool`, `b_and b_or b_not b_ite sem_eq sem_eq_untyped b_distinct b_mk_exists`, `bv_add/sub/mul : checked -> ..`,
-`bv_div bv_rem : bool -> ..`, `bv_mod bv_neg bv_*_overflows bv_lt bv_leq bv_concat bv_extend bv_extract bv_and bv_or
-bv_xor bv_shl bv_lshr bv_ashr bv_not bv_of_bool bv_to_bool bv_not_bool bv_of_float bv_to_float bv_to_float_raw msb_of`,
-`float_*` (21 fns), `ptr_loc ptr_ofs`. Integers are `Z.t`.
+### 3.1 RULES (generated from bool/bitvec/float/ptr/exists, in the module of each: `Bv_rules.Bitvec.add`)
+`Bool`: `sure_neq of_bool and_ or_ not_ ite eq eq_untyped distinct`; `Exists.mk`; `Bitvec`: `add/sub/mul : checked -> ..`,
+`div rem : bool -> ..`, `mod_ neg *_overflows lt leq concat extend_ extract and_ or_ xor shl lshr ashr not_ of_bool
+to_bool not_bool of_float to_float to_float_raw msb_of`; `Float` (21 fns); `Ptr.loc Ptr.ofs`. Integers are `Z.t`.
 
 ### 3.2 HOST (glue/prims: Kanon cannot express them; `Lang`/`Bv_prims` have them for C)
 | item | type | why not Kanon | replaces |

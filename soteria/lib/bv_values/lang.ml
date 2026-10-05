@@ -54,7 +54,7 @@ let mk_ptr (l : t) (o : t) =
   node (Op2 (Ptr, l, o)) (TPointer n)
 
 let mk_seq ~seq_ty l = node (Seq l) seq_ty
-let mk_exists = Rules.b_mk_exists
+let mk_exists = Rules.Exists.mk
 
 (** {1 Printing: s-expressions} *)
 
@@ -162,9 +162,17 @@ let show = Fmt.to_to_string pp
 
 (** {1 The language} *)
 
-(* the leaves above, which the generated [Rules] shadow with the (differently
-   typed) primitives of the same names *)
-module Leaves = struct
+(** The language as the generic host code consumes it: the generated rules and
+    view functions, and the constants and builders above. *)
+module K : Kanon_fns.Kanon_fns with type t = Types.t and type ty = Types.ty =
+struct
+  type t = Types.t
+  type ty = Types.ty
+  type smt_op = (t, ty) View_host.smt_op
+  type smt_sort_op = ty View_host.smt_sort_op
+
+  include Rules
+
   let v_true = v_true
   let v_false = v_false
   let mk_var = mk_var
@@ -176,20 +184,6 @@ module Leaves = struct
   let mk_loc = mk_loc
   let mk_ptr = mk_ptr
   let mk_seq ty l = mk_seq ~seq_ty:ty l
-end
-
-(** The language as the generic host code consumes it: the generated rules and
-    view functions, and the constants and builders above. *)
-module K : Kanon_fns.Kanon_fns with type t = Types.t and type ty = Types.ty =
-struct
-  type t = Types.t
-  type ty = Types.ty
-  type smt_op = (t, ty) View_host.smt_op
-  type smt_sort_op = ty View_host.smt_sort_op
-
-  include Rules
-  include Leaves
-
   let pp_ty = Bv_pp.pp_ty
   let pp = Bv_pp.pp
 end

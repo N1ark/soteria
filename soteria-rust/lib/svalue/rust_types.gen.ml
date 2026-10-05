@@ -213,10 +213,11 @@ and equal_float (a : float) (b : float) = Floatml.AnyFloat.equal a b
 and hash_float (a : float) = Floatml.AnyFloat.hash a
 
 and equal_checked (a : checked) (b : checked) =
-  Bool.equal a.signed b.signed && Bool.equal a.unsigned b.unsigned
+  Stdlib.Bool.equal a.signed b.signed &&
+  Stdlib.Bool.equal a.unsigned b.unsigned
 
 and hash_checked (a : checked) =
-  hash_combine (Bool.to_int a.signed) (Bool.to_int a.unsigned)
+  hash_combine (Stdlib.Bool.to_int a.signed) (Stdlib.Bool.to_int a.unsigned)
 
 and equal_fp (a : fp) (b : fp) =
   match (a, b) with
@@ -290,9 +291,9 @@ and equal_learn_plan (a : learn_plan) (b : learn_plan) =
   match (a, b) with
   | LNone, LNone -> true
   | LAlts a1, LAlts b1 ->
-      (List.equal (fun (a1, a2) (b1, b2) -> Z.equal a1 b1 && Z.equal a2 b2)) a1 b1
+      (Stdlib.List.equal (fun (a1, a2) (b1, b2) -> Z.equal a1 b1 && Z.equal a2 b2)) a1 b1
   | LAll (a1, a2), LAll (b1, b2) ->
-      (List.equal Z.equal) a1 b1 && (List.equal Z.equal) a2 b2
+      (Stdlib.List.equal Z.equal) a1 b1 && (Stdlib.List.equal Z.equal) a2 b2
   | _ -> false
 
 and hash_learn_plan (a : learn_plan) =
@@ -300,13 +301,13 @@ and hash_learn_plan (a : learn_plan) =
   | LNone -> 0
   | LAlts a1 ->
       hash_combine (1)
-        ((List.fold_left (fun acc x -> hash_combine acc ((fun (x1, x2) -> 
+        ((Stdlib.List.fold_left (fun acc x -> hash_combine acc ((fun (x1, x2) -> 
         hash_combine (Z.hash x1) (Z.hash x2)) x)) 0) a1)
   | LAll (a1, a2) ->
       hash_combine
         (hash_combine (2)
-           ((List.fold_left (fun acc x -> hash_combine acc (Z.hash x)) 0) a1))
-        ((List.fold_left (fun acc x -> hash_combine acc (Z.hash x)) 0) a2)
+           ((Stdlib.List.fold_left (fun acc x -> hash_combine acc (Z.hash x)) 0) a1))
+        ((Stdlib.List.fold_left (fun acc x -> hash_combine acc (Z.hash x)) 0) a2)
 
 and equal_decl_ref (a : decl_ref) (b : decl_ref) = Charon.Types.equal_type_decl_ref a b
 
@@ -398,10 +399,10 @@ and hash_meta_part (a : meta_part) =
 and equal_kind (a : kind) (b : kind) =
   match (a, b) with
   | Var a1, Var b1 -> equal_var a1 b1
-  | Seq a1, Seq b1 -> (List.equal equal_t) a1 b1
-  | Bool a1, Bool b1 -> Bool.equal a1 b1
+  | Seq a1, Seq b1 -> (Stdlib.List.equal equal_t) a1 b1
+  | Bool a1, Bool b1 -> Stdlib.Bool.equal a1 b1
   | Exists (a1, a2), Exists (b1, b2) ->
-      (List.equal (fun (a1, a2) (b1, b2) -> equal_var a1 b1 && equal_ty a2 b2)) a1 b1 &&
+      (Stdlib.List.equal (fun (a1, a2) (b1, b2) -> equal_var a1 b1 && equal_ty a2 b2)) a1 b1 &&
       equal_t a2 b2
   | BitVec a1, BitVec b1 -> Z.equal a1 b1
   | LocLit a1, LocLit b1 -> Z.equal a1 b1
@@ -410,10 +411,10 @@ and equal_kind (a : kind) (b : kind) =
   | FullPtr (a1, a2), FullPtr (b1, b2) -> equal_t a1 b1 && equal_t a2 b2
   | PtrMeta a1, PtrMeta b1 -> equal_ptr_meta a1 b1
   | Enum (a1, a2), Enum (b1, b2) ->
-      equal_variant_id a1 b1 && (List.equal equal_t) a2 b2
-  | Tuple a1, Tuple b1 -> (List.equal equal_t) a1 b1
-  | Array a1, Array b1 -> (Iarray.equal equal_t) a1 b1
-  | Union a1, Union b1 -> (List.equal equal_block) a1 b1
+      equal_variant_id a1 b1 && (Stdlib.List.equal equal_t) a2 b2
+  | Tuple a1, Tuple b1 -> (Stdlib.List.equal equal_t) a1 b1
+  | Array a1, Array b1 -> (Stdlib.Iarray.equal equal_t) a1 b1
+  | Union a1, Union b1 -> (Stdlib.List.equal equal_block) a1 b1
   | PolyVal a1, PolyVal b1 -> equal_tyvar_id a1 b1
   | ThinPtrPart (a1, a2), ThinPtrPart (b1, b2) ->
       equal_ptr_part a1 b1 && equal_t a2 b2
@@ -428,7 +429,7 @@ and equal_kind (a : kind) (b : kind) =
   | Op3 (a1, a2, a3, a4), Op3 (b1, b2, b3, b4) ->
       equal_op3 a1 b1 && equal_t a2 b2 && equal_t a3 b3 && equal_t a4 b4
   | OpN (a1, a2), OpN (b1, b2) ->
-      equal_opn a1 b1 && (List.equal equal_t) a2 b2
+      equal_opn a1 b1 && (Stdlib.List.equal equal_t) a2 b2
   | _ -> false
 
 and hash_kind (a : kind) =
@@ -436,12 +437,12 @@ and hash_kind (a : kind) =
   | Var a1 -> hash_combine (0) (hash_var a1)
   | Seq a1 ->
       hash_combine (1)
-        ((List.fold_left (fun acc x -> hash_combine acc (hash_t x)) 0) a1)
-  | Bool a1 -> hash_combine (2) (Bool.to_int a1)
+        ((Stdlib.List.fold_left (fun acc x -> hash_combine acc (hash_t x)) 0) a1)
+  | Bool a1 -> hash_combine (2) (Stdlib.Bool.to_int a1)
   | Exists (a1, a2) ->
       hash_combine
         (hash_combine (3)
-           ((List.fold_left (fun acc x -> hash_combine acc ((fun (x1, x2) -> 
+           ((Stdlib.List.fold_left (fun acc x -> hash_combine acc ((fun (x1, x2) -> 
            hash_combine (hash_var x1) (hash_ty x2)) x)) 0) a1)) (hash_t a2)
   | BitVec a1 -> hash_combine (4) (Z.hash a1)
   | LocLit a1 -> hash_combine (5) (Z.hash a1)
@@ -452,16 +453,16 @@ and hash_kind (a : kind) =
   | PtrMeta a1 -> hash_combine (9) (hash_ptr_meta a1)
   | Enum (a1, a2) ->
       hash_combine (hash_combine (10) (hash_variant_id a1))
-        ((List.fold_left (fun acc x -> hash_combine acc (hash_t x)) 0) a2)
+        ((Stdlib.List.fold_left (fun acc x -> hash_combine acc (hash_t x)) 0) a2)
   | Tuple a1 ->
       hash_combine (11)
-        ((List.fold_left (fun acc x -> hash_combine acc (hash_t x)) 0) a1)
+        ((Stdlib.List.fold_left (fun acc x -> hash_combine acc (hash_t x)) 0) a1)
   | Array a1 ->
       hash_combine (12)
-        ((Iarray.fold_left (fun acc x -> hash_combine acc (hash_t x)) 0) a1)
+        ((Stdlib.Iarray.fold_left (fun acc x -> hash_combine acc (hash_t x)) 0) a1)
   | Union a1 ->
       hash_combine (13)
-        ((List.fold_left (fun acc x -> hash_combine acc (hash_block x)) 0) a1)
+        ((Stdlib.List.fold_left (fun acc x -> hash_combine acc (hash_block x)) 0) a1)
   | PolyVal a1 -> hash_combine (14) (hash_tyvar_id a1)
   | ThinPtrPart (a1, a2) ->
       hash_combine (hash_combine (15) (hash_ptr_part a1)) (hash_t a2)
@@ -485,7 +486,7 @@ and hash_kind (a : kind) =
            (hash_t a3)) (hash_t a4)
   | OpN (a1, a2) ->
       hash_combine (hash_combine (22) (hash_opn a1))
-        ((List.fold_left (fun acc x -> hash_combine acc (hash_t x)) 0) a2)
+        ((Stdlib.List.fold_left (fun acc x -> hash_combine acc (hash_t x)) 0) a2)
 
 and equal_op1 (a : op1) (b : op1) =
   match (a, b) with
@@ -494,13 +495,13 @@ and equal_op1 (a : op1) (b : op1) =
   | BvExtract (a1, a2), BvExtract (b1, b2) ->
       Int.equal a1 b1 && Int.equal a2 b2
   | BvExtend (a1, a2), BvExtend (b1, b2) ->
-      Bool.equal a1 b1 && Int.equal a2 b2
+      Stdlib.Bool.equal a1 b1 && Int.equal a2 b2
   | BvNot, BvNot -> true
-  | Neg a1, Neg b1 -> Bool.equal a1 b1
+  | Neg a1, Neg b1 -> Stdlib.Bool.equal a1 b1
   | BvOfFloat (a1, a2, a3), BvOfFloat (b1, b2, b3) ->
-      equal_rm a1 b1 && Bool.equal a2 b2 && Int.equal a3 b3
+      equal_rm a1 b1 && Stdlib.Bool.equal a2 b2 && Int.equal a3 b3
   | FloatOfBv (a1, a2, a3), FloatOfBv (b1, b2, b3) ->
-      equal_rm a1 b1 && Bool.equal a2 b2 && equal_fp a3 b3
+      equal_rm a1 b1 && Stdlib.Bool.equal a2 b2 && equal_fp a3 b3
   | FloatOfBvRaw a1, FloatOfBvRaw b1 -> equal_fp a1 b1
   | FloatOfFloat (a1, a2), FloatOfFloat (b1, b2) ->
       equal_rm a1 b1 && equal_fp a2 b2
@@ -525,15 +526,16 @@ and hash_op1 (a : op1) =
   | BvOfBool a1 -> hash_combine (1) (a1)
   | BvExtract (a1, a2) -> hash_combine (hash_combine (2) (a1)) (a2)
   | BvExtend (a1, a2) ->
-      hash_combine (hash_combine (3) (Bool.to_int a1)) (a2)
+      hash_combine (hash_combine (3) (Stdlib.Bool.to_int a1)) (a2)
   | BvNot -> 4
-  | Neg a1 -> hash_combine (5) (Bool.to_int a1)
+  | Neg a1 -> hash_combine (5) (Stdlib.Bool.to_int a1)
   | BvOfFloat (a1, a2, a3) ->
       hash_combine
-        (hash_combine (hash_combine (6) (hash_rm a1)) (Bool.to_int a2)) (a3)
+        (hash_combine (hash_combine (6) (hash_rm a1)) (Stdlib.Bool.to_int a2))
+        (a3)
   | FloatOfBv (a1, a2, a3) ->
       hash_combine
-        (hash_combine (hash_combine (7) (hash_rm a1)) (Bool.to_int a2))
+        (hash_combine (hash_combine (7) (hash_rm a1)) (Stdlib.Bool.to_int a2))
         (hash_fp a3)
   | FloatOfBvRaw a1 -> hash_combine (8) (hash_fp a1)
   | FloatOfFloat (a1, a2) ->
@@ -560,14 +562,14 @@ and equal_op2 (a : op2) (b : op2) =
   | Add a1, Add b1 -> equal_checked a1 b1
   | Sub a1, Sub b1 -> equal_checked a1 b1
   | Mul a1, Mul b1 -> equal_checked a1 b1
-  | Div a1, Div b1 -> Bool.equal a1 b1
-  | Rem a1, Rem b1 -> Bool.equal a1 b1
+  | Div a1, Div b1 -> Stdlib.Bool.equal a1 b1
+  | Rem a1, Rem b1 -> Stdlib.Bool.equal a1 b1
   | Mod, Mod -> true
-  | AddOvf a1, AddOvf b1 -> Bool.equal a1 b1
-  | SubOvf a1, SubOvf b1 -> Bool.equal a1 b1
-  | MulOvf a1, MulOvf b1 -> Bool.equal a1 b1
-  | Lt a1, Lt b1 -> Bool.equal a1 b1
-  | Leq a1, Leq b1 -> Bool.equal a1 b1
+  | AddOvf a1, AddOvf b1 -> Stdlib.Bool.equal a1 b1
+  | SubOvf a1, SubOvf b1 -> Stdlib.Bool.equal a1 b1
+  | MulOvf a1, MulOvf b1 -> Stdlib.Bool.equal a1 b1
+  | Lt a1, Lt b1 -> Stdlib.Bool.equal a1 b1
+  | Leq a1, Leq b1 -> Stdlib.Bool.equal a1 b1
   | BvConcat, BvConcat -> true
   | BitAnd, BitAnd -> true
   | BitOr, BitOr -> true
@@ -596,14 +598,14 @@ and hash_op2 (a : op2) =
   | Add a1 -> hash_combine (3) (hash_checked a1)
   | Sub a1 -> hash_combine (4) (hash_checked a1)
   | Mul a1 -> hash_combine (5) (hash_checked a1)
-  | Div a1 -> hash_combine (6) (Bool.to_int a1)
-  | Rem a1 -> hash_combine (7) (Bool.to_int a1)
+  | Div a1 -> hash_combine (6) (Stdlib.Bool.to_int a1)
+  | Rem a1 -> hash_combine (7) (Stdlib.Bool.to_int a1)
   | Mod -> 8
-  | AddOvf a1 -> hash_combine (9) (Bool.to_int a1)
-  | SubOvf a1 -> hash_combine (10) (Bool.to_int a1)
-  | MulOvf a1 -> hash_combine (11) (Bool.to_int a1)
-  | Lt a1 -> hash_combine (12) (Bool.to_int a1)
-  | Leq a1 -> hash_combine (13) (Bool.to_int a1)
+  | AddOvf a1 -> hash_combine (9) (Stdlib.Bool.to_int a1)
+  | SubOvf a1 -> hash_combine (10) (Stdlib.Bool.to_int a1)
+  | MulOvf a1 -> hash_combine (11) (Stdlib.Bool.to_int a1)
+  | Lt a1 -> hash_combine (12) (Stdlib.Bool.to_int a1)
+  | Leq a1 -> hash_combine (13) (Stdlib.Bool.to_int a1)
   | BvConcat -> 14
   | BitAnd -> 15
   | BitOr -> 16
@@ -652,7 +654,7 @@ and equal_ty (a : ty) (b : ty) =
   | TPointer a1, TPointer b1 -> Int.equal a1 b1
   | TEnum a1, TEnum b1 -> equal_decl_ref a1 b1
   | TUnion a1, TUnion b1 -> equal_decl_ref a1 b1
-  | TTuple a1, TTuple b1 -> (List.equal equal_ty) a1 b1
+  | TTuple a1, TTuple b1 -> (Stdlib.List.equal equal_ty) a1 b1
   | TArray (a1, a2), TArray (b1, b2) -> equal_ty a1 b1 && Z.equal a2 b2
   | TThinPtr, TThinPtr -> true
   | TFullPtr, TFullPtr -> true
@@ -672,7 +674,7 @@ and hash_ty (a : ty) =
   | TUnion a1 -> hash_combine (7) (hash_decl_ref a1)
   | TTuple a1 ->
       hash_combine (8)
-        ((List.fold_left (fun acc x -> hash_combine acc (hash_ty x)) 0) a1)
+        ((Stdlib.List.fold_left (fun acc x -> hash_combine acc (hash_ty x)) 0) a1)
   | TArray (a1, a2) ->
       hash_combine (hash_combine (9) (hash_ty a1)) (Z.hash a2)
   | TThinPtr -> 10

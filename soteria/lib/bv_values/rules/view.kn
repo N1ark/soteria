@@ -93,13 +93,6 @@ prim so_seq : smt_sort_op [@no_lean]
 
 (* {1 Sorts} *)
 
-fn t_bool : ty [@no_lean] = TBool
-fn t_bv (n : int) : ty [@no_lean] = TBitVector n
-fn t_loc (n : int) : ty [@no_lean] = TLoc n
-fn t_ptr (n : int) : ty [@no_lean] = TPointer n
-fn t_float (p : fp) : ty [@no_lean] = TFloat p
-fn t_seq (s : ty) : ty [@no_lean] = TSeq s
-
 (* The size of a bit-vector, a pointer and a location sort *)
 fn sized_ty (s : ty) : int option [@no_lean] =
   match s with
@@ -215,15 +208,15 @@ fn flip (s : range_sign) : range_sign [@no_lean] =
    [[lo, hi]]. The constants are the unsigned integers that the literals hold. *)
 fn as_range (v : t) : (var * int * (range_sign * (int * int))) option [@no_lean] =
   match v with
-  | (BitVec c1 as l) <u r -> range_const_ult true (size l) c1 r
-  | (BitVec c1 as l) <=u r -> range_const_ult false (size l) c1 r
-  | l <u (BitVec c2 as r) -> range_ult_const true (size r) c2 l
-  | l <=u (BitVec c2 as r) -> range_ult_const false (size r) c2 l
-  | Var x <s (BitVec c1 as r) -> range_var_slt (size r) x (c1 - 1)
-  | Var x <=s (BitVec c1 as r) -> range_var_slt (size r) x c1
-  | (BitVec c1 as l) <s Var x -> range_slt_var (size l) (c1 + 1) x
-  | (BitVec c1 as l) <=s Var x -> range_slt_var (size l) c1 x
-  | Eq ((BitVec c as l), Var x) -> Some (x, size l, (Inside, (c, c)))
+  | (BitVec c1 as l) <u r -> range_const_ult true (Bitvec.size l) c1 r
+  | (BitVec c1 as l) <=u r -> range_const_ult false (Bitvec.size l) c1 r
+  | l <u (BitVec c2 as r) -> range_ult_const true (Bitvec.size r) c2 l
+  | l <=u (BitVec c2 as r) -> range_ult_const false (Bitvec.size r) c2 l
+  | Var x <s (BitVec c1 as r) -> range_var_slt (Bitvec.size r) x (c1 - 1)
+  | Var x <=s (BitVec c1 as r) -> range_var_slt (Bitvec.size r) x c1
+  | (BitVec c1 as l) <s Var x -> range_slt_var (Bitvec.size l) (c1 + 1) x
+  | (BitVec c1 as l) <=s Var x -> range_slt_var (Bitvec.size l) c1 x
+  | Eq ((BitVec c as l), Var x) -> Some (x, Bitvec.size l, (Inside, (c, c)))
   (* This only works for a single fact; we can't apply this to [!(A && B)],
      since that's a disjunction! *)
   | Not x -> (
@@ -267,85 +260,85 @@ fn rebuild (v : t) (cs : t list) : t [@no_lean] [@total] =
       match cs with [] -> v | _ -> bad_operands v)
   | Seq _ -> mk_seq (type_of v) cs
   | Exists (bs, _) -> (
-      match cs with [ a ] -> b_mk_exists bs a | _ -> bad_operands v)
-  | Not _ -> ( match cs with [ a ] -> b_not a | _ -> bad_operands v)
-  | FAbs _ -> ( match cs with [ a ] -> float_abs a | _ -> bad_operands v)
-  | FNeg _ -> ( match cs with [ a ] -> float_neg a | _ -> bad_operands v)
-  | FSqrt _ -> ( match cs with [ a ] -> float_sqrt a | _ -> bad_operands v)
-  | GetPtrLoc _ -> ( match cs with [ a ] -> ptr_loc a | _ -> bad_operands v)
-  | GetPtrOfs _ -> ( match cs with [ a ] -> ptr_ofs a | _ -> bad_operands v)
+      match cs with [ a ] -> Exists.mk bs a | _ -> bad_operands v)
+  | Not _ -> ( match cs with [ a ] -> Bool.not_ a | _ -> bad_operands v)
+  | FAbs _ -> ( match cs with [ a ] -> Float.abs a | _ -> bad_operands v)
+  | FNeg _ -> ( match cs with [ a ] -> Float.neg a | _ -> bad_operands v)
+  | FSqrt _ -> ( match cs with [ a ] -> Float.sqrt a | _ -> bad_operands v)
+  | GetPtrLoc _ -> ( match cs with [ a ] -> Ptr.loc a | _ -> bad_operands v)
+  | GetPtrOfs _ -> ( match cs with [ a ] -> Ptr.ofs a | _ -> bad_operands v)
   | BvOfBool (n, _) -> (
-      match cs with [ a ] -> bv_of_bool n a | _ -> bad_operands v)
+      match cs with [ a ] -> Bitvec.of_bool n a | _ -> bad_operands v)
   | BvOfFloat (rm, s, n, _) -> (
-      match cs with [ a ] -> bv_of_float rm s n a | _ -> bad_operands v)
+      match cs with [ a ] -> Bitvec.of_float rm s n a | _ -> bad_operands v)
   | FloatOfBv (rm, s, p, _) -> (
-      match cs with [ a ] -> bv_to_float rm s p a | _ -> bad_operands v)
+      match cs with [ a ] -> Bitvec.to_float rm s p a | _ -> bad_operands v)
   | FloatOfBvRaw _ -> (
-      match cs with [ a ] -> bv_to_float_raw a | _ -> bad_operands v)
+      match cs with [ a ] -> Bitvec.to_float_raw a | _ -> bad_operands v)
   | FloatOfFloat (rm, p, _) -> (
-      match cs with [ a ] -> float_cast rm p a | _ -> bad_operands v)
+      match cs with [ a ] -> Float.cast rm p a | _ -> bad_operands v)
   | BvExtract (f, t, _) -> (
-      match cs with [ a ] -> bv_extract f t a | _ -> bad_operands v)
+      match cs with [ a ] -> Bitvec.extract f t a | _ -> bad_operands v)
   | BvExtend (s, k, _) -> (
-      match cs with [ a ] -> bv_extend s k a | _ -> bad_operands v)
-  | BvNot _ -> ( match cs with [ a ] -> bv_not a | _ -> bad_operands v)
-  | Neg (c, _) -> ( match cs with [ a ] -> bv_neg c a | _ -> bad_operands v)
+      match cs with [ a ] -> Bitvec.extend_ s k a | _ -> bad_operands v)
+  | BvNot _ -> ( match cs with [ a ] -> Bitvec.not_ a | _ -> bad_operands v)
+  | Neg (c, _) -> ( match cs with [ a ] -> Bitvec.neg c a | _ -> bad_operands v)
   | FIs (fc, _) -> (
-      match cs with [ a ] -> float_is_floatclass fc a | _ -> bad_operands v)
+      match cs with [ a ] -> Float.is_floatclass fc a | _ -> bad_operands v)
   | FIsNeg _ -> (
-      match cs with [ a ] -> float_is_negative a | _ -> bad_operands v)
+      match cs with [ a ] -> Float.is_negative a | _ -> bad_operands v)
   | FIsPos _ -> (
-      match cs with [ a ] -> float_is_positive a | _ -> bad_operands v)
+      match cs with [ a ] -> Float.is_positive a | _ -> bad_operands v)
   | FRound (rm, _) -> (
-      match cs with [ a ] -> float_round rm a | _ -> bad_operands v)
-  | And _ -> ( match cs with [ a; b ] -> b_and a b | _ -> bad_operands v)
-  | Or _ -> ( match cs with [ a; b ] -> b_or a b | _ -> bad_operands v)
-  | Eq _ -> ( match cs with [ a; b ] -> sem_eq a b | _ -> bad_operands v)
+      match cs with [ a ] -> Float.round rm a | _ -> bad_operands v)
+  | And _ -> ( match cs with [ a; b ] -> Bool.and_ a b | _ -> bad_operands v)
+  | Or _ -> ( match cs with [ a; b ] -> Bool.or_ a b | _ -> bad_operands v)
+  | Eq _ -> ( match cs with [ a; b ] -> Bool.eq a b | _ -> bad_operands v)
   | Add (c, _, _) -> (
-      match cs with [ a; b ] -> bv_add c a b | _ -> bad_operands v)
+      match cs with [ a; b ] -> Bitvec.add c a b | _ -> bad_operands v)
   | Sub (c, _, _) -> (
-      match cs with [ a; b ] -> bv_sub c a b | _ -> bad_operands v)
+      match cs with [ a; b ] -> Bitvec.sub c a b | _ -> bad_operands v)
   | Mul (c, _, _) -> (
-      match cs with [ a; b ] -> bv_mul c a b | _ -> bad_operands v)
+      match cs with [ a; b ] -> Bitvec.mul c a b | _ -> bad_operands v)
   | Div (s, _, _) -> (
-      match cs with [ a; b ] -> bv_div s a b | _ -> bad_operands v)
+      match cs with [ a; b ] -> Bitvec.div s a b | _ -> bad_operands v)
   | Rem (s, _, _) -> (
-      match cs with [ a; b ] -> bv_rem s a b | _ -> bad_operands v)
-  | Mod _ -> ( match cs with [ a; b ] -> bv_mod a b | _ -> bad_operands v)
+      match cs with [ a; b ] -> Bitvec.rem s a b | _ -> bad_operands v)
+  | Mod _ -> ( match cs with [ a; b ] -> Bitvec.mod_ a b | _ -> bad_operands v)
   | AddOvf (s, _, _) -> (
-      match cs with [ a; b ] -> bv_add_overflows s a b | _ -> bad_operands v)
+      match cs with [ a; b ] -> Bitvec.add_overflows s a b | _ -> bad_operands v)
   | SubOvf (s, _, _) -> (
-      match cs with [ a; b ] -> bv_sub_overflows s a b | _ -> bad_operands v)
+      match cs with [ a; b ] -> Bitvec.sub_overflows s a b | _ -> bad_operands v)
   | MulOvf (s, _, _) -> (
-      match cs with [ a; b ] -> bv_mul_overflows s a b | _ -> bad_operands v)
+      match cs with [ a; b ] -> Bitvec.mul_overflows s a b | _ -> bad_operands v)
   | Lt (s, _, _) -> (
-      match cs with [ a; b ] -> bv_lt s a b | _ -> bad_operands v)
+      match cs with [ a; b ] -> Bitvec.lt s a b | _ -> bad_operands v)
   | Leq (s, _, _) -> (
-      match cs with [ a; b ] -> bv_leq s a b | _ -> bad_operands v)
+      match cs with [ a; b ] -> Bitvec.leq s a b | _ -> bad_operands v)
   | BvConcat _ -> (
-      match cs with [ a; b ] -> bv_concat a b | _ -> bad_operands v)
-  | BitAnd _ -> ( match cs with [ a; b ] -> bv_and a b | _ -> bad_operands v)
-  | BitOr _ -> ( match cs with [ a; b ] -> bv_or a b | _ -> bad_operands v)
-  | BitXor _ -> ( match cs with [ a; b ] -> bv_xor a b | _ -> bad_operands v)
-  | Shl _ -> ( match cs with [ a; b ] -> bv_shl a b | _ -> bad_operands v)
-  | LShr _ -> ( match cs with [ a; b ] -> bv_lshr a b | _ -> bad_operands v)
-  | AShr _ -> ( match cs with [ a; b ] -> bv_ashr a b | _ -> bad_operands v)
-  | FEq _ -> ( match cs with [ a; b ] -> float_eq a b | _ -> bad_operands v)
-  | FLeq _ -> ( match cs with [ a; b ] -> float_leq a b | _ -> bad_operands v)
-  | FLt _ -> ( match cs with [ a; b ] -> float_lt a b | _ -> bad_operands v)
-  | FAdd _ -> ( match cs with [ a; b ] -> float_add a b | _ -> bad_operands v)
-  | FSub _ -> ( match cs with [ a; b ] -> float_sub a b | _ -> bad_operands v)
-  | FMul _ -> ( match cs with [ a; b ] -> float_mul a b | _ -> bad_operands v)
-  | FDiv _ -> ( match cs with [ a; b ] -> float_div a b | _ -> bad_operands v)
-  | FRem _ -> ( match cs with [ a; b ] -> float_rem a b | _ -> bad_operands v)
-  | FMin _ -> ( match cs with [ a; b ] -> float_min a b | _ -> bad_operands v)
-  | FMax _ -> ( match cs with [ a; b ] -> float_max a b | _ -> bad_operands v)
+      match cs with [ a; b ] -> Bitvec.concat a b | _ -> bad_operands v)
+  | BitAnd _ -> ( match cs with [ a; b ] -> Bitvec.and_ a b | _ -> bad_operands v)
+  | BitOr _ -> ( match cs with [ a; b ] -> Bitvec.or_ a b | _ -> bad_operands v)
+  | BitXor _ -> ( match cs with [ a; b ] -> Bitvec.xor a b | _ -> bad_operands v)
+  | Shl _ -> ( match cs with [ a; b ] -> Bitvec.shl a b | _ -> bad_operands v)
+  | LShr _ -> ( match cs with [ a; b ] -> Bitvec.lshr a b | _ -> bad_operands v)
+  | AShr _ -> ( match cs with [ a; b ] -> Bitvec.ashr a b | _ -> bad_operands v)
+  | FEq _ -> ( match cs with [ a; b ] -> Float.eq a b | _ -> bad_operands v)
+  | FLeq _ -> ( match cs with [ a; b ] -> Float.leq a b | _ -> bad_operands v)
+  | FLt _ -> ( match cs with [ a; b ] -> Float.lt a b | _ -> bad_operands v)
+  | FAdd _ -> ( match cs with [ a; b ] -> Float.add a b | _ -> bad_operands v)
+  | FSub _ -> ( match cs with [ a; b ] -> Float.sub a b | _ -> bad_operands v)
+  | FMul _ -> ( match cs with [ a; b ] -> Float.mul a b | _ -> bad_operands v)
+  | FDiv _ -> ( match cs with [ a; b ] -> Float.div a b | _ -> bad_operands v)
+  | FRem _ -> ( match cs with [ a; b ] -> Float.rem a b | _ -> bad_operands v)
+  | FMin _ -> ( match cs with [ a; b ] -> Float.min a b | _ -> bad_operands v)
+  | FMax _ -> ( match cs with [ a; b ] -> Float.max a b | _ -> bad_operands v)
   | Ptr _ -> ( match cs with [ a; b ] -> mk_ptr a b | _ -> bad_operands v)
   | Ite _ -> (
-      match cs with [ a; b; c ] -> b_ite a b c | _ -> bad_operands v)
+      match cs with [ a; b; c ] -> Bool.ite a b c | _ -> bad_operands v)
   | Fma _ -> (
-      match cs with [ a; b; c ] -> float_fma a b c | _ -> bad_operands v)
-  | Distinct _ -> b_distinct cs
+      match cs with [ a; b; c ] -> Float.fma a b c | _ -> bad_operands v)
+  | Distinct _ -> Bool.distinct cs
 
 (* Whether [map_operands] of the solver maps over the operands: the unary and
    binary operators, but not [Ptr]. A language that adds nodes extends this. *)
@@ -419,7 +412,7 @@ fn random_bound (s : ty) : int option [@no_lean] =
   match s with
   | TLoc n | TBitVector n -> Some (1 lsl n)
   | TBool -> Some 2
-  | TFloat p -> Some (1 lsl fp_size p)
+  | TFloat p -> Some (1 lsl Float.fp_size p)
   | _ -> None
 
 (* [random_of_z s z] is the value of sort [s] numbered [z], for [z] in
@@ -427,9 +420,9 @@ fn random_bound (s : ty) : int option [@no_lean] =
 fn random_of_z (s : ty) (z : int) : t option [@no_lean] =
   match s with
   | TLoc n -> Some (LocLit z : TLoc n)
-  | TBitVector n -> Some (mk_bv n z)
-  | TBool -> Some (of_bool (z = 1))
-  | TFloat p -> Some (Float (f_of_bits p z))
+  | TBitVector n -> Some (Bitvec.mk_bv n z)
+  | TBool -> Some (Bool.of_bool (z = 1))
+  | TFloat p -> Some (Float (Float.f_of_bits p z))
   | _ -> None
 
 (* {1 SMT encoding} *)
@@ -529,24 +522,24 @@ fn learn_alts (v : t) : learn_plan [@no_lean] =
    [e = v], if any, computed when asked: it creates nodes at that moment *)
 fn learn_value (e : t) (i : int) (v : t) : t option [@no_lean] =
   match (e, i) with
-  | Not _, 0 -> Some (b_not v)
-  | BvNot _, 0 -> Some (bv_not v)
-  | Neg _, 0 -> Some (bv_neg false v)
-  | BvExtend (_, _, e1), 0 -> Some (bv_extract 0 (size e1 - 1) v)
+  | Not _, 0 -> Some (Bool.not_ v)
+  | BvNot _, 0 -> Some (Bitvec.not_ v)
+  | Neg _, 0 -> Some (Bitvec.neg false v)
+  | BvExtend (_, _, e1), 0 -> Some (Bitvec.extract 0 (Bitvec.size e1 - 1) v)
   | BvOfBool _, 0 -> (
       match v with
-      | BitVec 0 -> Some v_false
-      | BitVec 1 -> Some v_true
+      | BitVec 0 -> Some Bool.v_false
+      | BitVec 1 -> Some Bool.v_true
       | _ -> None)
-  | Add (_, _, e2), 0 -> Some (bv_sub unchecked v e2)
-  | Add (_, e1, _), 1 -> Some (bv_sub unchecked v e1)
-  | Sub (_, _, e2), 0 -> Some (bv_add unchecked v e2)
-  | Sub (_, e1, _), 1 -> Some (bv_sub unchecked e1 v)
-  | BitXor (_, e2), 0 -> Some (bv_xor v e2)
-  | BitXor (e1, _), 1 -> Some (bv_xor v e1)
-  | BvConcat (_, e2), 1 -> Some (bv_extract 0 (size e2 - 1) v)
+  | Add (_, _, e2), 0 -> Some (Bitvec.sub Bitvec.unchecked v e2)
+  | Add (_, e1, _), 1 -> Some (Bitvec.sub Bitvec.unchecked v e1)
+  | Sub (_, _, e2), 0 -> Some (Bitvec.add Bitvec.unchecked v e2)
+  | Sub (_, e1, _), 1 -> Some (Bitvec.sub Bitvec.unchecked e1 v)
+  | BitXor (_, e2), 0 -> Some (Bitvec.xor v e2)
+  | BitXor (e1, _), 1 -> Some (Bitvec.xor v e1)
+  | BvConcat (_, e2), 1 -> Some (Bitvec.extract 0 (Bitvec.size e2 - 1) v)
   | BvConcat (e1, e2), 0 ->
-      Some (bv_extract (size e2) (size e2 + size e1 - 1) v)
-  | Ptr _, 0 -> Some (ptr_loc v)
-  | Ptr _, 1 -> Some (ptr_ofs v)
+      Some (Bitvec.extract (Bitvec.size e2) (Bitvec.size e2 + Bitvec.size e1 - 1) v)
+  | Ptr _, 0 -> Some (Ptr.loc v)
+  | Ptr _, 1 -> Some (Ptr.ofs v)
   | _ -> None

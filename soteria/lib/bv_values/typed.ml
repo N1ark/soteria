@@ -62,11 +62,11 @@ let t_f128 = t_float F128
 module Bool_ = struct
   include L.Svalue.Bool
 
-  let and_ = G.Bool.b_and
-  let or_ = G.Bool.b_or
-  let not = G.Bool.b_not
-  let ite = G.Bool.b_ite
-  let distinct = G.Bool.b_distinct
+  let and_ = G.Bool.and_
+  let or_ = G.Bool.or_
+  let not = G.Bool.not_
+  let ite = G.Bool.ite
+  let distinct = G.Bool.distinct
 end
 
 include Bool_
@@ -77,10 +77,10 @@ module Bool = struct
   type t = sbool
 end
 
-let sem_eq (x : 'a t) (y : 'b t) : [> sbool ] t = G.Bool.sem_eq x (cast y)
+let sem_eq (x : 'a t) (y : 'b t) : [> sbool ] t = G.Bool.eq x (cast y)
 
 let sem_eq_untyped (x : 'a t) (y : 'b t) : [> sbool ] t =
-  G.Bool.sem_eq_untyped x (cast y)
+  G.Bool.eq_untyped x (cast y)
 
 let[@inline] get_ty x = L.V.type_of x
 let ppa = pp
@@ -106,45 +106,40 @@ let cast_checked2 x y =
 module BitVec = struct
   include L.Svalue.BitVec
 
-  let add ?(checked = unchecked) l r = G.Bitvec.bv_add checked l r
-  let sub ?(checked = unchecked) l r = G.Bitvec.bv_sub checked l r
-  let mul ?(checked = unchecked) l r = G.Bitvec.bv_mul checked l r
-  let div ~signed l r = G.Bitvec.bv_div signed l r
-  let rem ~signed l r = G.Bitvec.bv_rem signed l r
-  let mod_ = G.Bitvec.bv_mod
-  let neg ?(checked = false) v = G.Bitvec.bv_neg checked v
-  let add_overflows ~signed l r = G.Bitvec.bv_add_overflows signed l r
-  let sub_overflows ~signed l r = G.Bitvec.bv_sub_overflows signed l r
-  let mul_overflows ~signed l r = G.Bitvec.bv_mul_overflows signed l r
-  let neg_overflows = G.Bitvec.bv_neg_overflows
-  let lt ~signed l r = G.Bitvec.bv_lt signed l r
-  let leq ~signed l r = G.Bitvec.bv_leq signed l r
+  let add ?(checked = unchecked) l r = G.Bitvec.add checked l r
+  let sub ?(checked = unchecked) l r = G.Bitvec.sub checked l r
+  let mul ?(checked = unchecked) l r = G.Bitvec.mul checked l r
+  let div ~signed l r = G.Bitvec.div signed l r
+  let rem ~signed l r = G.Bitvec.rem signed l r
+  let mod_ = G.Bitvec.mod_
+  let neg ?(checked = false) v = G.Bitvec.neg checked v
+  let add_overflows ~signed l r = G.Bitvec.add_overflows signed l r
+  let sub_overflows ~signed l r = G.Bitvec.sub_overflows signed l r
+  let mul_overflows ~signed l r = G.Bitvec.mul_overflows signed l r
+  let neg_overflows = G.Bitvec.neg_overflows
+  let lt ~signed l r = G.Bitvec.lt signed l r
+  let leq ~signed l r = G.Bitvec.leq signed l r
   let gt ~signed l r = lt ~signed r l
   let geq ~signed l r = leq ~signed r l
-  let concat = G.Bitvec.bv_concat
-  let extend ~signed by v = G.Bitvec.bv_extend signed (Z.of_int by) v
-
-  let extract from_ to_ v =
-    G.Bitvec.bv_extract (Z.of_int from_) (Z.of_int to_) v
-
-  let and_ = G.Bitvec.bv_and
-  let or_ = G.Bitvec.bv_or
-  let xor = G.Bitvec.bv_xor
-  let shl = G.Bitvec.bv_shl
-  let lshr = G.Bitvec.bv_lshr
-  let ashr = G.Bitvec.bv_ashr
-  let not = G.Bitvec.bv_not
-  let of_bool n b = G.Bitvec.bv_of_bool (Z.of_int n) b
-  let to_bool = G.Bitvec.bv_to_bool
-  let not_bool = G.Bitvec.bv_not_bool
+  let concat = G.Bitvec.concat
+  let extend ~signed by v = G.Bitvec.extend_ signed (Z.of_int by) v
+  let extract from_ to_ v = G.Bitvec.extract (Z.of_int from_) (Z.of_int to_) v
+  let and_ = G.Bitvec.and_
+  let or_ = G.Bitvec.or_
+  let xor = G.Bitvec.xor
+  let shl = G.Bitvec.shl
+  let lshr = G.Bitvec.lshr
+  let ashr = G.Bitvec.ashr
+  let not = G.Bitvec.not_
+  let of_bool n b = G.Bitvec.of_bool (Z.of_int n) b
+  let to_bool = G.Bitvec.to_bool
+  let not_bool = G.Bitvec.not_bool
 
   let of_float ~rounding ~signed ~size v =
-    G.Bitvec.bv_of_float rounding signed (Z.of_int size) v
+    G.Bitvec.of_float rounding signed (Z.of_int size) v
 
-  let to_float ~rounding ~signed ~fp v =
-    G.Bitvec.bv_to_float rounding signed fp v
-
-  let to_float_raw = G.Bitvec.bv_to_float_raw
+  let to_float ~rounding ~signed ~fp v = G.Bitvec.to_float rounding signed fp v
+  let to_float_raw = G.Bitvec.to_float_raw
 
   let mk_nz n z =
     if Z.equal z Z.zero then L_logs.failwith "Zero value in mk_nonzero"
@@ -173,41 +168,41 @@ end
 module Float = struct
   include L.Svalue.Float
 
-  let is_floatclass = G.Float.float_is_floatclass
+  let is_floatclass = G.Float.is_floatclass
   let is_normal v = is_floatclass Normal v
   let is_subnormal v = is_floatclass Subnormal v
   let is_infinite v = is_floatclass Infinite v
   let is_nan v = is_floatclass NaN v
   let is_zero v = is_floatclass Zero v
-  let is_negative = G.Float.float_is_negative
-  let is_positive = G.Float.float_is_positive
-  let cast ~rounding ~fp v = G.Float.float_cast rounding fp v
-  let eq = G.Float.float_eq
-  let lt = G.Float.float_lt
-  let leq = G.Float.float_leq
+  let is_negative = G.Float.is_negative
+  let is_positive = G.Float.is_positive
+  let cast ~rounding ~fp v = G.Float.cast rounding fp v
+  let eq = G.Float.eq
+  let lt = G.Float.lt
+  let leq = G.Float.leq
   let gt l r = lt r l
   let geq l r = leq r l
-  let add = G.Float.float_add
-  let sub = G.Float.float_sub
-  let mul = G.Float.float_mul
-  let div = G.Float.float_div
-  let rem = G.Float.float_rem
-  let abs = G.Float.float_abs
-  let neg = G.Float.float_neg
-  let fma = G.Float.float_fma
-  let fmod_of_rem = G.Float.float_fmod_of_rem
-  let fmod = G.Float.float_fmod
-  let min = G.Float.float_min
-  let max = G.Float.float_max
-  let sqrt = G.Float.float_sqrt
-  let round rm v = G.Float.float_round rm v
+  let add = G.Float.add
+  let sub = G.Float.sub
+  let mul = G.Float.mul
+  let div = G.Float.div
+  let rem = G.Float.rem
+  let abs = G.Float.abs
+  let neg = G.Float.neg
+  let fma = G.Float.fma
+  let fmod_of_rem = G.Float.fmod_of_rem
+  let fmod = G.Float.fmod
+  let min = G.Float.min
+  let max = G.Float.max
+  let sqrt = G.Float.sqrt
+  let round rm v = G.Float.round rm v
 end
 
 module Ptr = struct
   include L.Svalue.Ptr
 
-  let loc = G.Ptr.ptr_loc
-  let ofs = G.Ptr.ptr_ofs
+  let loc = G.Ptr.loc
+  let ofs = G.Ptr.ofs
 end
 
 module Infix = struct

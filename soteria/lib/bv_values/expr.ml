@@ -61,16 +61,16 @@ struct
               let s = Raw_map.add v v' s in
               (v', s)
           | None -> (
-              match K.as_exists v with
+              match K.Exists.as_exists v with
               | Some (vs, sv) ->
                   let (vs, sv), s = apply_bound ~missing_var s vs sv in
-                  (K.b_mk_exists vs sv, s)
+                  (K.Exists.mk vs sv, s)
               | None -> (
-                  match K.operands v with
+                  match K.View.operands v with
                   | [] -> (v, s)
                   | cs ->
                       let cs, s = apply_list ~missing_var s cs in
-                      (K.rebuild v cs, s))))
+                      (K.View.rebuild v cs, s))))
 
     and apply_list ~missing_var s vs =
       match vs with
@@ -145,25 +145,25 @@ struct
     let rec learn (s : t) (e : V.t) (v : V.t) : t option =
       let open Syntaxes.Option in
       let/ () = if is_known s e then Some s else None in
-      match K.as_var e with
+      match K.Core.as_var e with
       | Some _ -> if Raw_map.mem e s then Some s else Some (extend e v s)
       | None -> (
-          match K.learn_alts e with
+          match K.View.learn_alts e with
           | View_host.LNone -> None
           | LAlts alts ->
-              let ops = Array.of_list (K.operands e) in
+              let ops = Array.of_list (K.View.operands e) in
               let rec first = function
                 | [] -> None
                 | (known, target) :: rest ->
                     let known = Z.to_int known and target = Z.to_int target in
                     if is_known s ops.(known) then
-                      let* tv = K.learn_value e (Z.of_int target) v in
+                      let* tv = K.View.learn_value e (Z.of_int target) v in
                       learn s ops.(target) tv
                     else first rest
               in
               first alts
           | LAll (eager, order) ->
-              let ops = Array.of_list (K.operands e) in
+              let ops = Array.of_list (K.View.operands e) in
               let values = Array.make (Array.length ops) None in
               (* the eager values, in their order, before anything is learned *)
               let* () =
@@ -171,7 +171,7 @@ struct
                   (fun acc i ->
                     let* () = acc in
                     let i = Z.to_int i in
-                    let* tv = K.learn_value e (Z.of_int i) v in
+                    let* tv = K.View.learn_value e (Z.of_int i) v in
                     values.(i) <- Some tv;
                     Some ())
                   (Some ()) eager
@@ -183,7 +183,7 @@ struct
                   let* tv =
                     match values.(i) with
                     | Some tv -> Some tv
-                    | None -> K.learn_value e (Z.of_int i) v
+                    | None -> K.View.learn_value e (Z.of_int i) v
                   in
                   learn s ops.(i) tv)
                 (Some s) order)

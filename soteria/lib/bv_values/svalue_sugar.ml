@@ -316,27 +316,27 @@ module Make (V : Value_lang.S) : S with type t = V.t and type ty = V.ty = struct
 
   (* {2 Sorts} *)
 
-  let t_bool = K.t_bool
-  let t_float = K.t_float
+  let t_bool = K.Bool.t_bool
+  let t_float = K.Float.t_float
   let t_f16 = t_float F16
   let t_f32 = t_float F32
   let t_f64 = t_float F64
   let t_f128 = t_float F128
-  let t_loc n = K.t_loc (Z.of_int n)
-  let t_ptr n = K.t_ptr (Z.of_int n)
-  let t_seq = K.t_seq
+  let t_loc n = K.Ptr.t_loc n
+  let t_ptr n = K.Ptr.t_pointer n
+  let t_seq = K.Core.t_seq
   let t_bv = V.t_bv
-  let is_float ty = Option.is_some (K.as_tfloat ty)
-  let is_bv ty = Option.is_some (K.as_tbitvector ty)
-  let is_bool_ty = K.is_tbool
+  let is_float ty = Option.is_some (K.Float.as_tfloat ty)
+  let is_bv ty = Option.is_some (K.Bitvec.as_tbitvector ty)
+  let is_bool_ty = K.Bool.is_tbool
 
   let precision_of_f ty =
-    match K.as_tfloat ty with
+    match K.Float.as_tfloat ty with
     | Some p -> p
     | None -> L.failwith "Not a float: %a" K.pp_ty ty
 
   let[@inline] size_of ty =
-    match K.sized_ty ty with
+    match K.View.sized_ty ty with
     | Some n -> Z.to_int n
     | None -> L.failwith "Not a bit value"
 
@@ -370,12 +370,12 @@ module Make (V : Value_lang.S) : S with type t = V.t and type ty = V.ty = struct
 
     (* avoid re-alloc and re-hashconsing *)
     let of_bool = V.of_bool
-    let and_ = K.b_and
-    let or_ = K.b_or
-    let not = K.b_not
-    let ite = K.b_ite
-    let sem_eq = K.sem_eq
-    let mk_exists = K.b_mk_exists
+    let and_ = K.Bool.and_
+    let or_ = K.Bool.or_
+    let not = K.Bool.not_
+    let ite = K.Bool.ite
+    let sem_eq = K.Bool.eq
+    let mk_exists = K.Exists.mk
 
     (** * [exists_n ~not_in tys mk] creates an existential with [length tys]
         variables of types [tys], that are not in [not_in], and with body
@@ -408,13 +408,13 @@ module Make (V : Value_lang.S) : S with type t = V.t and type ty = V.ty = struct
         | [ v1; v2; v3 ] -> mk v1 v2 v3
         | _ -> L.failwith "exists_3: unreachable")
 
-    let sem_eq_untyped = K.sem_eq_untyped
+    let sem_eq_untyped = K.Bool.eq_untyped
     let and_lazy v1 v2 = if equal v1 v_false then v_false else and_ v1 (v2 ())
     let or_lazy v1 v2 = if equal v1 v_true then v_true else or_ v1 (v2 ())
     let conj l = List.fold_left and_ v_true l
     let split_ands = V.split_ands
-    let distinct_seq s = K.b_distinct (List.of_seq s)
-    let distinct l = K.b_distinct l
+    let distinct_seq s = K.Bool.distinct (List.of_seq s)
+    let distinct l = K.Bool.distinct l
   end
 
   (* {2 Bit vectors} *)
@@ -431,50 +431,57 @@ module Make (V : Value_lang.S) : S with type t = V.t and type ty = V.ty = struct
     let bv_to_z signed bits z = if signed then Z.signed_extract z 0 bits else z
 
     let to_z v =
-      match K.as_bitvec v with Some _ as z -> z | None -> K.as_loclit v
+      match K.Bitvec.as_bitvec v with
+      | Some _ as z -> z
+      | None -> K.Bitvec.as_loclit v
 
-    let msb_of v = Z.to_int (K.msb_of v)
-    let add ?(checked = unchecked) v1 v2 = K.bv_add checked v1 v2
-    let sub ?(checked = unchecked) v1 v2 = K.bv_sub checked v1 v2
-    let mul ?(checked = unchecked) v1 v2 = K.bv_mul checked v1 v2
-    let div ~signed v1 v2 = K.bv_div signed v1 v2
-    let rem ~signed v1 v2 = K.bv_rem signed v1 v2
-    let mod_ = K.bv_mod
-    let neg ?(checked = false) v = K.bv_neg checked v
-    let add_overflows ~signed v1 v2 = K.bv_add_overflows signed v1 v2
-    let sub_overflows ~signed v1 v2 = K.bv_sub_overflows signed v1 v2
-    let mul_overflows ~signed v1 v2 = K.bv_mul_overflows signed v1 v2
-    let neg_overflows = K.bv_neg_overflows
-    let lt ~signed v1 v2 = K.bv_lt signed v1 v2
-    let leq ~signed v1 v2 = K.bv_leq signed v1 v2
+    let msb_of v = Z.to_int (K.Bitvec.msb_of v)
+    let add ?(checked = unchecked) v1 v2 = K.Bitvec.add checked v1 v2
+    let sub ?(checked = unchecked) v1 v2 = K.Bitvec.sub checked v1 v2
+    let mul ?(checked = unchecked) v1 v2 = K.Bitvec.mul checked v1 v2
+    let div ~signed v1 v2 = K.Bitvec.div signed v1 v2
+    let rem ~signed v1 v2 = K.Bitvec.rem signed v1 v2
+    let mod_ = K.Bitvec.mod_
+    let neg ?(checked = false) v = K.Bitvec.neg checked v
+    let add_overflows ~signed v1 v2 = K.Bitvec.add_overflows signed v1 v2
+    let sub_overflows ~signed v1 v2 = K.Bitvec.sub_overflows signed v1 v2
+    let mul_overflows ~signed v1 v2 = K.Bitvec.mul_overflows signed v1 v2
+    let neg_overflows = K.Bitvec.neg_overflows
+    let lt ~signed v1 v2 = K.Bitvec.lt signed v1 v2
+    let leq ~signed v1 v2 = K.Bitvec.leq signed v1 v2
     let gt ~signed v1 v2 = lt ~signed v2 v1
     let geq ~signed v1 v2 = leq ~signed v2 v1
-    let concat = K.bv_concat
-    let extend ~signed extend_by v = K.bv_extend signed (Z.of_int extend_by) v
-    let extract from_ to_ v = K.bv_extract (Z.of_int from_) (Z.of_int to_) v
-    let and_ = K.bv_and
-    let or_ = K.bv_or
-    let xor = K.bv_xor
-    let shl = K.bv_shl
-    let lshr = K.bv_lshr
-    let ashr = K.bv_ashr
-    let not = K.bv_not
-    let of_bool n b = K.bv_of_bool (Z.of_int n) b
-    let to_bool = K.bv_to_bool
-    let not_bool = K.bv_not_bool
+    let concat = K.Bitvec.concat
+
+    let extend ~signed extend_by v =
+      K.Bitvec.extend_ signed (Z.of_int extend_by) v
+
+    let extract from_ to_ v = K.Bitvec.extract (Z.of_int from_) (Z.of_int to_) v
+    let and_ = K.Bitvec.and_
+    let or_ = K.Bitvec.or_
+    let xor = K.Bitvec.xor
+    let shl = K.Bitvec.shl
+    let lshr = K.Bitvec.lshr
+    let ashr = K.Bitvec.ashr
+    let not = K.Bitvec.not_
+    let of_bool n b = K.Bitvec.of_bool (Z.of_int n) b
+    let to_bool = K.Bitvec.to_bool
+    let not_bool = K.Bitvec.not_bool
 
     let of_float ~rounding ~signed ~size v =
-      K.bv_of_float rounding signed (Z.of_int size) v
+      K.Bitvec.of_float rounding signed (Z.of_int size) v
 
-    let to_float ~rounding ~signed ~fp v = K.bv_to_float rounding signed fp v
-    let to_float_raw = K.bv_to_float_raw
+    let to_float ~rounding ~signed ~fp v =
+      K.Bitvec.to_float rounding signed fp v
+
+    let to_float_raw = K.Bitvec.to_float_raw
   end
 
   (* {2 Floating point} *)
 
   module Float = struct
     let fp_of v =
-      match K.as_tfloat (V.type_of v) with
+      match K.Float.as_tfloat (V.type_of v) with
       | Some fp -> fp
       | None -> L.failwith "Unsupported float type"
 
@@ -491,10 +498,10 @@ module Make (V : Value_lang.S) : S with type t = V.t and type ty = V.ty = struct
        format gives an infinity. Unlike {!BitVec.to_float} the argument is not
        the contents of a bit-vector, so it is not reduced to any width. *)
     let of_z fp z = mk_raw fp (F.of_z fp z)
-    let to_float_opt v = Option.map F.to_float (K.as_float v)
+    let to_float_opt v = Option.map F.to_float (K.Float.as_float v)
 
     let sign_bit_opt v =
-      match K.as_float v with
+      match K.Float.as_float v with
       | Some f ->
           Some (Z.testbit (F.to_z f) (FloatPrecision.size (fp_of v) - 1))
       | None -> None
@@ -521,38 +528,38 @@ module Make (V : Value_lang.S) : S with type t = V.t and type ty = V.ty = struct
     let neg_infinity fp = mk_raw fp (F.neg_infinity fp)
 
     let to_bits_opt v =
-      match K.as_float v with
+      match K.Float.as_float v with
       | Some f ->
           let size = FloatPrecision.size (fp_of v) in
           Some (BitVec.mk_masked size (F.to_z f))
       | None -> None
 
-    let is_floatclass fc sv = K.float_is_floatclass fc sv
+    let is_floatclass fc sv = K.Float.is_floatclass fc sv
     let is_normal = is_floatclass Normal
     let is_subnormal = is_floatclass Subnormal
     let is_infinite = is_floatclass Infinite
     let is_nan = is_floatclass NaN
     let is_zero = is_floatclass Zero
-    let is_negative = K.float_is_negative
-    let is_positive = K.float_is_positive
-    let cast ~rounding ~fp v = K.float_cast rounding fp v
-    let eq = K.float_eq
-    let lt = K.float_lt
-    let leq = K.float_leq
+    let is_negative = K.Float.is_negative
+    let is_positive = K.Float.is_positive
+    let cast ~rounding ~fp v = K.Float.cast rounding fp v
+    let eq = K.Float.eq
+    let lt = K.Float.lt
+    let leq = K.Float.leq
     let gt v1 v2 = lt v2 v1
     let geq v1 v2 = leq v2 v1
-    let add = K.float_add
-    let sub = K.float_sub
-    let div = K.float_div
-    let mul = K.float_mul
-    let rem = K.float_rem
-    let abs = K.float_abs
-    let neg = K.float_neg
-    let fma = K.float_fma
-    let fmod_of_rem = K.float_fmod_of_rem
-    let fmod = K.float_fmod
-    let min = K.float_min
-    let max = K.float_max
+    let add = K.Float.add
+    let sub = K.Float.sub
+    let div = K.Float.div
+    let mul = K.Float.mul
+    let rem = K.Float.rem
+    let abs = K.Float.abs
+    let neg = K.Float.neg
+    let fma = K.Float.fma
+    let fmod_of_rem = K.Float.fmod_of_rem
+    let fmod = K.Float.fmod
+    let min = K.Float.min
+    let max = K.Float.max
 
     (* The IEEE 754-2019 [minimum]/[maximum]: unlike {!min}/{!max} a NaN
        propagates, and [-0.0] is strictly below [+0.0]. SMT-Lib has neither, so
@@ -569,23 +576,23 @@ module Make (V : Value_lang.S) : S with type t = V.t and type ty = V.ty = struct
       @@ Bool.ite (lt v2 v1) v1
       @@ Bool.ite (is_negative v1) v2 v1
 
-    let sqrt = K.float_sqrt
-    let round rm sv = K.float_round rm sv
+    let sqrt = K.Float.sqrt
+    let round rm sv = K.Float.round rm sv
   end
 
   (* {2 Pointers} *)
 
   module Ptr = struct
     let mk = K.mk_ptr
-    let loc = K.ptr_loc
+    let loc = K.Ptr.loc
     let null_loc n = K.mk_loc n Z.zero
     let is_null_loc l = Bool.sem_eq l (null_loc (size_of (V.type_of l)))
     let loc_of_z n z = K.mk_loc n z
     let loc_of_int n i = loc_of_z n (Z.of_int i)
-    let ofs = K.ptr_ofs
+    let ofs = K.Ptr.ofs
 
     let decompose p =
-      match K.as_ptr p with Some (l, o) -> (l, o) | None -> (loc p, ofs p)
+      match K.Ptr.as_ptr p with Some (l, o) -> (l, o) | None -> (loc p, ofs p)
 
     let add_ofs p o =
       let loc, ofs = decompose p in
@@ -602,7 +609,7 @@ module Make (V : Value_lang.S) : S with type t = V.t and type ty = V.ty = struct
     let mk ~seq_ty l = K.mk_seq seq_ty l
 
     let inner_ty ty =
-      match K.as_tseq ty with
+      match K.Core.as_tseq ty with
       | Some ty -> ty
       | None -> L.failwith "Expected a sequence type"
   end

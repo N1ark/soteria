@@ -5,7 +5,7 @@ use "core"
 node Float of float (f) : TFloat (f_prec f)
 node BvOfFloat of rm * bool * nat (_, _, n) : TFloat p -> TBitVector n
 node FloatOfBv of rm * bool * fp (_, _, p) : TBitVector n -> TFloat p
-node FloatOfBvRaw of fp (p) : TBitVector (fp_size p) -> TFloat p
+node FloatOfBvRaw of fp (p) : TBitVector (Float.fp_size p) -> TFloat p
 node FloatOfFloat of rm * fp (_, p) : TFloat q -> TFloat p [@fold f_convert]
 node FAbs : TFloat p -> TFloat p [@fold f_abs]
 node FNeg : TFloat p -> TFloat p [@fold f_neg]

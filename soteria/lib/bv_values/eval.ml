@@ -27,16 +27,16 @@ struct
     match as_var x with
     | Some (v, ty) -> eval_var x v ty
     | None -> (
-        match K.as_exists x with
+        match K.Exists.as_exists x with
         | Some (vs, sv) ->
             let eval_var' sv v ty =
               if List.exists (fun (v', _) -> Var.equal v v') vs then sv
               else eval_var sv v ty
             in
             let nsv = eval' ~eval_var:eval_var' sv in
-            if (not force) && sv == nsv then x else K.b_mk_exists vs nsv
+            if (not force) && sv == nsv then x else K.Exists.mk vs nsv
         | None -> (
-            match K.as_ite x with
+            match K.Bool.as_ite x with
             | Some (guard, then_, else_) ->
                 (* eval this separately, to have lazy evaluation *)
                 let old_guard = guard in
@@ -52,13 +52,14 @@ struct
                     && then_ == nthen
                     && else_ == nelse
                   then x
-                  else K.b_ite guard nthen nelse
+                  else K.Bool.ite guard nthen nelse
             | None -> (
-                match K.operands x with
+                match K.View.operands x with
                 | [] -> x
                 | cs ->
                     let cs', changed = Soteria_std.List.map_changed eval cs in
-                    if (not force) && not changed then x else K.rebuild x cs')))
+                    if (not force) && not changed then x
+                    else K.View.rebuild x cs')))
 
   let eval ?(force = false) ?(eval_var : t -> Var.t -> ty -> t = fun x _ _ -> x)
       (x : t) : t =

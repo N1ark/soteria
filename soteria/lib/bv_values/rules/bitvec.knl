@@ -29,11 +29,11 @@ node Div of bool : TBitVector n -> TNonzero n -> TBitVector n
 node Rem of bool : TBitVector n -> TNonzero n -> TBitVector n
 node Mod : TBitVector n -> TBitVector n -> TBitVector n [@fold lit_smod]
 node AddOvf of bool : TBitVector n -> TBitVector n -> TBool [@comm]
-    [@fold add_overflows]
+    [@fold lit_add_overflows]
 node SubOvf of bool : TBitVector n -> TBitVector n -> TBool
-    [@fold sub_overflows]
+    [@fold lit_sub_overflows]
 node MulOvf of bool : TBitVector n -> TBitVector n -> TBool [@comm]
-    [@fold mul_overflows]
+    [@fold lit_mul_overflows]
 node Lt of bool : TBitVector n -> TBitVector n -> TBool
 node Leq of bool : TBitVector n -> TBitVector n -> TBool
 node BvConcat : TBitVector n -> TBitVector m -> TBitVector (n + m)
@@ -56,34 +56,34 @@ subsort TZero of nat : TBitVector n [@lean "Zero"]
    in [bitvec.kn] with the names that the rules of the C and Rust tools have
    always had ([zero], [one], [same]). *)
 
-(* Operators on terms: [a + b] is [bv_add unchecked a b] in expressions and
+(* Operators on terms: [a + b] is [add unchecked a b] in expressions and
    matches [Add (_, a, b)] in patterns, whatever its overflow check; on
    integers, [land] and [lsl] are the integer operations [z_land] and [z_lsl]
    (the bit-vector arithmetic on literals is [lit_add] etc., which take the
    sorts of their operands). *)
 
-infix "+" = Add, bv_add unchecked
-infix "-" = Sub, bv_sub unchecked
-infix "*" = Mul, bv_mul unchecked
-infix "land" = BitAnd, bv_and, z_land
-infix "lor" = BitOr, bv_or
-infix "lxor" = BitXor, bv_xor
-infix "lsl" = Shl, bv_shl, z_lsl
-infix "lsr" = LShr, bv_lshr
-infix "asr" = AShr, bv_ashr
-infix "++" = BvConcat, bv_concat
+infix "+" = Add, add unchecked
+infix "-" = Sub, sub unchecked
+infix "*" = Mul, mul unchecked
+infix "land" = BitAnd, and_, z_land
+infix "lor" = BitOr, or_
+infix "lxor" = BitXor, xor
+infix "lsl" = Shl, shl, z_lsl
+infix "lsr" = LShr, lshr
+infix "asr" = AShr, ashr
+infix "++" = BvConcat, concat
 (* the remainders: [urem] is unsigned, [srem] takes the sign of the dividend
    and [mod] that of the divisor *)
-infix "urem" = Rem false, bv_rem false
-infix "srem" = Rem true, bv_rem true
-infix "mod" = Mod, bv_mod
+infix "urem" = Rem false, rem false
+infix "srem" = Rem true, rem true
+infix "mod" = Mod, mod_
 (* the comparisons: [<u] and [<=u] are unsigned, [<s] and [<=s] signed *)
-infix "<u" = Lt false, bv_lt false
-infix "<s" = Lt true, bv_lt true
-infix "<=u" = Leq false, bv_leq false
-infix "<=s" = Leq true, bv_leq true
-prefix "-" = Neg, bv_neg false
-prefix "~" = BvNot, bv_not
+infix "<u" = Lt false, lt false
+infix "<s" = Lt true, lt true
+infix "<=u" = Leq false, leq false
+infix "<=s" = Leq true, leq true
+prefix "-" = Neg, neg false
+prefix "~" = BvNot, not_
 
 constant "0" (v) = bv_zero (size v)
 constant "1" (v) = bv_one (size v)

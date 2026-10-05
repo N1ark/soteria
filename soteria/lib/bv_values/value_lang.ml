@@ -84,23 +84,23 @@ module type Base = sig
   val sem_eq : t -> t -> t
   val mk_var : Var.t -> ty -> t
 
-  (** [= K.t_bv (Z.of_int n)] *)
+  (** [= K.Bitvec.t_bitvector n] *)
   val t_bv : int -> ty
 
   (** [= K.mk_bv] *)
   val bv_mk : int -> Z.t -> t
 
-  (** [= K.bv_leq false] *)
+  (** [= K.Bitvec.leq false] *)
   val bv_uleq : t -> t -> t
 
   val is_literal : t -> bool
 
-  (** [= K.is_tbool (type_of v)] *)
+  (** [= K.Bool.is_tbool (type_of v)] *)
   val is_bool : t -> bool
 
   val as_var : t -> (Var.t * ty) option
 
-  (** [= K.as_tbitvector s] *)
+  (** [= K.Bitvec.as_tbitvector s] *)
   val as_bv_ty : ty -> int option
 
   val as_not : t -> t option
@@ -112,40 +112,41 @@ module type Base = sig
   val as_leq : t -> (t * t) option
   val as_distinct : t -> t list option
 
-  (** Via [K.as_and], with no list: the old [Bool.split_ands]. *)
+  (** Via [K.Bool.as_and], with no list: the old [Bool.split_ands]. *)
   val split_ands : t -> t Iter.t
 
   val sure_neq : t -> t -> bool
 
-  (** [= K.implies_or_contradicts q neg_q pc]; keep it [[@inline]]. *)
+  (** [= K.View.implies_or_contradicts q neg_q pc]; keep it [[@inline]]. *)
   val implies_or_contradicts : q:t -> neg_q:t -> t -> bool option
 
   type sign = Pos | Neg
 
-  (** [K.as_range], with [Inside] for [Pos], [Outside] for [Neg] and the size as
-      an [int]. *)
+  (** [K.View.as_range], with [Inside] for [Pos], [Outside] for [Neg] and the
+      size as an [int]. *)
   val as_range : t -> (Var.t * int * (sign * (Z.t * Z.t))) option
 
-  (** The old [map_operands]: [K.maps_operands v], else [v] itself; the operands
-      [cs] of [v] are mapped left to right and [v] is rebuilt with [K.rebuild]
-      iff one changed. *)
+  (** The old [map_operands]: [K.View.maps_operands v], else [v] itself; the
+      operands [cs] of [v] are mapped left to right and [v] is rebuilt with
+      [K.View.rebuild] iff one changed. *)
   val map_operands : (t -> t) -> t -> t
 
   (** Replaces [Svalue.iter_vars] ([svalue.ml:71-93]): the free variables,
-      binder aware, via [K.as_var], [K.as_exists] and [K.operands], left to
-      right. *)
+      binder aware, via [K.Core.as_var], [K.Exists.as_exists] and
+      [K.View.operands], left to right. *)
   val iter_vars : t -> (Var.t * ty -> unit) -> unit
 
-  (** [= Z.to_int (K.cost v)] *)
+  (** [= Z.to_int (K.View.cost v)] *)
   val cost : t -> int
 
-  (** From [K.random_bound] and [K.random_of_z], see there. *)
+  (** From [K.View.random_bound] and [K.View.random_of_z], see there. *)
   val random_value : ty -> (unit -> t) option
 
-  (** [= (K.encode_sort ty) ~sort_of_ty (K.sort_operands ty)] *)
+  (** [= (K.View.encode_sort ty) ~sort_of_ty (K.View.sort_operands ty)] *)
   val encode_ty : sort_of_ty:(ty -> Smt.sexp) -> ty -> Smt.sexp
 
-  (** [= (K.encode_head v) ~sort_of_ty ~encode_child (K.operands v)] *)
+  (** [= (K.View.encode_head v) ~sort_of_ty ~encode_child (K.View.operands v)]
+  *)
   val encode_node :
     sort_of_ty:(ty -> Smt.sexp) -> encode_child:(t -> Smt.sexp) -> t -> Smt.sexp
 end
@@ -189,56 +190,56 @@ module Make
   let pp = K.pp
   let v_true = K.v_true
   let v_false = K.v_false
-  let of_bool = K.of_bool
-  let not_ = K.b_not
-  let and_ = K.b_and
-  let or_ = K.b_or
-  let ite = K.b_ite
-  let sem_eq = K.sem_eq
+  let of_bool = K.Bool.of_bool
+  let not_ = K.Bool.not_
+  let and_ = K.Bool.and_
+  let or_ = K.Bool.or_
+  let ite = K.Bool.ite
+  let sem_eq = K.Bool.eq
   let mk_var = K.mk_var
-  let t_bv n = K.t_bv (Z.of_int n)
+  let t_bv n = K.Bitvec.t_bitvector n
   let bv_mk = K.mk_bv
-  let bv_uleq = K.bv_leq false
-  let is_literal = K.is_literal
-  let is_bool (v : t) = K.is_tbool v.ty
-  let as_var (v : t) = Option.map (fun x -> (x, v.ty)) (K.as_var v)
-  let as_bv_ty = K.as_tbitvector
-  let as_not = K.as_not
-  let as_eq = K.as_eq
-  let as_and = K.as_and
-  let as_or = K.as_or
-  let as_ite = K.as_ite
-  let as_lt v = Option.map (fun (_, l, r) -> (l, r)) (K.as_lt v)
-  let as_leq v = Option.map (fun (_, l, r) -> (l, r)) (K.as_leq v)
-  let as_distinct = K.as_distinct
+  let bv_uleq = K.Bitvec.leq false
+  let is_literal = K.View.is_literal
+  let is_bool (v : t) = K.Bool.is_tbool v.ty
+  let as_var (v : t) = Option.map (fun x -> (x, v.ty)) (K.Core.as_var v)
+  let as_bv_ty = K.Bitvec.as_tbitvector
+  let as_not = K.Bool.as_not
+  let as_eq = K.Bool.as_eq
+  let as_and = K.Bool.as_and
+  let as_or = K.Bool.as_or
+  let as_ite = K.Bool.as_ite
+  let as_lt v = Option.map (fun (_, l, r) -> (l, r)) (K.Bitvec.as_lt v)
+  let as_leq v = Option.map (fun (_, l, r) -> (l, r)) (K.Bitvec.as_leq v)
+  let as_distinct = K.Bool.as_distinct
 
   (* [A && B && C] iterates over [A], [B], [C], left to right *)
   let rec split_ands (v : t) (f : t -> unit) : unit =
-    match K.as_and v with
+    match K.Bool.as_and v with
     | Some (l, r) ->
         split_ands l f;
         split_ands r f
     | None -> f v
 
-  let sure_neq = K.sure_neq
+  let sure_neq = K.Bool.sure_neq
 
   let[@inline] implies_or_contradicts ~(q : t) ~(neg_q : t) (pc : t) :
       bool option =
-    K.implies_or_contradicts q neg_q pc
+    K.View.implies_or_contradicts q neg_q pc
 
   type sign = Pos | Neg
 
   let as_range (v : t) =
-    match K.as_range v with
+    match K.View.as_range v with
     | None -> None
     | Some (x, size, (side, range)) ->
         let sign : sign = match side with Inside -> Pos | Outside -> Neg in
         Some (x, Z.to_int size, (sign, range))
 
   let map_operands (f : t -> t) (v : t) : t =
-    if not (K.maps_operands v) then v
+    if not (K.View.maps_operands v) then v
     else
-      let cs = K.operands v in
+      let cs = K.View.operands v in
       let rec map_changed = function
         | [] -> ([], false)
         | x :: rest ->
@@ -248,14 +249,14 @@ module Make
       in
       (* [f] is applied left to right: [x'] is computed before [rest'] *)
       let cs', changed = map_changed cs in
-      if changed then K.rebuild v cs' else v
+      if changed then K.View.rebuild v cs' else v
 
   let iter_vars (sv : t) (f : Var.t * ty -> unit) : unit =
     let rec aux ~ignore (sv : t) : unit =
-      match K.as_var sv with
+      match K.Core.as_var sv with
       | Some x -> if Var.Set.mem x ignore then () else f (x, sv.ty)
       | None -> (
-          match K.as_exists sv with
+          match K.Exists.as_exists sv with
           | Some (vs, body) ->
               let ignore =
                 List.fold_left
@@ -263,27 +264,28 @@ module Make
                   ignore vs
               in
               aux ~ignore body
-          | None -> List.iter (aux ~ignore) (K.operands sv))
+          | None -> List.iter (aux ~ignore) (K.View.operands sv))
     in
     aux ~ignore:Var.Set.empty sv
 
-  let cost (v : t) : int = Z.to_int (K.cost v)
+  let cost (v : t) : int = Z.to_int (K.View.cost v)
 
   let random_value (ty : ty) : (unit -> t) option =
-    match K.random_bound ty with
+    match K.View.random_bound ty with
     | None -> None
     | Some bound ->
         let of_z z =
-          match K.random_of_z ty z with
+          match K.View.random_of_z ty z with
           | Some v -> v
           | None -> failwith "random_value: no value of this sort"
         in
-        if K.is_tbool ty then Some (fun () -> K.of_bool (Random.bool ()))
+        if K.Bool.is_tbool ty then
+          Some (fun () -> K.Bool.of_bool (Random.bool ()))
         else Some (fun () -> of_z (Z.random_int bound))
 
   let encode_ty ~sort_of_ty (s : ty) : Smt.sexp =
-    (K.encode_sort s) ~sort_of_ty (K.sort_operands s)
+    (K.View.encode_sort s) ~sort_of_ty (K.View.sort_operands s)
 
   let encode_node ~sort_of_ty ~encode_child (v : t) : Smt.sexp =
-    (K.encode_head v) ~sort_of_ty ~encode_child (K.operands v)
+    (K.View.encode_head v) ~sort_of_ty ~encode_child (K.View.operands v)
 end

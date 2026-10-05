@@ -145,4113 +145,4345 @@ module _ : sig
   val so_seq : smt_sort_op
 end = Bv_prims
 
-let[@inline] mk_commut_binop (op : op2) (l : t) (r : t) : kind =
-    (if (Int.compare l.tag r.tag <= 0)
-    then (Op2 (op, l, r))
-    else (Op2 (op, r, l)))
-
-let[@inline] of_bool (b : bool) : t =
-    (if b then Bv_prims.v_true else Bv_prims.v_false)
-
-let rec sure_neq (a : t) (b : t) : bool =
-    ((not ((equal_ty a.ty b.ty))) || (match a, b with
-                                     | ({ kind = Bool (a); _ }, { kind = Bool (b); _ }) ->
-                                       (not ((Bool.equal a b)))
-                                     | ({ kind = BitVec (a); _ }, { kind = BitVec (b); _ }) ->
-                                       (not ((Z.equal a b)))
-                                     | ({ kind = LocLit (a); _ }, { kind = LocLit (b); _ }) ->
-                                       (not ((Z.equal a b)))
-                                     | ({ kind = Float (a); _ }, { kind = Float (b); _ }) ->
-                                       (not (Bv_prims.f_equal a b))
-                                     | ({ kind = Op2 ((Ptr), la, oa); _ }, { kind = Op2 ((Ptr), lb, ob); _ }) ->
-                                       ((sure_neq la lb) || (sure_neq oa ob))
-                                     | _ -> false
-                                     ))
-
-let[@inline] at_most_one (l : (t list)) : bool =
-    (match l with
-    | [] -> true
-    | (_ :: []) -> true
-    | _ -> false
-    )
-
-let[@inline] bv_to_z (signed : bool) (bits : Z.t) (z : Z.t) : Z.t =
-    (if signed then (Bv_prims.signed_extract z Z.zero bits) else z)
-
-let[@inline] size (v : t) : Z.t = (Bv_prims.size_of_ty v.ty)
-
-let lower_bound (v : t) : Z.t =
-    (match v with
-    | { kind = Op2 ((Lt (s)), { kind = BitVec (c); _ }, a); _ } ->
-      (Z.add (bv_to_z s (size a) c) Z.one)
-    | { kind = Op2 ((Leq (s)), { kind = BitVec (c); _ }, a); _ } ->
-      (bv_to_z s (size a) c)
-    | _ -> Z.zero
-    )
-
-let[@inline] checked_meet (a : checked) (b : checked) : checked =
-    { signed = (a.signed && b.signed); unsigned = (a.unsigned && b.unsigned) }
-
-let checked_signed : checked = { signed = true; unsigned = false }
-
-let checked_unsigned : checked = { signed = false; unsigned = true }
-
-let[@inline] is_checked (c : checked) : bool = (c.signed || c.unsigned)
-
-let[@inline] min_for (signed : bool) (n : Z.t) : Z.t =
-    (if signed
-    then (Z.neg (Bv_prims.z_lsl Z.one (Z.sub n Z.one)))
-    else Z.zero)
-
-let[@inline] is_int_min (n : Z.t) (l : Z.t) : bool =
-    ((Z.equal (bv_to_z true n l) (min_for true n)))
-
-let[@inline] max_for (signed : bool) (n : Z.t) : Z.t =
-    (let n = (if signed then (Z.sub n Z.one) else n) in
-    (Z.sub (Bv_prims.z_lsl Z.one n) Z.one))
-
-let overflows_mul (signed : bool) (n : Z.t) (l : Z.t) (r : Z.t) : bool =
-    (let res = (Z.mul (bv_to_z signed n l) (bv_to_z signed n r)) in
-    ((Z.lt res (min_for signed n)) || (Z.gt res (max_for signed n))))
-
-let unchecked : checked = { signed = false; unsigned = false }
-
-let[@inline] checked_has (signed : bool) (c : checked) : bool =
-    (if signed then c.signed else c.unsigned)
-
-let overflows_add (signed : bool) (n : Z.t) (l : Z.t) (r : Z.t) : bool =
-    (let res = (Z.add (bv_to_z signed n l) (bv_to_z signed n r)) in
-    ((Z.lt res (min_for signed n)) || (Z.gt res (max_for signed n))))
-
-let overflows_sub (signed : bool) (n : Z.t) (l : Z.t) (r : Z.t) : bool =
-    (let res = (Z.sub (bv_to_z signed n l) (bv_to_z signed n r)) in
-    ((Z.lt res (min_for signed n)) || (Z.gt res (max_for signed n))))
-
-let fold_checked (c : checked) (n : Z.t) (a : Z.t) (b : Z.t) (is_add : bool) : checked =
-    (let keep (signed : bool) =
-      ((checked_has signed c) && (not (if is_add
-                                      then (overflows_add signed n a b)
-                                      else (overflows_sub signed n a b)))) in
-    { signed = (keep true); unsigned = (keep false) })
-
-let[@inline] is_bv (t : ty) : bool =
-    (match t with
-    | (TBitVector (_)) -> true
-    | _ -> false
-    )
-
-let[@inline] zmax (a : Z.t) (b : Z.t) : Z.t = (if (Z.geq a b) then a else b)
-
-let[@inline] zmin (a : Z.t) (b : Z.t) : Z.t = (if (Z.leq a b) then a else b)
-
-let rec msb_of (v : t) : Z.t =
-    (assert ((match v.ty with
-             | (TBitVector (kanon__v_n)) -> true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v with
-    | { kind = BitVec (z); _ } when ((Z.gt z Z.zero)) -> (Bv_prims.log2 z)
-    | { kind = BitVec (kanon__1); _ }
-      when (((Z.equal kanon__1 Z.zero))) ->
-      (Z.sub (size v) Z.one)
-    | { kind = Op2 ((BitAnd), bv1, bv2); _ } ->
-      (zmin (msb_of bv1) (msb_of bv2))
-    | { kind = Op3 ((Ite), _, l, r); _ } -> (zmax (msb_of l) (msb_of r))
-    | { kind = Op1 ((BvExtend (false, _)), v); _ } -> (msb_of v)
-    | { kind = Op2 ((Rem (false)), _, { kind = BitVec (k); _ }); _ }
-      when ((Z.gt k Z.one)) ->
-      (Bv_prims.log2 (Z.sub k Z.one))
-    | { kind = Op2 ((Mod), _, { kind = BitVec (k); _ }); _ }
-      when (((Z.gt k Z.one) && (Z.lt k (Bv_prims.z_lsl Z.one (Z.sub (size v) Z.one))))) ->
-      (Bv_prims.log2 (Z.sub k Z.one))
-    | { kind = Op2 ((Rem (true)), { kind = BitVec (k); _ }, _); _ }
-      when (((Z.gt k Z.zero) && (Z.lt k (Bv_prims.z_lsl Z.one (Z.sub (size v) Z.one))))) ->
-      (Bv_prims.log2 k)
-    | _ -> (Z.sub (size v) Z.one)
-    ))
-
-let[@inline] unsigned_ub (v : t) : Z.t =
-    (Z.sub (Bv_prims.z_lsl Z.one (Z.add (msb_of v) Z.one)) Z.one)
-
-let no_wrap (c : checked) (v1 : t) (v2 : t) : checked =
-    (if ((is_bv v1.ty) && (Z.lt (Z.add (unsigned_ub v1) (unsigned_ub v2)) (Bv_prims.z_lsl Z.one (size v1))))
-    then { signed = c.signed; unsigned = true }
-    else c)
-
-let[@inline] udivides (d : Z.t) (n : Z.t) : bool = (Bv_prims.divisible n d)
-
-let[@inline] bits_in (a : Z.t) (b : Z.t) : bool =
-    ((Z.equal (Bv_prims.z_land a b) a))
-
-let bv_of_bool (n : Z.t) (b : t) : t =
-    (assert ((match b.ty with
-             | (TBool) -> true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match b with
-    | { kind = Bool (true); _ } -> (Bv_prims.bv_one n)
-    | { kind = Bool (false); _ } -> (Bv_prims.bv_zero n)
-    | _ ->
-      (node (Op1 ((BvOfBool ((Z.to_int n))), b)) (TBitVector ((Z.to_int n))))
-    ))
-
-let[@inline] disjoint (a : Z.t) (b : Z.t) : bool =
-    ((Z.equal (Bv_prims.z_land a b) Z.zero))
-
-let[@inline] ones (n : Z.t) : Z.t = (Z.sub (Bv_prims.z_lsl Z.one n) Z.one)
-
-let[@inline] is_ones (n : Z.t) (l : Z.t) : bool = ((Z.equal l (ones n)))
-
-let[@inline] is_right_mask (z : Z.t) : bool =
-    ((Z.gt z Z.zero) && ((Z.equal (Bv_prims.popcount (Z.add z Z.one)) Z.one)))
-
-let[@inline] is_pow2 (z : Z.t) : bool =
-    ((Z.gt z Z.zero) && ((Z.equal (Bv_prims.popcount z) Z.one)))
-
-let[@inline] lsb (z : Z.t) : Z.t =
-    (if ((Z.equal z Z.zero))
-    then (Z.of_int (128))
-    else (Bv_prims.log2 (Bv_prims.z_land z (Z.neg z))))
-
-let upper_bound (v : t) : Z.t =
-    (match v with
-    | { kind = Op2 ((Lt (s)), a, { kind = BitVec (c); _ }); _ } ->
-      (Z.sub (bv_to_z s (size a) c) Z.one)
-    | { kind = Op2 ((Leq (s)), a, { kind = BitVec (c); _ }); _ } ->
-      (bv_to_z s (size a) c)
-    | _ -> Z.zero
-    )
-
-let cancellable (signed : bool) (a : t) : bool =
-    (if signed
-    then (match a with
-         | { kind = BitVec (z); _ } ->
-           (Z.gt (bv_to_z true (size a) z) Z.zero)
-         | _ -> false
-         )
-    else (sure_neq a (Bv_prims.bv_zero (size a))))
-
-let[@inline] checked_of_signed (signed : bool) : checked =
-    (if signed then checked_signed else checked_unsigned)
-
-let const_keeps_in_range (signed : bool) (n : Z.t) (l : Z.t) (r : Z.t) : bool =
-    (let base = (bv_to_z signed n l) in
-    (let d = (Z.sub base (bv_to_z signed n r)) in
-    ((Z.leq (zmin Z.zero base) d) && (Z.leq d (zmax Z.zero base)))))
-
-let is_checked_unsigned_op (v : t) : bool =
-    (match v with
-    | { kind = Op2 ((Add (c)), { kind = BitVec (_); _ }, _); _ } ->
-      c.unsigned
-    | { kind = Op2 ((Add (c)), _, { kind = BitVec (_); _ }); _ } ->
-      c.unsigned
-    | { kind = Op2 ((Sub (c)), { kind = BitVec (_); _ }, _); _ } ->
-      c.unsigned
-    | { kind = Op2 ((Sub (c)), _, { kind = BitVec (_); _ }); _ } ->
-      c.unsigned
-    | { kind = Op2 ((Mul (c)), { kind = BitVec (_); _ }, _); _ } ->
-      c.unsigned
-    | { kind = Op2 ((Mul (c)), _, { kind = BitVec (_); _ }); _ } ->
-      c.unsigned
-    | _ -> false
-    )
-
-let[@inline] is_max_of (signed : bool) (n : Z.t) (l : Z.t) : bool =
-    ((Z.equal (bv_to_z signed n l) (max_for signed n)))
-
-let[@inline] is_min_of (signed : bool) (n : Z.t) (l : Z.t) : bool =
-    ((Z.equal (bv_to_z signed n l) (min_for signed n)))
-
-let rec b_and (v1 : t) (v2 : t) : t =
-    (assert ((match v1.ty, v2.ty with
-             | ((TBool), (TBool)) -> true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v1, v2 with
-    | (v, kanon__2) when ((Int.equal v.tag kanon__2.tag)) -> v
-    | ({ kind = Bool (false); _ }, _) -> Bv_prims.v_false
-    | (_, { kind = Bool (false); _ }) -> Bv_prims.v_false
-    | ({ kind = Bool (true); _ }, x) -> x
-    | (x, { kind = Bool (true); _ }) -> x
-    | (p, { kind = Op1 ((Not), kanon__3); _ })
-      when ((Int.equal p.tag kanon__3.tag)) ->
-      Bv_prims.v_false
-    | ({ kind = Op1 ((Not), kanon__3); _ }, p)
-      when ((Int.equal p.tag kanon__3.tag)) ->
-      Bv_prims.v_false
-    | (({ kind = Op2 ((And), a, _); _ } as x), kanon__7)
-      when ((Int.equal a.tag kanon__7.tag)) ->
-      x
-    | (({ kind = Op2 ((And), _, a); _ } as x), kanon__7)
-      when ((Int.equal a.tag kanon__7.tag)) ->
-      x
-    | (kanon__7, ({ kind = Op2 ((And), a, _); _ } as x))
-      when ((Int.equal a.tag kanon__7.tag)) ->
-      x
-    | (kanon__7, ({ kind = Op2 ((And), _, a); _ } as x))
-      when ((Int.equal a.tag kanon__7.tag)) ->
-      x
-    | ({ kind = Op2 ((Or), a, _); _ }, kanon__6)
-      when ((Int.equal a.tag kanon__6.tag)) ->
-      a
-    | ({ kind = Op2 ((Or), _, a); _ }, kanon__6)
-      when ((Int.equal a.tag kanon__6.tag)) ->
-      a
-    | (kanon__6, { kind = Op2 ((Or), a, _); _ })
-      when ((Int.equal a.tag kanon__6.tag)) ->
-      a
-    | (kanon__6, { kind = Op2 ((Or), _, a); _ })
-      when ((Int.equal a.tag kanon__6.tag)) ->
-      a
-    | ({ kind = Op2 ((Eq), a, x); _ }, { kind = Op2 ((Eq), kanon__7, y); _ })
-      when (((Int.equal a.tag kanon__7.tag) && (sure_neq x y))) ->
-      Bv_prims.v_false
-    | ({ kind = Op2 ((Eq), a, x); _ }, { kind = Op2 ((Eq), y, kanon__7); _ })
-      when (((Int.equal a.tag kanon__7.tag) && (sure_neq x y))) ->
-      Bv_prims.v_false
-    | ({ kind = Op2 ((Eq), x, a); _ }, { kind = Op2 ((Eq), kanon__7, y); _ })
-      when (((Int.equal a.tag kanon__7.tag) && (sure_neq x y))) ->
-      Bv_prims.v_false
-    | ({ kind = Op2 ((Eq), x, a); _ }, { kind = Op2 ((Eq), y, kanon__7); _ })
-      when (((Int.equal a.tag kanon__7.tag) && (sure_neq x y))) ->
-      Bv_prims.v_false
-    | ({ kind = Op2 ((Eq), ({ kind = BitVec (_); _ } as bv1), { kind = Op1 ((BvExtract (s1, e1)), x); _ }); _ }, { kind = Op2 ((Eq), ({ kind = BitVec (_); _ } as bv2), { kind = Op1 ((BvExtract (s2, e2)), kanon__19); _ }); _ })
-      when (let s1 = Z.of_int s1 in
-      let e1 = Z.of_int e1 in
-      let s2 = Z.of_int s2 in
-      let e2 = Z.of_int e2 in
-      ((Int.equal x.tag kanon__19.tag) && (((Z.equal (Z.add e1 Z.one) s2)) || ((Z.equal (Z.add e2 Z.one) s1))))) ->
-      let s1 = Z.of_int s1 in
-      let e1 = Z.of_int e1 in
-      let s2 = Z.of_int s2 in
-      let e2 = Z.of_int e2 in
-      (if ((Z.equal (Z.add e1 Z.one) s2))
-      then (sem_eq (bv_concat bv2 bv1) (bv_extract s1 e2 x))
-      else (sem_eq (bv_concat bv1 bv2) (bv_extract s2 e1 x)))
-    | ({ kind = Op2 ((Eq), ({ kind = BitVec (_); _ } as bv1), { kind = Op1 ((BvExtract (s1, e1)), x); _ }); _ }, { kind = Op2 ((Eq), { kind = Op1 ((BvExtract (s2, e2)), kanon__19); _ }, ({ kind = BitVec (_); _ } as bv2)); _ })
-      when (let s1 = Z.of_int s1 in
-      let e1 = Z.of_int e1 in
-      let s2 = Z.of_int s2 in
-      let e2 = Z.of_int e2 in
-      ((Int.equal x.tag kanon__19.tag) && (((Z.equal (Z.add e1 Z.one) s2)) || ((Z.equal (Z.add e2 Z.one) s1))))) ->
-      let s1 = Z.of_int s1 in
-      let e1 = Z.of_int e1 in
-      let s2 = Z.of_int s2 in
-      let e2 = Z.of_int e2 in
-      (if ((Z.equal (Z.add e1 Z.one) s2))
-      then (sem_eq (bv_concat bv2 bv1) (bv_extract s1 e2 x))
-      else (sem_eq (bv_concat bv1 bv2) (bv_extract s2 e1 x)))
-    | ({ kind = Op2 ((Eq), { kind = Op1 ((BvExtract (s1, e1)), x); _ }, ({ kind = BitVec (_); _ } as bv1)); _ }, { kind = Op2 ((Eq), ({ kind = BitVec (_); _ } as bv2), { kind = Op1 ((BvExtract (s2, e2)), kanon__19); _ }); _ })
-      when (let s1 = Z.of_int s1 in
-      let e1 = Z.of_int e1 in
-      let s2 = Z.of_int s2 in
-      let e2 = Z.of_int e2 in
-      ((Int.equal x.tag kanon__19.tag) && (((Z.equal (Z.add e1 Z.one) s2)) || ((Z.equal (Z.add e2 Z.one) s1))))) ->
-      let s1 = Z.of_int s1 in
-      let e1 = Z.of_int e1 in
-      let s2 = Z.of_int s2 in
-      let e2 = Z.of_int e2 in
-      (if ((Z.equal (Z.add e1 Z.one) s2))
-      then (sem_eq (bv_concat bv2 bv1) (bv_extract s1 e2 x))
-      else (sem_eq (bv_concat bv1 bv2) (bv_extract s2 e1 x)))
-    | ({ kind = Op2 ((Eq), { kind = Op1 ((BvExtract (s1, e1)), x); _ }, ({ kind = BitVec (_); _ } as bv1)); _ }, { kind = Op2 ((Eq), { kind = Op1 ((BvExtract (s2, e2)), kanon__19); _ }, ({ kind = BitVec (_); _ } as bv2)); _ })
-      when (let s1 = Z.of_int s1 in
-      let e1 = Z.of_int e1 in
-      let s2 = Z.of_int s2 in
-      let e2 = Z.of_int e2 in
-      ((Int.equal x.tag kanon__19.tag) && (((Z.equal (Z.add e1 Z.one) s2)) || ((Z.equal (Z.add e2 Z.one) s1))))) ->
-      let s1 = Z.of_int s1 in
-      let e1 = Z.of_int e1 in
-      let s2 = Z.of_int s2 in
-      let e2 = Z.of_int e2 in
-      (if ((Z.equal (Z.add e1 Z.one) s2))
-      then (sem_eq (bv_concat bv2 bv1) (bv_extract s1 e2 x))
-      else (sem_eq (bv_concat bv1 bv2) (bv_extract s2 e1 x)))
-    | ({ kind = Op2 ((Lt (s)), a, { kind = BitVec (_); _ }); _ }, { kind = Op2 ((Lt (kanon__14)), kanon__16, { kind = BitVec (_); _ }); _ })
-      when ((((Bool.equal s kanon__14)) && (Int.equal a.tag kanon__16.tag))) ->
-      (if (Z.leq (upper_bound v1) (upper_bound v2)) then v1 else v2)
-    | ({ kind = Op2 ((Lt (s)), a, { kind = BitVec (_); _ }); _ }, { kind = Op2 ((Leq (kanon__20)), kanon__22, { kind = BitVec (_); _ }); _ })
-      when ((((Bool.equal s kanon__20)) && (Int.equal a.tag kanon__22.tag))) ->
-      (if (Z.leq (upper_bound v1) (upper_bound v2)) then v1 else v2)
-    | ({ kind = Op2 ((Leq (s)), a, { kind = BitVec (_); _ }); _ }, { kind = Op2 ((Lt (kanon__14)), kanon__16, { kind = BitVec (_); _ }); _ })
-      when ((((Bool.equal s kanon__14)) && (Int.equal a.tag kanon__16.tag))) ->
-      (if (Z.leq (upper_bound v1) (upper_bound v2)) then v1 else v2)
-    | ({ kind = Op2 ((Leq (s)), a, { kind = BitVec (_); _ }); _ }, { kind = Op2 ((Leq (kanon__20)), kanon__22, { kind = BitVec (_); _ }); _ })
-      when ((((Bool.equal s kanon__20)) && (Int.equal a.tag kanon__22.tag))) ->
-      (if (Z.leq (upper_bound v1) (upper_bound v2)) then v1 else v2)
-    | ({ kind = Op2 ((Lt (s)), { kind = BitVec (_); _ }, a); _ }, { kind = Op2 ((Lt (kanon__14)), { kind = BitVec (_); _ }, kanon__18); _ })
-      when ((((Bool.equal s kanon__14)) && (Int.equal a.tag kanon__18.tag))) ->
-      (if (Z.geq (lower_bound v1) (lower_bound v2)) then v1 else v2)
-    | ({ kind = Op2 ((Lt (s)), { kind = BitVec (_); _ }, a); _ }, { kind = Op2 ((Leq (kanon__20)), { kind = BitVec (_); _ }, kanon__24); _ })
-      when ((((Bool.equal s kanon__20)) && (Int.equal a.tag kanon__24.tag))) ->
-      (if (Z.geq (lower_bound v1) (lower_bound v2)) then v1 else v2)
-    | ({ kind = Op2 ((Leq (s)), { kind = BitVec (_); _ }, a); _ }, { kind = Op2 ((Lt (kanon__14)), { kind = BitVec (_); _ }, kanon__18); _ })
-      when ((((Bool.equal s kanon__14)) && (Int.equal a.tag kanon__18.tag))) ->
-      (if (Z.geq (lower_bound v1) (lower_bound v2)) then v1 else v2)
-    | ({ kind = Op2 ((Leq (s)), { kind = BitVec (_); _ }, a); _ }, { kind = Op2 ((Leq (kanon__20)), { kind = BitVec (_); _ }, kanon__24); _ })
-      when ((((Bool.equal s kanon__20)) && (Int.equal a.tag kanon__24.tag))) ->
-      (if (Z.geq (lower_bound v1) (lower_bound v2)) then v1 else v2)
-    | _ -> (node (mk_commut_binop And v1 v2) TBool)
-    ))
-
-and b_or (v1 : t) (v2 : t) : t =
-    (assert ((match v1.ty, v2.ty with
-             | ((TBool), (TBool)) -> true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v1, v2 with
-    | (v, kanon__2) when ((Int.equal v.tag kanon__2.tag)) -> v
-    | ({ kind = Bool (true); _ }, _) -> Bv_prims.v_true
-    | (_, { kind = Bool (true); _ }) -> Bv_prims.v_true
-    | ({ kind = Bool (false); _ }, x) -> x
-    | (x, { kind = Bool (false); _ }) -> x
-    | (p, { kind = Op1 ((Not), kanon__3); _ })
-      when ((Int.equal p.tag kanon__3.tag)) ->
-      Bv_prims.v_true
-    | ({ kind = Op1 ((Not), kanon__3); _ }, p)
-      when ((Int.equal p.tag kanon__3.tag)) ->
-      Bv_prims.v_true
-    | (({ kind = Op2 ((Or), a, _); _ } as x), kanon__7)
-      when ((Int.equal a.tag kanon__7.tag)) ->
-      x
-    | (({ kind = Op2 ((Or), _, a); _ } as x), kanon__7)
-      when ((Int.equal a.tag kanon__7.tag)) ->
-      x
-    | (kanon__7, ({ kind = Op2 ((Or), a, _); _ } as x))
-      when ((Int.equal a.tag kanon__7.tag)) ->
-      x
-    | (kanon__7, ({ kind = Op2 ((Or), _, a); _ } as x))
-      when ((Int.equal a.tag kanon__7.tag)) ->
-      x
-    | ({ kind = Op2 ((And), a, _); _ }, kanon__6)
-      when ((Int.equal a.tag kanon__6.tag)) ->
-      a
-    | ({ kind = Op2 ((And), _, a); _ }, kanon__6)
-      when ((Int.equal a.tag kanon__6.tag)) ->
-      a
-    | (kanon__6, { kind = Op2 ((And), a, _); _ })
-      when ((Int.equal a.tag kanon__6.tag)) ->
-      a
-    | (kanon__6, { kind = Op2 ((And), _, a); _ })
-      when ((Int.equal a.tag kanon__6.tag)) ->
-      a
-    | ({ kind = Op2 ((Lt (s)), a, b); _ }, { kind = Op2 ((Lt (kanon__6)), kanon__8, kanon__9); _ })
-      when (((((Bool.equal s kanon__6)) && (Int.equal b.tag kanon__8.tag)) && (Int.equal a.tag kanon__9.tag))) ->
-      (b_not (sem_eq a b))
-    | ({ kind = Op2 ((Lt (s)), a, b); _ }, { kind = Op2 ((Leq (kanon__6)), kanon__8, kanon__9); _ })
-      when (((((Bool.equal s kanon__6)) && (Int.equal b.tag kanon__8.tag)) && (Int.equal a.tag kanon__9.tag))) ->
-      Bv_prims.v_true
-    | ({ kind = Op2 ((Leq (kanon__6)), kanon__8, kanon__9); _ }, { kind = Op2 ((Lt (s)), a, b); _ })
-      when (((((Bool.equal s kanon__6)) && (Int.equal b.tag kanon__8.tag)) && (Int.equal a.tag kanon__9.tag))) ->
-      Bv_prims.v_true
-    | (({ kind = Op2 ((Lt (s)), a, { kind = BitVec (_); _ }); _ } as ub), ({ kind = Op2 ((Lt (kanon__15)), { kind = BitVec (_); _ }, kanon__19); _ } as lb))
-      when (((((Bool.equal s kanon__15)) && (Int.equal a.tag kanon__19.tag)) && (Z.leq (lower_bound lb) (Z.add (upper_bound ub) Z.one)))) ->
-      Bv_prims.v_true
-    | (({ kind = Op2 ((Lt (s)), a, { kind = BitVec (_); _ }); _ } as ub), ({ kind = Op2 ((Leq (kanon__21)), { kind = BitVec (_); _ }, kanon__25); _ } as lb))
-      when (((((Bool.equal s kanon__21)) && (Int.equal a.tag kanon__25.tag)) && (Z.leq (lower_bound lb) (Z.add (upper_bound ub) Z.one)))) ->
-      Bv_prims.v_true
-    | (({ kind = Op2 ((Leq (s)), a, { kind = BitVec (_); _ }); _ } as ub), ({ kind = Op2 ((Lt (kanon__15)), { kind = BitVec (_); _ }, kanon__19); _ } as lb))
-      when (((((Bool.equal s kanon__15)) && (Int.equal a.tag kanon__19.tag)) && (Z.leq (lower_bound lb) (Z.add (upper_bound ub) Z.one)))) ->
-      Bv_prims.v_true
-    | (({ kind = Op2 ((Leq (s)), a, { kind = BitVec (_); _ }); _ } as ub), ({ kind = Op2 ((Leq (kanon__21)), { kind = BitVec (_); _ }, kanon__25); _ } as lb))
-      when (((((Bool.equal s kanon__21)) && (Int.equal a.tag kanon__25.tag)) && (Z.leq (lower_bound lb) (Z.add (upper_bound ub) Z.one)))) ->
-      Bv_prims.v_true
-    | (({ kind = Op2 ((Lt (kanon__15)), { kind = BitVec (_); _ }, kanon__19); _ } as lb), ({ kind = Op2 ((Lt (s)), a, { kind = BitVec (_); _ }); _ } as ub))
-      when (((((Bool.equal s kanon__15)) && (Int.equal a.tag kanon__19.tag)) && (Z.leq (lower_bound lb) (Z.add (upper_bound ub) Z.one)))) ->
-      Bv_prims.v_true
-    | (({ kind = Op2 ((Lt (kanon__15)), { kind = BitVec (_); _ }, kanon__19); _ } as lb), ({ kind = Op2 ((Leq (s)), a, { kind = BitVec (_); _ }); _ } as ub))
-      when (((((Bool.equal s kanon__15)) && (Int.equal a.tag kanon__19.tag)) && (Z.leq (lower_bound lb) (Z.add (upper_bound ub) Z.one)))) ->
-      Bv_prims.v_true
-    | (({ kind = Op2 ((Leq (kanon__21)), { kind = BitVec (_); _ }, kanon__25); _ } as lb), ({ kind = Op2 ((Lt (s)), a, { kind = BitVec (_); _ }); _ } as ub))
-      when (((((Bool.equal s kanon__21)) && (Int.equal a.tag kanon__25.tag)) && (Z.leq (lower_bound lb) (Z.add (upper_bound ub) Z.one)))) ->
-      Bv_prims.v_true
-    | (({ kind = Op2 ((Leq (kanon__21)), { kind = BitVec (_); _ }, kanon__25); _ } as lb), ({ kind = Op2 ((Leq (s)), a, { kind = BitVec (_); _ }); _ } as ub))
-      when (((((Bool.equal s kanon__21)) && (Int.equal a.tag kanon__25.tag)) && (Z.leq (lower_bound lb) (Z.add (upper_bound ub) Z.one)))) ->
-      Bv_prims.v_true
-    | (({ kind = Op2 ((Lt (s)), a, { kind = BitVec (_); _ }); _ } as b), { kind = Op2 ((Eq), kanon__16, { kind = BitVec (k); _ }); _ })
-      when (((Int.equal a.tag kanon__16.tag) && (Z.leq (bv_to_z s (size a) k) (upper_bound b)))) ->
-      b
-    | (({ kind = Op2 ((Lt (s)), a, { kind = BitVec (_); _ }); _ } as b), { kind = Op2 ((Eq), { kind = BitVec (k); _ }, kanon__16); _ })
-      when (((Int.equal a.tag kanon__16.tag) && (Z.leq (bv_to_z s (size a) k) (upper_bound b)))) ->
-      b
-    | (({ kind = Op2 ((Leq (s)), a, { kind = BitVec (_); _ }); _ } as b), { kind = Op2 ((Eq), kanon__16, { kind = BitVec (k); _ }); _ })
-      when (((Int.equal a.tag kanon__16.tag) && (Z.leq (bv_to_z s (size a) k) (upper_bound b)))) ->
-      b
-    | (({ kind = Op2 ((Leq (s)), a, { kind = BitVec (_); _ }); _ } as b), { kind = Op2 ((Eq), { kind = BitVec (k); _ }, kanon__16); _ })
-      when (((Int.equal a.tag kanon__16.tag) && (Z.leq (bv_to_z s (size a) k) (upper_bound b)))) ->
-      b
-    | ({ kind = Op2 ((Eq), kanon__16, { kind = BitVec (k); _ }); _ }, ({ kind = Op2 ((Lt (s)), a, { kind = BitVec (_); _ }); _ } as b))
-      when (((Int.equal a.tag kanon__16.tag) && (Z.leq (bv_to_z s (size a) k) (upper_bound b)))) ->
-      b
-    | ({ kind = Op2 ((Eq), kanon__16, { kind = BitVec (k); _ }); _ }, ({ kind = Op2 ((Leq (s)), a, { kind = BitVec (_); _ }); _ } as b))
-      when (((Int.equal a.tag kanon__16.tag) && (Z.leq (bv_to_z s (size a) k) (upper_bound b)))) ->
-      b
-    | ({ kind = Op2 ((Eq), { kind = BitVec (k); _ }, kanon__16); _ }, ({ kind = Op2 ((Lt (s)), a, { kind = BitVec (_); _ }); _ } as b))
-      when (((Int.equal a.tag kanon__16.tag) && (Z.leq (bv_to_z s (size a) k) (upper_bound b)))) ->
-      b
-    | ({ kind = Op2 ((Eq), { kind = BitVec (k); _ }, kanon__16); _ }, ({ kind = Op2 ((Leq (s)), a, { kind = BitVec (_); _ }); _ } as b))
-      when (((Int.equal a.tag kanon__16.tag) && (Z.leq (bv_to_z s (size a) k) (upper_bound b)))) ->
-      b
-    | (({ kind = Op2 ((Lt (s)), { kind = BitVec (_); _ }, a); _ } as b), { kind = Op2 ((Eq), kanon__16, { kind = BitVec (k); _ }); _ })
-      when (((Int.equal a.tag kanon__16.tag) && (Z.leq (lower_bound b) (bv_to_z s (size a) k)))) ->
-      b
-    | (({ kind = Op2 ((Lt (s)), { kind = BitVec (_); _ }, a); _ } as b), { kind = Op2 ((Eq), { kind = BitVec (k); _ }, kanon__16); _ })
-      when (((Int.equal a.tag kanon__16.tag) && (Z.leq (lower_bound b) (bv_to_z s (size a) k)))) ->
-      b
-    | (({ kind = Op2 ((Leq (s)), { kind = BitVec (_); _ }, a); _ } as b), { kind = Op2 ((Eq), kanon__16, { kind = BitVec (k); _ }); _ })
-      when (((Int.equal a.tag kanon__16.tag) && (Z.leq (lower_bound b) (bv_to_z s (size a) k)))) ->
-      b
-    | (({ kind = Op2 ((Leq (s)), { kind = BitVec (_); _ }, a); _ } as b), { kind = Op2 ((Eq), { kind = BitVec (k); _ }, kanon__16); _ })
-      when (((Int.equal a.tag kanon__16.tag) && (Z.leq (lower_bound b) (bv_to_z s (size a) k)))) ->
-      b
-    | ({ kind = Op2 ((Eq), kanon__16, { kind = BitVec (k); _ }); _ }, ({ kind = Op2 ((Lt (s)), { kind = BitVec (_); _ }, a); _ } as b))
-      when (((Int.equal a.tag kanon__16.tag) && (Z.leq (lower_bound b) (bv_to_z s (size a) k)))) ->
-      b
-    | ({ kind = Op2 ((Eq), kanon__16, { kind = BitVec (k); _ }); _ }, ({ kind = Op2 ((Leq (s)), { kind = BitVec (_); _ }, a); _ } as b))
-      when (((Int.equal a.tag kanon__16.tag) && (Z.leq (lower_bound b) (bv_to_z s (size a) k)))) ->
-      b
-    | ({ kind = Op2 ((Eq), { kind = BitVec (k); _ }, kanon__16); _ }, ({ kind = Op2 ((Lt (s)), { kind = BitVec (_); _ }, a); _ } as b))
-      when (((Int.equal a.tag kanon__16.tag) && (Z.leq (lower_bound b) (bv_to_z s (size a) k)))) ->
-      b
-    | ({ kind = Op2 ((Eq), { kind = BitVec (k); _ }, kanon__16); _ }, ({ kind = Op2 ((Leq (s)), { kind = BitVec (_); _ }, a); _ } as b))
-      when (((Int.equal a.tag kanon__16.tag) && (Z.leq (lower_bound b) (bv_to_z s (size a) k)))) ->
-      b
-    | ({ kind = Op2 ((Lt (s)), a, { kind = BitVec (_); _ }); _ }, { kind = Op2 ((Lt (kanon__14)), kanon__16, { kind = BitVec (_); _ }); _ })
-      when ((((Bool.equal s kanon__14)) && (Int.equal a.tag kanon__16.tag))) ->
-      (if (Z.leq (upper_bound v1) (upper_bound v2)) then v2 else v1)
-    | ({ kind = Op2 ((Lt (s)), a, { kind = BitVec (_); _ }); _ }, { kind = Op2 ((Leq (kanon__20)), kanon__22, { kind = BitVec (_); _ }); _ })
-      when ((((Bool.equal s kanon__20)) && (Int.equal a.tag kanon__22.tag))) ->
-      (if (Z.leq (upper_bound v1) (upper_bound v2)) then v2 else v1)
-    | ({ kind = Op2 ((Leq (s)), a, { kind = BitVec (_); _ }); _ }, { kind = Op2 ((Lt (kanon__14)), kanon__16, { kind = BitVec (_); _ }); _ })
-      when ((((Bool.equal s kanon__14)) && (Int.equal a.tag kanon__16.tag))) ->
-      (if (Z.leq (upper_bound v1) (upper_bound v2)) then v2 else v1)
-    | ({ kind = Op2 ((Leq (s)), a, { kind = BitVec (_); _ }); _ }, { kind = Op2 ((Leq (kanon__20)), kanon__22, { kind = BitVec (_); _ }); _ })
-      when ((((Bool.equal s kanon__20)) && (Int.equal a.tag kanon__22.tag))) ->
-      (if (Z.leq (upper_bound v1) (upper_bound v2)) then v2 else v1)
-    | ({ kind = Op2 ((Lt (s)), { kind = BitVec (_); _ }, a); _ }, { kind = Op2 ((Lt (kanon__14)), { kind = BitVec (_); _ }, kanon__18); _ })
-      when ((((Bool.equal s kanon__14)) && (Int.equal a.tag kanon__18.tag))) ->
-      (if (Z.geq (lower_bound v1) (lower_bound v2)) then v2 else v1)
-    | ({ kind = Op2 ((Lt (s)), { kind = BitVec (_); _ }, a); _ }, { kind = Op2 ((Leq (kanon__20)), { kind = BitVec (_); _ }, kanon__24); _ })
-      when ((((Bool.equal s kanon__20)) && (Int.equal a.tag kanon__24.tag))) ->
-      (if (Z.geq (lower_bound v1) (lower_bound v2)) then v2 else v1)
-    | ({ kind = Op2 ((Leq (s)), { kind = BitVec (_); _ }, a); _ }, { kind = Op2 ((Lt (kanon__14)), { kind = BitVec (_); _ }, kanon__18); _ })
-      when ((((Bool.equal s kanon__14)) && (Int.equal a.tag kanon__18.tag))) ->
-      (if (Z.geq (lower_bound v1) (lower_bound v2)) then v2 else v1)
-    | ({ kind = Op2 ((Leq (s)), { kind = BitVec (_); _ }, a); _ }, { kind = Op2 ((Leq (kanon__20)), { kind = BitVec (_); _ }, kanon__24); _ })
-      when ((((Bool.equal s kanon__20)) && (Int.equal a.tag kanon__24.tag))) ->
-      (if (Z.geq (lower_bound v1) (lower_bound v2)) then v2 else v1)
-    | _ -> (node (mk_commut_binop Or v1 v2) TBool)
-    ))
-
-and b_not (sv : t) : t =
-    (assert ((match sv.ty with
-             | (TBool) -> true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match sv with
-    | { kind = Bool (true); _ } -> Bv_prims.v_false
-    | { kind = Bool (false); _ } -> Bv_prims.v_true
-    | { kind = Op1 ((Not), sv); _ } -> sv
-    | { kind = Op2 ((Or), v1, v2); _ } -> (b_and (b_not v1) (b_not v2))
-    | { kind = Op2 ((And), v1, v2); _ } -> (b_or (b_not v1) (b_not v2))
-    | { kind = Op3 ((Ite), g, a, b); _ } -> (b_ite g (b_not a) (b_not b))
-    | { kind = OpN ((Distinct), (l :: (r :: []))); _ } -> (sem_eq l r)
-    | { kind = Op2 ((Lt (signed)), v1, v2); _ } -> (bv_leq signed v2 v1)
-    | { kind = Op2 ((Leq (signed)), v1, v2); _ } -> (bv_lt signed v2 v1)
-    | { kind = Op2 ((Eq), ({ kind = BitVec (bv); _ } as c), v); _ }
-      when (((equal_ty c.ty (TBitVector ((Z.to_int Z.one)))))) ->
-      (sem_eq (Bv_prims.mk_bv Z.one (Bv_prims.lit_not c.ty bv)) v)
-    | { kind = Op2 ((Eq), v, ({ kind = BitVec (bv); _ } as c)); _ }
-      when (((equal_ty c.ty (TBitVector ((Z.to_int Z.one)))))) ->
-      (sem_eq (Bv_prims.mk_bv Z.one (Bv_prims.lit_not c.ty bv)) v)
-    | _ -> (node (Op1 (Not, sv)) TBool)
-    ))
-
-and b_ite (guard : t) (if_ : t) (else_ : t) : t =
-    (assert ((match guard.ty, if_.ty, else_.ty with
-             | ((TBool), kanon__a, kanon__s1)
-               when (((equal_ty kanon__s1 kanon__a))) ->
-               true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match guard, if_, else_ with
-    | ({ kind = Bool (true); _ }, _, _) -> if_
-    | ({ kind = Bool (false); _ }, _, _) -> else_
-    | (_, { kind = Bool (true); _ }, { kind = Bool (false); _ }) -> guard
-    | (_, { kind = Bool (false); _ }, { kind = Bool (true); _ }) ->
-      (b_not guard)
-    | (_, { kind = Bool (false); _ }, _) -> (b_and (b_not guard) else_)
-    | (_, { kind = Bool (true); _ }, _) -> (b_or guard else_)
-    | (_, _, { kind = Bool (false); _ }) -> (b_and guard if_)
-    | (_, _, { kind = Bool (true); _ }) -> (b_or (b_not guard) if_)
-    | ({ kind = Op1 ((Not), g); _ }, _, _) -> (b_ite g else_ if_)
-    | (g, kanon__2, _)
-      when ((Int.equal g.tag kanon__2.tag)) ->
-      (b_or guard else_)
-    | (g, _, kanon__3)
-      when ((Int.equal g.tag kanon__3.tag)) ->
-      (b_and guard if_)
-    | (g, { kind = Op3 ((Ite), kanon__3, x, _); _ }, _)
-      when ((Int.equal g.tag kanon__3.tag)) ->
-      (b_ite guard x else_)
-    | (g, _, { kind = Op3 ((Ite), kanon__4, _, y); _ })
-      when ((Int.equal g.tag kanon__4.tag)) ->
-      (b_ite guard if_ y)
-    | ({ kind = Op2 ((And), g, _); _ }, { kind = Op3 ((Ite), kanon__7, x, _); _ }, _)
-      when ((Int.equal g.tag kanon__7.tag)) ->
-      (b_ite guard x else_)
-    | ({ kind = Op2 ((And), _, g); _ }, { kind = Op3 ((Ite), kanon__7, x, _); _ }, _)
-      when ((Int.equal g.tag kanon__7.tag)) ->
-      (b_ite guard x else_)
-    | ({ kind = Op2 ((Or), g, _); _ }, _, { kind = Op3 ((Ite), kanon__8, _, y); _ })
-      when ((Int.equal g.tag kanon__8.tag)) ->
-      (b_ite guard if_ y)
-    | ({ kind = Op2 ((Or), _, g); _ }, _, { kind = Op3 ((Ite), kanon__8, _, y); _ })
-      when ((Int.equal g.tag kanon__8.tag)) ->
-      (b_ite guard if_ y)
-    | (_, x, kanon__3) when ((Int.equal x.tag kanon__3.tag)) -> if_
-    | (_, { kind = BitVec (kanon__2); _ }, { kind = BitVec (kanon__4); _ })
-      when (((((Z.equal kanon__2 Z.one)) && ((Z.equal kanon__4 Z.zero))) && (is_bv if_.ty))) ->
-      (bv_of_bool (size if_) guard)
-    | _ -> (node (Op3 (Ite, guard, if_, else_)) if_.ty)
-    ))
-
-and sem_eq (v1 : t) (v2 : t) : t =
-    (assert ((match v1.ty, v2.ty with
-             | (kanon__a, kanon__s1)
-               when (((equal_ty kanon__s1 kanon__a))) ->
-               true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v1, v2 with
-    | (v, kanon__2) when ((Int.equal v.tag kanon__2.tag)) -> Bv_prims.v_true
-    | ({ kind = Bool (b1); _ }, { kind = Bool (b2); _ }) ->
-      (of_bool ((Bool.equal b1 b2)))
-    | ({ kind = Op3 ((Ite), b, l, r); _ }, { kind = Op3 ((Ite), kanon__7, l', r'); _ })
-      when ((Int.equal b.tag kanon__7.tag)) ->
-      (b_ite b (sem_eq l l') (sem_eq r r'))
-    | ({ kind = Bool (false); _ }, x) -> (b_not x)
-    | (x, { kind = Bool (false); _ }) -> (b_not x)
-    | ({ kind = Bool (true); _ }, x) -> x
-    | (x, { kind = Bool (true); _ }) -> x
-    | ({ kind = Op1 ((Not), b); _ }, { kind = Op1 ((Not), c); _ }) ->
-      (sem_eq b c)
-    | ({ kind = BitVec (b1); _ }, { kind = BitVec (b2); _ }) ->
-      (of_bool ((Z.equal b1 b2)))
-    | ({ kind = LocLit (b1); _ }, { kind = LocLit (b2); _ }) ->
-      (of_bool ((Z.equal b1 b2)))
-    | (({ kind = BitVec (_); _ } as c), { kind = Op1 ((Neg (_)), x); _ }) ->
-      (sem_eq (bv_neg false c) x)
-    | ({ kind = Op1 ((Neg (_)), x); _ }, ({ kind = BitVec (_); _ } as c)) ->
-      (sem_eq (bv_neg false c) x)
-    | (({ kind = BitVec (_); _ } as c), { kind = Op1 ((BvNot), x); _ }) ->
-      (sem_eq (bv_not c) x)
-    | ({ kind = Op1 ((BvNot), x); _ }, ({ kind = BitVec (_); _ } as c)) ->
-      (sem_eq (bv_not c) x)
-    | (({ kind = BitVec (_); _ } as c), { kind = Op2 ((Add (_)), ({ kind = BitVec (_); _ } as l), r); _ }) ->
-      (sem_eq (bv_sub unchecked c l) r)
-    | (({ kind = BitVec (_); _ } as c), { kind = Op2 ((Add (_)), r, ({ kind = BitVec (_); _ } as l)); _ }) ->
-      (sem_eq (bv_sub unchecked c l) r)
-    | ({ kind = Op2 ((Add (_)), ({ kind = BitVec (_); _ } as l), r); _ }, ({ kind = BitVec (_); _ } as c)) ->
-      (sem_eq (bv_sub unchecked c l) r)
-    | ({ kind = Op2 ((Add (_)), r, ({ kind = BitVec (_); _ } as l)); _ }, ({ kind = BitVec (_); _ } as c)) ->
-      (sem_eq (bv_sub unchecked c l) r)
-    | (({ kind = BitVec (_); _ } as c), { kind = Op2 ((Sub (_)), l, ({ kind = BitVec (_); _ } as r)); _ }) ->
-      (sem_eq (bv_add unchecked c r) l)
-    | ({ kind = Op2 ((Sub (_)), l, ({ kind = BitVec (_); _ } as r)); _ }, ({ kind = BitVec (_); _ } as c)) ->
-      (sem_eq (bv_add unchecked c r) l)
-    | (({ kind = BitVec (_); _ } as c), { kind = Op2 ((Sub (_)), ({ kind = BitVec (_); _ } as l), r); _ }) ->
-      (sem_eq (bv_sub unchecked l c) r)
-    | ({ kind = Op2 ((Sub (_)), ({ kind = BitVec (_); _ } as l), r); _ }, ({ kind = BitVec (_); _ } as c)) ->
-      (sem_eq (bv_sub unchecked l c) r)
-    | (x, { kind = Op2 ((Add (_)), kanon__4, { kind = BitVec (bv); _ }); _ })
-      when ((Int.equal x.tag kanon__4.tag)) ->
-      (of_bool ((Z.equal bv Z.zero)))
-    | (x, { kind = Op2 ((Add (_)), { kind = BitVec (bv); _ }, kanon__4); _ })
-      when ((Int.equal x.tag kanon__4.tag)) ->
-      (of_bool ((Z.equal bv Z.zero)))
-    | ({ kind = Op2 ((Add (_)), kanon__4, { kind = BitVec (bv); _ }); _ }, x)
-      when ((Int.equal x.tag kanon__4.tag)) ->
-      (of_bool ((Z.equal bv Z.zero)))
-    | ({ kind = Op2 ((Add (_)), { kind = BitVec (bv); _ }, kanon__4); _ }, x)
-      when ((Int.equal x.tag kanon__4.tag)) ->
-      (of_bool ((Z.equal bv Z.zero)))
-    | ({ kind = Op2 ((Add (_)), ({ kind = BitVec (bv_l); _ } as l), y); _ }, { kind = Op2 ((Add (_)), ({ kind = BitVec (bv_r); _ } as r), x); _ }) ->
-      (if (Z.geq bv_l bv_r)
-      then (sem_eq x (bv_add unchecked y (bv_sub unchecked l r)))
-      else (sem_eq y (bv_add unchecked x (bv_sub unchecked r l))))
-    | ({ kind = Op2 ((Add (_)), ({ kind = BitVec (bv_l); _ } as l), y); _ }, { kind = Op2 ((Add (_)), x, ({ kind = BitVec (bv_r); _ } as r)); _ }) ->
-      (if (Z.geq bv_l bv_r)
-      then (sem_eq x (bv_add unchecked y (bv_sub unchecked l r)))
-      else (sem_eq y (bv_add unchecked x (bv_sub unchecked r l))))
-    | ({ kind = Op2 ((Add (_)), y, ({ kind = BitVec (bv_l); _ } as l)); _ }, { kind = Op2 ((Add (_)), ({ kind = BitVec (bv_r); _ } as r), x); _ }) ->
-      (if (Z.geq bv_l bv_r)
-      then (sem_eq x (bv_add unchecked y (bv_sub unchecked l r)))
-      else (sem_eq y (bv_add unchecked x (bv_sub unchecked r l))))
-    | ({ kind = Op2 ((Add (_)), y, ({ kind = BitVec (bv_l); _ } as l)); _ }, { kind = Op2 ((Add (_)), x, ({ kind = BitVec (bv_r); _ } as r)); _ }) ->
-      (if (Z.geq bv_l bv_r)
-      then (sem_eq x (bv_add unchecked y (bv_sub unchecked l r)))
-      else (sem_eq y (bv_add unchecked x (bv_sub unchecked r l))))
-    | ({ kind = BitVec (n); _ }, { kind = Op2 ((Mul (ck)), { kind = BitVec (m); _ }, x); _ })
-      when ((is_checked ck)) ->
-      (let sz = (size x) in
-      (let signed = (not ck.unsigned) in
-      (let m = (bv_to_z signed sz m) in
-      (let n = (bv_to_z signed sz n) in
-      (if ((Z.equal m Z.zero))
-      then (of_bool ((Z.equal n Z.zero)))
-      else (if ((Z.equal n Z.zero))
-           then (sem_eq x (Bv_prims.bv_zero sz))
-           else (if (Bv_prims.divisible n m)
-                then (let q = (Bv_prims.tdiv n m) in
-                     (let fits = (if signed
-                                 then (let h = (Bv_prims.z_lsl Z.one (Z.sub sz Z.one)) in
-                                      ((Z.leq (Z.neg h) q) && (Z.lt q h)))
-                                 else ((Z.leq Z.zero q) && (Z.lt q (Bv_prims.z_lsl Z.one sz)))) in
-                     (if fits
-                     then (sem_eq x (Bv_prims.mk_masked sz q))
-                     else Bv_prims.v_false)))
-                else Bv_prims.v_false)))))))
-    | ({ kind = BitVec (n); _ }, { kind = Op2 ((Mul (ck)), x, { kind = BitVec (m); _ }); _ })
-      when ((is_checked ck)) ->
-      (let sz = (size x) in
-      (let signed = (not ck.unsigned) in
-      (let m = (bv_to_z signed sz m) in
-      (let n = (bv_to_z signed sz n) in
-      (if ((Z.equal m Z.zero))
-      then (of_bool ((Z.equal n Z.zero)))
-      else (if ((Z.equal n Z.zero))
-           then (sem_eq x (Bv_prims.bv_zero sz))
-           else (if (Bv_prims.divisible n m)
-                then (let q = (Bv_prims.tdiv n m) in
-                     (let fits = (if signed
-                                 then (let h = (Bv_prims.z_lsl Z.one (Z.sub sz Z.one)) in
-                                      ((Z.leq (Z.neg h) q) && (Z.lt q h)))
-                                 else ((Z.leq Z.zero q) && (Z.lt q (Bv_prims.z_lsl Z.one sz)))) in
-                     (if fits
-                     then (sem_eq x (Bv_prims.mk_masked sz q))
-                     else Bv_prims.v_false)))
-                else Bv_prims.v_false)))))))
-    | ({ kind = Op2 ((Mul (ck)), { kind = BitVec (m); _ }, x); _ }, { kind = BitVec (n); _ })
-      when ((is_checked ck)) ->
-      (let sz = (size x) in
-      (let signed = (not ck.unsigned) in
-      (let m = (bv_to_z signed sz m) in
-      (let n = (bv_to_z signed sz n) in
-      (if ((Z.equal m Z.zero))
-      then (of_bool ((Z.equal n Z.zero)))
-      else (if ((Z.equal n Z.zero))
-           then (sem_eq x (Bv_prims.bv_zero sz))
-           else (if (Bv_prims.divisible n m)
-                then (let q = (Bv_prims.tdiv n m) in
-                     (let fits = (if signed
-                                 then (let h = (Bv_prims.z_lsl Z.one (Z.sub sz Z.one)) in
-                                      ((Z.leq (Z.neg h) q) && (Z.lt q h)))
-                                 else ((Z.leq Z.zero q) && (Z.lt q (Bv_prims.z_lsl Z.one sz)))) in
-                     (if fits
-                     then (sem_eq x (Bv_prims.mk_masked sz q))
-                     else Bv_prims.v_false)))
-                else Bv_prims.v_false)))))))
-    | ({ kind = Op2 ((Mul (ck)), x, { kind = BitVec (m); _ }); _ }, { kind = BitVec (n); _ })
-      when ((is_checked ck)) ->
-      (let sz = (size x) in
-      (let signed = (not ck.unsigned) in
-      (let m = (bv_to_z signed sz m) in
-      (let n = (bv_to_z signed sz n) in
-      (if ((Z.equal m Z.zero))
-      then (of_bool ((Z.equal n Z.zero)))
-      else (if ((Z.equal n Z.zero))
-           then (sem_eq x (Bv_prims.bv_zero sz))
-           else (if (Bv_prims.divisible n m)
-                then (let q = (Bv_prims.tdiv n m) in
-                     (let fits = (if signed
-                                 then (let h = (Bv_prims.z_lsl Z.one (Z.sub sz Z.one)) in
-                                      ((Z.leq (Z.neg h) q) && (Z.lt q h)))
-                                 else ((Z.leq Z.zero q) && (Z.lt q (Bv_prims.z_lsl Z.one sz)))) in
-                     (if fits
-                     then (sem_eq x (Bv_prims.mk_masked sz q))
-                     else Bv_prims.v_false)))
-                else Bv_prims.v_false)))))))
-    | ({ kind = Op2 ((Mul (ck1)), { kind = BitVec (a); _ }, b); _ }, { kind = Op2 ((Mul (ck2)), { kind = BitVec (a2); _ }, d); _ })
-      when ((((Z.equal a a2)) && (((Z.equal (Bv_prims.z_land a Z.one) Z.one)) || ((not (Z.equal a Z.zero)) && (is_checked (checked_meet ck1 ck2)))))) ->
-      (sem_eq b d)
-    | ({ kind = Op2 ((Mul (ck1)), { kind = BitVec (a); _ }, b); _ }, { kind = Op2 ((Mul (ck2)), d, { kind = BitVec (a2); _ }); _ })
-      when ((((Z.equal a a2)) && (((Z.equal (Bv_prims.z_land a Z.one) Z.one)) || ((not (Z.equal a Z.zero)) && (is_checked (checked_meet ck1 ck2)))))) ->
-      (sem_eq b d)
-    | ({ kind = Op2 ((Mul (ck1)), b, { kind = BitVec (a); _ }); _ }, { kind = Op2 ((Mul (ck2)), { kind = BitVec (a2); _ }, d); _ })
-      when ((((Z.equal a a2)) && (((Z.equal (Bv_prims.z_land a Z.one) Z.one)) || ((not (Z.equal a Z.zero)) && (is_checked (checked_meet ck1 ck2)))))) ->
-      (sem_eq b d)
-    | ({ kind = Op2 ((Mul (ck1)), b, { kind = BitVec (a); _ }); _ }, { kind = Op2 ((Mul (ck2)), d, { kind = BitVec (a2); _ }); _ })
-      when ((((Z.equal a a2)) && (((Z.equal (Bv_prims.z_land a Z.one) Z.one)) || ((not (Z.equal a Z.zero)) && (is_checked (checked_meet ck1 ck2)))))) ->
-      (sem_eq b d)
-    | ({ kind = BitVec (kanon__1); _ }, { kind = Op2 ((BitOr), l, r); _ })
-      when (((Z.equal kanon__1 Z.zero))) ->
-      (let z = (Bv_prims.bv_zero (size v1)) in
-      (b_and (sem_eq l z) (sem_eq r z)))
-    | ({ kind = Op2 ((BitOr), l, r); _ }, { kind = BitVec (kanon__1); _ })
-      when (((Z.equal kanon__1 Z.zero))) ->
-      (let z = (Bv_prims.bv_zero (size v1)) in
-      (b_and (sem_eq l z) (sem_eq r z)))
-    | ({ kind = BitVec (n); _ }, { kind = Op2 ((BitAnd), { kind = BitVec (mask); _ }, _); _ })
-      when ((not ((Z.equal (Bv_prims.z_land n (Bv_prims.lit_not v1.ty mask)) Z.zero)))) ->
-      Bv_prims.v_false
-    | ({ kind = BitVec (n); _ }, { kind = Op2 ((BitAnd), _, { kind = BitVec (mask); _ }); _ })
-      when ((not ((Z.equal (Bv_prims.z_land n (Bv_prims.lit_not v1.ty mask)) Z.zero)))) ->
-      Bv_prims.v_false
-    | ({ kind = Op2 ((BitAnd), { kind = BitVec (mask); _ }, _); _ }, { kind = BitVec (n); _ })
-      when ((not ((Z.equal (Bv_prims.z_land n (Bv_prims.lit_not v1.ty mask)) Z.zero)))) ->
-      Bv_prims.v_false
-    | ({ kind = Op2 ((BitAnd), _, { kind = BitVec (mask); _ }); _ }, { kind = BitVec (n); _ })
-      when ((not ((Z.equal (Bv_prims.z_land n (Bv_prims.lit_not v1.ty mask)) Z.zero)))) ->
-      Bv_prims.v_false
-    | (({ kind = BitVec (_); _ } as z), { kind = Op2 ((BvConcat), l, r); _ }) ->
-      (let size_r = (size r) in
-      (let size_l = (size l) in
-      (let z_r = (bv_extract Z.zero (Z.sub size_r Z.one) z) in
-      (let z_l = (bv_extract size_r (Z.sub (Z.add size_r size_l) Z.one) z) in
-      (b_and (sem_eq l z_l) (sem_eq r z_r))))))
-    | ({ kind = Op2 ((BvConcat), l, r); _ }, ({ kind = BitVec (_); _ } as z)) ->
-      (let size_r = (size r) in
-      (let size_l = (size l) in
-      (let z_r = (bv_extract Z.zero (Z.sub size_r Z.one) z) in
-      (let z_l = (bv_extract size_r (Z.sub (Z.add size_r size_l) Z.one) z) in
-      (b_and (sem_eq l z_l) (sem_eq r z_r))))))
-    | ({ kind = Op1 ((BvExtend (false, by)), bv); _ }, { kind = BitVec (z); _ }) ->
-      let by = Z.of_int by in
-      (let size_bv = (size bv) in
-      (let mask = (Bv_prims.z_lsl (Z.sub (Bv_prims.z_lsl Z.one by) Z.one) size_bv) in
-      (if (not ((Z.equal (Bv_prims.z_land z mask) Z.zero)))
-      then Bv_prims.v_false
-      else (let z_bv = (Bv_prims.mk_bv size_bv z) in
-           (sem_eq bv z_bv)))))
-    | ({ kind = BitVec (z); _ }, { kind = Op1 ((BvExtend (false, by)), bv); _ }) ->
-      let by = Z.of_int by in
-      (let size_bv = (size bv) in
-      (let mask = (Bv_prims.z_lsl (Z.sub (Bv_prims.z_lsl Z.one by) Z.one) size_bv) in
-      (if (not ((Z.equal (Bv_prims.z_land z mask) Z.zero)))
-      then Bv_prims.v_false
-      else (let z_bv = (Bv_prims.mk_bv size_bv z) in
-           (sem_eq bv z_bv)))))
-    | ({ kind = Op3 ((Ite), b, ({ kind = BitVec (_); _ } as t), ({ kind = BitVec (_); _ } as e)); _ }, { kind = Op2 ((BvConcat), l, r); _ }) ->
-      (let size_r = (size r) in
-      (let size_l = (size l) in
-      (let t_r = (bv_extract Z.zero (Z.sub size_r Z.one) t) in
-      (let t_l = (bv_extract size_r (Z.sub (Z.add size_r size_l) Z.one) t) in
-      (let e_r = (bv_extract Z.zero (Z.sub size_r Z.one) e) in
-      (let e_l = (bv_extract size_r (Z.sub (Z.add size_r size_l) Z.one) e) in
-      (b_and (sem_eq (b_ite b t_l e_l) l) (sem_eq (b_ite b t_r e_r) r))))))))
-    | ({ kind = Op2 ((BvConcat), l, r); _ }, { kind = Op3 ((Ite), b, ({ kind = BitVec (_); _ } as t), ({ kind = BitVec (_); _ } as e)); _ }) ->
-      (let size_r = (size r) in
-      (let size_l = (size l) in
-      (let t_r = (bv_extract Z.zero (Z.sub size_r Z.one) t) in
-      (let t_l = (bv_extract size_r (Z.sub (Z.add size_r size_l) Z.one) t) in
-      (let e_r = (bv_extract Z.zero (Z.sub size_r Z.one) e) in
-      (let e_l = (bv_extract size_r (Z.sub (Z.add size_r size_l) Z.one) e) in
-      (b_and (sem_eq (b_ite b t_l e_l) l) (sem_eq (b_ite b t_r e_r) r))))))))
-    | ({ kind = Op2 ((BvConcat), l1, r1); _ }, { kind = Op2 ((BvConcat), l2, r2); _ })
-      when (((Z.equal (size l1) (size l2)))) ->
-      (b_and (sem_eq l1 l2) (sem_eq r1 r2))
-    | ({ kind = Op3 ((Ite), b, l, t); _ }, ({ kind = BitVec (_); _ } as c)) ->
-      (b_ite b (sem_eq l c) (sem_eq t c))
-    | ({ kind = Op3 ((Ite), b, l, t); _ }, ({ kind = LocLit (_); _ } as c)) ->
-      (b_ite b (sem_eq l c) (sem_eq t c))
-    | (({ kind = BitVec (_); _ } as c), { kind = Op3 ((Ite), b, l, t); _ }) ->
-      (b_ite b (sem_eq l c) (sem_eq t c))
-    | (({ kind = LocLit (_); _ } as c), { kind = Op3 ((Ite), b, l, t); _ }) ->
-      (b_ite b (sem_eq l c) (sem_eq t c))
-    | ({ kind = Op1 ((BvOfBool (_)), b); _ }, { kind = Op1 ((BvOfBool (_)), c); _ }) ->
-      (sem_eq b c)
-    | ({ kind = Op1 ((BvOfBool (_)), b); _ }, { kind = BitVec (z); _ }) ->
-      (if ((Z.equal z Z.one))
-      then b
-      else (if ((Z.equal z Z.zero)) then (b_not b) else Bv_prims.v_false))
-    | ({ kind = BitVec (z); _ }, { kind = Op1 ((BvOfBool (_)), b); _ }) ->
-      (if ((Z.equal z Z.one))
-      then b
-      else (if ((Z.equal z Z.zero)) then (b_not b) else Bv_prims.v_false))
-    | _
-      when (((is_bv v1.ty) && ((is_bv v2.ty) && (let msb = (zmax (msb_of v1) (msb_of v2)) in
-                                                ((Z.leq Z.zero msb) && (Z.lt msb (Z.sub (size v1) Z.one))))))) ->
-      (let msb = (zmax (msb_of v1) (msb_of v2)) in
-      (let v1_ = (bv_extract Z.zero msb v1) in
-      (let v2_ = (bv_extract Z.zero msb v2) in
-      (sem_eq v1_ v2_))))
-    | ({ kind = Float (f1); _ }, { kind = Float (f2); _ }) ->
-      (of_bool (Bv_prims.f_bits_equal f1 f2))
-    | ({ kind = Op2 ((Ptr), l1, o1); _ }, { kind = Op2 ((Ptr), l2, o2); _ }) ->
-      (b_and (sem_eq l1 l2) (sem_eq o1 o2))
-    | _ -> (node (mk_commut_binop Eq v1 v2) TBool)
-    ))
-
-and bv_add (checked : checked) (v1 : t) (v2 : t) : t =
-    (assert ((match v1.ty, v2.ty with
-             | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
-               when (let kanon__n = Z.of_int kanon__n in
-               let kanon__s1 = Z.of_int kanon__s1 in
-               ((Z.equal kanon__s1 kanon__n))) ->
-               true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v1, v2 with
-    | (({ kind = BitVec (i1); _ } as lit_i1), ({ kind = BitVec (i2); _ } as lit_i2)) ->
-      (node (BitVec ((Bv_prims.lit_add lit_i1.ty lit_i2.ty i1 i2))) v1.ty)
-    | (x, { kind = Op1 ((Neg (_)), y); _ }) -> (bv_sub unchecked x y)
-    | ({ kind = Op1 ((Neg (_)), y); _ }, x) -> (bv_sub unchecked x y)
-    | (x, { kind = BitVec (kanon__2); _ })
-      when (((Z.equal kanon__2 Z.zero))) ->
-      x
-    | ({ kind = BitVec (kanon__2); _ }, x)
-      when (((Z.equal kanon__2 Z.zero))) ->
-      x
-    | ({ kind = Op1 ((BvNot), x); _ }, { kind = BitVec (kanon__4); _ })
-      when (((Z.equal kanon__4 Z.one))) ->
-      (bv_neg false x)
-    | ({ kind = BitVec (kanon__4); _ }, { kind = Op1 ((BvNot), x); _ })
-      when (((Z.equal kanon__4 Z.one))) ->
-      (bv_neg false x)
-    | ({ kind = Op2 ((Add (c)), { kind = BitVec (k1); _ }, r); _ }, { kind = BitVec (k2); _ }) ->
-      (let n = (size v1) in
-      (let sty = v1.ty in
-      (let checked = (fold_checked (checked_meet checked c) n k1 k2 true) in
-      (bv_add checked (Bv_prims.mk_bv n (Bv_prims.lit_add sty sty k1 k2)) r))))
-    | ({ kind = Op2 ((Add (c)), r, { kind = BitVec (k1); _ }); _ }, { kind = BitVec (k2); _ }) ->
-      (let n = (size v1) in
-      (let sty = v1.ty in
-      (let checked = (fold_checked (checked_meet checked c) n k1 k2 true) in
-      (bv_add checked (Bv_prims.mk_bv n (Bv_prims.lit_add sty sty k1 k2)) r))))
-    | ({ kind = BitVec (k2); _ }, { kind = Op2 ((Add (c)), { kind = BitVec (k1); _ }, r); _ }) ->
-      (let n = (size v1) in
-      (let sty = v1.ty in
-      (let checked = (fold_checked (checked_meet checked c) n k1 k2 true) in
-      (bv_add checked (Bv_prims.mk_bv n (Bv_prims.lit_add sty sty k1 k2)) r))))
-    | ({ kind = BitVec (k2); _ }, { kind = Op2 ((Add (c)), r, { kind = BitVec (k1); _ }); _ }) ->
-      (let n = (size v1) in
-      (let sty = v1.ty in
-      (let checked = (fold_checked (checked_meet checked c) n k1 k2 true) in
-      (bv_add checked (Bv_prims.mk_bv n (Bv_prims.lit_add sty sty k1 k2)) r))))
-    | ({ kind = Op2 ((Sub (c)), l, { kind = BitVec (k1); _ }); _ }, { kind = BitVec (k2); _ }) ->
-      (let n = (size v1) in
-      (let sty = v1.ty in
-      (let checked = (fold_checked (checked_meet checked c) n k2 k1 false) in
-      (bv_add checked l (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty k2 k1))))))
-    | ({ kind = BitVec (k2); _ }, { kind = Op2 ((Sub (c)), l, { kind = BitVec (k1); _ }); _ }) ->
-      (let n = (size v1) in
-      (let sty = v1.ty in
-      (let checked = (fold_checked (checked_meet checked c) n k2 k1 false) in
-      (bv_add checked l (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty k2 k1))))))
-    | ({ kind = Op2 ((Sub (c)), { kind = BitVec (k1); _ }, r); _ }, { kind = BitVec (k2); _ }) ->
-      (let n = (size v1) in
-      (let sty = v1.ty in
-      (let checked = (fold_checked (checked_meet checked c) n k1 k2 true) in
-      (bv_sub checked (Bv_prims.mk_bv n (Bv_prims.lit_add sty sty k1 k2)) r))))
-    | ({ kind = BitVec (k2); _ }, { kind = Op2 ((Sub (c)), { kind = BitVec (k1); _ }, r); _ }) ->
-      (let n = (size v1) in
-      (let sty = v1.ty in
-      (let checked = (fold_checked (checked_meet checked c) n k1 k2 true) in
-      (bv_sub checked (Bv_prims.mk_bv n (Bv_prims.lit_add sty sty k1 k2)) r))))
-    | (r, { kind = Op2 ((Sub (_)), l, kanon__5); _ })
-      when ((Int.equal r.tag kanon__5.tag)) ->
-      l
-    | ({ kind = Op2 ((Sub (_)), l, kanon__5); _ }, r)
-      when ((Int.equal r.tag kanon__5.tag)) ->
-      l
-    | ({ kind = Op2 ((Add (_)), a, b); _ }, { kind = Op2 ((Sub (_)), c, kanon__10); _ })
-      when ((Int.equal a.tag kanon__10.tag)) ->
-      (bv_add unchecked b c)
-    | ({ kind = Op2 ((Add (_)), b, a); _ }, { kind = Op2 ((Sub (_)), c, kanon__10); _ })
-      when ((Int.equal a.tag kanon__10.tag)) ->
-      (bv_add unchecked b c)
-    | ({ kind = Op2 ((Sub (_)), c, kanon__10); _ }, { kind = Op2 ((Add (_)), a, b); _ })
-      when ((Int.equal a.tag kanon__10.tag)) ->
-      (bv_add unchecked b c)
-    | ({ kind = Op2 ((Sub (_)), c, kanon__10); _ }, { kind = Op2 ((Add (_)), b, a); _ })
-      when ((Int.equal a.tag kanon__10.tag)) ->
-      (bv_add unchecked b c)
-    | ({ kind = Op2 ((Mul (ck1)), a, b); _ }, { kind = Op2 ((Mul (ck2)), kanon__9, c); _ })
-      when ((Int.equal a.tag kanon__9.tag)) ->
-      (if (checked_meet (checked_meet checked ck1) ck2).unsigned
-      then (bv_mul checked_unsigned a (bv_add unchecked b c))
-      else (bv_mul unchecked a (bv_add unchecked b c)))
-    | ({ kind = Op2 ((Mul (ck1)), a, b); _ }, { kind = Op2 ((Mul (ck2)), c, kanon__9); _ })
-      when ((Int.equal a.tag kanon__9.tag)) ->
-      (if (checked_meet (checked_meet checked ck1) ck2).unsigned
-      then (bv_mul checked_unsigned a (bv_add unchecked b c))
-      else (bv_mul unchecked a (bv_add unchecked b c)))
-    | ({ kind = Op2 ((Mul (ck1)), b, a); _ }, { kind = Op2 ((Mul (ck2)), kanon__9, c); _ })
-      when ((Int.equal a.tag kanon__9.tag)) ->
-      (if (checked_meet (checked_meet checked ck1) ck2).unsigned
-      then (bv_mul checked_unsigned a (bv_add unchecked b c))
-      else (bv_mul unchecked a (bv_add unchecked b c)))
-    | ({ kind = Op2 ((Mul (ck1)), b, a); _ }, { kind = Op2 ((Mul (ck2)), c, kanon__9); _ })
-      when ((Int.equal a.tag kanon__9.tag)) ->
-      (if (checked_meet (checked_meet checked ck1) ck2).unsigned
-      then (bv_mul checked_unsigned a (bv_add unchecked b c))
-      else (bv_mul unchecked a (bv_add unchecked b c)))
-    | ({ kind = Op2 ((Mul (ck1)), ({ kind = BitVec (k1); _ } as v_k1), r1); _ }, { kind = Op2 ((Mul (ck2)), ({ kind = BitVec (k2); _ } as v_k2), r2); _ })
-      when (((checked_meet (checked_meet checked ck1) ck2).unsigned && (((not (Z.equal k1 Z.zero)) || (not (Z.equal k2 Z.zero))) && ((udivides k1 k2) || (udivides k2 k1))))) ->
-      (let checked = checked_unsigned in
-      (let n = (size v1) in
-      (let sty = v1.ty in
-      (if (udivides k1 k2)
-      then (let common = (Bv_prims.mk_bv n (Bv_prims.lit_udiv sty sty k2 k1)) in
-           (bv_mul checked v_k1 (bv_add checked r1 (bv_mul checked common r2))))
-      else (let common = (Bv_prims.mk_bv n (Bv_prims.lit_udiv sty sty k1 k2)) in
-           (bv_mul checked v_k2 (bv_add checked r2 (bv_mul checked common r1))))))))
-    | ({ kind = Op2 ((Mul (ck1)), ({ kind = BitVec (k1); _ } as v_k1), r1); _ }, { kind = Op2 ((Mul (ck2)), r2, ({ kind = BitVec (k2); _ } as v_k2)); _ })
-      when (((checked_meet (checked_meet checked ck1) ck2).unsigned && (((not (Z.equal k1 Z.zero)) || (not (Z.equal k2 Z.zero))) && ((udivides k1 k2) || (udivides k2 k1))))) ->
-      (let checked = checked_unsigned in
-      (let n = (size v1) in
-      (let sty = v1.ty in
-      (if (udivides k1 k2)
-      then (let common = (Bv_prims.mk_bv n (Bv_prims.lit_udiv sty sty k2 k1)) in
-           (bv_mul checked v_k1 (bv_add checked r1 (bv_mul checked common r2))))
-      else (let common = (Bv_prims.mk_bv n (Bv_prims.lit_udiv sty sty k1 k2)) in
-           (bv_mul checked v_k2 (bv_add checked r2 (bv_mul checked common r1))))))))
-    | ({ kind = Op2 ((Mul (ck1)), r1, ({ kind = BitVec (k1); _ } as v_k1)); _ }, { kind = Op2 ((Mul (ck2)), ({ kind = BitVec (k2); _ } as v_k2), r2); _ })
-      when (((checked_meet (checked_meet checked ck1) ck2).unsigned && (((not (Z.equal k1 Z.zero)) || (not (Z.equal k2 Z.zero))) && ((udivides k1 k2) || (udivides k2 k1))))) ->
-      (let checked = checked_unsigned in
-      (let n = (size v1) in
-      (let sty = v1.ty in
-      (if (udivides k1 k2)
-      then (let common = (Bv_prims.mk_bv n (Bv_prims.lit_udiv sty sty k2 k1)) in
-           (bv_mul checked v_k1 (bv_add checked r1 (bv_mul checked common r2))))
-      else (let common = (Bv_prims.mk_bv n (Bv_prims.lit_udiv sty sty k1 k2)) in
-           (bv_mul checked v_k2 (bv_add checked r2 (bv_mul checked common r1))))))))
-    | ({ kind = Op2 ((Mul (ck1)), r1, ({ kind = BitVec (k1); _ } as v_k1)); _ }, { kind = Op2 ((Mul (ck2)), r2, ({ kind = BitVec (k2); _ } as v_k2)); _ })
-      when (((checked_meet (checked_meet checked ck1) ck2).unsigned && (((not (Z.equal k1 Z.zero)) || (not (Z.equal k2 Z.zero))) && ((udivides k1 k2) || (udivides k2 k1))))) ->
-      (let checked = checked_unsigned in
-      (let n = (size v1) in
-      (let sty = v1.ty in
-      (if (udivides k1 k2)
-      then (let common = (Bv_prims.mk_bv n (Bv_prims.lit_udiv sty sty k2 k1)) in
-           (bv_mul checked v_k1 (bv_add checked r1 (bv_mul checked common r2))))
-      else (let common = (Bv_prims.mk_bv n (Bv_prims.lit_udiv sty sty k1 k2)) in
-           (bv_mul checked v_k2 (bv_add checked r2 (bv_mul checked common r1))))))))
-    | ({ kind = Op3 ((Ite), b, l, r); _ }, ({ kind = BitVec (_); _ } as x)) ->
-      (b_ite b (bv_add checked l x) (bv_add checked r x))
-    | (({ kind = BitVec (_); _ } as x), { kind = Op3 ((Ite), b, l, r); _ }) ->
-      (b_ite b (bv_add checked l x) (bv_add checked r x))
-    | _ ->
-      (node (mk_commut_binop (Add ((no_wrap checked v1 v2))) v1 v2) v1.ty)
-    ))
-
-and bv_sub (checked : checked) (v1 : t) (v2 : t) : t =
-    (assert ((match v1.ty, v2.ty with
-             | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
-               when (let kanon__n = Z.of_int kanon__n in
-               let kanon__s1 = Z.of_int kanon__s1 in
-               ((Z.equal kanon__s1 kanon__n))) ->
-               true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v1, v2 with
-    | (({ kind = BitVec (i1); _ } as lit_i1), ({ kind = BitVec (i2); _ } as lit_i2)) ->
-      (node (BitVec ((Bv_prims.lit_sub lit_i1.ty lit_i2.ty i1 i2))) v1.ty)
-    | (_, { kind = BitVec (kanon__2); _ })
-      when (((Z.equal kanon__2 Z.zero))) ->
-      v1
-    | ({ kind = BitVec (kanon__1); _ }, _)
-      when (((Z.equal kanon__1 Z.zero))) ->
-      (bv_neg checked.signed v2)
-    | (v, kanon__2)
-      when ((Int.equal v.tag kanon__2.tag)) ->
-      (Bv_prims.bv_zero (size v1))
-    | (_, { kind = Op1 ((Neg (_)), v2); _ }) -> (bv_add unchecked v1 v2)
-    | ({ kind = Op2 ((Sub (c)), { kind = BitVec (k1); _ }, s); _ }, { kind = BitVec (k2); _ }) ->
-      (let n = (size v1) in
-      (let sty = v1.ty in
-      (let checked = (fold_checked (checked_meet c checked) n k1 k2 false) in
-      (bv_sub checked (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty k1 k2)) s))))
-    | ({ kind = Op2 ((Sub (c)), s, { kind = BitVec (k1); _ }); _ }, { kind = BitVec (k2); _ }) ->
-      (let n = (size v1) in
-      (let sty = v1.ty in
-      (let checked = (fold_checked (checked_meet c checked) n k1 k2 true) in
-      (bv_sub checked s (Bv_prims.mk_bv n (Bv_prims.lit_add sty sty k1 k2))))))
-    | ({ kind = BitVec (k1); _ }, { kind = Op2 ((Add (c)), { kind = BitVec (k2); _ }, l); _ }) ->
-      (let n = (size v1) in
-      (let sty = v1.ty in
-      (let checked = (fold_checked (checked_meet c checked) n k1 k2 false) in
-      (bv_sub checked (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty k1 k2)) l))))
-    | ({ kind = BitVec (k1); _ }, { kind = Op2 ((Add (c)), l, { kind = BitVec (k2); _ }); _ }) ->
-      (let n = (size v1) in
-      (let sty = v1.ty in
-      (let checked = (fold_checked (checked_meet c checked) n k1 k2 false) in
-      (bv_sub checked (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty k1 k2)) l))))
-    | ({ kind = Op2 ((Add (c)), { kind = BitVec (k1); _ }, l); _ }, { kind = BitVec (k2); _ }) ->
-      (let n = (size v1) in
-      (let sty = v1.ty in
-      (if (Z.lt k1 k2)
-      then (let checked = (fold_checked (checked_meet c checked) n k2 k1 false) in
-           (bv_sub checked l (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty k2 k1))))
-      else (let checked = (fold_checked (checked_meet c checked) n k1 k2 false) in
-           (bv_add checked l (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty k1 k2)))))))
-    | ({ kind = Op2 ((Add (c)), l, { kind = BitVec (k1); _ }); _ }, { kind = BitVec (k2); _ }) ->
-      (let n = (size v1) in
-      (let sty = v1.ty in
-      (if (Z.lt k1 k2)
-      then (let checked = (fold_checked (checked_meet c checked) n k2 k1 false) in
-           (bv_sub checked l (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty k2 k1))))
-      else (let checked = (fold_checked (checked_meet c checked) n k1 k2 false) in
-           (bv_add checked l (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty k1 k2)))))))
-    | ({ kind = Op2 ((Add (_)), l, r); _ }, kanon__7)
-      when ((Int.equal l.tag kanon__7.tag)) ->
-      r
-    | ({ kind = Op2 ((Add (_)), r, l); _ }, kanon__7)
-      when ((Int.equal l.tag kanon__7.tag)) ->
-      r
-    | ({ kind = Op2 ((Add (_)), l, r); _ }, kanon__7)
-      when ((Int.equal r.tag kanon__7.tag)) ->
-      l
-    | ({ kind = Op2 ((Add (_)), r, l); _ }, kanon__7)
-      when ((Int.equal r.tag kanon__7.tag)) ->
-      l
-    | ({ kind = Op2 ((Add (_)), l, r1); _ }, { kind = Op2 ((Add (_)), kanon__9, r2); _ })
-      when ((Int.equal l.tag kanon__9.tag)) ->
-      (bv_sub unchecked r1 r2)
-    | ({ kind = Op2 ((Add (_)), l, r1); _ }, { kind = Op2 ((Add (_)), r2, kanon__9); _ })
-      when ((Int.equal l.tag kanon__9.tag)) ->
-      (bv_sub unchecked r1 r2)
-    | ({ kind = Op2 ((Add (_)), r1, l); _ }, { kind = Op2 ((Add (_)), kanon__9, r2); _ })
-      when ((Int.equal l.tag kanon__9.tag)) ->
-      (bv_sub unchecked r1 r2)
-    | ({ kind = Op2 ((Add (_)), r1, l); _ }, { kind = Op2 ((Add (_)), r2, kanon__9); _ })
-      when ((Int.equal l.tag kanon__9.tag)) ->
-      (bv_sub unchecked r1 r2)
-    | (l, { kind = Op2 ((Sub (_)), kanon__4, r); _ })
-      when ((Int.equal l.tag kanon__4.tag)) ->
-      r
-    | ({ kind = Op3 ((Ite), b, l, r); _ }, { kind = Op3 ((Ite), kanon__7, l2, r2); _ })
-      when ((Int.equal b.tag kanon__7.tag)) ->
-      (b_ite b (bv_sub unchecked l l2) (bv_sub unchecked r r2))
-    | ({ kind = Op3 ((Ite), b, l, r); _ }, { kind = BitVec (_); _ }) ->
-      (b_ite b (bv_sub unchecked l v2) (bv_sub unchecked r v2))
-    | ({ kind = BitVec (_); _ }, { kind = Op3 ((Ite), b, l, r); _ }) ->
-      (b_ite b (bv_sub unchecked v1 l) (bv_sub unchecked v1 r))
-    | ({ kind = Op1 ((BvOfBool (n)), b); _ }, { kind = BitVec (_); _ }) ->
-      let n = Z.of_int n in
-      (b_ite b (bv_sub unchecked (Bv_prims.bv_one n) v2) (bv_neg false v2))
-    | ({ kind = BitVec (_); _ }, { kind = Op1 ((BvOfBool (n)), b); _ }) ->
-      let n = Z.of_int n in
-      (b_ite b (bv_sub unchecked v1 (Bv_prims.bv_one n)) v1)
-    | _ -> (node (Op2 ((Sub (checked)), v1, v2)) v1.ty)
-    ))
-
-and bv_neg (checked : bool) (v : t) : t =
-    (assert ((match v.ty with
-             | (TBitVector (kanon__n)) -> true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v with
-    | ({ kind = BitVec (i); _ } as lit_i) ->
-      (node (BitVec ((Bv_prims.lit_neg lit_i.ty i))) v.ty)
-    | { kind = Op1 ((Neg (_)), x); _ } -> x
-    | { kind = Op3 ((Ite), b, l, r); _ } ->
-      (b_ite b (bv_neg checked l) (bv_neg checked r))
-    | { kind = Op1 ((BvOfBool (n)), b); _ } ->
-      let n = Z.of_int n in
-      (b_ite b (bv_neg false (Bv_prims.bv_one n)) (Bv_prims.bv_zero n))
-    | _ -> (node (Op1 ((Neg (checked)), v)) v.ty)
-    ))
-
-and bv_rem (signed : bool) (v1 : t) (v2 : t) : t =
-    (assert ((match v1.ty, v2.ty with
-             | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
-               when (let kanon__n = Z.of_int kanon__n in
-               let kanon__s1 = Z.of_int kanon__s1 in
-               ((Z.equal kanon__s1 kanon__n))) ->
-               true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v1, v2 with
-    | ({ kind = BitVec (l); _ }, { kind = BitVec (r); _ }) ->
-      (Bv_prims.mk_bv (size v1) (if signed
-                                then (Bv_prims.lit_srem v1.ty v2.ty l r)
-                                else (Bv_prims.lit_urem v1.ty v2.ty l r)))
-    | (_, { kind = BitVec (kanon__2); _ })
-      when (((Z.equal kanon__2 Z.zero))) ->
-      v1
-    | ({ kind = BitVec (kanon__1); _ }, _)
-      when (((Z.equal kanon__1 Z.zero))) ->
-      (Bv_prims.bv_zero (size v1))
-    | (_, { kind = BitVec (kanon__2); _ })
-      when ((((Z.equal kanon__2 Z.one)) && (not signed))) ->
-      (Bv_prims.bv_zero (size v1))
-    | (_, { kind = BitVec (r); _ })
-      when (((not signed) && ((is_pow2 r) && (Z.gt r Z.one)))) ->
-      (let sz = (size v1) in
-      (let bitwidth = (Bv_prims.log2 r) in
-      (let lower = (bv_extract Z.zero (Z.sub bitwidth Z.one) v1) in
-      (bv_extend false (Z.sub sz bitwidth) lower))))
-    | ({ kind = Op2 ((Add (ck)), { kind = BitVec (d); _ }, r); _ }, { kind = BitVec (d2); _ })
-      when (((not signed) && (ck.unsigned && ((Z.equal d d2))))) ->
-      (bv_rem signed r v2)
-    | ({ kind = Op2 ((Add (ck)), r, { kind = BitVec (d); _ }); _ }, { kind = BitVec (d2); _ })
-      when (((not signed) && (ck.unsigned && ((Z.equal d d2))))) ->
-      (bv_rem signed r v2)
-    | ({ kind = Op2 ((Rem (false)), r, ({ kind = BitVec (r1); _ } as v_r1)); _ }, { kind = BitVec (r2); _ })
-      when (((not signed) && ((Z.gt r1 Z.zero) && ((Z.gt r2 Z.zero) && ((udivides r2 r1) || (udivides r1 r2)))))) ->
-      (let rhs = (if (Z.leq r1 r2) then v_r1 else v2) in
-      (bv_rem signed r rhs))
-    | _ -> (node (Op2 ((Rem (signed)), v1, v2)) v1.ty)
-    ))
-
-and bv_not (v : t) : t =
-    (assert ((match v.ty with
-             | (TBitVector (kanon__n)) -> true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v with
-    | ({ kind = BitVec (i); _ } as lit_i) ->
-      (node (BitVec ((Bv_prims.lit_not lit_i.ty i))) v.ty)
-    | { kind = Op3 ((Ite), b, l, r); _ } -> (b_ite b (bv_not l) (bv_not r))
-    | _ -> (node (Op1 (BvNot, v)) v.ty)
-    ))
-
-and bv_and (v1 : t) (v2 : t) : t =
-    (assert ((match v1.ty, v2.ty with
-             | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
-               when (let kanon__n = Z.of_int kanon__n in
-               let kanon__s1 = Z.of_int kanon__s1 in
-               ((Z.equal kanon__s1 kanon__n))) ->
-               true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v1, v2 with
-    | (({ kind = BitVec (i1); _ } as lit_i1), ({ kind = BitVec (i2); _ } as lit_i2)) ->
-      (node (BitVec ((Bv_prims.lit_and lit_i1.ty lit_i2.ty i1 i2))) v1.ty)
-    | (_, { kind = BitVec (kanon__2); _ })
-      when (((Z.equal kanon__2 Z.zero))) ->
-      (Bv_prims.bv_zero (size v1))
-    | ({ kind = BitVec (kanon__2); _ }, _)
-      when (((Z.equal kanon__2 Z.zero))) ->
-      (Bv_prims.bv_zero (size v1))
-    | ({ kind = BitVec (mask); _ }, x) when ((is_ones (size v1) mask)) -> x
-    | (x, { kind = BitVec (mask); _ }) when ((is_ones (size v1) mask)) -> x
-    | (({ kind = Op2 ((LShr), _, { kind = BitVec (shift); _ }); _ } as base), { kind = BitVec (mask); _ })
-      when (((Z.lt shift (size v1)) && (bits_in (Bv_prims.lit_lshr v1.ty v1.ty (ones (size v1)) shift) mask))) ->
-      base
-    | ({ kind = BitVec (mask); _ }, ({ kind = Op2 ((LShr), _, { kind = BitVec (shift); _ }); _ } as base))
-      when (((Z.lt shift (size v1)) && (bits_in (Bv_prims.lit_lshr v1.ty v1.ty (ones (size v1)) shift) mask))) ->
-      base
-    | (({ kind = BitVec (_); _ } as k), { kind = Op3 ((Ite), b, l, r); _ }) ->
-      (b_ite b (bv_and k l) (bv_and k r))
-    | ({ kind = Op3 ((Ite), b, l, r); _ }, ({ kind = BitVec (_); _ } as k)) ->
-      (b_ite b (bv_and k l) (bv_and k r))
-    | ({ kind = BitVec (m1); _ }, { kind = Op2 ((BitAnd), x, { kind = BitVec (m2); _ }); _ }) ->
-      (bv_and x (Bv_prims.mk_bv (size v1) (Bv_prims.lit_and v1.ty v1.ty m1 m2)))
-    | ({ kind = BitVec (m1); _ }, { kind = Op2 ((BitAnd), { kind = BitVec (m2); _ }, x); _ }) ->
-      (bv_and x (Bv_prims.mk_bv (size v1) (Bv_prims.lit_and v1.ty v1.ty m1 m2)))
-    | ({ kind = Op2 ((BitAnd), x, { kind = BitVec (m2); _ }); _ }, { kind = BitVec (m1); _ }) ->
-      (bv_and x (Bv_prims.mk_bv (size v1) (Bv_prims.lit_and v1.ty v1.ty m1 m2)))
-    | ({ kind = Op2 ((BitAnd), { kind = BitVec (m2); _ }, x); _ }, { kind = BitVec (m1); _ }) ->
-      (bv_and x (Bv_prims.mk_bv (size v1) (Bv_prims.lit_and v1.ty v1.ty m1 m2)))
-    | (({ kind = BitVec (_); _ } as m), { kind = Op2 ((BitOr), ({ kind = BitVec (_); _ } as n), { kind = Op2 ((BitAnd), ({ kind = BitVec (_); _ } as p), x); _ }); _ }) ->
-      (bv_or (bv_and m n) (bv_and x (bv_and m p)))
-    | (({ kind = BitVec (_); _ } as m), { kind = Op2 ((BitOr), ({ kind = BitVec (_); _ } as n), { kind = Op2 ((BitAnd), x, ({ kind = BitVec (_); _ } as p)); _ }); _ }) ->
-      (bv_or (bv_and m n) (bv_and x (bv_and m p)))
-    | (({ kind = BitVec (_); _ } as m), { kind = Op2 ((BitOr), { kind = Op2 ((BitAnd), ({ kind = BitVec (_); _ } as p), x); _ }, ({ kind = BitVec (_); _ } as n)); _ }) ->
-      (bv_or (bv_and m n) (bv_and x (bv_and m p)))
-    | (({ kind = BitVec (_); _ } as m), { kind = Op2 ((BitOr), { kind = Op2 ((BitAnd), x, ({ kind = BitVec (_); _ } as p)); _ }, ({ kind = BitVec (_); _ } as n)); _ }) ->
-      (bv_or (bv_and m n) (bv_and x (bv_and m p)))
-    | ({ kind = Op2 ((BitOr), ({ kind = BitVec (_); _ } as n), { kind = Op2 ((BitAnd), ({ kind = BitVec (_); _ } as p), x); _ }); _ }, ({ kind = BitVec (_); _ } as m)) ->
-      (bv_or (bv_and m n) (bv_and x (bv_and m p)))
-    | ({ kind = Op2 ((BitOr), ({ kind = BitVec (_); _ } as n), { kind = Op2 ((BitAnd), x, ({ kind = BitVec (_); _ } as p)); _ }); _ }, ({ kind = BitVec (_); _ } as m)) ->
-      (bv_or (bv_and m n) (bv_and x (bv_and m p)))
-    | ({ kind = Op2 ((BitOr), { kind = Op2 ((BitAnd), ({ kind = BitVec (_); _ } as p), x); _ }, ({ kind = BitVec (_); _ } as n)); _ }, ({ kind = BitVec (_); _ } as m)) ->
-      (bv_or (bv_and m n) (bv_and x (bv_and m p)))
-    | ({ kind = Op2 ((BitOr), { kind = Op2 ((BitAnd), x, ({ kind = BitVec (_); _ } as p)); _ }, ({ kind = BitVec (_); _ } as n)); _ }, ({ kind = BitVec (_); _ } as m)) ->
-      (bv_or (bv_and m n) (bv_and x (bv_and m p)))
-    | (({ kind = BitVec (m_and); _ } as v_m_and), { kind = Op2 ((BitOr), _, { kind = BitVec (m_or); _ }); _ })
-      when ((bits_in m_and m_or)) ->
-      v_m_and
-    | (({ kind = BitVec (m_and); _ } as v_m_and), { kind = Op2 ((BitOr), { kind = BitVec (m_or); _ }, _); _ })
-      when ((bits_in m_and m_or)) ->
-      v_m_and
-    | ({ kind = Op2 ((BitOr), _, { kind = BitVec (m_or); _ }); _ }, ({ kind = BitVec (m_and); _ } as v_m_and))
-      when ((bits_in m_and m_or)) ->
-      v_m_and
-    | ({ kind = Op2 ((BitOr), { kind = BitVec (m_or); _ }, _); _ }, ({ kind = BitVec (m_and); _ } as v_m_and))
-      when ((bits_in m_and m_or)) ->
-      v_m_and
-    | (({ kind = BitVec (m_and); _ } as v_m_and), { kind = Op2 ((BitOr), x, { kind = BitVec (m_or); _ }); _ })
-      when ((disjoint m_and m_or)) ->
-      (bv_and x v_m_and)
-    | (({ kind = BitVec (m_and); _ } as v_m_and), { kind = Op2 ((BitOr), { kind = BitVec (m_or); _ }, x); _ })
-      when ((disjoint m_and m_or)) ->
-      (bv_and x v_m_and)
-    | ({ kind = Op2 ((BitOr), x, { kind = BitVec (m_or); _ }); _ }, ({ kind = BitVec (m_and); _ } as v_m_and))
-      when ((disjoint m_and m_or)) ->
-      (bv_and x v_m_and)
-    | ({ kind = Op2 ((BitOr), { kind = BitVec (m_or); _ }, x); _ }, ({ kind = BitVec (m_and); _ } as v_m_and))
-      when ((disjoint m_and m_or)) ->
-      (bv_and x v_m_and)
-    | (({ kind = BitVec (mask); _ } as v_mask), { kind = Op2 ((BitAnd), l, r); _ })
-      when ((is_right_mask mask)) ->
-      (bv_and (bv_and v_mask l) (bv_and v_mask r))
-    | ({ kind = Op2 ((BitAnd), l, r); _ }, ({ kind = BitVec (mask); _ } as v_mask))
-      when ((is_right_mask mask)) ->
-      (bv_and (bv_and v_mask l) (bv_and v_mask r))
-    | ({ kind = BitVec (kanon__1); _ }, ({ kind = Op1 ((BvOfBool (_)), _); _ } as b))
-      when (((Z.equal kanon__1 Z.one))) ->
-      b
-    | (({ kind = Op1 ((BvOfBool (_)), _); _ } as b), { kind = BitVec (kanon__1); _ })
-      when (((Z.equal kanon__1 Z.one))) ->
-      b
-    | ({ kind = Op1 ((BvOfBool (_)), b1); _ }, { kind = Op1 ((BvOfBool (_)), b2); _ }) ->
-      (bv_of_bool (size v1) (b_and b1 b2))
-    | ({ kind = Op3 ((Ite), b1, l1, { kind = BitVec (kanon__4); _ }); _ }, { kind = Op3 ((Ite), b2, l2, { kind = BitVec (kanon__10); _ }); _ })
-      when ((((Z.equal kanon__4 Z.zero)) && ((Z.equal kanon__10 Z.zero)))) ->
-      (b_ite (b_and b1 b2) (bv_and l1 l2) (Bv_prims.bv_zero (size v1)))
-    | _ -> (node (mk_commut_binop BitAnd v1 v2) v1.ty)
-    ))
-
-and bv_or (v1 : t) (v2 : t) : t =
-    (assert ((match v1.ty, v2.ty with
-             | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
-               when (let kanon__n = Z.of_int kanon__n in
-               let kanon__s1 = Z.of_int kanon__s1 in
-               ((Z.equal kanon__s1 kanon__n))) ->
-               true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v1, v2 with
-    | (({ kind = BitVec (i1); _ } as lit_i1), ({ kind = BitVec (i2); _ } as lit_i2)) ->
-      (node (BitVec ((Bv_prims.lit_or lit_i1.ty lit_i2.ty i1 i2))) v1.ty)
-    | (x, { kind = BitVec (kanon__2); _ })
-      when (((Z.equal kanon__2 Z.zero))) ->
-      x
-    | ({ kind = BitVec (kanon__2); _ }, x)
-      when (((Z.equal kanon__2 Z.zero))) ->
-      x
-    | (x, kanon__2) when ((Int.equal x.tag kanon__2.tag)) -> x
-    | (({ kind = BitVec (m1); _ } as v_m1), { kind = Op2 ((BitAnd), _, { kind = BitVec (m2); _ }); _ })
-      when ((bits_in m2 m1)) ->
-      v_m1
-    | (({ kind = BitVec (m1); _ } as v_m1), { kind = Op2 ((BitAnd), { kind = BitVec (m2); _ }, _); _ })
-      when ((bits_in m2 m1)) ->
-      v_m1
-    | ({ kind = Op2 ((BitAnd), _, { kind = BitVec (m2); _ }); _ }, ({ kind = BitVec (m1); _ } as v_m1))
-      when ((bits_in m2 m1)) ->
-      v_m1
-    | ({ kind = Op2 ((BitAnd), { kind = BitVec (m2); _ }, _); _ }, ({ kind = BitVec (m1); _ } as v_m1))
-      when ((bits_in m2 m1)) ->
-      v_m1
-    | ({ kind = BitVec (m1); _ }, { kind = Op2 ((BitOr), x, { kind = BitVec (m2); _ }); _ }) ->
-      (bv_or x (Bv_prims.mk_bv (size v1) (Bv_prims.lit_or v1.ty v1.ty m1 m2)))
-    | ({ kind = BitVec (m1); _ }, { kind = Op2 ((BitOr), { kind = BitVec (m2); _ }, x); _ }) ->
-      (bv_or x (Bv_prims.mk_bv (size v1) (Bv_prims.lit_or v1.ty v1.ty m1 m2)))
-    | ({ kind = Op2 ((BitOr), x, { kind = BitVec (m2); _ }); _ }, { kind = BitVec (m1); _ }) ->
-      (bv_or x (Bv_prims.mk_bv (size v1) (Bv_prims.lit_or v1.ty v1.ty m1 m2)))
-    | ({ kind = Op2 ((BitOr), { kind = BitVec (m2); _ }, x); _ }, { kind = BitVec (m1); _ }) ->
-      (bv_or x (Bv_prims.mk_bv (size v1) (Bv_prims.lit_or v1.ty v1.ty m1 m2)))
-    | ({ kind = Op1 ((BvExtend (false, nx)), base); _ }, { kind = Op2 ((Shl), { kind = Op1 ((BvExtend (false, _)), tail); _ }, { kind = BitVec (shift); _ }); _ })
-      when (let nx = Z.of_int nx in
-      (((Z.equal shift (size base))) && (Z.gt nx Z.zero))) ->
-      let nx = Z.of_int nx in
-      (let tail_size = (size tail) in
-      (if ((Z.equal nx tail_size))
-      then (bv_concat tail base)
-      else (if (Z.gt nx tail_size)
-           then (let new_base = (bv_concat tail base) in
-                (bv_extend false (Z.sub nx tail_size) new_base))
-           else (let new_tail = (bv_extract Z.zero (Z.sub nx Z.one) tail) in
-                (bv_concat new_tail base)))))
-    | ({ kind = Op2 ((Shl), { kind = Op1 ((BvExtend (false, _)), tail); _ }, { kind = BitVec (shift); _ }); _ }, { kind = Op1 ((BvExtend (false, nx)), base); _ })
-      when (let nx = Z.of_int nx in
-      (((Z.equal shift (size base))) && (Z.gt nx Z.zero))) ->
-      let nx = Z.of_int nx in
-      (let tail_size = (size tail) in
-      (if ((Z.equal nx tail_size))
-      then (bv_concat tail base)
-      else (if (Z.gt nx tail_size)
-           then (let new_base = (bv_concat tail base) in
-                (bv_extend false (Z.sub nx tail_size) new_base))
-           else (let new_tail = (bv_extract Z.zero (Z.sub nx Z.one) tail) in
-                (bv_concat new_tail base)))))
-    | ({ kind = Op1 ((BvOfBool (n)), b1); _ }, { kind = Op1 ((BvOfBool (_)), b2); _ }) ->
-      let n = Z.of_int n in
-      (bv_of_bool n (b_or b1 b2))
-    | _ -> (node (mk_commut_binop BitOr v1 v2) v1.ty)
-    ))
-
-and bv_xor (v1 : t) (v2 : t) : t =
-    (assert ((match v1.ty, v2.ty with
-             | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
-               when (let kanon__n = Z.of_int kanon__n in
-               let kanon__s1 = Z.of_int kanon__s1 in
-               ((Z.equal kanon__s1 kanon__n))) ->
-               true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v1, v2 with
-    | (({ kind = BitVec (i1); _ } as lit_i1), ({ kind = BitVec (i2); _ } as lit_i2)) ->
-      (node (BitVec ((Bv_prims.lit_xor lit_i1.ty lit_i2.ty i1 i2))) v1.ty)
-    | (x, { kind = BitVec (kanon__2); _ })
-      when (((Z.equal kanon__2 Z.zero))) ->
-      x
-    | ({ kind = BitVec (kanon__2); _ }, x)
-      when (((Z.equal kanon__2 Z.zero))) ->
-      x
-    | ({ kind = Op1 ((BvOfBool (n)), b1); _ }, { kind = Op1 ((BvOfBool (_)), b2); _ }) ->
-      let n = Z.of_int n in
-      (bv_of_bool n (b_not (sem_eq b1 b2)))
-    | _ -> (node (mk_commut_binop BitXor v1 v2) v1.ty)
-    ))
-
-and bv_extract (from_ : Z.t) (to_ : Z.t) (v : t) : t =
-    (assert ((match v.ty with
-             | (TBitVector (kanon__n))
-               when (let kanon__n = Z.of_int kanon__n in
-               ((Z.leq Z.zero from_) && ((Z.leq from_ to_) && (Z.lt to_ kanon__n)))) ->
-               true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v with
-    | ({ kind = BitVec (i); _ } as lit_i) ->
-      (node (BitVec ((Bv_prims.lit_extract from_ to_ lit_i.ty i))) (TBitVector ((Z.to_int (Z.add (Z.sub to_ from_) Z.one)))))
-    | _
-      when ((((Z.equal from_ Z.zero)) && ((Z.equal to_ (Z.sub (size v) Z.one))))) ->
-      v
-    | { kind = Op2 ((BitAnd), v1, v2); _ } ->
-      (bv_and (bv_extract from_ to_ v1) (bv_extract from_ to_ v2))
-    | { kind = Op2 ((BitOr), v1, v2); _ } ->
-      (bv_or (bv_extract from_ to_ v1) (bv_extract from_ to_ v2))
-    | { kind = Op2 ((BitXor), v1, v2); _ } ->
-      (bv_xor (bv_extract from_ to_ v1) (bv_extract from_ to_ v2))
-    | { kind = Op2 ((Shl), v1, { kind = BitVec (shift); _ }); _ } ->
-      (if (Z.geq from_ shift)
-      then (bv_extract (Z.sub from_ shift) (Z.sub to_ shift) v1)
-      else (if (Z.lt to_ shift)
-           then (Bv_prims.bv_zero (Z.add (Z.sub to_ from_) Z.one))
-           else (let high_part = (bv_extract Z.zero (Z.sub to_ shift) v1) in
-                (let low_zeros = (Bv_prims.bv_zero (Z.sub shift from_)) in
-                (bv_concat high_part low_zeros)))))
-    | { kind = Op2 ((LShr), v1, { kind = BitVec (shift); _ }); _ } ->
-      (let prev_size = (size v) in
-      (if (Z.geq (Z.add from_ shift) prev_size)
-      then (Bv_prims.bv_zero (Z.add (Z.sub to_ from_) Z.one))
-      else (if (Z.lt (Z.add to_ shift) prev_size)
-           then (bv_extract (Z.add from_ shift) (Z.add to_ shift) v1)
-           else (let low_part = (bv_extract (Z.add from_ shift) (Z.sub prev_size Z.one) v1) in
-                (let high_zeros = (Bv_prims.bv_zero (Z.sub to_ (Z.sub (Z.sub prev_size shift) Z.one))) in
-                (bv_concat high_zeros low_part))))))
-    | { kind = Op3 ((Ite), b, l, r); _ } ->
-      (b_ite b (bv_extract from_ to_ l) (bv_extract from_ to_ r))
-    | { kind = Op1 ((BvExtend (false, by)), _); _ }
-      when (let by = Z.of_int by in
-      (Z.geq from_ (Z.sub (size v) by))) ->
-      (Bv_prims.bv_zero (Z.add (Z.sub to_ from_) Z.one))
-    | { kind = Op1 ((BvExtend (true, by)), x); _ }
-      when (let by = Z.of_int by in
-      ((Z.geq from_ (Z.sub (size v) by)) && ((Z.equal from_ to_)))) ->
-      (bv_extract (Z.sub (size x) Z.one) (Z.sub (size x) Z.one) x)
-    | { kind = Op1 ((BvExtend (signed, _)), x); _ }
-      when (((Z.equal from_ Z.zero))) ->
-      (let orig_size = (size x) in
-      (if ((Z.equal to_ (Z.sub orig_size Z.one)))
-      then x
-      else (if (Z.lt to_ orig_size)
-           then (bv_extract from_ to_ x)
-           else (bv_extend signed (Z.add (Z.sub to_ orig_size) Z.one) x))))
-    | { kind = Op1 ((BvExtend (_, by)), x); _ }
-      when (let by = Z.of_int by in
-      (Z.leq to_ (Z.sub (Z.sub (size v) by) Z.one))) ->
-      (bv_extract from_ to_ x)
-    | { kind = Op1 ((BvExtract (prev_from_, _)), x); _ } ->
-      let prev_from_ = Z.of_int prev_from_ in
-      (bv_extract (Z.add prev_from_ from_) (Z.add prev_from_ to_) x)
-    | { kind = Op2 ((BvConcat), l, r); _ } ->
-      (let size_r = (size r) in
-      (if (Z.geq from_ size_r)
-      then (bv_extract (Z.sub from_ size_r) (Z.sub to_ size_r) l)
-      else (if (Z.lt to_ size_r)
-           then (bv_extract from_ to_ r)
-           else (let r_ = (bv_extract from_ (Z.sub size_r Z.one) r) in
-                (let l_ = (bv_extract Z.zero (Z.sub to_ size_r) l) in
-                (bv_concat l_ r_))))))
-    | { kind = Op2 ((Add (_)), l, r); _ }
-      when (((Z.equal from_ Z.zero))) ->
-      (bv_add unchecked (bv_extract from_ to_ l) (bv_extract from_ to_ r))
-    | { kind = Op2 ((Add (_)), { kind = BitVec (n); _ }, x); _ }
-      when ((Z.lt to_ (lsb n))) ->
-      (bv_extract from_ to_ x)
-    | { kind = Op2 ((Add (_)), x, { kind = BitVec (n); _ }); _ }
-      when ((Z.lt to_ (lsb n))) ->
-      (bv_extract from_ to_ x)
-    | { kind = Op2 ((Mul (_)), { kind = BitVec (n); _ }, _); _ }
-      when (((is_pow2 n) && (Z.lt to_ (Bv_prims.log2 n)))) ->
-      (Bv_prims.bv_zero (Z.add (Z.sub to_ from_) Z.one))
-    | { kind = Op2 ((Mul (_)), _, { kind = BitVec (n); _ }); _ }
-      when (((is_pow2 n) && (Z.lt to_ (Bv_prims.log2 n)))) ->
-      (Bv_prims.bv_zero (Z.add (Z.sub to_ from_) Z.one))
-    | { kind = Op2 ((Mul (_)), l, r); _ }
-      when (((Z.equal from_ Z.zero))) ->
-      (bv_mul unchecked (bv_extract from_ to_ l) (bv_extract from_ to_ r))
-    | { kind = Op2 ((Rem (false)), l, { kind = BitVec (n); _ }); _ }
-      when ((((Z.equal from_ Z.zero)) && ((is_pow2 n) && (Z.lt (Bv_prims.log2 n) to_)))) ->
-      (bv_rem false (bv_extract from_ to_ l) (Bv_prims.mk_bv (Z.add (Z.sub to_ from_) Z.one) (Bv_prims.lit_extract from_ to_ v.ty n)))
-    | _ ->
-      (node (Op1 ((BvExtract ((Z.to_int from_), (Z.to_int to_))), v)) (TBitVector ((Z.to_int (Z.add (Z.sub to_ from_) Z.one)))))
-    ))
-
-and bv_extend (signed : bool) (extend_by : Z.t) (v : t) : t =
-    (assert ((match v.ty with
-             | (TBitVector (kanon__n))
-               when ((Z.leq Z.zero extend_by)) ->
-               true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v with
-    | _ when (((Z.equal extend_by Z.zero))) -> v
-    | { kind = BitVec (bv); _ } ->
-      (Bv_prims.mk_bv (Z.add (size v) extend_by) (if signed
-                                                 then (Bv_prims.lit_sext extend_by v.ty bv)
-                                                 else (Bv_prims.lit_zext extend_by v.ty bv)))
-    | { kind = Op1 ((BvExtend (s, prev_by)), v); _ }
-      when (((Bool.equal s signed))) ->
-      let prev_by = Z.of_int prev_by in
-      (bv_extend signed (Z.add prev_by extend_by) v)
-    | { kind = Op3 ((Ite), b, l, r); _ } ->
-      (b_ite b (bv_extend signed extend_by l) (bv_extend signed extend_by r))
-    | { kind = Op1 ((BvOfBool (n)), b); _ }
-      when (let n = Z.of_int n in
-      ((not signed) || (Z.gt n Z.one))) ->
-      (bv_of_bool (Z.add (size v) extend_by) b)
-    | _ ->
-      (node (Op1 ((BvExtend (signed, (Z.to_int extend_by))), v)) (TBitVector ((Z.to_int (Z.add (size v) extend_by)))))
-    ))
-
-and bv_concat (v1 : t) (v2 : t) : t =
-    (assert ((match v1.ty, v2.ty with
-             | ((TBitVector (kanon__n)), (TBitVector (kanon__m))) -> true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v1, v2 with
-    | (({ kind = BitVec (i1); _ } as lit_i1), ({ kind = BitVec (i2); _ } as lit_i2)) ->
-      (node (BitVec ((Bv_prims.lit_concat lit_i1.ty lit_i2.ty i1 i2))) (TBitVector ((Z.to_int (Z.add (size v1) (size v2))))))
-    | ({ kind = Op1 ((BvExtract (from1, to1)), v); _ }, { kind = Op1 ((BvExtract (from2, to2)), kanon__9); _ })
-      when (let from1 = Z.of_int from1 in
-      let to2 = Z.of_int to2 in
-      ((Int.equal v.tag kanon__9.tag) && ((Z.equal (Z.add to2 Z.one) from1)))) ->
-      let to1 = Z.of_int to1 in
-      let from2 = Z.of_int from2 in
-      (bv_extract from2 to1 v)
-    | ({ kind = Op1 ((BvExtract (_, _)), _); _ }, { kind = Op2 ((BvConcat), { kind = Op1 ((BvExtract (_, _)), _); _ }, { kind = Op1 ((BvExtract (_, _)), _); _ }); _ }) ->
-      (node (Op2 (BvConcat, v1, v2)) (TBitVector ((Z.to_int (Z.add (size v1) (size v2))))))
-    | ({ kind = Op1 ((BvExtract (_, _)), x); _ }, { kind = Op2 ((BvConcat), ({ kind = Op1 ((BvExtract (_, _)), kanon__10); _ } as left), right); _ })
-      when ((Int.equal x.tag kanon__10.tag)) ->
-      (bv_concat (bv_concat v1 left) right)
-    | ({ kind = Op2 ((BvConcat), left, ({ kind = Op1 ((BvExtract (_, _)), x); _ } as right)); _ }, { kind = Op1 ((BvExtract (_, _)), kanon__13); _ })
-      when ((Int.equal x.tag kanon__13.tag)) ->
-      (bv_concat left (bv_concat right v2))
-    | ({ kind = Op3 ((Ite), b, l1, r1); _ }, { kind = Op3 ((Ite), kanon__7, l2, r2); _ })
-      when ((Int.equal b.tag kanon__7.tag)) ->
-      (b_ite b (bv_concat l1 l2) (bv_concat r1 r2))
-    | _ ->
-      (node (Op2 (BvConcat, v1, v2)) (TBitVector ((Z.to_int (Z.add (size v1) (size v2))))))
-    ))
-
-and bv_mul (checked : checked) (v1 : t) (v2 : t) : t =
-    (assert ((match v1.ty, v2.ty with
-             | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
-               when (let kanon__n = Z.of_int kanon__n in
-               let kanon__s1 = Z.of_int kanon__s1 in
-               ((Z.equal kanon__s1 kanon__n))) ->
-               true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v1, v2 with
-    | (({ kind = BitVec (i1); _ } as lit_i1), ({ kind = BitVec (i2); _ } as lit_i2)) ->
-      (node (BitVec ((Bv_prims.lit_mul lit_i1.ty lit_i2.ty i1 i2))) v1.ty)
-    | (x, { kind = BitVec (kanon__2); _ })
-      when (((Z.equal kanon__2 Z.one))) ->
-      x
-    | ({ kind = BitVec (kanon__2); _ }, x)
-      when (((Z.equal kanon__2 Z.one))) ->
-      x
-    | (_, { kind = BitVec (kanon__2); _ })
-      when (((Z.equal kanon__2 Z.zero))) ->
-      (Bv_prims.bv_zero (size v1))
-    | ({ kind = BitVec (kanon__2); _ }, _)
-      when (((Z.equal kanon__2 Z.zero))) ->
-      (Bv_prims.bv_zero (size v1))
-    | ({ kind = BitVec (c); _ }, { kind = Op1 ((Neg (true)), x); _ })
-      when ((not (is_int_min (size v1) c))) ->
-      (bv_mul (checked_meet checked checked_signed) (Bv_prims.mk_bv (size v1) (Bv_prims.lit_neg v1.ty c)) x)
-    | ({ kind = Op1 ((Neg (true)), x); _ }, { kind = BitVec (c); _ })
-      when ((not (is_int_min (size v1) c))) ->
-      (bv_mul (checked_meet checked checked_signed) (Bv_prims.mk_bv (size v1) (Bv_prims.lit_neg v1.ty c)) x)
-    | ({ kind = Op2 ((Mul (ckm)), x, { kind = BitVec (n); _ }); _ }, { kind = BitVec (m); _ })
-      when ((is_checked (checked_meet checked ckm))) ->
-      (let checked = (checked_meet checked ckm) in
-      (let checked = (if (overflows_mul true (size v1) n m)
-                     then (checked_meet checked checked_unsigned)
-                     else checked) in
-      (bv_mul checked x (Bv_prims.mk_bv (size v1) (Bv_prims.lit_mul v1.ty v1.ty n m)))))
-    | ({ kind = Op2 ((Mul (ckm)), { kind = BitVec (n); _ }, x); _ }, { kind = BitVec (m); _ })
-      when ((is_checked (checked_meet checked ckm))) ->
-      (let checked = (checked_meet checked ckm) in
-      (let checked = (if (overflows_mul true (size v1) n m)
-                     then (checked_meet checked checked_unsigned)
-                     else checked) in
-      (bv_mul checked x (Bv_prims.mk_bv (size v1) (Bv_prims.lit_mul v1.ty v1.ty n m)))))
-    | ({ kind = BitVec (m); _ }, { kind = Op2 ((Mul (ckm)), x, { kind = BitVec (n); _ }); _ })
-      when ((is_checked (checked_meet checked ckm))) ->
-      (let checked = (checked_meet checked ckm) in
-      (let checked = (if (overflows_mul true (size v1) n m)
-                     then (checked_meet checked checked_unsigned)
-                     else checked) in
-      (bv_mul checked x (Bv_prims.mk_bv (size v1) (Bv_prims.lit_mul v1.ty v1.ty n m)))))
-    | ({ kind = BitVec (m); _ }, { kind = Op2 ((Mul (ckm)), { kind = BitVec (n); _ }, x); _ })
-      when ((is_checked (checked_meet checked ckm))) ->
-      (let checked = (checked_meet checked ckm) in
-      (let checked = (if (overflows_mul true (size v1) n m)
-                     then (checked_meet checked checked_unsigned)
-                     else checked) in
-      (bv_mul checked x (Bv_prims.mk_bv (size v1) (Bv_prims.lit_mul v1.ty v1.ty n m)))))
-    | ({ kind = Op3 ((Ite), b, l, r); _ }, ({ kind = BitVec (_); _ } as x)) ->
-      (b_ite b (bv_mul unchecked l x) (bv_mul unchecked r x))
-    | (({ kind = BitVec (_); _ } as x), { kind = Op3 ((Ite), b, l, r); _ }) ->
-      (b_ite b (bv_mul unchecked l x) (bv_mul unchecked r x))
-    | _ -> (node (mk_commut_binop (Mul (checked)) v1 v2) v1.ty)
-    ))
-
-and bv_div (signed : bool) (v1 : t) (v2 : t) : t =
-    (assert ((match v1.ty, v2.ty with
-             | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
-               when (let kanon__n = Z.of_int kanon__n in
-               let kanon__s1 = Z.of_int kanon__s1 in
-               ((Z.equal kanon__s1 kanon__n))) ->
-               true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v1, v2 with
-    | ({ kind = BitVec (l); _ }, { kind = BitVec (r); _ }) ->
-      (Bv_prims.mk_bv (size v1) (if signed
-                                then (Bv_prims.lit_sdiv v1.ty v2.ty l r)
-                                else (Bv_prims.lit_udiv v1.ty v2.ty l r)))
-    | (_, { kind = BitVec (kanon__2); _ })
-      when (((Z.equal kanon__2 Z.one))) ->
-      v1
-    | ({ kind = Op2 ((Mul (checked)), ({ kind = BitVec (_); _ } as l), ({ kind = BitVec (_); _ } as r)); _ }, { kind = BitVec (_); _ }) ->
-      (bv_div signed (bv_mul checked l r) v2)
-    | ({ kind = Op2 ((Mul ({ unsigned = true; _ })), { kind = BitVec (n); _ }, x); _ }, { kind = BitVec (d); _ })
-      when (((not signed) && ((not (Z.equal d Z.zero)) && (udivides d n)))) ->
-      (bv_mul checked_unsigned x (Bv_prims.mk_bv (size v1) (Bv_prims.lit_udiv v1.ty v2.ty n d)))
-    | ({ kind = Op2 ((Mul ({ unsigned = true; _ })), x, { kind = BitVec (n); _ }); _ }, { kind = BitVec (d); _ })
-      when (((not signed) && ((not (Z.equal d Z.zero)) && (udivides d n)))) ->
-      (bv_mul checked_unsigned x (Bv_prims.mk_bv (size v1) (Bv_prims.lit_udiv v1.ty v2.ty n d)))
-    | ({ kind = Op2 ((Mul ({ unsigned = true; _ })), { kind = BitVec (n); _ }, x); _ }, { kind = BitVec (d); _ })
-      when (((not signed) && ((not (Z.equal n Z.zero)) && (udivides n d)))) ->
-      (bv_div signed x (Bv_prims.mk_bv (size v1) (Bv_prims.lit_udiv v2.ty v1.ty d n)))
-    | ({ kind = Op2 ((Mul ({ unsigned = true; _ })), x, { kind = BitVec (n); _ }); _ }, { kind = BitVec (d); _ })
-      when (((not signed) && ((not (Z.equal n Z.zero)) && (udivides n d)))) ->
-      (bv_div signed x (Bv_prims.mk_bv (size v1) (Bv_prims.lit_udiv v2.ty v1.ty d n)))
-    | ({ kind = Op2 ((Div (false)), x, { kind = BitVec (n); _ }); _ }, { kind = BitVec (d); _ })
-      when (((not signed) && ((not (Z.equal n Z.zero)) && (not (overflows_mul false (size v1) n d))))) ->
-      (bv_div signed x (Bv_prims.mk_bv (size v1) (Bv_prims.lit_mul v1.ty v2.ty n d)))
-    | ({ kind = Op1 ((BvExtend (false, by)), x); _ }, { kind = BitVec (z); _ })
-      when (((not signed) && (Z.lt (msb_of v2) (size x)))) ->
-      let by = Z.of_int by in
-      (bv_extend false by (bv_div signed x (Bv_prims.mk_masked (size x) z)))
-    | _ -> (node (Op2 ((Div (signed)), v1, v2)) v1.ty)
-    ))
-
-and bv_lt_zero (v : t) : t =
-    (match v with
-    | { kind = Op1 ((BvExtend (true, _)), x); _ } -> (bv_lt_zero x)
-    | { kind = Op1 ((BvExtend (false, k)), _); _ }
-      when (let k = Z.of_int k in
-      (Z.gt k Z.zero)) ->
-      Bv_prims.v_false
-    | { kind = Op2 ((Rem (true)), l, _); _ } ->
-      (b_and (bv_lt_zero l) (b_not (sem_eq v (Bv_prims.bv_zero (size v)))))
-    | { kind = Op2 ((BvConcat), l, _); _ } -> (bv_lt_zero l)
-    | { kind = Op1 ((BvNot), x); _ } -> (b_not (bv_lt_zero x))
-    | { kind = Op1 ((BvOfBool (n)), _); _ }
-      when (let n = Z.of_int n in
-      (Z.gt n Z.one)) ->
-      Bv_prims.v_false
-    | { kind = Op3 ((Ite), _, l, r); _ } ->
-      (let pos_l = (bv_lt_zero l) in
-      (let pos_r = (bv_lt_zero r) in
-      (if (Int.equal pos_l.tag pos_r.tag)
-      then pos_l
-      else (node (Op2 ((Lt (true)), v, (Bv_prims.bv_zero (size v)))) TBool))))
-    | _ -> (node (Op2 ((Lt (true)), v, (Bv_prims.bv_zero (size v)))) TBool)
-    )
-
-and bv_lt (signed : bool) (v1 : t) (v2 : t) : t =
-    (assert ((match v1.ty, v2.ty with
-             | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
-               when (let kanon__n = Z.of_int kanon__n in
-               let kanon__s1 = Z.of_int kanon__s1 in
-               ((Z.equal kanon__s1 kanon__n))) ->
-               true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v1, v2 with
-    | ({ kind = BitVec (l); _ }, { kind = BitVec (r); _ }) ->
-      (of_bool (Z.lt (bv_to_z signed (size v1) l) (bv_to_z signed (size v1) r)))
-    | (v, kanon__2) when ((Int.equal v.tag kanon__2.tag)) -> Bv_prims.v_false
-    | ({ kind = Op1 ((Neg (true)), a); _ }, { kind = Op1 ((Neg (true)), b); _ })
-      when (signed) ->
-      (bv_lt signed b a)
-    | ({ kind = Op1 ((Neg (true)), a); _ }, { kind = BitVec (c); _ })
-      when ((signed && (not (is_int_min (size v1) c)))) ->
-      (bv_lt signed (bv_neg false v2) a)
-    | ({ kind = BitVec (c); _ }, { kind = Op1 ((Neg (true)), a); _ })
-      when ((signed && (not (is_int_min (size v1) c)))) ->
-      (bv_lt signed a (bv_neg false v1))
-    | ({ kind = BitVec (c); _ }, { kind = Op2 ((Add (checked)), { kind = BitVec (r); _ }, x); _ })
-      when ((checked_has signed checked)) ->
-      (if (overflows_sub signed (size v1) c r)
-      then (if (not signed)
-           then Bv_prims.v_true
-           else (node (Op2 ((Lt (signed)), v1, v2)) TBool))
-      else (bv_lt signed (Bv_prims.mk_bv (size v1) (Bv_prims.lit_sub v1.ty v1.ty c r)) x))
-    | ({ kind = BitVec (c); _ }, { kind = Op2 ((Add (checked)), x, { kind = BitVec (r); _ }); _ })
-      when ((checked_has signed checked)) ->
-      (if (overflows_sub signed (size v1) c r)
-      then (if (not signed)
-           then Bv_prims.v_true
-           else (node (Op2 ((Lt (signed)), v1, v2)) TBool))
-      else (bv_lt signed (Bv_prims.mk_bv (size v1) (Bv_prims.lit_sub v1.ty v1.ty c r)) x))
-    | ({ kind = Op2 ((Add (checked)), { kind = BitVec (l); _ }, x); _ }, { kind = BitVec (c); _ })
-      when ((checked_has signed checked)) ->
-      (if (overflows_sub signed (size v1) c l)
-      then (if (not signed)
-           then Bv_prims.v_false
-           else (node (Op2 ((Lt (signed)), v1, v2)) TBool))
-      else (bv_lt signed x (Bv_prims.mk_bv (size v1) (Bv_prims.lit_sub v1.ty v1.ty c l))))
-    | ({ kind = Op2 ((Add (checked)), x, { kind = BitVec (l); _ }); _ }, { kind = BitVec (c); _ })
-      when ((checked_has signed checked)) ->
-      (if (overflows_sub signed (size v1) c l)
-      then (if (not signed)
-           then Bv_prims.v_false
-           else (node (Op2 ((Lt (signed)), v1, v2)) TBool))
-      else (bv_lt signed x (Bv_prims.mk_bv (size v1) (Bv_prims.lit_sub v1.ty v1.ty c l))))
-    | (a, { kind = Op2 ((Add (checked)), kanon__4, b); _ })
-      when (((Int.equal a.tag kanon__4.tag) && (checked_has signed checked))) ->
-      (bv_lt signed (Bv_prims.bv_zero (size v1)) b)
-    | (a, { kind = Op2 ((Add (checked)), b, kanon__4); _ })
-      when (((Int.equal a.tag kanon__4.tag) && (checked_has signed checked))) ->
-      (bv_lt signed (Bv_prims.bv_zero (size v1)) b)
-    | ({ kind = Op2 ((Add (checked)), a, b); _ }, kanon__7)
-      when (((Int.equal a.tag kanon__7.tag) && (checked_has signed checked))) ->
-      (bv_lt signed b (Bv_prims.bv_zero (size v1)))
-    | ({ kind = Op2 ((Add (checked)), b, a); _ }, kanon__7)
-      when (((Int.equal a.tag kanon__7.tag) && (checked_has signed checked))) ->
-      (bv_lt signed b (Bv_prims.bv_zero (size v1)))
-    | ({ kind = Op2 ((Add (checked_l)), { kind = BitVec (l); _ }, y); _ }, { kind = Op2 ((Add (checked_r)), { kind = BitVec (r); _ }, x); _ })
-      when (((checked_has signed checked_l) && (checked_has signed checked_r))) ->
-      (let n = (size v1) in
-      (let sty = v1.ty in
-      (if (const_keeps_in_range signed n l r)
-      then (bv_lt signed (bv_add (checked_of_signed signed) y (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty l r))) x)
-      else (if (const_keeps_in_range signed n r l)
-           then (bv_lt signed y (bv_add (checked_of_signed signed) x (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty r l))))
-           else (node (Op2 ((Lt (signed)), v1, v2)) TBool)))))
-    | ({ kind = Op2 ((Add (checked_l)), { kind = BitVec (l); _ }, y); _ }, { kind = Op2 ((Add (checked_r)), x, { kind = BitVec (r); _ }); _ })
-      when (((checked_has signed checked_l) && (checked_has signed checked_r))) ->
-      (let n = (size v1) in
-      (let sty = v1.ty in
-      (if (const_keeps_in_range signed n l r)
-      then (bv_lt signed (bv_add (checked_of_signed signed) y (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty l r))) x)
-      else (if (const_keeps_in_range signed n r l)
-           then (bv_lt signed y (bv_add (checked_of_signed signed) x (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty r l))))
-           else (node (Op2 ((Lt (signed)), v1, v2)) TBool)))))
-    | ({ kind = Op2 ((Add (checked_l)), y, { kind = BitVec (l); _ }); _ }, { kind = Op2 ((Add (checked_r)), { kind = BitVec (r); _ }, x); _ })
-      when (((checked_has signed checked_l) && (checked_has signed checked_r))) ->
-      (let n = (size v1) in
-      (let sty = v1.ty in
-      (if (const_keeps_in_range signed n l r)
-      then (bv_lt signed (bv_add (checked_of_signed signed) y (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty l r))) x)
-      else (if (const_keeps_in_range signed n r l)
-           then (bv_lt signed y (bv_add (checked_of_signed signed) x (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty r l))))
-           else (node (Op2 ((Lt (signed)), v1, v2)) TBool)))))
-    | ({ kind = Op2 ((Add (checked_l)), y, { kind = BitVec (l); _ }); _ }, { kind = Op2 ((Add (checked_r)), x, { kind = BitVec (r); _ }); _ })
-      when (((checked_has signed checked_l) && (checked_has signed checked_r))) ->
-      (let n = (size v1) in
-      (let sty = v1.ty in
-      (if (const_keeps_in_range signed n l r)
-      then (bv_lt signed (bv_add (checked_of_signed signed) y (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty l r))) x)
-      else (if (const_keeps_in_range signed n r l)
-           then (bv_lt signed y (bv_add (checked_of_signed signed) x (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty r l))))
-           else (node (Op2 ((Lt (signed)), v1, v2)) TBool)))))
-    | (_, { kind = BitVec (kanon__2); _ })
-      when ((((Z.equal kanon__2 Z.one)) && (not signed))) ->
-      (sem_eq v1 (Bv_prims.bv_zero (size v1)))
-    | (_, { kind = Op1 ((BvOfBool (n)), b); _ })
-      when ((not signed)) ->
-      let n = Z.of_int n in
-      (b_and b (sem_eq v1 (Bv_prims.bv_zero n)))
-    | ({ kind = Op3 ((Ite), b, l, r); _ }, _) ->
-      (b_ite b (bv_lt signed l v2) (bv_lt signed r v2))
-    | (_, { kind = Op3 ((Ite), b, l, r); _ }) ->
-      (b_ite b (bv_lt signed v1 l) (bv_lt signed v1 r))
-    | (_, { kind = BitVec (kanon__2); _ })
-      when ((((Z.equal kanon__2 Z.zero)) && (signed && (not (is_checked_unsigned_op v1))))) ->
-      (bv_lt_zero v1)
-    | ({ kind = BitVec (x); _ }, _)
-      when ((is_max_of signed (size v1) x)) ->
-      Bv_prims.v_false
-    | (_, { kind = BitVec (x); _ })
-      when ((is_min_of signed (size v1) x)) ->
-      Bv_prims.v_false
-    | ({ kind = BitVec (x); _ }, _)
-      when ((is_min_of signed (size v1) x)) ->
-      (b_not (sem_eq v1 v2))
-    | (_, { kind = BitVec (x); _ })
-      when ((is_max_of signed (size v1) x)) ->
-      (b_not (sem_eq v1 v2))
-    | ({ kind = BitVec (c2); _ }, { kind = Op2 ((Mul (checked)), x, ({ kind = BitVec (c1); _ } as vc1)); _ })
-      when (((checked_has signed checked) && (not ((Z.equal c1 Z.zero))))) ->
-      (let z1 = (bv_to_z signed (size v1) c1) in
-      (let z2 = (bv_to_z signed (size v1) c2) in
-      (if ((Bv_prims.divisible z2 z1) || (Z.geq z2 Z.zero))
-      then (if (Z.lt z1 Z.zero)
-           then (if (signed && (((Z.equal z1 Z.minus_one)) && (is_int_min (size v1) c2)))
-                then Bv_prims.v_true
-                else (bv_lt signed x (bv_div signed v1 vc1)))
-           else (bv_lt signed (bv_div signed v1 vc1) x))
-      else (if (Z.lt z1 Z.zero)
-           then (bv_leq signed x (bv_div signed v1 vc1))
-           else (bv_leq signed (bv_div signed v1 vc1) x)))))
-    | ({ kind = BitVec (c2); _ }, { kind = Op2 ((Mul (checked)), ({ kind = BitVec (c1); _ } as vc1), x); _ })
-      when (((checked_has signed checked) && (not ((Z.equal c1 Z.zero))))) ->
-      (let z1 = (bv_to_z signed (size v1) c1) in
-      (let z2 = (bv_to_z signed (size v1) c2) in
-      (if ((Bv_prims.divisible z2 z1) || (Z.geq z2 Z.zero))
-      then (if (Z.lt z1 Z.zero)
-           then (if (signed && (((Z.equal z1 Z.minus_one)) && (is_int_min (size v1) c2)))
-                then Bv_prims.v_true
-                else (bv_lt signed x (bv_div signed v1 vc1)))
-           else (bv_lt signed (bv_div signed v1 vc1) x))
-      else (if (Z.lt z1 Z.zero)
-           then (bv_leq signed x (bv_div signed v1 vc1))
-           else (bv_leq signed (bv_div signed v1 vc1) x)))))
-    | ({ kind = Op2 ((Mul (checked)), x, ({ kind = BitVec (c1); _ } as vc1)); _ }, { kind = BitVec (c2); _ })
-      when (((checked_has signed checked) && (not ((Z.equal c1 Z.zero))))) ->
-      (let z1 = (bv_to_z signed (size v1) c1) in
-      (let z2 = (bv_to_z signed (size v1) c2) in
-      (if ((Bv_prims.divisible z2 z1) || (Z.lt z2 Z.zero))
-      then (if (Z.lt z1 Z.zero)
-           then (if (signed && (((Z.equal z1 Z.minus_one)) && (is_int_min (size v1) c2)))
-                then Bv_prims.v_false
-                else (bv_lt signed (bv_div signed v2 vc1) x))
-           else (bv_lt signed x (bv_div signed v2 vc1)))
-      else (if (Z.lt z1 Z.zero)
-           then (bv_leq signed (bv_div signed v2 vc1) x)
-           else (bv_leq signed x (bv_div signed v2 vc1))))))
-    | ({ kind = Op2 ((Mul (checked)), ({ kind = BitVec (c1); _ } as vc1), x); _ }, { kind = BitVec (c2); _ })
-      when (((checked_has signed checked) && (not ((Z.equal c1 Z.zero))))) ->
-      (let z1 = (bv_to_z signed (size v1) c1) in
-      (let z2 = (bv_to_z signed (size v1) c2) in
-      (if ((Bv_prims.divisible z2 z1) || (Z.lt z2 Z.zero))
-      then (if (Z.lt z1 Z.zero)
-           then (if (signed && (((Z.equal z1 Z.minus_one)) && (is_int_min (size v1) c2)))
-                then Bv_prims.v_false
-                else (bv_lt signed (bv_div signed v2 vc1) x))
-           else (bv_lt signed x (bv_div signed v2 vc1)))
-      else (if (Z.lt z1 Z.zero)
-           then (bv_leq signed (bv_div signed v2 vc1) x)
-           else (bv_leq signed x (bv_div signed v2 vc1))))))
-    | ({ kind = Op2 ((Mul (checked_l)), a, x); _ }, { kind = Op2 ((Mul (checked_r)), kanon__9, y); _ })
-      when (((Int.equal a.tag kanon__9.tag) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))) ->
-      (bv_lt signed x y)
-    | ({ kind = Op2 ((Mul (checked_l)), a, x); _ }, { kind = Op2 ((Mul (checked_r)), y, kanon__9); _ })
-      when (((Int.equal a.tag kanon__9.tag) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))) ->
-      (bv_lt signed x y)
-    | ({ kind = Op2 ((Mul (checked_l)), x, a); _ }, { kind = Op2 ((Mul (checked_r)), kanon__9, y); _ })
-      when (((Int.equal a.tag kanon__9.tag) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))) ->
-      (bv_lt signed x y)
-    | ({ kind = Op2 ((Mul (checked_l)), x, a); _ }, { kind = Op2 ((Mul (checked_r)), y, kanon__9); _ })
-      when (((Int.equal a.tag kanon__9.tag) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))) ->
-      (bv_lt signed x y)
-    | ({ kind = BitVec (c); _ }, { kind = Op2 ((Sub (checked)), x, { kind = BitVec (k); _ }); _ })
-      when ((checked_has signed checked)) ->
-      (if (overflows_add signed (size v1) c k)
-      then (if (not signed)
-           then Bv_prims.v_false
-           else (node (Op2 ((Lt (signed)), v1, v2)) TBool))
-      else (bv_lt signed (Bv_prims.mk_bv (size v1) (Bv_prims.lit_add v1.ty v1.ty c k)) x))
-    | ({ kind = BitVec (c); _ }, { kind = Op2 ((Sub (checked)), { kind = BitVec (k); _ }, x); _ })
-      when ((checked_has signed checked)) ->
-      (if (overflows_sub signed (size v1) k c)
-      then (if (not signed)
-           then Bv_prims.v_false
-           else (node (Op2 ((Lt (signed)), v1, v2)) TBool))
-      else (bv_lt signed x (Bv_prims.mk_bv (size v1) (Bv_prims.lit_sub v1.ty v1.ty k c))))
-    | ({ kind = Op2 ((Sub (checked)), x, { kind = BitVec (k); _ }); _ }, { kind = BitVec (c); _ })
-      when ((checked_has signed checked)) ->
-      (if (overflows_add signed (size v1) c k)
-      then (if (not signed)
-           then Bv_prims.v_true
-           else (node (Op2 ((Lt (signed)), v1, v2)) TBool))
-      else (bv_lt signed x (Bv_prims.mk_bv (size v1) (Bv_prims.lit_add v1.ty v1.ty c k))))
-    | ({ kind = Op2 ((Sub (checked)), { kind = BitVec (k); _ }, x); _ }, { kind = BitVec (c); _ })
-      when ((checked_has signed checked)) ->
-      (if (overflows_sub signed (size v1) k c)
-      then (if (not signed)
-           then Bv_prims.v_true
-           else (node (Op2 ((Lt (signed)), v1, v2)) TBool))
-      else (bv_lt signed (Bv_prims.mk_bv (size v1) (Bv_prims.lit_sub v1.ty v1.ty k c)) x))
-    | (_, { kind = BitVec (c); _ })
-      when (((not signed) && (Z.lt (unsigned_ub v1) c))) ->
-      Bv_prims.v_true
-    | ({ kind = BitVec (c); _ }, _)
-      when (((not signed) && (Z.leq (unsigned_ub v2) c))) ->
-      Bv_prims.v_false
-    | ({ kind = BitVec (c); _ }, _)
-      when ((signed && (is_checked_unsigned_op v2))) ->
-      (signed_to_unsigned_cmp false true c v1 v2)
-    | (_, { kind = BitVec (c); _ })
-      when ((signed && (is_checked_unsigned_op v1))) ->
-      (signed_to_unsigned_cmp false false c v1 v2)
-    | _ -> (node (Op2 ((Lt (signed)), v1, v2)) TBool)
-    ))
-
-and bv_leq (signed : bool) (v1 : t) (v2 : t) : t =
-    (assert ((match v1.ty, v2.ty with
-             | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
-               when (let kanon__n = Z.of_int kanon__n in
-               let kanon__s1 = Z.of_int kanon__s1 in
-               ((Z.equal kanon__s1 kanon__n))) ->
-               true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v1, v2 with
-    | (v, kanon__2) when ((Int.equal v.tag kanon__2.tag)) -> Bv_prims.v_true
-    | ({ kind = BitVec (l); _ }, { kind = BitVec (r); _ }) ->
-      (of_bool (Z.leq (bv_to_z signed (size v1) l) (bv_to_z signed (size v1) r)))
-    | ({ kind = Op1 ((Neg (true)), a); _ }, { kind = Op1 ((Neg (true)), b); _ })
-      when (signed) ->
-      (bv_leq signed b a)
-    | ({ kind = Op1 ((Neg (true)), a); _ }, { kind = BitVec (c); _ })
-      when ((signed && (not (is_int_min (size v1) c)))) ->
-      (bv_leq signed (bv_neg false v2) a)
-    | ({ kind = BitVec (c); _ }, { kind = Op1 ((Neg (true)), a); _ })
-      when ((signed && (not (is_int_min (size v1) c)))) ->
-      (bv_leq signed a (bv_neg false v1))
-    | ({ kind = BitVec (c); _ }, { kind = Op2 ((Add (checked)), { kind = BitVec (r); _ }, x); _ })
-      when ((checked_has signed checked)) ->
-      (if (overflows_sub signed (size v1) c r)
-      then (if (not signed)
-           then Bv_prims.v_true
-           else (node (Op2 ((Leq (signed)), v1, v2)) TBool))
-      else (bv_leq signed (Bv_prims.mk_bv (size v1) (Bv_prims.lit_sub v1.ty v1.ty c r)) x))
-    | ({ kind = BitVec (c); _ }, { kind = Op2 ((Add (checked)), x, { kind = BitVec (r); _ }); _ })
-      when ((checked_has signed checked)) ->
-      (if (overflows_sub signed (size v1) c r)
-      then (if (not signed)
-           then Bv_prims.v_true
-           else (node (Op2 ((Leq (signed)), v1, v2)) TBool))
-      else (bv_leq signed (Bv_prims.mk_bv (size v1) (Bv_prims.lit_sub v1.ty v1.ty c r)) x))
-    | ({ kind = Op2 ((Add (checked)), { kind = BitVec (l); _ }, x); _ }, { kind = BitVec (c); _ })
-      when ((checked_has signed checked)) ->
-      (if (overflows_sub signed (size v1) c l)
-      then (if (not signed)
-           then Bv_prims.v_false
-           else (node (Op2 ((Leq (signed)), v1, v2)) TBool))
-      else (bv_leq signed x (Bv_prims.mk_bv (size v1) (Bv_prims.lit_sub v1.ty v1.ty c l))))
-    | ({ kind = Op2 ((Add (checked)), x, { kind = BitVec (l); _ }); _ }, { kind = BitVec (c); _ })
-      when ((checked_has signed checked)) ->
-      (if (overflows_sub signed (size v1) c l)
-      then (if (not signed)
-           then Bv_prims.v_false
-           else (node (Op2 ((Leq (signed)), v1, v2)) TBool))
-      else (bv_leq signed x (Bv_prims.mk_bv (size v1) (Bv_prims.lit_sub v1.ty v1.ty c l))))
-    | ({ kind = Op2 ((Add (checked_l)), { kind = BitVec (l); _ }, y); _ }, { kind = Op2 ((Add (checked_r)), { kind = BitVec (r); _ }, x); _ })
-      when (((checked_has signed checked_l) && (checked_has signed checked_r))) ->
-      (let n = (size v1) in
-      (let sty = v1.ty in
-      (if (const_keeps_in_range signed n l r)
-      then (bv_leq signed (bv_add (checked_of_signed signed) y (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty l r))) x)
-      else (if (const_keeps_in_range signed n r l)
-           then (bv_leq signed y (bv_add (checked_of_signed signed) x (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty r l))))
-           else (node (Op2 ((Leq (signed)), v1, v2)) TBool)))))
-    | ({ kind = Op2 ((Add (checked_l)), { kind = BitVec (l); _ }, y); _ }, { kind = Op2 ((Add (checked_r)), x, { kind = BitVec (r); _ }); _ })
-      when (((checked_has signed checked_l) && (checked_has signed checked_r))) ->
-      (let n = (size v1) in
-      (let sty = v1.ty in
-      (if (const_keeps_in_range signed n l r)
-      then (bv_leq signed (bv_add (checked_of_signed signed) y (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty l r))) x)
-      else (if (const_keeps_in_range signed n r l)
-           then (bv_leq signed y (bv_add (checked_of_signed signed) x (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty r l))))
-           else (node (Op2 ((Leq (signed)), v1, v2)) TBool)))))
-    | ({ kind = Op2 ((Add (checked_l)), y, { kind = BitVec (l); _ }); _ }, { kind = Op2 ((Add (checked_r)), { kind = BitVec (r); _ }, x); _ })
-      when (((checked_has signed checked_l) && (checked_has signed checked_r))) ->
-      (let n = (size v1) in
-      (let sty = v1.ty in
-      (if (const_keeps_in_range signed n l r)
-      then (bv_leq signed (bv_add (checked_of_signed signed) y (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty l r))) x)
-      else (if (const_keeps_in_range signed n r l)
-           then (bv_leq signed y (bv_add (checked_of_signed signed) x (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty r l))))
-           else (node (Op2 ((Leq (signed)), v1, v2)) TBool)))))
-    | ({ kind = Op2 ((Add (checked_l)), y, { kind = BitVec (l); _ }); _ }, { kind = Op2 ((Add (checked_r)), x, { kind = BitVec (r); _ }); _ })
-      when (((checked_has signed checked_l) && (checked_has signed checked_r))) ->
-      (let n = (size v1) in
-      (let sty = v1.ty in
-      (if (const_keeps_in_range signed n l r)
-      then (bv_leq signed (bv_add (checked_of_signed signed) y (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty l r))) x)
-      else (if (const_keeps_in_range signed n r l)
-           then (bv_leq signed y (bv_add (checked_of_signed signed) x (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty r l))))
-           else (node (Op2 ((Leq (signed)), v1, v2)) TBool)))))
-    | (a, { kind = Op2 ((Add (checked)), kanon__4, b); _ })
-      when (((Int.equal a.tag kanon__4.tag) && (checked_has signed checked))) ->
-      (bv_leq signed (Bv_prims.bv_zero (size v1)) b)
-    | (a, { kind = Op2 ((Add (checked)), b, kanon__4); _ })
-      when (((Int.equal a.tag kanon__4.tag) && (checked_has signed checked))) ->
-      (bv_leq signed (Bv_prims.bv_zero (size v1)) b)
-    | ({ kind = Op2 ((Add (checked)), a, b); _ }, kanon__7)
-      when (((Int.equal a.tag kanon__7.tag) && (checked_has signed checked))) ->
-      (bv_leq signed b (Bv_prims.bv_zero (size v1)))
-    | ({ kind = Op2 ((Add (checked)), b, a); _ }, kanon__7)
-      when (((Int.equal a.tag kanon__7.tag) && (checked_has signed checked))) ->
-      (bv_leq signed b (Bv_prims.bv_zero (size v1)))
-    | ({ kind = BitVec (x); _ }, _)
-      when ((is_min_of signed (size v1) x)) ->
-      Bv_prims.v_true
-    | (_, { kind = BitVec (x); _ })
-      when ((is_max_of signed (size v1) x)) ->
-      Bv_prims.v_true
-    | ({ kind = BitVec (c2); _ }, { kind = Op2 ((Mul (checked)), x, ({ kind = BitVec (c1); _ } as vc1)); _ })
-      when (((checked_has signed checked) && (not ((Z.equal c1 Z.zero))))) ->
-      (let z1 = (bv_to_z signed (size v1) c1) in
-      (let z2 = (bv_to_z signed (size v1) c2) in
-      (if (Bv_prims.divisible z2 z1)
-      then (if (Z.lt z1 Z.zero)
-           then (if (signed && (((Z.equal z1 Z.minus_one)) && (is_int_min (size v1) c2)))
-                then Bv_prims.v_true
-                else (bv_leq signed x (bv_div signed v1 vc1)))
-           else (bv_leq signed (bv_div signed v1 vc1) x))
-      else (if (Z.lt z1 Z.zero)
-           then (if (Z.lt z2 Z.zero)
-                then (bv_leq signed x (bv_div signed v1 vc1))
-                else (bv_lt signed x (bv_div signed v1 vc1)))
-           else (if (Z.lt z2 Z.zero)
-                then (bv_leq signed (bv_div signed v1 vc1) x)
-                else (bv_lt signed (bv_div signed v1 vc1) x))))))
-    | ({ kind = BitVec (c2); _ }, { kind = Op2 ((Mul (checked)), ({ kind = BitVec (c1); _ } as vc1), x); _ })
-      when (((checked_has signed checked) && (not ((Z.equal c1 Z.zero))))) ->
-      (let z1 = (bv_to_z signed (size v1) c1) in
-      (let z2 = (bv_to_z signed (size v1) c2) in
-      (if (Bv_prims.divisible z2 z1)
-      then (if (Z.lt z1 Z.zero)
-           then (if (signed && (((Z.equal z1 Z.minus_one)) && (is_int_min (size v1) c2)))
-                then Bv_prims.v_true
-                else (bv_leq signed x (bv_div signed v1 vc1)))
-           else (bv_leq signed (bv_div signed v1 vc1) x))
-      else (if (Z.lt z1 Z.zero)
-           then (if (Z.lt z2 Z.zero)
-                then (bv_leq signed x (bv_div signed v1 vc1))
-                else (bv_lt signed x (bv_div signed v1 vc1)))
-           else (if (Z.lt z2 Z.zero)
-                then (bv_leq signed (bv_div signed v1 vc1) x)
-                else (bv_lt signed (bv_div signed v1 vc1) x))))))
-    | ({ kind = Op2 ((Mul (checked)), x, ({ kind = BitVec (c1); _ } as vc1)); _ }, { kind = BitVec (c2); _ })
-      when (((checked_has signed checked) && (not ((Z.equal c1 Z.zero))))) ->
-      (let z1 = (bv_to_z signed (size v1) c1) in
-      (let z2 = (bv_to_z signed (size v1) c2) in
-      (if (Bv_prims.divisible z2 z1)
-      then (if (Z.lt z1 Z.zero)
-           then (if (signed && (((Z.equal z1 Z.minus_one)) && (is_int_min (size v1) c2)))
-                then Bv_prims.v_false
-                else (bv_leq signed (bv_div signed v2 vc1) x))
-           else (bv_leq signed x (bv_div signed v2 vc1)))
-      else (if (Z.lt z1 Z.zero)
-           then (if (Z.lt z2 Z.zero)
-                then (bv_lt signed (bv_div signed v2 vc1) x)
-                else (bv_leq signed (bv_div signed v2 vc1) x))
-           else (if (Z.lt z2 Z.zero)
-                then (bv_lt signed x (bv_div signed v2 vc1))
-                else (bv_leq signed x (bv_div signed v2 vc1)))))))
-    | ({ kind = Op2 ((Mul (checked)), ({ kind = BitVec (c1); _ } as vc1), x); _ }, { kind = BitVec (c2); _ })
-      when (((checked_has signed checked) && (not ((Z.equal c1 Z.zero))))) ->
-      (let z1 = (bv_to_z signed (size v1) c1) in
-      (let z2 = (bv_to_z signed (size v1) c2) in
-      (if (Bv_prims.divisible z2 z1)
-      then (if (Z.lt z1 Z.zero)
-           then (if (signed && (((Z.equal z1 Z.minus_one)) && (is_int_min (size v1) c2)))
-                then Bv_prims.v_false
-                else (bv_leq signed (bv_div signed v2 vc1) x))
-           else (bv_leq signed x (bv_div signed v2 vc1)))
-      else (if (Z.lt z1 Z.zero)
-           then (if (Z.lt z2 Z.zero)
-                then (bv_lt signed (bv_div signed v2 vc1) x)
-                else (bv_leq signed (bv_div signed v2 vc1) x))
-           else (if (Z.lt z2 Z.zero)
-                then (bv_lt signed x (bv_div signed v2 vc1))
-                else (bv_leq signed x (bv_div signed v2 vc1)))))))
-    | ({ kind = Op2 ((Mul (checked_l)), a, x); _ }, { kind = Op2 ((Mul (checked_r)), kanon__9, y); _ })
-      when (((Int.equal a.tag kanon__9.tag) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))) ->
-      (bv_leq signed x y)
-    | ({ kind = Op2 ((Mul (checked_l)), a, x); _ }, { kind = Op2 ((Mul (checked_r)), y, kanon__9); _ })
-      when (((Int.equal a.tag kanon__9.tag) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))) ->
-      (bv_leq signed x y)
-    | ({ kind = Op2 ((Mul (checked_l)), x, a); _ }, { kind = Op2 ((Mul (checked_r)), kanon__9, y); _ })
-      when (((Int.equal a.tag kanon__9.tag) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))) ->
-      (bv_leq signed x y)
-    | ({ kind = Op2 ((Mul (checked_l)), x, a); _ }, { kind = Op2 ((Mul (checked_r)), y, kanon__9); _ })
-      when (((Int.equal a.tag kanon__9.tag) && ((checked_has signed checked_l) && ((checked_has signed checked_r) && (cancellable signed a))))) ->
-      (bv_leq signed x y)
-    | ({ kind = Op2 ((Div (false)), _, { kind = BitVec (d); _ }); _ }, { kind = BitVec (n); _ })
-      when (((not signed) && (overflows_mul false (size v1) n d))) ->
-      Bv_prims.v_true
-    | ({ kind = Op3 ((Ite), b, l, r); _ }, { kind = BitVec (_); _ }) ->
-      (b_ite b (bv_leq signed l v2) (bv_leq signed r v2))
-    | ({ kind = BitVec (_); _ }, { kind = Op3 ((Ite), b, l, r); _ }) ->
-      (b_ite b (bv_leq signed v1 l) (bv_leq signed v1 r))
-    | ({ kind = BitVec (c); _ }, { kind = Op2 ((Sub (checked)), x, { kind = BitVec (k); _ }); _ })
-      when ((checked_has signed checked)) ->
-      (if (overflows_add signed (size v1) c k)
-      then (if (not signed)
-           then Bv_prims.v_false
-           else (node (Op2 ((Leq (signed)), v1, v2)) TBool))
-      else (bv_leq signed (Bv_prims.mk_bv (size v1) (Bv_prims.lit_add v1.ty v1.ty c k)) x))
-    | ({ kind = BitVec (c); _ }, { kind = Op2 ((Sub (checked)), { kind = BitVec (k); _ }, x); _ })
-      when ((checked_has signed checked)) ->
-      (if (overflows_sub signed (size v1) k c)
-      then (if (not signed)
-           then Bv_prims.v_false
-           else (node (Op2 ((Leq (signed)), v1, v2)) TBool))
-      else (bv_leq signed x (Bv_prims.mk_bv (size v1) (Bv_prims.lit_sub v1.ty v1.ty k c))))
-    | ({ kind = Op2 ((Sub (checked)), x, { kind = BitVec (k); _ }); _ }, { kind = BitVec (c); _ })
-      when ((checked_has signed checked)) ->
-      (if (overflows_add signed (size v1) c k)
-      then (if (not signed)
-           then Bv_prims.v_true
-           else (node (Op2 ((Leq (signed)), v1, v2)) TBool))
-      else (bv_leq signed x (Bv_prims.mk_bv (size v1) (Bv_prims.lit_add v1.ty v1.ty c k))))
-    | ({ kind = Op2 ((Sub (checked)), { kind = BitVec (k); _ }, x); _ }, { kind = BitVec (c); _ })
-      when ((checked_has signed checked)) ->
-      (if (overflows_sub signed (size v1) k c)
-      then (if (not signed)
-           then Bv_prims.v_true
-           else (node (Op2 ((Leq (signed)), v1, v2)) TBool))
-      else (bv_leq signed (Bv_prims.mk_bv (size v1) (Bv_prims.lit_sub v1.ty v1.ty k c)) x))
-    | (_, { kind = BitVec (c); _ })
-      when (((not signed) && (Z.leq (unsigned_ub v1) c))) ->
-      Bv_prims.v_true
-    | ({ kind = BitVec (c); _ }, _)
-      when (((not signed) && (Z.lt (unsigned_ub v2) c))) ->
-      Bv_prims.v_false
-    | ({ kind = BitVec (c); _ }, _)
-      when ((signed && (is_checked_unsigned_op v2))) ->
-      (signed_to_unsigned_cmp true true c v1 v2)
-    | (_, { kind = BitVec (c); _ })
-      when ((signed && (is_checked_unsigned_op v1))) ->
-      (signed_to_unsigned_cmp true false c v1 v2)
-    | _ -> (node (Op2 ((Leq (signed)), v1, v2)) TBool)
-    ))
-
-and signed_to_unsigned_cmp (is_leq : bool) (c_on_left : bool) (c : Z.t) (v1 : t) (v2 : t) : t =
-    (let bits = (size v1) in
-    (let sign_bit = (Bv_prims.mk_bv bits (Bv_prims.z_lsl Z.one (Z.sub bits Z.one))) in
-    (let c_cmp = (if is_leq
-                 then (bv_leq false v1 v2)
-                 else (bv_lt false v1 v2)) in
-    (let nonneg = (Z.geq (bv_to_z true bits c) Z.zero) in
-    (if c_on_left
-    then (let in_pos = (bv_lt false v2 sign_bit) in
-         (if nonneg then (b_and c_cmp in_pos) else (b_or in_pos c_cmp)))
-    else (let in_neg = (bv_leq false sign_bit v1) in
-         (if nonneg then (b_or c_cmp in_neg) else (b_and in_neg c_cmp))))))))
-
-let sem_eq_untyped (v1 : t) (v2 : t) : t =
-    (match v1, v2 with
-    | _ when ((not ((equal_ty v1.ty v2.ty)))) -> Bv_prims.v_false
-    | _ -> (sem_eq v1 v2)
-    )
-
-let rec distinct_check_one (a : t) (rest : (t list)) : (bool option) =
-    (match rest with
-    | [] -> (Some true)
-    | (b :: rest) ->
-      (if (Int.equal a.tag b.tag)
-      then (Some false)
-      else (if (sure_neq a b) then (distinct_check_one a rest) else None))
-    )
-
-let rec distinct_check (l : (t list)) : (bool option) =
-    (match l with
-    | [] -> (Some true)
-    | (a :: rest) ->
-      (match (distinct_check_one a rest) with
-      | (Some true) -> (distinct_check rest)
-      | r -> r
+(** The functions of the language, in one recursive group, by their flat name: the module in lowercase, an underscore, and the name. The modules below are their names. Not meant to be used. *)
+module Kanon_flat = struct
+  let[@inline] mk_commut_binop (op : op2) (l : t) (r : t) : kind =
+      (if (Stdlib.Int.compare l.tag r.tag <= 0)
+      then (Op2 (op, l, r))
+      else (Op2 (op, r, l)))
+  
+  let[@inline] bool_of_bool (b : bool) : t =
+      (if b then Bv_prims.v_true else Bv_prims.v_false)
+  
+  let rec bool_sure_neq (a : t) (b : t) : bool =
+      ((not ((equal_ty a.ty b.ty))) || (match a, b with
+                                       | ({ kind = Bool (a); _ }, { kind = Bool (b); _ }) ->
+                                         (not ((Stdlib.Bool.equal a b)))
+                                       | ({ kind = BitVec (a); _ }, { kind = BitVec (b); _ }) ->
+                                         (not ((Z.equal a b)))
+                                       | ({ kind = LocLit (a); _ }, { kind = LocLit (b); _ }) ->
+                                         (not ((Z.equal a b)))
+                                       | ({ kind = Float (a); _ }, { kind = Float (b); _ }) ->
+                                         (not (Bv_prims.f_equal a b))
+                                       | ({ kind = Op2 ((Ptr), la, oa); _ }, { kind = Op2 ((Ptr), lb, ob); _ }) ->
+                                         ((bool_sure_neq la lb) || (bool_sure_neq oa ob))
+                                       | _ -> false
+                                       ))
+  
+  let[@inline] bool_at_most_one (l : (t list)) : bool =
+      (match l with
+      | [] -> true
+      | (_ :: []) -> true
+      | _ -> false
       )
-    )
-
-let b_distinct (l : (t list)) : t =
-    (match l with
-    | _ when ((at_most_one l)) -> Bv_prims.v_true
-    | _
-      when ((((Option.equal Bool.equal) (distinct_check l) (Some true)))) ->
-      Bv_prims.v_true
-    | _
-      when ((((Option.equal Bool.equal) (distinct_check l) (Some false)))) ->
-      Bv_prims.v_false
-    | _ -> (node (OpN (Distinct, (Bv_prims.sort_by_tag l))) TBool)
-    )
-
-let[@inline] no_binders (l : ((var * ty) list)) : bool =
-    (match l with
-    | [] -> true
-    | _ -> false
-    )
-
-let b_mk_exists (binders : ((var * ty) list)) (body : t) : t =
-    (assert ((match body.ty with
-             | (TBool) -> true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match body with
-    | _ when ((no_binders (Bv_prims.used_binders binders body))) -> body
-    | _ -> (node (Exists ((Bv_prims.used_binders binders body), body)) TBool)
-    ))
-
-let checked_both : checked = { signed = true; unsigned = true }
-
-let[@inline] right_mask_size (z : Z.t) : Z.t =
-    (Bv_prims.log2 (Z.add z Z.one))
-
-let[@inline] covers_bitwidth (bits : Z.t) (z : Z.t) : bool =
-    ((is_right_mask z) && ((Z.equal (right_mask_size z) bits)))
-
-let add_overflows (signed : bool) (s : ty) (_ : ty) (l : Z.t) (r : Z.t) : bool =
-    (let n = (Bv_prims.size_of_ty s) in
-    (let res = (Z.add (bv_to_z signed n l) (bv_to_z signed n r)) in
-    ((Z.lt res (min_for signed n)) || (Z.gt res (max_for signed n)))))
-
-let sub_overflows (signed : bool) (s : ty) (_ : ty) (l : Z.t) (r : Z.t) : bool =
-    (let n = (Bv_prims.size_of_ty s) in
-    (let res = (Z.sub (bv_to_z signed n l) (bv_to_z signed n r)) in
-    ((Z.lt res (min_for signed n)) || (Z.gt res (max_for signed n)))))
-
-let mul_overflows (signed : bool) (s : ty) (_ : ty) (l : Z.t) (r : Z.t) : bool =
-    (let n = (Bv_prims.size_of_ty s) in
-    (let res = (Z.mul (bv_to_z signed n l) (bv_to_z signed n r)) in
-    ((Z.lt res (min_for signed n)) || (Z.gt res (max_for signed n)))))
-
-let bv_to_bool (v : t) : t =
-    (match v with
-    | { kind = BitVec (z); _ } -> (of_bool (not ((Z.equal z Z.zero))))
-    | { kind = Op1 ((BvOfBool (_)), b); _ } -> b
-    | _ -> (b_not (sem_eq v (Bv_prims.bv_zero (size v))))
-    )
-
-let bv_not_bool (v : t) : t =
-    (match v with
-    | { kind = BitVec (z); _ } ->
-      (if ((Z.equal z Z.zero))
-      then (Bv_prims.bv_one (size v))
-      else (Bv_prims.bv_zero (size v)))
-    | { kind = Op1 ((BvOfBool (n)), g); _ } ->
-      let n = Z.of_int n in
-      (bv_of_bool n (b_not g))
-    | _ -> (bv_of_bool (size v) (sem_eq v (Bv_prims.bv_zero (size v))))
-    )
-
-let bv_mod (v1 : t) (v2 : t) : t =
-    (assert ((match v1.ty, v2.ty with
-             | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
-               when (let kanon__n = Z.of_int kanon__n in
-               let kanon__s1 = Z.of_int kanon__s1 in
-               ((Z.equal kanon__s1 kanon__n))) ->
-               true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v1, v2 with
-    | (({ kind = BitVec (i1); _ } as lit_i1), ({ kind = BitVec (i2); _ } as lit_i2)) ->
-      (node (BitVec ((Bv_prims.lit_smod lit_i1.ty lit_i2.ty i1 i2))) v1.ty)
-    | (_, { kind = BitVec (kanon__2); _ })
-      when (((Z.equal kanon__2 Z.zero))) ->
-      v1
-    | _ -> (node (Op2 (Mod, v1, v2)) v1.ty)
-    ))
-
-let rec bv_lshr (v1 : t) (v2 : t) : t =
-    (assert ((match v1.ty, v2.ty with
-             | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
-               when (let kanon__n = Z.of_int kanon__n in
-               let kanon__s1 = Z.of_int kanon__s1 in
-               ((Z.equal kanon__s1 kanon__n))) ->
-               true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v1, v2 with
-    | (({ kind = BitVec (i1); _ } as lit_i1), ({ kind = BitVec (i2); _ } as lit_i2)) ->
-      (node (BitVec ((Bv_prims.lit_lshr lit_i1.ty lit_i2.ty i1 i2))) v1.ty)
-    | (_, { kind = BitVec (kanon__2); _ })
-      when (((Z.equal kanon__2 Z.zero))) ->
-      v1
-    | (_, { kind = BitVec (s); _ })
-      when ((Z.geq s (size v1))) ->
-      (Bv_prims.bv_zero (size v1))
-    | ({ kind = Op2 ((LShr), v, { kind = BitVec (s1); _ }); _ }, { kind = BitVec (s2); _ }) ->
-      (let n = (size v1) in
-      (bv_lshr v (Bv_prims.mk_masked n (zmin (Z.add s1 s2) n))))
-    | ({ kind = Op2 ((BitAnd), x, { kind = BitVec (mask); _ }); _ }, { kind = BitVec (s); _ }) ->
-      (bv_and (bv_lshr x v2) (Bv_prims.mk_bv (size v1) (Bv_prims.lit_lshr v1.ty v1.ty mask s)))
-    | ({ kind = Op2 ((BitAnd), { kind = BitVec (mask); _ }, x); _ }, { kind = BitVec (s); _ }) ->
-      (bv_and (bv_lshr x v2) (Bv_prims.mk_bv (size v1) (Bv_prims.lit_lshr v1.ty v1.ty mask s)))
-    | ({ kind = Op2 ((BitOr), x, { kind = BitVec (mask); _ }); _ }, { kind = BitVec (s); _ }) ->
-      (bv_or (bv_lshr x v2) (Bv_prims.mk_bv (size v1) (Bv_prims.lit_lshr v1.ty v1.ty mask s)))
-    | ({ kind = Op2 ((BitOr), { kind = BitVec (mask); _ }, x); _ }, { kind = BitVec (s); _ }) ->
-      (bv_or (bv_lshr x v2) (Bv_prims.mk_bv (size v1) (Bv_prims.lit_lshr v1.ty v1.ty mask s)))
-    | _ -> (node (Op2 (LShr, v1, v2)) v1.ty)
-    ))
-
-let rec bv_shl (v1 : t) (v2 : t) : t =
-    (assert ((match v1.ty, v2.ty with
-             | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
-               when (let kanon__n = Z.of_int kanon__n in
-               let kanon__s1 = Z.of_int kanon__s1 in
-               ((Z.equal kanon__s1 kanon__n))) ->
-               true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v1, v2 with
-    | (({ kind = BitVec (i1); _ } as lit_i1), ({ kind = BitVec (i2); _ } as lit_i2)) ->
-      (node (BitVec ((Bv_prims.lit_shl lit_i1.ty lit_i2.ty i1 i2))) v1.ty)
-    | (_, { kind = BitVec (kanon__2); _ })
-      when (((Z.equal kanon__2 Z.zero))) ->
-      v1
-    | (_, { kind = BitVec (s); _ })
-      when ((Z.geq s (size v1))) ->
-      (Bv_prims.bv_zero (size v1))
-    | ({ kind = Op2 ((Shl), v, { kind = BitVec (s1); _ }); _ }, { kind = BitVec (s2); _ }) ->
-      (let n = (size v1) in
-      (bv_shl v (Bv_prims.mk_masked n (zmin (Z.add s1 s2) n))))
-    | ({ kind = Op2 ((LShr), x, { kind = BitVec (sr); _ }); _ }, { kind = BitVec (sl); _ }) ->
-      (let n = (size v1) in
-      (let sty = v1.ty in
-      (if (Z.leq sl sr)
-      then (bv_and (bv_lshr x (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty sr sl))) (Bv_prims.mk_bv n (Bv_prims.lit_shl sty sty (ones n) sl)))
-      else (bv_shl (bv_and x (Bv_prims.mk_bv n (Bv_prims.lit_shl sty sty (ones n) sr))) (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty sl sr))))))
-    | ({ kind = Op2 ((BitAnd), x, { kind = BitVec (mask); _ }); _ }, { kind = BitVec (s); _ }) ->
-      (bv_and (bv_shl x v2) (Bv_prims.mk_bv (size v1) (Bv_prims.lit_shl v1.ty v1.ty mask s)))
-    | ({ kind = Op2 ((BitAnd), { kind = BitVec (mask); _ }, x); _ }, { kind = BitVec (s); _ }) ->
-      (bv_and (bv_shl x v2) (Bv_prims.mk_bv (size v1) (Bv_prims.lit_shl v1.ty v1.ty mask s)))
-    | ({ kind = Op2 ((BitOr), x, { kind = BitVec (mask); _ }); _ }, { kind = BitVec (s); _ }) ->
-      (bv_or (bv_shl x v2) (Bv_prims.mk_bv (size v1) (Bv_prims.lit_shl v1.ty v1.ty mask s)))
-    | ({ kind = Op2 ((BitOr), { kind = BitVec (mask); _ }, x); _ }, { kind = BitVec (s); _ }) ->
-      (bv_or (bv_shl x v2) (Bv_prims.mk_bv (size v1) (Bv_prims.lit_shl v1.ty v1.ty mask s)))
-    | _ -> (node (Op2 (Shl, v1, v2)) v1.ty)
-    ))
-
-let rec bv_ashr (v1 : t) (v2 : t) : t =
-    (assert ((match v1.ty, v2.ty with
-             | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
-               when (let kanon__n = Z.of_int kanon__n in
-               let kanon__s1 = Z.of_int kanon__s1 in
-               ((Z.equal kanon__s1 kanon__n))) ->
-               true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v1, v2 with
-    | (({ kind = BitVec (i1); _ } as lit_i1), ({ kind = BitVec (i2); _ } as lit_i2)) ->
-      (node (BitVec ((Bv_prims.lit_ashr lit_i1.ty lit_i2.ty i1 i2))) v1.ty)
-    | (_, { kind = BitVec (kanon__2); _ })
-      when (((Z.equal kanon__2 Z.zero))) ->
-      v1
-    | (_, { kind = BitVec (s); _ })
-      when ((Z.geq s (size v1))) ->
-      (let sz = (size v1) in
-      (bv_ashr v1 (Bv_prims.mk_masked sz (Z.sub sz Z.one))))
-    | ({ kind = Op2 ((AShr), v, { kind = BitVec (s1); _ }); _ }, { kind = BitVec (s2); _ }) ->
-      (let sz = (size v1) in
-      (bv_ashr v (Bv_prims.mk_masked sz (zmin (Z.add s1 s2) (Z.sub sz Z.one)))))
-    | _ -> (node (Op2 (AShr, v1, v2)) v1.ty)
-    ))
-
-let bv_add_overflows (signed : bool) (v1 : t) (v2 : t) : t =
-    (assert ((match v1.ty, v2.ty with
-             | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
-               when (let kanon__n = Z.of_int kanon__n in
-               let kanon__s1 = Z.of_int kanon__s1 in
-               ((Z.equal kanon__s1 kanon__n))) ->
-               true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v1, v2 with
-    | (({ kind = BitVec (i1); _ } as lit_i1), ({ kind = BitVec (i2); _ } as lit_i2)) ->
-      (node (Bool ((add_overflows signed lit_i1.ty lit_i2.ty i1 i2))) TBool)
-    | ({ kind = BitVec (kanon__1); _ }, _)
-      when (((Z.equal kanon__1 Z.zero))) ->
-      Bv_prims.v_false
-    | (_, { kind = BitVec (kanon__1); _ })
-      when (((Z.equal kanon__1 Z.zero))) ->
-      Bv_prims.v_false
-    | _
-      when (((Z.equal (size v1) Z.one))) ->
-      (let one = (Bv_prims.bv_one Z.one) in
-      (b_and (sem_eq v1 one) (sem_eq v2 one)))
-    | ({ kind = BitVec (z); _ }, x)
-      when ((not signed)) ->
-      (bv_lt signed (Bv_prims.mk_bv (size v1) (Bv_prims.lit_not v1.ty z)) x)
-    | (x, { kind = BitVec (z); _ })
-      when ((not signed)) ->
-      (bv_lt signed (Bv_prims.mk_bv (size v1) (Bv_prims.lit_not v1.ty z)) x)
-    | ({ kind = BitVec (z); _ }, x)
-      when (signed) ->
-      (let n = (size v1) in
-      (let z = (bv_to_z signed n z) in
-      (if (Z.gt z Z.zero)
-      then (bv_lt signed (Bv_prims.mk_masked n (Z.sub (max_for signed n) z)) x)
-      else (bv_lt signed x (Bv_prims.mk_masked n (Z.sub (min_for signed n) z))))))
-    | (x, { kind = BitVec (z); _ })
-      when (signed) ->
-      (let n = (size v1) in
-      (let z = (bv_to_z signed n z) in
-      (if (Z.gt z Z.zero)
-      then (bv_lt signed (Bv_prims.mk_masked n (Z.sub (max_for signed n) z)) x)
-      else (bv_lt signed x (Bv_prims.mk_masked n (Z.sub (min_for signed n) z))))))
-    | ({ kind = Op1 ((BvOfBool (n)), b1); _ }, { kind = Op1 ((BvOfBool (_)), b2); _ })
-      when (let n = Z.of_int n in
-      (Z.gt n Z.one)) ->
-      let n = Z.of_int n in
-      (if (signed && ((Z.equal n (Z.of_int (2)))))
-      then (b_and b1 b2)
-      else Bv_prims.v_false)
-    | ({ kind = Op1 ((BvOfBool (_)), b2); _ }, { kind = Op1 ((BvOfBool (n)), b1); _ })
-      when (let n = Z.of_int n in
-      (Z.gt n Z.one)) ->
-      let n = Z.of_int n in
-      (if (signed && ((Z.equal n (Z.of_int (2)))))
-      then (b_and b1 b2)
-      else Bv_prims.v_false)
-    | ({ kind = Op1 ((BvOfBool (_)), b); _ }, other)
-      when ((Z.gt (size v1) Z.one)) ->
-      (let n = (size v1) in
-      (b_and b (sem_eq other (Bv_prims.mk_masked n (max_for signed n)))))
-    | (other, { kind = Op1 ((BvOfBool (_)), b); _ })
-      when ((Z.gt (size v1) Z.one)) ->
-      (let n = (size v1) in
-      (b_and b (sem_eq other (Bv_prims.mk_masked n (max_for signed n)))))
-    | _ -> (node (mk_commut_binop (AddOvf (signed)) v1 v2) TBool)
-    ))
-
-let bv_mul_overflows (signed : bool) (v1 : t) (v2 : t) : t =
-    (assert ((match v1.ty, v2.ty with
-             | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
-               when (let kanon__n = Z.of_int kanon__n in
-               let kanon__s1 = Z.of_int kanon__s1 in
-               ((Z.equal kanon__s1 kanon__n))) ->
-               true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v1, v2 with
-    | (({ kind = BitVec (i1); _ } as lit_i1), ({ kind = BitVec (i2); _ } as lit_i2)) ->
-      (node (Bool ((mul_overflows signed lit_i1.ty lit_i2.ty i1 i2))) TBool)
-    | _
-      when ((signed && ((Z.equal (size v1) Z.one)))) ->
-      (let one = (Bv_prims.bv_one Z.one) in
-      (b_and (sem_eq v1 one) (sem_eq v2 one)))
-    | _
-      when (((signed && (Z.lt (Z.add (msb_of v1) (msb_of v2)) (Z.sub (size v1) (Z.of_int (2))))) || ((not signed) && (Z.lt (Z.add (msb_of v1) (msb_of v2)) (Z.sub (size v1) Z.one))))) ->
-      Bv_prims.v_false
-    | ({ kind = BitVec (z); _ }, x)
-      when (((not signed) || (Z.gt (size v1) Z.one))) ->
-      (if (((Z.equal z Z.zero)) || ((Z.equal z Z.one)))
-      then Bv_prims.v_false
-      else (let n = (size v1) in
-           (let z = (bv_to_z signed n z) in
-           (if signed
-           then (let min_val = (Z.neg (Bv_prims.z_lsl Z.one (Z.sub n Z.one))) in
-                (let max_val = (Z.sub (Bv_prims.z_lsl Z.one (Z.sub n Z.one)) Z.one) in
-                (if ((Z.equal z Z.minus_one))
-                then (sem_eq x (Bv_prims.mk_masked n min_val))
-                else (let (min_x, max_x) = (if (Z.gt z Z.zero)
-                                           then ((Bv_prims.tdiv min_val z), (Bv_prims.tdiv max_val z))
-                                           else ((Bv_prims.tdiv max_val z), (Bv_prims.tdiv min_val z))) in
-                     (b_or (bv_lt signed x (Bv_prims.mk_masked n min_x)) (bv_lt signed (Bv_prims.mk_masked n max_x) x))))))
-           else (bv_lt signed (Bv_prims.mk_masked n (Bv_prims.tdiv (Z.sub (Bv_prims.z_lsl Z.one n) Z.one) z)) x)))))
-    | (x, { kind = BitVec (z); _ })
-      when (((not signed) || (Z.gt (size v1) Z.one))) ->
-      (if (((Z.equal z Z.zero)) || ((Z.equal z Z.one)))
-      then Bv_prims.v_false
-      else (let n = (size v1) in
-           (let z = (bv_to_z signed n z) in
-           (if signed
-           then (let min_val = (Z.neg (Bv_prims.z_lsl Z.one (Z.sub n Z.one))) in
-                (let max_val = (Z.sub (Bv_prims.z_lsl Z.one (Z.sub n Z.one)) Z.one) in
-                (if ((Z.equal z Z.minus_one))
-                then (sem_eq x (Bv_prims.mk_masked n min_val))
-                else (let (min_x, max_x) = (if (Z.gt z Z.zero)
-                                           then ((Bv_prims.tdiv min_val z), (Bv_prims.tdiv max_val z))
-                                           else ((Bv_prims.tdiv max_val z), (Bv_prims.tdiv min_val z))) in
-                     (b_or (bv_lt signed x (Bv_prims.mk_masked n min_x)) (bv_lt signed (Bv_prims.mk_masked n max_x) x))))))
-           else (bv_lt signed (Bv_prims.mk_masked n (Bv_prims.tdiv (Z.sub (Bv_prims.z_lsl Z.one n) Z.one) z)) x)))))
-    | (x, { kind = Op2 ((Div (false)), _, kanon__5); _ })
-      when (((Int.equal x.tag kanon__5.tag) && (not signed))) ->
-      Bv_prims.v_false
-    | ({ kind = Op2 ((Div (false)), _, kanon__5); _ }, x)
-      when (((Int.equal x.tag kanon__5.tag) && (not signed))) ->
-      Bv_prims.v_false
-    | _ -> (node (mk_commut_binop (MulOvf (signed)) v1 v2) TBool)
-    ))
-
-let[@inline] bv_neg_overflows (v : t) : t =
-    (sem_eq (Bv_prims.mk_masked (size v) (min_for true (size v))) v)
-
-let bv_sub_overflows (signed : bool) (v1 : t) (v2 : t) : t =
-    (assert ((match v1.ty, v2.ty with
-             | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
-               when (let kanon__n = Z.of_int kanon__n in
-               let kanon__s1 = Z.of_int kanon__s1 in
-               ((Z.equal kanon__s1 kanon__n))) ->
-               true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v1, v2 with
-    | (({ kind = BitVec (i1); _ } as lit_i1), ({ kind = BitVec (i2); _ } as lit_i2)) ->
-      (node (Bool ((sub_overflows signed lit_i1.ty lit_i2.ty i1 i2))) TBool)
-    | (v, kanon__2) when ((Int.equal v.tag kanon__2.tag)) -> Bv_prims.v_false
-    | _ when ((not signed)) -> (bv_lt signed v1 v2)
-    | _ -> (node (Op2 ((SubOvf (signed)), v1, v2)) TBool)
-    ))
-
-let bv_of_float (rounding : rm) (signed : bool) (sz : Z.t) (v : t) : t =
-    (assert ((match v.ty with
-             | (TFloat (kanon__p)) -> true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v with
-    | { kind = Float (f); _ } ->
-      (match (Bv_prims.f_to_int rounding signed sz f) with
-      | (Some z) -> (Bv_prims.mk_masked sz z)
-      | None ->
-        (node (Op1 ((BvOfFloat (rounding, signed, (Z.to_int sz))), v)) (TBitVector ((Z.to_int sz))))
+  
+  let[@inline] bitvec_checked_meet (a : checked) (b : checked) : checked =
+      { signed = (a.signed && b.signed); unsigned = (a.unsigned && b.unsigned) }
+  
+  let bitvec_checked_unsigned : checked = { signed = false; unsigned = true }
+  
+  let[@inline] bitvec_checked_has (signed : bool) (c : checked) : bool =
+      (if signed then c.signed else c.unsigned)
+  
+  let[@inline] bitvec_max_for (signed : bool) (n : Z.t) : Z.t =
+      (let n = (if signed then (Z.sub n Z.one) else n) in
+      (Z.sub (Bv_prims.z_lsl Z.one n) Z.one))
+  
+  let[@inline] bitvec_min_for (signed : bool) (n : Z.t) : Z.t =
+      (if signed
+      then (Z.neg (Bv_prims.z_lsl Z.one (Z.sub n Z.one)))
+      else Z.zero)
+  
+  let[@inline] bitvec_to_z (signed : bool) (bits : Z.t) (z : Z.t) : Z.t =
+      (if signed then (Bv_prims.signed_extract z Z.zero bits) else z)
+  
+  let bitvec_overflows_add (signed : bool) (n : Z.t) (l : Z.t) (r : Z.t) : bool =
+      (let res = (Z.add (bitvec_to_z signed n l) (bitvec_to_z signed n r)) in
+      ((Z.lt res (bitvec_min_for signed n)) || (Z.gt res (bitvec_max_for signed n))))
+  
+  let bitvec_overflows_sub (signed : bool) (n : Z.t) (l : Z.t) (r : Z.t) : bool =
+      (let res = (Z.sub (bitvec_to_z signed n l) (bitvec_to_z signed n r)) in
+      ((Z.lt res (bitvec_min_for signed n)) || (Z.gt res (bitvec_max_for signed n))))
+  
+  let bitvec_fold_checked (c : checked) (n : Z.t) (a : Z.t) (b : Z.t) (is_add : bool) : checked =
+      (let keep (signed : bool) =
+        ((bitvec_checked_has signed c) && (not (if is_add
+                                               then (bitvec_overflows_add signed n a b)
+                                               else (bitvec_overflows_sub signed n a b)))) in
+      { signed = (keep true); unsigned = (keep false) })
+  
+  let bitvec_checked_signed : checked = { signed = true; unsigned = false }
+  
+  let[@inline] bitvec_is_checked (c : checked) : bool =
+      (c.signed || c.unsigned)
+  
+  let[@inline] bitvec_is_int_min (n : Z.t) (l : Z.t) : bool =
+      ((Z.equal (bitvec_to_z true n l) (bitvec_min_for true n)))
+  
+  let bitvec_overflows_mul (signed : bool) (n : Z.t) (l : Z.t) (r : Z.t) : bool =
+      (let res = (Z.mul (bitvec_to_z signed n l) (bitvec_to_z signed n r)) in
+      ((Z.lt res (bitvec_min_for signed n)) || (Z.gt res (bitvec_max_for signed n))))
+  
+  let[@inline] bitvec_size (v : t) : Z.t = (Bv_prims.size_of_ty v.ty)
+  
+  let bitvec_unchecked : checked = { signed = false; unsigned = false }
+  
+  let[@inline] bitvec_is_bv (t : ty) : bool =
+      (match t with
+      | (TBitVector (_)) -> true
+      | _ -> false
       )
-    | _ ->
-      (node (Op1 ((BvOfFloat (rounding, signed, (Z.to_int sz))), v)) (TBitVector ((Z.to_int sz))))
-    ))
-
-let bv_to_float (rounding : rm) (signed : bool) (fp : fp) (v : t) : t =
-    (assert ((match v.ty with
-             | (TBitVector (kanon__n)) -> true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v with
-    | { kind = BitVec (z); _ } ->
-      (match (Bv_prims.f_of_int rounding signed fp (size v) z) with
-      | (Some f) -> (node (Float (f)) (TFloat ((Bv_prims.f_prec f))))
-      | None ->
-        (node (Op1 ((FloatOfBv (rounding, signed, fp)), v)) (TFloat (fp)))
-      )
-    | _ -> (node (Op1 ((FloatOfBv (rounding, signed, fp)), v)) (TFloat (fp)))
-    ))
-
-let bv_to_float_raw (v : t) : t =
-    (assert ((match v.ty with
-             | (TBitVector (kanon__s1))
-               when (let kanon__s1 = Z.of_int kanon__s1 in
-               ((Z.equal kanon__s1 (Bv_prims.fp_size (Bv_prims.fp_of_size (size v)))))) ->
-               true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v with
-    | { kind = BitVec (z); _ } ->
-      (let fp = (Bv_prims.fp_of_size (size v)) in
-      (let kanon__a1 = (Bv_prims.f_of_bits fp z) in
-      (node (Float (kanon__a1)) (TFloat ((Bv_prims.f_prec kanon__a1))))))
-    | _ ->
-      (let kanon__a2 = (Bv_prims.fp_of_size (size v)) in
-      (node (Op1 ((FloatOfBvRaw (kanon__a2)), v)) (TFloat (kanon__a2))))
-    ))
-
-let[@inline] fp_of (v : t) : fp = (Bv_prims.fp_of_ty v.ty)
-
-let float_is_floatclass (fc : fc) (sv : t) : t =
-    (assert ((match sv.ty with
-             | (TFloat (kanon__p)) -> true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match sv with
-    | { kind = Float (f); _ } ->
-      (node (Bool ((Bv_prims.f_is_class fc f))) TBool)
-    | _ -> (node (Op1 ((FIs (fc)), sv)) TBool)
-    ))
-
-let float_is_negative (v : t) : t =
-    (assert ((match v.ty with
-             | (TFloat (kanon__p)) -> true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v with
-    | { kind = Float (f); _ } ->
-      (node (Bool ((Bv_prims.f_is_negative f))) TBool)
-    | _ -> (node (Op1 (FIsNeg, v)) TBool)
-    ))
-
-let float_is_positive (v : t) : t =
-    (assert ((match v.ty with
-             | (TFloat (kanon__p)) -> true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v with
-    | { kind = Float (f); _ } ->
-      (node (Bool ((Bv_prims.f_is_positive f))) TBool)
-    | _ -> (node (Op1 (FIsPos, v)) TBool)
-    ))
-
-let float_cast (rounding : rm) (fp : fp) (v : t) : t =
-    (assert ((match v.ty with
-             | (TFloat (kanon__q)) -> true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v with
-    | { kind = Float (f); _ } ->
-      (let kanon__a1 = (Bv_prims.f_convert rounding fp f) in
-      (node (Float (kanon__a1)) (TFloat ((Bv_prims.f_prec kanon__a1)))))
-    | _ -> (node (Op1 ((FloatOfFloat (rounding, fp)), v)) (TFloat (fp)))
-    ))
-
-let float_eq (v1 : t) (v2 : t) : t =
-    (assert ((match v1.ty, v2.ty with
-             | ((TFloat (kanon__p)), (TFloat (kanon__s1)))
-               when (((equal_fp kanon__s1 kanon__p))) ->
-               true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v1, v2 with
-    | ({ kind = Float (f1); _ }, { kind = Float (f2); _ }) ->
-      (node (Bool ((Bv_prims.f_eq f1 f2))) TBool)
-    | (v, kanon__2)
-      when ((Int.equal v.tag kanon__2.tag)) ->
-      (b_not (float_is_floatclass NaN v))
-    | (({ kind = Float (f); _ } as l), x) ->
-      (if (Bv_prims.f_is_nan f)
-      then Bv_prims.v_false
-      else (if (Bv_prims.f_is_zero f)
-           then (float_is_floatclass Zero x)
-           else (sem_eq l x)))
-    | (x, ({ kind = Float (f); _ } as l)) ->
-      (if (Bv_prims.f_is_nan f)
-      then Bv_prims.v_false
-      else (if (Bv_prims.f_is_zero f)
-           then (float_is_floatclass Zero x)
-           else (sem_eq l x)))
-    | _ -> (node (mk_commut_binop FEq v1 v2) TBool)
-    ))
-
-let float_lt (v1 : t) (v2 : t) : t =
-    (assert ((match v1.ty, v2.ty with
-             | ((TFloat (kanon__p)), (TFloat (kanon__s1)))
-               when (((equal_fp kanon__s1 kanon__p))) ->
-               true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v1, v2 with
-    | ({ kind = Float (f1); _ }, { kind = Float (f2); _ }) ->
-      (node (Bool ((Bv_prims.f_lt f1 f2))) TBool)
-    | _ -> (node (Op2 (FLt, v1, v2)) TBool)
-    ))
-
-let float_leq (v1 : t) (v2 : t) : t =
-    (assert ((match v1.ty, v2.ty with
-             | ((TFloat (kanon__p)), (TFloat (kanon__s1)))
-               when (((equal_fp kanon__s1 kanon__p))) ->
-               true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v1, v2 with
-    | ({ kind = Float (f1); _ }, { kind = Float (f2); _ }) ->
-      (node (Bool ((Bv_prims.f_le f1 f2))) TBool)
-    | _ -> (node (Op2 (FLeq, v1, v2)) TBool)
-    ))
-
-let float_add (v1 : t) (v2 : t) : t =
-    (assert ((match v1.ty, v2.ty with
-             | ((TFloat (kanon__p)), (TFloat (kanon__s1)))
-               when (((equal_fp kanon__s1 kanon__p))) ->
-               true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v1, v2 with
-    | ({ kind = Float (f1); _ }, { kind = Float (f2); _ }) ->
-      (let kanon__a1 = (Bv_prims.f_add f1 f2) in
-      (node (Float (kanon__a1)) (TFloat ((Bv_prims.f_prec kanon__a1)))))
-    | _ -> (node (Op2 (FAdd, v1, v2)) v1.ty)
-    ))
-
-let float_sub (v1 : t) (v2 : t) : t =
-    (assert ((match v1.ty, v2.ty with
-             | ((TFloat (kanon__p)), (TFloat (kanon__s1)))
-               when (((equal_fp kanon__s1 kanon__p))) ->
-               true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v1, v2 with
-    | ({ kind = Float (f1); _ }, { kind = Float (f2); _ }) ->
-      (let kanon__a1 = (Bv_prims.f_sub f1 f2) in
-      (node (Float (kanon__a1)) (TFloat ((Bv_prims.f_prec kanon__a1)))))
-    | _ -> (node (Op2 (FSub, v1, v2)) v1.ty)
-    ))
-
-let float_div (v1 : t) (v2 : t) : t =
-    (assert ((match v1.ty, v2.ty with
-             | ((TFloat (kanon__p)), (TFloat (kanon__s1)))
-               when (((equal_fp kanon__s1 kanon__p))) ->
-               true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v1, v2 with
-    | ({ kind = Float (f1); _ }, { kind = Float (f2); _ }) ->
-      (let kanon__a1 = (Bv_prims.f_div f1 f2) in
-      (node (Float (kanon__a1)) (TFloat ((Bv_prims.f_prec kanon__a1)))))
-    | _ -> (node (Op2 (FDiv, v1, v2)) v1.ty)
-    ))
-
-let float_mul (v1 : t) (v2 : t) : t =
-    (assert ((match v1.ty, v2.ty with
-             | ((TFloat (kanon__p)), (TFloat (kanon__s1)))
-               when (((equal_fp kanon__s1 kanon__p))) ->
-               true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v1, v2 with
-    | ({ kind = Float (f1); _ }, { kind = Float (f2); _ }) ->
-      (let kanon__a1 = (Bv_prims.f_mul f1 f2) in
-      (node (Float (kanon__a1)) (TFloat ((Bv_prims.f_prec kanon__a1)))))
-    | _ -> (node (Op2 (FMul, v1, v2)) v1.ty)
-    ))
-
-let float_rem (v1 : t) (v2 : t) : t =
-    (assert ((match v1.ty, v2.ty with
-             | ((TFloat (kanon__p)), (TFloat (kanon__s1)))
-               when (((equal_fp kanon__s1 kanon__p))) ->
-               true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v1, v2 with
-    | ({ kind = Float (f1); _ }, { kind = Float (f2); _ }) ->
-      (let kanon__a1 = (Bv_prims.f_rem f1 f2) in
-      (node (Float (kanon__a1)) (TFloat ((Bv_prims.f_prec kanon__a1)))))
-    | _ -> (node (Op2 (FRem, v1, v2)) v1.ty)
-    ))
-
-let float_abs (v : t) : t =
-    (assert ((match v.ty with
-             | (TFloat (kanon__p)) -> true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v with
-    | { kind = Float (f); _ } ->
-      (let kanon__a1 = (Bv_prims.f_abs f) in
-      (node (Float (kanon__a1)) (TFloat ((Bv_prims.f_prec kanon__a1)))))
-    | { kind = Op1 ((FAbs), _); _ } -> v
-    | _ -> (node (Op1 (FAbs, v)) v.ty)
-    ))
-
-let float_neg (v : t) : t =
-    (assert ((match v.ty with
-             | (TFloat (kanon__p)) -> true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v with
-    | { kind = Float (f); _ } ->
-      (let kanon__a1 = (Bv_prims.f_neg f) in
-      (node (Float (kanon__a1)) (TFloat ((Bv_prims.f_prec kanon__a1)))))
-    | { kind = Op1 ((FNeg), v); _ } -> v
-    | _ -> (node (Op1 (FNeg, v)) v.ty)
-    ))
-
-let float_fma (a : t) (b : t) (c : t) : t =
-    (assert ((match a.ty, b.ty, c.ty with
-             | ((TFloat (kanon__p)), (TFloat (kanon__s1)), (TFloat (kanon__s2)))
-               when ((((equal_fp kanon__s1 kanon__p)) && ((equal_fp kanon__s2 kanon__p)))) ->
-               true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match a, b, c with
-    | ({ kind = Float (fa); _ }, { kind = Float (fb); _ }, { kind = Float (fc); _ }) ->
-      (let kanon__a1 = (Bv_prims.f_fma fa fb fc) in
-      (node (Float (kanon__a1)) (TFloat ((Bv_prims.f_prec kanon__a1)))))
-    | _ -> (node (Op3 (Fma, a, b, c)) a.ty)
-    ))
-
-let raw_fmod_of_rem (r : t) (v1 : t) (v2 : t) : t =
-    (let is_neg (v : t) =
-      (node (Op1 (FIsNeg, v)) TBool) in
-    (let abs2 = (node (Op1 (FAbs, v2)) v2.ty) in
-    (let correction = (node (Op3 (Ite, (is_neg v1), (node (Op1 (FNeg, abs2)) abs2.ty), abs2)) abs2.ty) in
-    (node (Op3 (Ite, (node (Op2 (Eq, (is_neg r), (is_neg v1))) TBool), r, (node (Op2 (FAdd, r, correction)) r.ty))) r.ty))))
-
-let float_fmod_of_rem (r : t) (v1 : t) (v2 : t) : t =
-    (b_ite (sem_eq (float_is_negative r) (float_is_negative v1)) r (float_add r (b_ite (float_is_negative v1) (float_neg (float_abs v2)) (float_abs v2))))
-
-let float_fmod (v1 : t) (v2 : t) : t =
-    (match v1, v2 with
-    | ({ kind = Float (f1); _ }, { kind = Float (f2); _ }) ->
-      (let kanon__a1 = (Bv_prims.f_fmod f1 f2) in
-      (node (Float (kanon__a1)) (TFloat ((Bv_prims.f_prec kanon__a1)))))
-    | _ -> (float_fmod_of_rem (float_rem v1 v2) v1 v2)
-    )
-
-let float_min (v1 : t) (v2 : t) : t =
-    (assert ((match v1.ty, v2.ty with
-             | ((TFloat (kanon__p)), (TFloat (kanon__s1)))
-               when (((equal_fp kanon__s1 kanon__p))) ->
-               true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v1, v2 with
-    | ({ kind = Float (f1); _ }, { kind = Float (f2); _ }) ->
-      (let kanon__a1 = (Bv_prims.f_min f1 f2) in
-      (node (Float (kanon__a1)) (TFloat ((Bv_prims.f_prec kanon__a1)))))
-    | _ -> (node (Op2 (FMin, v1, v2)) v1.ty)
-    ))
-
-let float_max (v1 : t) (v2 : t) : t =
-    (assert ((match v1.ty, v2.ty with
-             | ((TFloat (kanon__p)), (TFloat (kanon__s1)))
-               when (((equal_fp kanon__s1 kanon__p))) ->
-               true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v1, v2 with
-    | ({ kind = Float (f1); _ }, { kind = Float (f2); _ }) ->
-      (let kanon__a1 = (Bv_prims.f_max f1 f2) in
-      (node (Float (kanon__a1)) (TFloat ((Bv_prims.f_prec kanon__a1)))))
-    | _ -> (node (Op2 (FMax, v1, v2)) v1.ty)
-    ))
-
-let float_sqrt (v : t) : t =
-    (assert ((match v.ty with
-             | (TFloat (kanon__p)) -> true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match v with
-    | { kind = Float (f); _ } ->
-      (let kanon__a1 = (Bv_prims.f_sqrt f) in
-      (node (Float (kanon__a1)) (TFloat ((Bv_prims.f_prec kanon__a1)))))
-    | _ -> (node (Op1 (FSqrt, v)) v.ty)
-    ))
-
-let float_round (rm : rm) (sv : t) : t =
-    (assert ((match sv.ty with
-             | (TFloat (kanon__p)) -> true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match sv with
-    | { kind = Float (f); _ } ->
-      (let kanon__a1 = (Bv_prims.f_round rm f) in
-      (node (Float (kanon__a1)) (TFloat ((Bv_prims.f_prec kanon__a1)))))
-    | _ -> (node (Op1 ((FRound (rm)), sv)) sv.ty)
-    ))
-
-let ptr_loc (p : t) : t =
-    (assert ((match p.ty with
-             | (TPointer (kanon__n)) -> true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match p with
-    | { kind = Op2 ((Ptr), l, _); _ } -> l
-    | _ -> (node (Op1 (GetPtrLoc, p)) (TLoc ((Z.to_int (size p)))))
-    ))
-
-let ptr_ofs (p : t) : t =
-    (assert ((match p.ty with
-             | (TPointer (kanon__n)) -> true
-             | _ -> false
-             ) [@warning "-11"]);
-    (match p with
-    | { kind = Op2 ((Ptr), _, o); _ } -> o
-    | _ -> (node (Op1 (GetPtrOfs, p)) (TBitVector ((Z.to_int (size p)))))
-    ))
-
-let t_bool : ty = TBool
-
-let[@inline] t_bv (n : Z.t) : ty = (TBitVector ((Z.to_int n)))
-
-let[@inline] t_loc (n : Z.t) : ty = (TLoc ((Z.to_int n)))
-
-let[@inline] t_ptr (n : Z.t) : ty = (TPointer ((Z.to_int n)))
-
-let[@inline] t_float (p : fp) : ty = (TFloat (p))
-
-let[@inline] t_seq (s : ty) : ty = (TSeq (s))
-
-let[@inline] sized_ty (s : ty) : (Z.t option) =
-    (match s with
-    | (TBitVector (n)) -> let n = Z.of_int n in (Some n)
-    | (TPointer (n)) -> let n = Z.of_int n in (Some n)
-    | (TLoc (n)) -> let n = Z.of_int n in (Some n)
-    | _ -> None
-    )
-
-let[@inline] is_literal (v : t) : bool =
-    (match v with
-    | { kind = Bool (_); _ } -> true
-    | { kind = BitVec (_); _ } -> true
-    | { kind = LocLit (_); _ } -> true
-    | { kind = Float (_); _ } -> true
-    | _ -> false
-    )
-
-let rec append (l : (t list)) (r : (t list)) : (t list) =
-    (match l with
-    | [] -> r
-    | (x :: rest) -> (x :: (append rest r))
-    )
-
-let rec conjuncts (v : t) : (t list) =
-    (match v with
-    | { kind = Op2 ((And), a, b); _ } -> (append (conjuncts a) (conjuncts b))
-    | _ -> (v :: [])
-    )
-
-let implies_or_contradicts (q : t) (neg_q : t) (pc : t) : (bool option) =
-    (if (Int.equal q.tag pc.tag)
-    then (Some true)
-    else (if (Int.equal neg_q.tag pc.tag)
-         then (Some false)
-         else (match q, pc with
-              | ({ kind = Op2 ((Leq (qs)), qa, qb); _ }, { kind = Op2 ((Lt (ps)), pa, pb); _ })
-                when ((((Bool.equal qs ps)) && ((Int.equal qa.tag pa.tag) && (Int.equal qb.tag pb.tag)))) ->
-                (Some true)
-              | ({ kind = Op2 ((Lt (qs)), qa, qb); _ }, { kind = Op2 ((Lt (ps)), pa, pb); _ })
-                when ((((Bool.equal qs ps)) && ((Int.equal qa.tag pb.tag) && (Int.equal qb.tag pa.tag)))) ->
-                (Some false)
-              | ({ kind = Op2 ((Leq (qs)), qa, qb); _ }, { kind = Op2 ((Lt (ps)), pa, pb); _ })
-                when ((((Bool.equal qs ps)) && ((Int.equal qa.tag pb.tag) && (Int.equal qb.tag pa.tag)))) ->
-                (Some false)
-              | ({ kind = Op2 ((Lt (qs)), qa, qb); _ }, { kind = Op2 ((Leq (ps)), pa, pb); _ })
-                when ((((Bool.equal qs ps)) && ((Int.equal qa.tag pb.tag) && (Int.equal qb.tag pa.tag)))) ->
-                (Some false)
-              | ({ kind = Op2 ((Eq), qa, qb); _ }, { kind = Op2 ((Lt (_)), pa, pb); _ })
-                when ((((Int.equal qa.tag pa.tag) && (Int.equal qb.tag pb.tag)) || ((Int.equal qa.tag pb.tag) && (Int.equal qb.tag pa.tag)))) ->
-                (Some false)
-              | ({ kind = Op1 ((Not), { kind = Op2 ((Eq), qa, qb); _ }); _ }, { kind = Op2 ((Lt (_)), pa, pb); _ })
-                when ((((Int.equal qa.tag pa.tag) && (Int.equal qb.tag pb.tag)) || ((Int.equal qa.tag pb.tag) && (Int.equal qb.tag pa.tag)))) ->
-                (Some true)
-              | _ -> None
-              )))
-
-let[@inline] to_bv (n : Z.t) (x : Z.t) : Z.t =
-    (Bv_prims.z_land x (Z.sub (Bv_prims.z_lsl Z.one n) Z.one))
-
-let[@inline] neg_mod (n : Z.t) (x : Z.t) : Z.t =
-    (Z.sub (Bv_prims.z_lsl Z.one n) x)
-
-let var_plus_const (v : t) : ((var * Z.t) option) =
-    (match v with
-    | { kind = Var (x); _ } -> (Some (x, Z.zero))
-    | { kind = Op2 ((Add (_)), { kind = Var (x); _ }, { kind = BitVec (c); _ }); _ } ->
-      (Some (x, c))
-    | { kind = Op2 ((Add (_)), { kind = BitVec (c); _ }, { kind = Var (x); _ }); _ } ->
-      (Some (x, c))
-    | _ -> None
-    )
-
-let range_const_ult (strict : bool) (sz : Z.t) (c1 : Z.t) (rhs : t) : ((var * Z.t * (range_sign * (Z.t * Z.t))) option) =
-    (match (var_plus_const rhs) with
-    | None -> None
-    | (Some (x, c2)) ->
-      (let c1 = (if strict then (Z.add c1 Z.one) else c1) in
-      (if (Z.lt c1 c2)
-      then (Some (x, sz, (Outside, ((neg_mod sz c2), (to_bv sz (Z.sub (Z.sub c1 c2) Z.one))))))
-      else (Some (x, sz, (Inside, ((Z.sub c1 c2), (to_bv sz (Z.sub (neg_mod sz c2) Z.one))))))))
-    )
-
-let range_ult_const (strict : bool) (sz : Z.t) (c2 : Z.t) (lhs : t) : ((var * Z.t * (range_sign * (Z.t * Z.t))) option) =
-    (match (var_plus_const lhs) with
-    | None -> None
-    | (Some (x, c1)) ->
-      (let c2 = (if strict then (Z.sub c2 Z.one) else c2) in
-      (if (Z.leq c1 c2)
-      then (Some (x, sz, (Outside, ((Z.add (Z.sub c2 c1) Z.one), (neg_mod sz Z.one)))))
-      else (Some (x, sz, (Inside, ((neg_mod sz c1), (Z.add (neg_mod sz c1) c2)))))))
-    )
-
-let range_var_slt (sz : Z.t) (x : var) (c1 : Z.t) : ((var * Z.t * (range_sign * (Z.t * Z.t))) option) =
-    (let mid = (Bv_prims.z_lsl Z.one (Z.sub sz Z.one)) in
-    (if (Z.lt c1 mid)
-    then (Some (x, sz, (Outside, ((Z.add c1 Z.one), (Z.sub mid Z.one)))))
-    else (Some (x, sz, (Inside, (mid, c1))))))
-
-let range_slt_var (sz : Z.t) (c1 : Z.t) (x : var) : ((var * Z.t * (range_sign * (Z.t * Z.t))) option) =
-    (let mid = (Bv_prims.z_lsl Z.one (Z.sub sz Z.one)) in
-    (if (Z.lt c1 mid)
-    then (Some (x, sz, (Inside, (c1, (Z.sub mid Z.one)))))
-    else (Some (x, sz, (Outside, (mid, (Z.sub c1 Z.one)))))))
-
-let[@inline] flip (s : range_sign) : range_sign =
-    (match s with
-    | (Inside) -> Outside
-    | (Outside) -> Inside
-    )
-
-let rec as_range (v : t) : ((var * Z.t * (range_sign * (Z.t * Z.t))) option) =
-    (match v with
-    | { kind = Op2 ((Lt (false)), ({ kind = BitVec (c1); _ } as l), r); _ } ->
-      (range_const_ult true (size l) c1 r)
-    | { kind = Op2 ((Leq (false)), ({ kind = BitVec (c1); _ } as l), r); _ } ->
-      (range_const_ult false (size l) c1 r)
-    | { kind = Op2 ((Lt (false)), l, ({ kind = BitVec (c2); _ } as r)); _ } ->
-      (range_ult_const true (size r) c2 l)
-    | { kind = Op2 ((Leq (false)), l, ({ kind = BitVec (c2); _ } as r)); _ } ->
-      (range_ult_const false (size r) c2 l)
-    | { kind = Op2 ((Lt (true)), { kind = Var (x); _ }, ({ kind = BitVec (c1); _ } as r)); _ } ->
-      (range_var_slt (size r) x (Z.sub c1 Z.one))
-    | { kind = Op2 ((Leq (true)), { kind = Var (x); _ }, ({ kind = BitVec (c1); _ } as r)); _ } ->
-      (range_var_slt (size r) x c1)
-    | { kind = Op2 ((Lt (true)), ({ kind = BitVec (c1); _ } as l), { kind = Var (x); _ }); _ } ->
-      (range_slt_var (size l) (Z.add c1 Z.one) x)
-    | { kind = Op2 ((Leq (true)), ({ kind = BitVec (c1); _ } as l), { kind = Var (x); _ }); _ } ->
-      (range_slt_var (size l) c1 x)
-    | { kind = Op2 ((Eq), ({ kind = BitVec (c); _ } as l), { kind = Var (x); _ }); _ } ->
-      (Some (x, (size l), (Inside, (c, c))))
-    | { kind = Op2 ((Eq), { kind = Var (x); _ }, ({ kind = BitVec (c); _ } as l)); _ } ->
-      (Some (x, (size l), (Inside, (c, c))))
-    | { kind = Op1 ((Not), x); _ } ->
-      (match (as_range x) with
-      | (Some (y, sz, (s, r))) -> (Some (y, sz, ((flip s), r)))
-      | None -> None
-      )
-    | _ -> None
-    )
-
-let operands (v : t) : (t list) =
-    (match v with
-    | { kind = Var (_); _ } -> []
-    | { kind = Bool (_); _ } -> []
-    | { kind = BitVec (_); _ } -> []
-    | { kind = LocLit (_); _ } -> []
-    | { kind = Float (_); _ } -> []
-    | { kind = Seq (l); _ } -> l
-    | { kind = Exists (_, a); _ } -> (a :: [])
-    | { kind = Op1 ((Not), a); _ } -> (a :: [])
-    | { kind = Op1 ((FAbs), a); _ } -> (a :: [])
-    | { kind = Op1 ((FNeg), a); _ } -> (a :: [])
-    | { kind = Op1 ((FSqrt), a); _ } -> (a :: [])
-    | { kind = Op1 ((GetPtrLoc), a); _ } -> (a :: [])
-    | { kind = Op1 ((GetPtrOfs), a); _ } -> (a :: [])
-    | { kind = Op1 ((BvOfBool (_)), a); _ } -> (a :: [])
-    | { kind = Op1 ((BvOfFloat (_, _, _)), a); _ } -> (a :: [])
-    | { kind = Op1 ((FloatOfBv (_, _, _)), a); _ } -> (a :: [])
-    | { kind = Op1 ((FloatOfBvRaw (_)), a); _ } -> (a :: [])
-    | { kind = Op1 ((FloatOfFloat (_, _)), a); _ } -> (a :: [])
-    | { kind = Op1 ((BvExtract (_, _)), a); _ } -> (a :: [])
-    | { kind = Op1 ((BvExtend (_, _)), a); _ } -> (a :: [])
-    | { kind = Op1 ((BvNot), a); _ } -> (a :: [])
-    | { kind = Op1 ((Neg (_)), a); _ } -> (a :: [])
-    | { kind = Op1 ((FIs (_)), a); _ } -> (a :: [])
-    | { kind = Op1 ((FIsNeg), a); _ } -> (a :: [])
-    | { kind = Op1 ((FIsPos), a); _ } -> (a :: [])
-    | { kind = Op1 ((FRound (_)), a); _ } -> (a :: [])
-    | { kind = Op2 ((Ptr), a, b); _ } -> (a :: (b :: []))
-    | { kind = Op2 ((Eq), a, b); _ } -> (a :: (b :: []))
-    | { kind = Op2 ((And), a, b); _ } -> (a :: (b :: []))
-    | { kind = Op2 ((Or), a, b); _ } -> (a :: (b :: []))
-    | { kind = Op2 ((FEq), a, b); _ } -> (a :: (b :: []))
-    | { kind = Op2 ((FLeq), a, b); _ } -> (a :: (b :: []))
-    | { kind = Op2 ((FLt), a, b); _ } -> (a :: (b :: []))
-    | { kind = Op2 ((FAdd), a, b); _ } -> (a :: (b :: []))
-    | { kind = Op2 ((FSub), a, b); _ } -> (a :: (b :: []))
-    | { kind = Op2 ((FMul), a, b); _ } -> (a :: (b :: []))
-    | { kind = Op2 ((FDiv), a, b); _ } -> (a :: (b :: []))
-    | { kind = Op2 ((FRem), a, b); _ } -> (a :: (b :: []))
-    | { kind = Op2 ((FMin), a, b); _ } -> (a :: (b :: []))
-    | { kind = Op2 ((FMax), a, b); _ } -> (a :: (b :: []))
-    | { kind = Op2 ((BitAnd), a, b); _ } -> (a :: (b :: []))
-    | { kind = Op2 ((BitOr), a, b); _ } -> (a :: (b :: []))
-    | { kind = Op2 ((BitXor), a, b); _ } -> (a :: (b :: []))
-    | { kind = Op2 ((Shl), a, b); _ } -> (a :: (b :: []))
-    | { kind = Op2 ((LShr), a, b); _ } -> (a :: (b :: []))
-    | { kind = Op2 ((AShr), a, b); _ } -> (a :: (b :: []))
-    | { kind = Op2 ((Add (_)), a, b); _ } -> (a :: (b :: []))
-    | { kind = Op2 ((Sub (_)), a, b); _ } -> (a :: (b :: []))
-    | { kind = Op2 ((Mul (_)), a, b); _ } -> (a :: (b :: []))
-    | { kind = Op2 ((Div (_)), a, b); _ } -> (a :: (b :: []))
-    | { kind = Op2 ((Rem (_)), a, b); _ } -> (a :: (b :: []))
-    | { kind = Op2 ((Mod), a, b); _ } -> (a :: (b :: []))
-    | { kind = Op2 ((AddOvf (_)), a, b); _ } -> (a :: (b :: []))
-    | { kind = Op2 ((SubOvf (_)), a, b); _ } -> (a :: (b :: []))
-    | { kind = Op2 ((MulOvf (_)), a, b); _ } -> (a :: (b :: []))
-    | { kind = Op2 ((Lt (_)), a, b); _ } -> (a :: (b :: []))
-    | { kind = Op2 ((Leq (_)), a, b); _ } -> (a :: (b :: []))
-    | { kind = Op2 ((BvConcat), a, b); _ } -> (a :: (b :: []))
-    | { kind = Op3 ((Fma), a, b, c); _ } -> (a :: (b :: (c :: [])))
-    | { kind = Op3 ((Ite), a, b, c); _ } -> (a :: (b :: (c :: [])))
-    | { kind = OpN ((Distinct), l); _ } -> l
-    )
-
-let rebuild (v : t) (cs : (t list)) : t =
-    (match v with
-    | { kind = Var (_); _ } ->
-      (match cs with
-      | [] -> v
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Bool (_); _ } ->
-      (match cs with
-      | [] -> v
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = BitVec (_); _ } ->
-      (match cs with
-      | [] -> v
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = LocLit (_); _ } ->
-      (match cs with
-      | [] -> v
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Float (_); _ } ->
-      (match cs with
-      | [] -> v
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Seq (_); _ } -> (Bv_prims.mk_seq v.ty cs)
-    | { kind = Exists (bs, _); _ } ->
-      (match cs with
-      | (a :: []) -> (b_mk_exists bs a)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op1 ((Not), _); _ } ->
-      (match cs with
-      | (a :: []) -> (b_not a)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op1 ((FAbs), _); _ } ->
-      (match cs with
-      | (a :: []) -> (float_abs a)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op1 ((FNeg), _); _ } ->
-      (match cs with
-      | (a :: []) -> (float_neg a)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op1 ((FSqrt), _); _ } ->
-      (match cs with
-      | (a :: []) -> (float_sqrt a)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op1 ((GetPtrLoc), _); _ } ->
-      (match cs with
-      | (a :: []) -> (ptr_loc a)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op1 ((GetPtrOfs), _); _ } ->
-      (match cs with
-      | (a :: []) -> (ptr_ofs a)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op1 ((BvOfBool (n)), _); _ } ->
-      let n = Z.of_int n in
-      (match cs with
-      | (a :: []) -> (bv_of_bool n a)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op1 ((BvOfFloat (rm, s, n)), _); _ } ->
-      let n = Z.of_int n in
-      (match cs with
-      | (a :: []) -> (bv_of_float rm s n a)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op1 ((FloatOfBv (rm, s, p)), _); _ } ->
-      (match cs with
-      | (a :: []) -> (bv_to_float rm s p a)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op1 ((FloatOfBvRaw (_)), _); _ } ->
-      (match cs with
-      | (a :: []) -> (bv_to_float_raw a)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op1 ((FloatOfFloat (rm, p)), _); _ } ->
-      (match cs with
-      | (a :: []) -> (float_cast rm p a)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op1 ((BvExtract (f, t)), _); _ } ->
-      let f = Z.of_int f in
-      let t = Z.of_int t in
-      (match cs with
-      | (a :: []) -> (bv_extract f t a)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op1 ((BvExtend (s, k)), _); _ } ->
-      let k = Z.of_int k in
-      (match cs with
-      | (a :: []) -> (bv_extend s k a)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op1 ((BvNot), _); _ } ->
-      (match cs with
-      | (a :: []) -> (bv_not a)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op1 ((Neg (c)), _); _ } ->
-      (match cs with
-      | (a :: []) -> (bv_neg c a)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op1 ((FIs (fc)), _); _ } ->
-      (match cs with
-      | (a :: []) -> (float_is_floatclass fc a)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op1 ((FIsNeg), _); _ } ->
-      (match cs with
-      | (a :: []) -> (float_is_negative a)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op1 ((FIsPos), _); _ } ->
-      (match cs with
-      | (a :: []) -> (float_is_positive a)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op1 ((FRound (rm)), _); _ } ->
-      (match cs with
-      | (a :: []) -> (float_round rm a)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op2 ((And), _, _); _ } ->
-      (match cs with
-      | (a :: (b :: [])) -> (b_and a b)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op2 ((Or), _, _); _ } ->
-      (match cs with
-      | (a :: (b :: [])) -> (b_or a b)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op2 ((Eq), _, _); _ } ->
-      (match cs with
-      | (a :: (b :: [])) -> (sem_eq a b)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op2 ((Add (c)), _, _); _ } ->
-      (match cs with
-      | (a :: (b :: [])) -> (bv_add c a b)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op2 ((Sub (c)), _, _); _ } ->
-      (match cs with
-      | (a :: (b :: [])) -> (bv_sub c a b)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op2 ((Mul (c)), _, _); _ } ->
-      (match cs with
-      | (a :: (b :: [])) -> (bv_mul c a b)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op2 ((Div (s)), _, _); _ } ->
-      (match cs with
-      | (a :: (b :: [])) -> (bv_div s a b)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op2 ((Rem (s)), _, _); _ } ->
-      (match cs with
-      | (a :: (b :: [])) -> (bv_rem s a b)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op2 ((Mod), _, _); _ } ->
-      (match cs with
-      | (a :: (b :: [])) -> (bv_mod a b)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op2 ((AddOvf (s)), _, _); _ } ->
-      (match cs with
-      | (a :: (b :: [])) -> (bv_add_overflows s a b)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op2 ((SubOvf (s)), _, _); _ } ->
-      (match cs with
-      | (a :: (b :: [])) -> (bv_sub_overflows s a b)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op2 ((MulOvf (s)), _, _); _ } ->
-      (match cs with
-      | (a :: (b :: [])) -> (bv_mul_overflows s a b)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op2 ((Lt (s)), _, _); _ } ->
-      (match cs with
-      | (a :: (b :: [])) -> (bv_lt s a b)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op2 ((Leq (s)), _, _); _ } ->
-      (match cs with
-      | (a :: (b :: [])) -> (bv_leq s a b)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op2 ((BvConcat), _, _); _ } ->
-      (match cs with
-      | (a :: (b :: [])) -> (bv_concat a b)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op2 ((BitAnd), _, _); _ } ->
-      (match cs with
-      | (a :: (b :: [])) -> (bv_and a b)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op2 ((BitOr), _, _); _ } ->
-      (match cs with
-      | (a :: (b :: [])) -> (bv_or a b)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op2 ((BitXor), _, _); _ } ->
-      (match cs with
-      | (a :: (b :: [])) -> (bv_xor a b)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op2 ((Shl), _, _); _ } ->
-      (match cs with
-      | (a :: (b :: [])) -> (bv_shl a b)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op2 ((LShr), _, _); _ } ->
-      (match cs with
-      | (a :: (b :: [])) -> (bv_lshr a b)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op2 ((AShr), _, _); _ } ->
-      (match cs with
-      | (a :: (b :: [])) -> (bv_ashr a b)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op2 ((FEq), _, _); _ } ->
-      (match cs with
-      | (a :: (b :: [])) -> (float_eq a b)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op2 ((FLeq), _, _); _ } ->
-      (match cs with
-      | (a :: (b :: [])) -> (float_leq a b)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op2 ((FLt), _, _); _ } ->
-      (match cs with
-      | (a :: (b :: [])) -> (float_lt a b)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op2 ((FAdd), _, _); _ } ->
-      (match cs with
-      | (a :: (b :: [])) -> (float_add a b)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op2 ((FSub), _, _); _ } ->
-      (match cs with
-      | (a :: (b :: [])) -> (float_sub a b)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op2 ((FMul), _, _); _ } ->
-      (match cs with
-      | (a :: (b :: [])) -> (float_mul a b)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op2 ((FDiv), _, _); _ } ->
-      (match cs with
-      | (a :: (b :: [])) -> (float_div a b)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op2 ((FRem), _, _); _ } ->
-      (match cs with
-      | (a :: (b :: [])) -> (float_rem a b)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op2 ((FMin), _, _); _ } ->
-      (match cs with
-      | (a :: (b :: [])) -> (float_min a b)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op2 ((FMax), _, _); _ } ->
-      (match cs with
-      | (a :: (b :: [])) -> (float_max a b)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op2 ((Ptr), _, _); _ } ->
-      (match cs with
-      | (a :: (b :: [])) -> (Bv_prims.mk_ptr a b)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op3 ((Ite), _, _, _); _ } ->
-      (match cs with
-      | (a :: (b :: (c :: []))) -> (b_ite a b c)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = Op3 ((Fma), _, _, _); _ } ->
-      (match cs with
-      | (a :: (b :: (c :: []))) -> (float_fma a b c)
-      | _ -> (Bv_prims.bad_operands v)
-      )
-    | { kind = OpN ((Distinct), _); _ } -> (b_distinct cs)
-    )
-
-let maps_operands (v : t) : bool =
-    (match v with
-    | { kind = Op2 ((Ptr), _, _); _ } -> false
-    | { kind = Op1 ((Not), _); _ } -> true
-    | { kind = Op1 ((FAbs), _); _ } -> true
-    | { kind = Op1 ((FNeg), _); _ } -> true
-    | { kind = Op1 ((FSqrt), _); _ } -> true
-    | { kind = Op1 ((GetPtrLoc), _); _ } -> true
-    | { kind = Op1 ((GetPtrOfs), _); _ } -> true
-    | { kind = Op1 ((BvOfBool (_)), _); _ } -> true
-    | { kind = Op1 ((BvOfFloat (_, _, _)), _); _ } -> true
-    | { kind = Op1 ((FloatOfBv (_, _, _)), _); _ } -> true
-    | { kind = Op1 ((FloatOfBvRaw (_)), _); _ } -> true
-    | { kind = Op1 ((FloatOfFloat (_, _)), _); _ } -> true
-    | { kind = Op1 ((BvExtract (_, _)), _); _ } -> true
-    | { kind = Op1 ((BvExtend (_, _)), _); _ } -> true
-    | { kind = Op1 ((BvNot), _); _ } -> true
-    | { kind = Op1 ((Neg (_)), _); _ } -> true
-    | { kind = Op1 ((FIs (_)), _); _ } -> true
-    | { kind = Op1 ((FIsNeg), _); _ } -> true
-    | { kind = Op1 ((FIsPos), _); _ } -> true
-    | { kind = Op1 ((FRound (_)), _); _ } -> true
-    | { kind = Op2 ((Eq), _, _); _ } -> true
-    | { kind = Op2 ((And), _, _); _ } -> true
-    | { kind = Op2 ((Or), _, _); _ } -> true
-    | { kind = Op2 ((FEq), _, _); _ } -> true
-    | { kind = Op2 ((FLeq), _, _); _ } -> true
-    | { kind = Op2 ((FLt), _, _); _ } -> true
-    | { kind = Op2 ((FAdd), _, _); _ } -> true
-    | { kind = Op2 ((FSub), _, _); _ } -> true
-    | { kind = Op2 ((FMul), _, _); _ } -> true
-    | { kind = Op2 ((FDiv), _, _); _ } -> true
-    | { kind = Op2 ((FRem), _, _); _ } -> true
-    | { kind = Op2 ((FMin), _, _); _ } -> true
-    | { kind = Op2 ((FMax), _, _); _ } -> true
-    | { kind = Op2 ((BitAnd), _, _); _ } -> true
-    | { kind = Op2 ((BitOr), _, _); _ } -> true
-    | { kind = Op2 ((BitXor), _, _); _ } -> true
-    | { kind = Op2 ((Shl), _, _); _ } -> true
-    | { kind = Op2 ((LShr), _, _); _ } -> true
-    | { kind = Op2 ((AShr), _, _); _ } -> true
-    | { kind = Op2 ((Add (_)), _, _); _ } -> true
-    | { kind = Op2 ((Sub (_)), _, _); _ } -> true
-    | { kind = Op2 ((Mul (_)), _, _); _ } -> true
-    | { kind = Op2 ((Div (_)), _, _); _ } -> true
-    | { kind = Op2 ((Rem (_)), _, _); _ } -> true
-    | { kind = Op2 ((Mod), _, _); _ } -> true
-    | { kind = Op2 ((AddOvf (_)), _, _); _ } -> true
-    | { kind = Op2 ((SubOvf (_)), _, _); _ } -> true
-    | { kind = Op2 ((MulOvf (_)), _, _); _ } -> true
-    | { kind = Op2 ((Lt (_)), _, _); _ } -> true
-    | { kind = Op2 ((Leq (_)), _, _); _ } -> true
-    | { kind = Op2 ((BvConcat), _, _); _ } -> true
-    | _ -> false
-    )
-
-let rec cost (v : t) : Z.t =
-    (match v with
-    | { kind = Op2 ((FRem), _, _); _ } ->
-      (Z.add (Z.of_int (12900)) (costs (operands v)))
-    | { kind = Op2 ((Mod), _, _); _ } ->
-      (Z.add (Z.of_int (12700)) (costs (operands v)))
-    | { kind = Op2 ((Div (s)), _, _); _ } ->
-      (Z.add (if s then (Z.of_int (12700)) else (Z.of_int (3600))) (costs (operands v)))
-    | { kind = Op2 ((Rem (s)), _, _); _ } ->
-      (Z.add (if s then (Z.of_int (12700)) else (Z.of_int (7100))) (costs (operands v)))
-    | { kind = Op2 ((Mul (_)), _, _); _ } ->
-      (Z.add (Z.of_int (1900)) (costs (operands v)))
-    | { kind = Op2 ((FDiv), _, _); _ } ->
-      (Z.add (Z.of_int (1300)) (costs (operands v)))
-    | { kind = Op2 ((FMul), _, _); _ } ->
-      (Z.add (Z.of_int (345)) (costs (operands v)))
-    | { kind = Op2 ((MulOvf (_)), _, _); _ } ->
-      (Z.add (Z.of_int (200)) (costs (operands v)))
-    | { kind = Op2 ((FAdd), _, _); _ } ->
-      (Z.add (Z.of_int (130)) (costs (operands v)))
-    | { kind = Op2 ((FSub), _, _); _ } ->
-      (Z.add (Z.of_int (130)) (costs (operands v)))
-    | { kind = Op2 ((Sub (_)), _, _); _ } ->
-      (Z.add (Z.of_int (97)) (costs (operands v)))
-    | { kind = Op2 ((Add (_)), _, _); _ } ->
-      (Z.add (Z.of_int (75)) (costs (operands v)))
-    | { kind = Op2 ((Shl), _, _); _ } ->
-      (Z.add (Z.of_int (35)) (costs (operands v)))
-    | { kind = Op2 ((LShr), _, _); _ } ->
-      (Z.add (Z.of_int (35)) (costs (operands v)))
-    | { kind = Op2 ((AShr), _, _); _ } ->
-      (Z.add (Z.of_int (35)) (costs (operands v)))
-    | { kind = Op2 ((FMin), _, _); _ } ->
-      (Z.add (Z.of_int (24)) (costs (operands v)))
-    | { kind = Op2 ((FMax), _, _); _ } ->
-      (Z.add (Z.of_int (24)) (costs (operands v)))
-    | { kind = Op2 ((FLt), _, _); _ } ->
-      (Z.add (Z.of_int (12)) (costs (operands v)))
-    | { kind = Op2 ((FLeq), _, _); _ } ->
-      (Z.add (Z.of_int (12)) (costs (operands v)))
-    | { kind = Op2 ((SubOvf (s)), _, _); _ } ->
-      (Z.add (if s then (Z.of_int (12)) else (Z.of_int (5))) (costs (operands v)))
-    | { kind = Op2 ((AddOvf (s)), _, _); _ } ->
-      (Z.add (if s then (Z.of_int (9)) else (Z.of_int (5))) (costs (operands v)))
-    | { kind = Op2 ((Lt (_)), _, _); _ } ->
-      (Z.add (Z.of_int (5)) (costs (operands v)))
-    | { kind = Op2 ((Leq (_)), _, _); _ } ->
-      (Z.add (Z.of_int (5)) (costs (operands v)))
-    | { kind = Op2 ((FEq), _, _); _ } ->
-      (Z.add (Z.of_int (3)) (costs (operands v)))
-    | { kind = Op2 ((And), _, _); _ } -> (Z.add Z.one (costs (operands v)))
-    | { kind = Op2 ((Or), _, _); _ } -> (Z.add Z.one (costs (operands v)))
-    | { kind = Op2 ((Eq), _, _); _ } -> (Z.add Z.one (costs (operands v)))
-    | { kind = Op2 ((BitAnd), _, _); _ } ->
-      (Z.add Z.one (costs (operands v)))
-    | { kind = Op2 ((BitOr), _, _); _ } -> (Z.add Z.one (costs (operands v)))
-    | { kind = Op2 ((BitXor), _, _); _ } ->
-      (Z.add Z.one (costs (operands v)))
-    | { kind = Op2 ((BvConcat), _, _); _ } ->
-      (Z.add Z.one (costs (operands v)))
-    | { kind = Op1 ((BvOfFloat (_, _, _)), _); _ } ->
-      (Z.add (Z.of_int (1400)) (costs (operands v)))
-    | { kind = Op1 ((FSqrt), _); _ } ->
-      (Z.add (Z.of_int (280)) (costs (operands v)))
-    | { kind = Op1 ((FloatOfFloat (_, _)), _); _ } ->
-      (Z.add (Z.of_int (255)) (costs (operands v)))
-    | { kind = Op1 ((FloatOfBv (_, _, _)), _); _ } ->
-      (Z.add (Z.of_int (78)) (costs (operands v)))
-    | { kind = Op1 ((FRound (_)), _); _ } ->
-      (Z.add (Z.of_int (65)) (costs (operands v)))
-    | { kind = Op1 ((Neg (_)), _); _ } ->
-      (Z.add (Z.of_int (10)) (costs (operands v)))
-    | { kind = Op1 ((FAbs), _); _ } ->
-      (Z.add (Z.of_int (4)) (costs (operands v)))
-    | { kind = Op1 ((FNeg), _); _ } ->
-      (Z.add (Z.of_int (4)) (costs (operands v)))
-    | { kind = Op1 ((FloatOfBvRaw (_)), _); _ } ->
-      (Z.add (Z.of_int (4)) (costs (operands v)))
-    | { kind = Op1 ((Not), _); _ } -> (Z.add Z.one (costs (operands v)))
-    | { kind = Op1 ((GetPtrLoc), _); _ } ->
-      (Z.add Z.one (costs (operands v)))
-    | { kind = Op1 ((GetPtrOfs), _); _ } ->
-      (Z.add Z.one (costs (operands v)))
-    | { kind = Op1 ((BvNot), _); _ } -> (Z.add Z.one (costs (operands v)))
-    | { kind = Op1 ((BvOfBool (_)), _); _ } ->
-      (Z.add Z.one (costs (operands v)))
-    | { kind = Op1 ((BvExtend (_, _)), _); _ } ->
-      (Z.add Z.one (costs (operands v)))
-    | { kind = Op1 ((BvExtract (_, _)), _); _ } ->
-      (Z.add Z.one (costs (operands v)))
-    | { kind = Op1 ((FIs (_)), _); _ } -> (Z.add Z.one (costs (operands v)))
-    | { kind = Op1 ((FIsNeg), _); _ } -> (Z.add Z.one (costs (operands v)))
-    | { kind = Op1 ((FIsPos), _); _ } -> (Z.add Z.one (costs (operands v)))
-    | { kind = Op3 ((Fma), _, _, _); _ } ->
-      (Z.add (Z.of_int (400)) (costs (operands v)))
-    | { kind = Op3 ((Ite), _, _, _); _ } -> (costs (operands v))
-    | { kind = OpN ((Distinct), _); _ } -> (costs (operands v))
-    | { kind = Seq (_); _ } -> (costs (operands v))
-    | { kind = Var (_); _ } -> (Z.of_int (3))
-    | { kind = Float (_); _ } -> (Z.of_int (2))
-    | { kind = Exists (_, _); _ } ->
-      (Z.add (Z.of_int (100000)) (costs (operands v)))
-    | { kind = Op2 ((Ptr), _, _); _ } -> Z.one
-    | { kind = Bool (_); _ } -> Z.one
-    | { kind = BitVec (_); _ } -> Z.one
-    | { kind = LocLit (_); _ } -> Z.one
-    )
-
-and costs (l : (t list)) : Z.t =
-    (match l with
-    | [] -> Z.zero
-    | (x :: rest) -> (Z.add (cost x) (costs rest))
-    )
-
-let random_bound (s : ty) : (Z.t option) =
-    (match s with
-    | (TLoc (n)) -> let n = Z.of_int n in (Some (Bv_prims.z_lsl Z.one n))
-    | (TBitVector (n)) ->
-      let n = Z.of_int n in
-      (Some (Bv_prims.z_lsl Z.one n))
-    | (TBool) -> (Some (Z.of_int (2)))
-    | (TFloat (p)) -> (Some (Bv_prims.z_lsl Z.one (Bv_prims.fp_size p)))
-    | _ -> None
-    )
-
-let random_of_z (s : ty) (z : Z.t) : (t option) =
-    (match s with
-    | (TLoc (n)) ->
-      let n = Z.of_int n in
-      (Some (node (LocLit (z)) (TLoc ((Z.to_int n)))))
-    | (TBitVector (n)) -> let n = Z.of_int n in (Some (Bv_prims.mk_bv n z))
-    | (TBool) -> (Some (of_bool ((Z.equal z Z.one))))
-    | (TFloat (p)) ->
-      (Some (let kanon__a1 = (Bv_prims.f_of_bits p z) in
-            (node (Float (kanon__a1)) (TFloat ((Bv_prims.f_prec kanon__a1))))))
-    | _ -> None
-    )
-
-let[@inline] sort_operands (s : ty) : (ty list) =
-    (match s with
-    | (TSeq (e)) -> (e :: [])
-    | _ -> []
-    )
-
-let[@inline] encode_sort (s : ty) : smt_sort_op =
-    (match s with
-    | (TBool) -> Bv_prims.so_bool
-    | (TLoc (n)) -> let n = Z.of_int n in (Bv_prims.so_bits n)
-    | (TFloat (p)) -> (Bv_prims.so_float p)
-    | (TSeq (_)) -> Bv_prims.so_seq
-    | (TPointer (n)) -> let n = Z.of_int n in (Bv_prims.so_ptr n)
-    | (TBitVector (n)) -> let n = Z.of_int n in (Bv_prims.so_bits n)
-    )
-
-let encode_head (v : t) : smt_op =
-    (match v with
-    | { kind = Var (x); _ } -> (Bv_prims.h_var x)
-    | { kind = Float (f); _ } -> (Bv_prims.h_float v.ty f)
-    | { kind = Bool (b); _ } -> (Bv_prims.h_bool b)
-    | { kind = BitVec (z); _ } -> (Bv_prims.h_bits v.ty z)
-    | { kind = LocLit (z); _ } -> (Bv_prims.h_bits v.ty z)
-    | { kind = Op2 ((Ptr), _, _); _ } -> (Bv_prims.h_ptr v.ty)
-    | { kind = Seq (_); _ } -> Bv_prims.h_seq
-    | { kind = Exists (bs, _); _ } -> (Bv_prims.h_exists bs)
-    | { kind = OpN ((Distinct), _); _ } -> Bv_prims.h_distinct
-    | { kind = Op1 ((Not), _); _ } -> Bv_prims.h_not
-    | { kind = Op1 ((FAbs), _); _ } -> Bv_prims.h_fabs
-    | { kind = Op1 ((FNeg), _); _ } -> Bv_prims.h_fneg
-    | { kind = Op1 ((FSqrt), _); _ } -> Bv_prims.h_fsqrt
-    | { kind = Op1 ((GetPtrLoc), _); _ } -> Bv_prims.h_ptr_loc
-    | { kind = Op1 ((GetPtrOfs), _); _ } -> Bv_prims.h_ptr_ofs
-    | { kind = Op1 ((BvOfBool (n)), _); _ } ->
-      let n = Z.of_int n in
-      (Bv_prims.h_bv_of_bool n)
-    | { kind = Op1 ((BvOfFloat (rm, s, n)), _); _ } ->
-      let n = Z.of_int n in
-      (Bv_prims.h_bv_of_float rm s n)
-    | { kind = Op1 ((FloatOfBv (rm, s, p)), _); _ } ->
-      (Bv_prims.h_float_of_bv rm s p)
-    | { kind = Op1 ((FloatOfBvRaw (p)), _); _ } ->
-      (Bv_prims.h_float_of_bv_raw p)
-    | { kind = Op1 ((FloatOfFloat (rm, p)), _); _ } ->
-      (Bv_prims.h_float_of_float rm p)
-    | { kind = Op1 ((BvExtract (f, t)), _); _ } ->
-      let f = Z.of_int f in
-      let t = Z.of_int t in
-      (Bv_prims.h_bv_extract f t)
-    | { kind = Op1 ((BvExtend (s, k)), _); _ } ->
-      let k = Z.of_int k in
-      (Bv_prims.h_bv_extend s k)
-    | { kind = Op1 ((BvNot), _); _ } -> Bv_prims.h_bv_not
-    | { kind = Op1 ((Neg (_)), _); _ } -> Bv_prims.h_neg
-    | { kind = Op1 ((FIs (fc)), _); _ } -> (Bv_prims.h_fis fc)
-    | { kind = Op1 ((FIsNeg), _); _ } -> Bv_prims.h_fisneg
-    | { kind = Op1 ((FIsPos), _); _ } -> Bv_prims.h_fispos
-    | { kind = Op1 ((FRound (rm)), _); _ } -> (Bv_prims.h_fround rm)
-    | { kind = Op2 ((Eq), _, _); _ } -> Bv_prims.h_eq
-    | { kind = Op2 ((And), _, _); _ } -> Bv_prims.h_and
-    | { kind = Op2 ((Or), _, _); _ } -> Bv_prims.h_or
-    | { kind = Op2 ((FEq), _, _); _ } -> Bv_prims.h_feq
-    | { kind = Op2 ((FLeq), _, _); _ } -> Bv_prims.h_fleq
-    | { kind = Op2 ((FLt), _, _); _ } -> Bv_prims.h_flt
-    | { kind = Op2 ((FAdd), _, _); _ } -> Bv_prims.h_fadd
-    | { kind = Op2 ((FSub), _, _); _ } -> Bv_prims.h_fsub
-    | { kind = Op2 ((FMul), _, _); _ } -> Bv_prims.h_fmul
-    | { kind = Op2 ((FDiv), _, _); _ } -> Bv_prims.h_fdiv
-    | { kind = Op2 ((FRem), _, _); _ } -> Bv_prims.h_frem
-    | { kind = Op2 ((FMin), _, _); _ } -> Bv_prims.h_fmin
-    | { kind = Op2 ((FMax), _, _); _ } -> Bv_prims.h_fmax
-    | { kind = Op2 ((BitAnd), _, _); _ } -> Bv_prims.h_bit_and
-    | { kind = Op2 ((BitOr), _, _); _ } -> Bv_prims.h_bit_or
-    | { kind = Op2 ((BitXor), _, _); _ } -> Bv_prims.h_bit_xor
-    | { kind = Op2 ((Shl), _, _); _ } -> Bv_prims.h_shl
-    | { kind = Op2 ((LShr), _, _); _ } -> Bv_prims.h_lshr
-    | { kind = Op2 ((AShr), _, _); _ } -> Bv_prims.h_ashr
-    | { kind = Op2 ((Add (_)), _, _); _ } -> Bv_prims.h_add
-    | { kind = Op2 ((Sub (_)), _, _); _ } -> Bv_prims.h_sub
-    | { kind = Op2 ((Mul (_)), _, _); _ } -> Bv_prims.h_mul
-    | { kind = Op2 ((Div (s)), _, _); _ } -> (Bv_prims.h_div s)
-    | { kind = Op2 ((Rem (s)), _, _); _ } -> (Bv_prims.h_rem s)
-    | { kind = Op2 ((Mod), _, _); _ } -> Bv_prims.h_mod
-    | { kind = Op2 ((AddOvf (s)), _, _); _ } -> (Bv_prims.h_add_ovf s)
-    | { kind = Op2 ((SubOvf (s)), _, _); _ } -> (Bv_prims.h_sub_ovf s)
-    | { kind = Op2 ((MulOvf (s)), _, _); _ } -> (Bv_prims.h_mul_ovf s)
-    | { kind = Op2 ((Lt (s)), _, _); _ } -> (Bv_prims.h_lt s)
-    | { kind = Op2 ((Leq (s)), _, _); _ } -> (Bv_prims.h_leq s)
-    | { kind = Op2 ((BvConcat), _, _); _ } -> Bv_prims.h_concat
-    | { kind = Op3 ((Fma), _, _, _); _ } -> Bv_prims.h_fma
-    | { kind = Op3 ((Ite), _, _, _); _ } -> Bv_prims.h_ite
-    )
-
-let learn_alts (v : t) : learn_plan =
-    (match v with
-    | { kind = Op1 ((Not), _); _ } -> (LAll ([], (Z.zero :: [])))
-    | { kind = Op1 ((BvNot), _); _ } -> (LAll ([], (Z.zero :: [])))
-    | { kind = Op1 ((Neg (_)), _); _ } -> (LAll ([], (Z.zero :: [])))
-    | { kind = Op1 ((BvExtend (_, _)), _); _ } -> (LAll ([], (Z.zero :: [])))
-    | { kind = Op1 ((BvOfBool (_)), _); _ } -> (LAll ([], (Z.zero :: [])))
-    | { kind = Op2 ((Add (_)), _, _); _ } ->
-      (LAlts (((Z.zero, Z.one) :: ((Z.one, Z.zero) :: []))))
-    | { kind = Op2 ((Sub (_)), _, _); _ } ->
-      (LAlts (((Z.zero, Z.one) :: ((Z.one, Z.zero) :: []))))
-    | { kind = Op2 ((BitXor), _, _); _ } ->
-      (LAlts (((Z.zero, Z.one) :: ((Z.one, Z.zero) :: []))))
-    | { kind = Op2 ((BvConcat), _, _); _ } ->
-      (LAll ((Z.one :: (Z.zero :: [])), (Z.zero :: (Z.one :: []))))
-    | { kind = Op2 ((Ptr), _, _); _ } ->
-      (LAll ([], (Z.zero :: (Z.one :: []))))
-    | _ -> LNone
-    )
-
-let learn_value (e : t) (i : Z.t) (v : t) : (t option) =
-    (match e, i with
-    | ({ kind = Op1 ((Not), _); _ }, kanon__4)
-      when (((Z.equal kanon__4 Z.zero))) ->
-      (Some (b_not v))
-    | ({ kind = Op1 ((BvNot), _); _ }, kanon__4)
-      when (((Z.equal kanon__4 Z.zero))) ->
-      (Some (bv_not v))
-    | ({ kind = Op1 ((Neg (_)), _); _ }, kanon__5)
-      when (((Z.equal kanon__5 Z.zero))) ->
-      (Some (bv_neg false v))
-    | ({ kind = Op1 ((BvExtend (_, _)), e1); _ }, kanon__6)
-      when (((Z.equal kanon__6 Z.zero))) ->
-      (Some (bv_extract Z.zero (Z.sub (size e1) Z.one) v))
-    | ({ kind = Op1 ((BvOfBool (_)), _); _ }, kanon__5)
-      when (((Z.equal kanon__5 Z.zero))) ->
+  
+  let bitvec_of_bool (n : Z.t) (b : t) : t =
+      (assert ((match b.ty with
+               | (TBool) -> true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match b with
+      | { kind = Bool (true); _ } -> (Bv_prims.bv_one n)
+      | { kind = Bool (false); _ } -> (Bv_prims.bv_zero n)
+      | _ ->
+        (node (Op1 ((BvOfBool ((Z.to_int n))), b)) (TBitVector ((Z.to_int n))))
+      ))
+  
+  let bitvec_cancellable (signed : bool) (a : t) : bool =
+      (if signed
+      then (match a with
+           | { kind = BitVec (z); _ } ->
+             (Z.gt (bitvec_to_z true (bitvec_size a) z) Z.zero)
+           | _ -> false
+           )
+      else (bool_sure_neq a (Bv_prims.bv_zero (bitvec_size a))))
+  
+  let[@inline] bitvec_checked_of_signed (signed : bool) : checked =
+      (if signed then bitvec_checked_signed else bitvec_checked_unsigned)
+  
+  let[@inline] bitvec_zmax (a : Z.t) (b : Z.t) : Z.t =
+      (if (Z.geq a b) then a else b)
+  
+  let[@inline] bitvec_zmin (a : Z.t) (b : Z.t) : Z.t =
+      (if (Z.leq a b) then a else b)
+  
+  let bitvec_const_keeps_in_range (signed : bool) (n : Z.t) (l : Z.t) (r : Z.t) : bool =
+      (let base = (bitvec_to_z signed n l) in
+      (let d = (Z.sub base (bitvec_to_z signed n r)) in
+      ((Z.leq (bitvec_zmin Z.zero base) d) && (Z.leq d (bitvec_zmax Z.zero base)))))
+  
+  let rec bitvec_msb_of (v : t) : Z.t =
+      (assert ((match v.ty with
+               | (TBitVector (kanon__v_n)) -> true
+               | _ -> false
+               ) [@warning "-11"]);
       (match v with
+      | { kind = BitVec (z); _ } when ((Z.gt z Z.zero)) -> (Bv_prims.log2 z)
       | { kind = BitVec (kanon__1); _ }
         when (((Z.equal kanon__1 Z.zero))) ->
-        (Some Bv_prims.v_false)
-      | { kind = BitVec (kanon__1); _ }
+        (Z.sub (bitvec_size v) Z.one)
+      | { kind = Op2 ((BitAnd), bv1, bv2); _ } ->
+        (bitvec_zmin (bitvec_msb_of bv1) (bitvec_msb_of bv2))
+      | { kind = Op3 ((Ite), _, l, r); _ } ->
+        (bitvec_zmax (bitvec_msb_of l) (bitvec_msb_of r))
+      | { kind = Op1 ((BvExtend (false, _)), v); _ } -> (bitvec_msb_of v)
+      | { kind = Op2 ((Rem (false)), _, { kind = BitVec (k); _ }); _ }
+        when ((Z.gt k Z.one)) ->
+        (Bv_prims.log2 (Z.sub k Z.one))
+      | { kind = Op2 ((Mod), _, { kind = BitVec (k); _ }); _ }
+        when (((Z.gt k Z.one) && (Z.lt k (Bv_prims.z_lsl Z.one (Z.sub (bitvec_size v) Z.one))))) ->
+        (Bv_prims.log2 (Z.sub k Z.one))
+      | { kind = Op2 ((Rem (true)), { kind = BitVec (k); _ }, _); _ }
+        when (((Z.gt k Z.zero) && (Z.lt k (Bv_prims.z_lsl Z.one (Z.sub (bitvec_size v) Z.one))))) ->
+        (Bv_prims.log2 k)
+      | _ -> (Z.sub (bitvec_size v) Z.one)
+      ))
+  
+  let[@inline] bitvec_udivides (d : Z.t) (n : Z.t) : bool =
+      (Bv_prims.divisible n d)
+  
+  let bitvec_is_checked_unsigned_op (v : t) : bool =
+      (match v with
+      | { kind = Op2 ((Add (c)), { kind = BitVec (_); _ }, _); _ } ->
+        c.unsigned
+      | { kind = Op2 ((Add (c)), _, { kind = BitVec (_); _ }); _ } ->
+        c.unsigned
+      | { kind = Op2 ((Sub (c)), { kind = BitVec (_); _ }, _); _ } ->
+        c.unsigned
+      | { kind = Op2 ((Sub (c)), _, { kind = BitVec (_); _ }); _ } ->
+        c.unsigned
+      | { kind = Op2 ((Mul (c)), { kind = BitVec (_); _ }, _); _ } ->
+        c.unsigned
+      | { kind = Op2 ((Mul (c)), _, { kind = BitVec (_); _ }); _ } ->
+        c.unsigned
+      | _ -> false
+      )
+  
+  let[@inline] bitvec_is_max_of (signed : bool) (n : Z.t) (l : Z.t) : bool =
+      ((Z.equal (bitvec_to_z signed n l) (bitvec_max_for signed n)))
+  
+  let[@inline] bitvec_is_min_of (signed : bool) (n : Z.t) (l : Z.t) : bool =
+      ((Z.equal (bitvec_to_z signed n l) (bitvec_min_for signed n)))
+  
+  let bitvec_lower_bound (v : t) : Z.t =
+      (match v with
+      | { kind = Op2 ((Lt (s)), { kind = BitVec (c); _ }, a); _ } ->
+        (Z.add (bitvec_to_z s (bitvec_size a) c) Z.one)
+      | { kind = Op2 ((Leq (s)), { kind = BitVec (c); _ }, a); _ } ->
+        (bitvec_to_z s (bitvec_size a) c)
+      | _ -> Z.zero
+      )
+  
+  let bitvec_upper_bound (v : t) : Z.t =
+      (match v with
+      | { kind = Op2 ((Lt (s)), a, { kind = BitVec (c); _ }); _ } ->
+        (Z.sub (bitvec_to_z s (bitvec_size a) c) Z.one)
+      | { kind = Op2 ((Leq (s)), a, { kind = BitVec (c); _ }); _ } ->
+        (bitvec_to_z s (bitvec_size a) c)
+      | _ -> Z.zero
+      )
+  
+  let[@inline] bitvec_unsigned_ub (v : t) : Z.t =
+      (Z.sub (Bv_prims.z_lsl Z.one (Z.add (bitvec_msb_of v) Z.one)) Z.one)
+  
+  let bitvec_no_wrap (c : checked) (v1 : t) (v2 : t) : checked =
+      (if ((bitvec_is_bv v1.ty) && (Z.lt (Z.add (bitvec_unsigned_ub v1) (bitvec_unsigned_ub v2)) (Bv_prims.z_lsl Z.one (bitvec_size v1))))
+      then { signed = c.signed; unsigned = true }
+      else c)
+  
+  let[@inline] bitvec_bits_in (a : Z.t) (b : Z.t) : bool =
+      ((Z.equal (Bv_prims.z_land a b) a))
+  
+  let[@inline] bitvec_disjoint (a : Z.t) (b : Z.t) : bool =
+      ((Z.equal (Bv_prims.z_land a b) Z.zero))
+  
+  let[@inline] bitvec_ones (n : Z.t) : Z.t =
+      (Z.sub (Bv_prims.z_lsl Z.one n) Z.one)
+  
+  let[@inline] bitvec_is_ones (n : Z.t) (l : Z.t) : bool =
+      ((Z.equal l (bitvec_ones n)))
+  
+  let[@inline] bitvec_is_right_mask (z : Z.t) : bool =
+      ((Z.gt z Z.zero) && ((Z.equal (Bv_prims.popcount (Z.add z Z.one)) Z.one)))
+  
+  let[@inline] bitvec_is_pow2 (z : Z.t) : bool =
+      ((Z.gt z Z.zero) && ((Z.equal (Bv_prims.popcount z) Z.one)))
+  
+  let[@inline] bitvec_lsb (z : Z.t) : Z.t =
+      (if ((Z.equal z Z.zero))
+      then (Z.of_int (128))
+      else (Bv_prims.log2 (Bv_prims.z_land z (Z.neg z))))
+  
+  let rec bool_and_ (v1 : t) (v2 : t) : t =
+      (assert ((match v1.ty, v2.ty with
+               | ((TBool), (TBool)) -> true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v1, v2 with
+      | (v, kanon__2) when ((Int.equal v.tag kanon__2.tag)) -> v
+      | ({ kind = Bool (false); _ }, _) -> Bv_prims.v_false
+      | (_, { kind = Bool (false); _ }) -> Bv_prims.v_false
+      | ({ kind = Bool (true); _ }, x) -> x
+      | (x, { kind = Bool (true); _ }) -> x
+      | (p, { kind = Op1 ((Not), kanon__3); _ })
+        when ((Int.equal p.tag kanon__3.tag)) ->
+        Bv_prims.v_false
+      | ({ kind = Op1 ((Not), kanon__3); _ }, p)
+        when ((Int.equal p.tag kanon__3.tag)) ->
+        Bv_prims.v_false
+      | (({ kind = Op2 ((And), a, _); _ } as x), kanon__7)
+        when ((Int.equal a.tag kanon__7.tag)) ->
+        x
+      | (({ kind = Op2 ((And), _, a); _ } as x), kanon__7)
+        when ((Int.equal a.tag kanon__7.tag)) ->
+        x
+      | (kanon__7, ({ kind = Op2 ((And), a, _); _ } as x))
+        when ((Int.equal a.tag kanon__7.tag)) ->
+        x
+      | (kanon__7, ({ kind = Op2 ((And), _, a); _ } as x))
+        when ((Int.equal a.tag kanon__7.tag)) ->
+        x
+      | ({ kind = Op2 ((Or), a, _); _ }, kanon__6)
+        when ((Int.equal a.tag kanon__6.tag)) ->
+        a
+      | ({ kind = Op2 ((Or), _, a); _ }, kanon__6)
+        when ((Int.equal a.tag kanon__6.tag)) ->
+        a
+      | (kanon__6, { kind = Op2 ((Or), a, _); _ })
+        when ((Int.equal a.tag kanon__6.tag)) ->
+        a
+      | (kanon__6, { kind = Op2 ((Or), _, a); _ })
+        when ((Int.equal a.tag kanon__6.tag)) ->
+        a
+      | ({ kind = Op2 ((Eq), a, x); _ }, { kind = Op2 ((Eq), kanon__7, y); _ })
+        when (((Int.equal a.tag kanon__7.tag) && (bool_sure_neq x y))) ->
+        Bv_prims.v_false
+      | ({ kind = Op2 ((Eq), a, x); _ }, { kind = Op2 ((Eq), y, kanon__7); _ })
+        when (((Int.equal a.tag kanon__7.tag) && (bool_sure_neq x y))) ->
+        Bv_prims.v_false
+      | ({ kind = Op2 ((Eq), x, a); _ }, { kind = Op2 ((Eq), kanon__7, y); _ })
+        when (((Int.equal a.tag kanon__7.tag) && (bool_sure_neq x y))) ->
+        Bv_prims.v_false
+      | ({ kind = Op2 ((Eq), x, a); _ }, { kind = Op2 ((Eq), y, kanon__7); _ })
+        when (((Int.equal a.tag kanon__7.tag) && (bool_sure_neq x y))) ->
+        Bv_prims.v_false
+      | ({ kind = Op2 ((Eq), ({ kind = BitVec (_); _ } as bv1), { kind = Op1 ((BvExtract (s1, e1)), x); _ }); _ }, { kind = Op2 ((Eq), ({ kind = BitVec (_); _ } as bv2), { kind = Op1 ((BvExtract (s2, e2)), kanon__19); _ }); _ })
+        when (let s1 = Z.of_int s1 in
+        let e1 = Z.of_int e1 in
+        let s2 = Z.of_int s2 in
+        let e2 = Z.of_int e2 in
+        ((Int.equal x.tag kanon__19.tag) && (((Z.equal (Z.add e1 Z.one) s2)) || ((Z.equal (Z.add e2 Z.one) s1))))) ->
+        let s1 = Z.of_int s1 in
+        let e1 = Z.of_int e1 in
+        let s2 = Z.of_int s2 in
+        let e2 = Z.of_int e2 in
+        (if ((Z.equal (Z.add e1 Z.one) s2))
+        then (bool_eq (bitvec_concat bv2 bv1) (bitvec_extract s1 e2 x))
+        else (bool_eq (bitvec_concat bv1 bv2) (bitvec_extract s2 e1 x)))
+      | ({ kind = Op2 ((Eq), ({ kind = BitVec (_); _ } as bv1), { kind = Op1 ((BvExtract (s1, e1)), x); _ }); _ }, { kind = Op2 ((Eq), { kind = Op1 ((BvExtract (s2, e2)), kanon__19); _ }, ({ kind = BitVec (_); _ } as bv2)); _ })
+        when (let s1 = Z.of_int s1 in
+        let e1 = Z.of_int e1 in
+        let s2 = Z.of_int s2 in
+        let e2 = Z.of_int e2 in
+        ((Int.equal x.tag kanon__19.tag) && (((Z.equal (Z.add e1 Z.one) s2)) || ((Z.equal (Z.add e2 Z.one) s1))))) ->
+        let s1 = Z.of_int s1 in
+        let e1 = Z.of_int e1 in
+        let s2 = Z.of_int s2 in
+        let e2 = Z.of_int e2 in
+        (if ((Z.equal (Z.add e1 Z.one) s2))
+        then (bool_eq (bitvec_concat bv2 bv1) (bitvec_extract s1 e2 x))
+        else (bool_eq (bitvec_concat bv1 bv2) (bitvec_extract s2 e1 x)))
+      | ({ kind = Op2 ((Eq), { kind = Op1 ((BvExtract (s1, e1)), x); _ }, ({ kind = BitVec (_); _ } as bv1)); _ }, { kind = Op2 ((Eq), ({ kind = BitVec (_); _ } as bv2), { kind = Op1 ((BvExtract (s2, e2)), kanon__19); _ }); _ })
+        when (let s1 = Z.of_int s1 in
+        let e1 = Z.of_int e1 in
+        let s2 = Z.of_int s2 in
+        let e2 = Z.of_int e2 in
+        ((Int.equal x.tag kanon__19.tag) && (((Z.equal (Z.add e1 Z.one) s2)) || ((Z.equal (Z.add e2 Z.one) s1))))) ->
+        let s1 = Z.of_int s1 in
+        let e1 = Z.of_int e1 in
+        let s2 = Z.of_int s2 in
+        let e2 = Z.of_int e2 in
+        (if ((Z.equal (Z.add e1 Z.one) s2))
+        then (bool_eq (bitvec_concat bv2 bv1) (bitvec_extract s1 e2 x))
+        else (bool_eq (bitvec_concat bv1 bv2) (bitvec_extract s2 e1 x)))
+      | ({ kind = Op2 ((Eq), { kind = Op1 ((BvExtract (s1, e1)), x); _ }, ({ kind = BitVec (_); _ } as bv1)); _ }, { kind = Op2 ((Eq), { kind = Op1 ((BvExtract (s2, e2)), kanon__19); _ }, ({ kind = BitVec (_); _ } as bv2)); _ })
+        when (let s1 = Z.of_int s1 in
+        let e1 = Z.of_int e1 in
+        let s2 = Z.of_int s2 in
+        let e2 = Z.of_int e2 in
+        ((Int.equal x.tag kanon__19.tag) && (((Z.equal (Z.add e1 Z.one) s2)) || ((Z.equal (Z.add e2 Z.one) s1))))) ->
+        let s1 = Z.of_int s1 in
+        let e1 = Z.of_int e1 in
+        let s2 = Z.of_int s2 in
+        let e2 = Z.of_int e2 in
+        (if ((Z.equal (Z.add e1 Z.one) s2))
+        then (bool_eq (bitvec_concat bv2 bv1) (bitvec_extract s1 e2 x))
+        else (bool_eq (bitvec_concat bv1 bv2) (bitvec_extract s2 e1 x)))
+      | ({ kind = Op2 ((Lt (s)), a, { kind = BitVec (_); _ }); _ }, { kind = Op2 ((Lt (kanon__14)), kanon__16, { kind = BitVec (_); _ }); _ })
+        when ((((Stdlib.Bool.equal s kanon__14)) && (Int.equal a.tag kanon__16.tag))) ->
+        (if (Z.leq (bitvec_upper_bound v1) (bitvec_upper_bound v2))
+        then v1
+        else v2)
+      | ({ kind = Op2 ((Lt (s)), a, { kind = BitVec (_); _ }); _ }, { kind = Op2 ((Leq (kanon__20)), kanon__22, { kind = BitVec (_); _ }); _ })
+        when ((((Stdlib.Bool.equal s kanon__20)) && (Int.equal a.tag kanon__22.tag))) ->
+        (if (Z.leq (bitvec_upper_bound v1) (bitvec_upper_bound v2))
+        then v1
+        else v2)
+      | ({ kind = Op2 ((Leq (s)), a, { kind = BitVec (_); _ }); _ }, { kind = Op2 ((Lt (kanon__14)), kanon__16, { kind = BitVec (_); _ }); _ })
+        when ((((Stdlib.Bool.equal s kanon__14)) && (Int.equal a.tag kanon__16.tag))) ->
+        (if (Z.leq (bitvec_upper_bound v1) (bitvec_upper_bound v2))
+        then v1
+        else v2)
+      | ({ kind = Op2 ((Leq (s)), a, { kind = BitVec (_); _ }); _ }, { kind = Op2 ((Leq (kanon__20)), kanon__22, { kind = BitVec (_); _ }); _ })
+        when ((((Stdlib.Bool.equal s kanon__20)) && (Int.equal a.tag kanon__22.tag))) ->
+        (if (Z.leq (bitvec_upper_bound v1) (bitvec_upper_bound v2))
+        then v1
+        else v2)
+      | ({ kind = Op2 ((Lt (s)), { kind = BitVec (_); _ }, a); _ }, { kind = Op2 ((Lt (kanon__14)), { kind = BitVec (_); _ }, kanon__18); _ })
+        when ((((Stdlib.Bool.equal s kanon__14)) && (Int.equal a.tag kanon__18.tag))) ->
+        (if (Z.geq (bitvec_lower_bound v1) (bitvec_lower_bound v2))
+        then v1
+        else v2)
+      | ({ kind = Op2 ((Lt (s)), { kind = BitVec (_); _ }, a); _ }, { kind = Op2 ((Leq (kanon__20)), { kind = BitVec (_); _ }, kanon__24); _ })
+        when ((((Stdlib.Bool.equal s kanon__20)) && (Int.equal a.tag kanon__24.tag))) ->
+        (if (Z.geq (bitvec_lower_bound v1) (bitvec_lower_bound v2))
+        then v1
+        else v2)
+      | ({ kind = Op2 ((Leq (s)), { kind = BitVec (_); _ }, a); _ }, { kind = Op2 ((Lt (kanon__14)), { kind = BitVec (_); _ }, kanon__18); _ })
+        when ((((Stdlib.Bool.equal s kanon__14)) && (Int.equal a.tag kanon__18.tag))) ->
+        (if (Z.geq (bitvec_lower_bound v1) (bitvec_lower_bound v2))
+        then v1
+        else v2)
+      | ({ kind = Op2 ((Leq (s)), { kind = BitVec (_); _ }, a); _ }, { kind = Op2 ((Leq (kanon__20)), { kind = BitVec (_); _ }, kanon__24); _ })
+        when ((((Stdlib.Bool.equal s kanon__20)) && (Int.equal a.tag kanon__24.tag))) ->
+        (if (Z.geq (bitvec_lower_bound v1) (bitvec_lower_bound v2))
+        then v1
+        else v2)
+      | _ -> (node (mk_commut_binop And v1 v2) TBool)
+      ))
+  and bool_or_ (v1 : t) (v2 : t) : t =
+      (assert ((match v1.ty, v2.ty with
+               | ((TBool), (TBool)) -> true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v1, v2 with
+      | (v, kanon__2) when ((Int.equal v.tag kanon__2.tag)) -> v
+      | ({ kind = Bool (true); _ }, _) -> Bv_prims.v_true
+      | (_, { kind = Bool (true); _ }) -> Bv_prims.v_true
+      | ({ kind = Bool (false); _ }, x) -> x
+      | (x, { kind = Bool (false); _ }) -> x
+      | (p, { kind = Op1 ((Not), kanon__3); _ })
+        when ((Int.equal p.tag kanon__3.tag)) ->
+        Bv_prims.v_true
+      | ({ kind = Op1 ((Not), kanon__3); _ }, p)
+        when ((Int.equal p.tag kanon__3.tag)) ->
+        Bv_prims.v_true
+      | (({ kind = Op2 ((Or), a, _); _ } as x), kanon__7)
+        when ((Int.equal a.tag kanon__7.tag)) ->
+        x
+      | (({ kind = Op2 ((Or), _, a); _ } as x), kanon__7)
+        when ((Int.equal a.tag kanon__7.tag)) ->
+        x
+      | (kanon__7, ({ kind = Op2 ((Or), a, _); _ } as x))
+        when ((Int.equal a.tag kanon__7.tag)) ->
+        x
+      | (kanon__7, ({ kind = Op2 ((Or), _, a); _ } as x))
+        when ((Int.equal a.tag kanon__7.tag)) ->
+        x
+      | ({ kind = Op2 ((And), a, _); _ }, kanon__6)
+        when ((Int.equal a.tag kanon__6.tag)) ->
+        a
+      | ({ kind = Op2 ((And), _, a); _ }, kanon__6)
+        when ((Int.equal a.tag kanon__6.tag)) ->
+        a
+      | (kanon__6, { kind = Op2 ((And), a, _); _ })
+        when ((Int.equal a.tag kanon__6.tag)) ->
+        a
+      | (kanon__6, { kind = Op2 ((And), _, a); _ })
+        when ((Int.equal a.tag kanon__6.tag)) ->
+        a
+      | ({ kind = Op2 ((Lt (s)), a, b); _ }, { kind = Op2 ((Lt (kanon__6)), kanon__8, kanon__9); _ })
+        when (((((Stdlib.Bool.equal s kanon__6)) && (Int.equal b.tag kanon__8.tag)) && (Int.equal a.tag kanon__9.tag))) ->
+        (bool_not_ (bool_eq a b))
+      | ({ kind = Op2 ((Lt (s)), a, b); _ }, { kind = Op2 ((Leq (kanon__6)), kanon__8, kanon__9); _ })
+        when (((((Stdlib.Bool.equal s kanon__6)) && (Int.equal b.tag kanon__8.tag)) && (Int.equal a.tag kanon__9.tag))) ->
+        Bv_prims.v_true
+      | ({ kind = Op2 ((Leq (kanon__6)), kanon__8, kanon__9); _ }, { kind = Op2 ((Lt (s)), a, b); _ })
+        when (((((Stdlib.Bool.equal s kanon__6)) && (Int.equal b.tag kanon__8.tag)) && (Int.equal a.tag kanon__9.tag))) ->
+        Bv_prims.v_true
+      | (({ kind = Op2 ((Lt (s)), a, { kind = BitVec (_); _ }); _ } as ub), ({ kind = Op2 ((Lt (kanon__15)), { kind = BitVec (_); _ }, kanon__19); _ } as lb))
+        when (((((Stdlib.Bool.equal s kanon__15)) && (Int.equal a.tag kanon__19.tag)) && (Z.leq (bitvec_lower_bound lb) (Z.add (bitvec_upper_bound ub) Z.one)))) ->
+        Bv_prims.v_true
+      | (({ kind = Op2 ((Lt (s)), a, { kind = BitVec (_); _ }); _ } as ub), ({ kind = Op2 ((Leq (kanon__21)), { kind = BitVec (_); _ }, kanon__25); _ } as lb))
+        when (((((Stdlib.Bool.equal s kanon__21)) && (Int.equal a.tag kanon__25.tag)) && (Z.leq (bitvec_lower_bound lb) (Z.add (bitvec_upper_bound ub) Z.one)))) ->
+        Bv_prims.v_true
+      | (({ kind = Op2 ((Leq (s)), a, { kind = BitVec (_); _ }); _ } as ub), ({ kind = Op2 ((Lt (kanon__15)), { kind = BitVec (_); _ }, kanon__19); _ } as lb))
+        when (((((Stdlib.Bool.equal s kanon__15)) && (Int.equal a.tag kanon__19.tag)) && (Z.leq (bitvec_lower_bound lb) (Z.add (bitvec_upper_bound ub) Z.one)))) ->
+        Bv_prims.v_true
+      | (({ kind = Op2 ((Leq (s)), a, { kind = BitVec (_); _ }); _ } as ub), ({ kind = Op2 ((Leq (kanon__21)), { kind = BitVec (_); _ }, kanon__25); _ } as lb))
+        when (((((Stdlib.Bool.equal s kanon__21)) && (Int.equal a.tag kanon__25.tag)) && (Z.leq (bitvec_lower_bound lb) (Z.add (bitvec_upper_bound ub) Z.one)))) ->
+        Bv_prims.v_true
+      | (({ kind = Op2 ((Lt (kanon__15)), { kind = BitVec (_); _ }, kanon__19); _ } as lb), ({ kind = Op2 ((Lt (s)), a, { kind = BitVec (_); _ }); _ } as ub))
+        when (((((Stdlib.Bool.equal s kanon__15)) && (Int.equal a.tag kanon__19.tag)) && (Z.leq (bitvec_lower_bound lb) (Z.add (bitvec_upper_bound ub) Z.one)))) ->
+        Bv_prims.v_true
+      | (({ kind = Op2 ((Lt (kanon__15)), { kind = BitVec (_); _ }, kanon__19); _ } as lb), ({ kind = Op2 ((Leq (s)), a, { kind = BitVec (_); _ }); _ } as ub))
+        when (((((Stdlib.Bool.equal s kanon__15)) && (Int.equal a.tag kanon__19.tag)) && (Z.leq (bitvec_lower_bound lb) (Z.add (bitvec_upper_bound ub) Z.one)))) ->
+        Bv_prims.v_true
+      | (({ kind = Op2 ((Leq (kanon__21)), { kind = BitVec (_); _ }, kanon__25); _ } as lb), ({ kind = Op2 ((Lt (s)), a, { kind = BitVec (_); _ }); _ } as ub))
+        when (((((Stdlib.Bool.equal s kanon__21)) && (Int.equal a.tag kanon__25.tag)) && (Z.leq (bitvec_lower_bound lb) (Z.add (bitvec_upper_bound ub) Z.one)))) ->
+        Bv_prims.v_true
+      | (({ kind = Op2 ((Leq (kanon__21)), { kind = BitVec (_); _ }, kanon__25); _ } as lb), ({ kind = Op2 ((Leq (s)), a, { kind = BitVec (_); _ }); _ } as ub))
+        when (((((Stdlib.Bool.equal s kanon__21)) && (Int.equal a.tag kanon__25.tag)) && (Z.leq (bitvec_lower_bound lb) (Z.add (bitvec_upper_bound ub) Z.one)))) ->
+        Bv_prims.v_true
+      | (({ kind = Op2 ((Lt (s)), a, { kind = BitVec (_); _ }); _ } as b), { kind = Op2 ((Eq), kanon__16, { kind = BitVec (k); _ }); _ })
+        when (((Int.equal a.tag kanon__16.tag) && (Z.leq (bitvec_to_z s (bitvec_size a) k) (bitvec_upper_bound b)))) ->
+        b
+      | (({ kind = Op2 ((Lt (s)), a, { kind = BitVec (_); _ }); _ } as b), { kind = Op2 ((Eq), { kind = BitVec (k); _ }, kanon__16); _ })
+        when (((Int.equal a.tag kanon__16.tag) && (Z.leq (bitvec_to_z s (bitvec_size a) k) (bitvec_upper_bound b)))) ->
+        b
+      | (({ kind = Op2 ((Leq (s)), a, { kind = BitVec (_); _ }); _ } as b), { kind = Op2 ((Eq), kanon__16, { kind = BitVec (k); _ }); _ })
+        when (((Int.equal a.tag kanon__16.tag) && (Z.leq (bitvec_to_z s (bitvec_size a) k) (bitvec_upper_bound b)))) ->
+        b
+      | (({ kind = Op2 ((Leq (s)), a, { kind = BitVec (_); _ }); _ } as b), { kind = Op2 ((Eq), { kind = BitVec (k); _ }, kanon__16); _ })
+        when (((Int.equal a.tag kanon__16.tag) && (Z.leq (bitvec_to_z s (bitvec_size a) k) (bitvec_upper_bound b)))) ->
+        b
+      | ({ kind = Op2 ((Eq), kanon__16, { kind = BitVec (k); _ }); _ }, ({ kind = Op2 ((Lt (s)), a, { kind = BitVec (_); _ }); _ } as b))
+        when (((Int.equal a.tag kanon__16.tag) && (Z.leq (bitvec_to_z s (bitvec_size a) k) (bitvec_upper_bound b)))) ->
+        b
+      | ({ kind = Op2 ((Eq), kanon__16, { kind = BitVec (k); _ }); _ }, ({ kind = Op2 ((Leq (s)), a, { kind = BitVec (_); _ }); _ } as b))
+        when (((Int.equal a.tag kanon__16.tag) && (Z.leq (bitvec_to_z s (bitvec_size a) k) (bitvec_upper_bound b)))) ->
+        b
+      | ({ kind = Op2 ((Eq), { kind = BitVec (k); _ }, kanon__16); _ }, ({ kind = Op2 ((Lt (s)), a, { kind = BitVec (_); _ }); _ } as b))
+        when (((Int.equal a.tag kanon__16.tag) && (Z.leq (bitvec_to_z s (bitvec_size a) k) (bitvec_upper_bound b)))) ->
+        b
+      | ({ kind = Op2 ((Eq), { kind = BitVec (k); _ }, kanon__16); _ }, ({ kind = Op2 ((Leq (s)), a, { kind = BitVec (_); _ }); _ } as b))
+        when (((Int.equal a.tag kanon__16.tag) && (Z.leq (bitvec_to_z s (bitvec_size a) k) (bitvec_upper_bound b)))) ->
+        b
+      | (({ kind = Op2 ((Lt (s)), { kind = BitVec (_); _ }, a); _ } as b), { kind = Op2 ((Eq), kanon__16, { kind = BitVec (k); _ }); _ })
+        when (((Int.equal a.tag kanon__16.tag) && (Z.leq (bitvec_lower_bound b) (bitvec_to_z s (bitvec_size a) k)))) ->
+        b
+      | (({ kind = Op2 ((Lt (s)), { kind = BitVec (_); _ }, a); _ } as b), { kind = Op2 ((Eq), { kind = BitVec (k); _ }, kanon__16); _ })
+        when (((Int.equal a.tag kanon__16.tag) && (Z.leq (bitvec_lower_bound b) (bitvec_to_z s (bitvec_size a) k)))) ->
+        b
+      | (({ kind = Op2 ((Leq (s)), { kind = BitVec (_); _ }, a); _ } as b), { kind = Op2 ((Eq), kanon__16, { kind = BitVec (k); _ }); _ })
+        when (((Int.equal a.tag kanon__16.tag) && (Z.leq (bitvec_lower_bound b) (bitvec_to_z s (bitvec_size a) k)))) ->
+        b
+      | (({ kind = Op2 ((Leq (s)), { kind = BitVec (_); _ }, a); _ } as b), { kind = Op2 ((Eq), { kind = BitVec (k); _ }, kanon__16); _ })
+        when (((Int.equal a.tag kanon__16.tag) && (Z.leq (bitvec_lower_bound b) (bitvec_to_z s (bitvec_size a) k)))) ->
+        b
+      | ({ kind = Op2 ((Eq), kanon__16, { kind = BitVec (k); _ }); _ }, ({ kind = Op2 ((Lt (s)), { kind = BitVec (_); _ }, a); _ } as b))
+        when (((Int.equal a.tag kanon__16.tag) && (Z.leq (bitvec_lower_bound b) (bitvec_to_z s (bitvec_size a) k)))) ->
+        b
+      | ({ kind = Op2 ((Eq), kanon__16, { kind = BitVec (k); _ }); _ }, ({ kind = Op2 ((Leq (s)), { kind = BitVec (_); _ }, a); _ } as b))
+        when (((Int.equal a.tag kanon__16.tag) && (Z.leq (bitvec_lower_bound b) (bitvec_to_z s (bitvec_size a) k)))) ->
+        b
+      | ({ kind = Op2 ((Eq), { kind = BitVec (k); _ }, kanon__16); _ }, ({ kind = Op2 ((Lt (s)), { kind = BitVec (_); _ }, a); _ } as b))
+        when (((Int.equal a.tag kanon__16.tag) && (Z.leq (bitvec_lower_bound b) (bitvec_to_z s (bitvec_size a) k)))) ->
+        b
+      | ({ kind = Op2 ((Eq), { kind = BitVec (k); _ }, kanon__16); _ }, ({ kind = Op2 ((Leq (s)), { kind = BitVec (_); _ }, a); _ } as b))
+        when (((Int.equal a.tag kanon__16.tag) && (Z.leq (bitvec_lower_bound b) (bitvec_to_z s (bitvec_size a) k)))) ->
+        b
+      | ({ kind = Op2 ((Lt (s)), a, { kind = BitVec (_); _ }); _ }, { kind = Op2 ((Lt (kanon__14)), kanon__16, { kind = BitVec (_); _ }); _ })
+        when ((((Stdlib.Bool.equal s kanon__14)) && (Int.equal a.tag kanon__16.tag))) ->
+        (if (Z.leq (bitvec_upper_bound v1) (bitvec_upper_bound v2))
+        then v2
+        else v1)
+      | ({ kind = Op2 ((Lt (s)), a, { kind = BitVec (_); _ }); _ }, { kind = Op2 ((Leq (kanon__20)), kanon__22, { kind = BitVec (_); _ }); _ })
+        when ((((Stdlib.Bool.equal s kanon__20)) && (Int.equal a.tag kanon__22.tag))) ->
+        (if (Z.leq (bitvec_upper_bound v1) (bitvec_upper_bound v2))
+        then v2
+        else v1)
+      | ({ kind = Op2 ((Leq (s)), a, { kind = BitVec (_); _ }); _ }, { kind = Op2 ((Lt (kanon__14)), kanon__16, { kind = BitVec (_); _ }); _ })
+        when ((((Stdlib.Bool.equal s kanon__14)) && (Int.equal a.tag kanon__16.tag))) ->
+        (if (Z.leq (bitvec_upper_bound v1) (bitvec_upper_bound v2))
+        then v2
+        else v1)
+      | ({ kind = Op2 ((Leq (s)), a, { kind = BitVec (_); _ }); _ }, { kind = Op2 ((Leq (kanon__20)), kanon__22, { kind = BitVec (_); _ }); _ })
+        when ((((Stdlib.Bool.equal s kanon__20)) && (Int.equal a.tag kanon__22.tag))) ->
+        (if (Z.leq (bitvec_upper_bound v1) (bitvec_upper_bound v2))
+        then v2
+        else v1)
+      | ({ kind = Op2 ((Lt (s)), { kind = BitVec (_); _ }, a); _ }, { kind = Op2 ((Lt (kanon__14)), { kind = BitVec (_); _ }, kanon__18); _ })
+        when ((((Stdlib.Bool.equal s kanon__14)) && (Int.equal a.tag kanon__18.tag))) ->
+        (if (Z.geq (bitvec_lower_bound v1) (bitvec_lower_bound v2))
+        then v2
+        else v1)
+      | ({ kind = Op2 ((Lt (s)), { kind = BitVec (_); _ }, a); _ }, { kind = Op2 ((Leq (kanon__20)), { kind = BitVec (_); _ }, kanon__24); _ })
+        when ((((Stdlib.Bool.equal s kanon__20)) && (Int.equal a.tag kanon__24.tag))) ->
+        (if (Z.geq (bitvec_lower_bound v1) (bitvec_lower_bound v2))
+        then v2
+        else v1)
+      | ({ kind = Op2 ((Leq (s)), { kind = BitVec (_); _ }, a); _ }, { kind = Op2 ((Lt (kanon__14)), { kind = BitVec (_); _ }, kanon__18); _ })
+        when ((((Stdlib.Bool.equal s kanon__14)) && (Int.equal a.tag kanon__18.tag))) ->
+        (if (Z.geq (bitvec_lower_bound v1) (bitvec_lower_bound v2))
+        then v2
+        else v1)
+      | ({ kind = Op2 ((Leq (s)), { kind = BitVec (_); _ }, a); _ }, { kind = Op2 ((Leq (kanon__20)), { kind = BitVec (_); _ }, kanon__24); _ })
+        when ((((Stdlib.Bool.equal s kanon__20)) && (Int.equal a.tag kanon__24.tag))) ->
+        (if (Z.geq (bitvec_lower_bound v1) (bitvec_lower_bound v2))
+        then v2
+        else v1)
+      | _ -> (node (mk_commut_binop Or v1 v2) TBool)
+      ))
+  and bool_not_ (sv : t) : t =
+      (assert ((match sv.ty with
+               | (TBool) -> true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match sv with
+      | { kind = Bool (true); _ } -> Bv_prims.v_false
+      | { kind = Bool (false); _ } -> Bv_prims.v_true
+      | { kind = Op1 ((Not), sv); _ } -> sv
+      | { kind = Op2 ((Or), v1, v2); _ } ->
+        (bool_and_ (bool_not_ v1) (bool_not_ v2))
+      | { kind = Op2 ((And), v1, v2); _ } ->
+        (bool_or_ (bool_not_ v1) (bool_not_ v2))
+      | { kind = Op3 ((Ite), g, a, b); _ } ->
+        (bool_ite g (bool_not_ a) (bool_not_ b))
+      | { kind = OpN ((Distinct), (l :: (r :: []))); _ } -> (bool_eq l r)
+      | { kind = Op2 ((Lt (signed)), v1, v2); _ } ->
+        (bitvec_leq signed v2 v1)
+      | { kind = Op2 ((Leq (signed)), v1, v2); _ } ->
+        (bitvec_lt signed v2 v1)
+      | { kind = Op2 ((Eq), ({ kind = BitVec (bv); _ } as c), v); _ }
+        when (((equal_ty c.ty (TBitVector ((Z.to_int Z.one)))))) ->
+        (bool_eq (Bv_prims.mk_bv Z.one (Bv_prims.lit_not c.ty bv)) v)
+      | { kind = Op2 ((Eq), v, ({ kind = BitVec (bv); _ } as c)); _ }
+        when (((equal_ty c.ty (TBitVector ((Z.to_int Z.one)))))) ->
+        (bool_eq (Bv_prims.mk_bv Z.one (Bv_prims.lit_not c.ty bv)) v)
+      | _ -> (node (Op1 (Not, sv)) TBool)
+      ))
+  and bool_ite (guard : t) (if_ : t) (else_ : t) : t =
+      (assert ((match guard.ty, if_.ty, else_.ty with
+               | ((TBool), kanon__a, kanon__s1)
+                 when (((equal_ty kanon__s1 kanon__a))) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match guard, if_, else_ with
+      | ({ kind = Bool (true); _ }, _, _) -> if_
+      | ({ kind = Bool (false); _ }, _, _) -> else_
+      | (_, { kind = Bool (true); _ }, { kind = Bool (false); _ }) -> guard
+      | (_, { kind = Bool (false); _ }, { kind = Bool (true); _ }) ->
+        (bool_not_ guard)
+      | (_, { kind = Bool (false); _ }, _) ->
+        (bool_and_ (bool_not_ guard) else_)
+      | (_, { kind = Bool (true); _ }, _) -> (bool_or_ guard else_)
+      | (_, _, { kind = Bool (false); _ }) -> (bool_and_ guard if_)
+      | (_, _, { kind = Bool (true); _ }) -> (bool_or_ (bool_not_ guard) if_)
+      | ({ kind = Op1 ((Not), g); _ }, _, _) -> (bool_ite g else_ if_)
+      | (g, kanon__2, _)
+        when ((Int.equal g.tag kanon__2.tag)) ->
+        (bool_or_ guard else_)
+      | (g, _, kanon__3)
+        when ((Int.equal g.tag kanon__3.tag)) ->
+        (bool_and_ guard if_)
+      | (g, { kind = Op3 ((Ite), kanon__3, x, _); _ }, _)
+        when ((Int.equal g.tag kanon__3.tag)) ->
+        (bool_ite guard x else_)
+      | (g, _, { kind = Op3 ((Ite), kanon__4, _, y); _ })
+        when ((Int.equal g.tag kanon__4.tag)) ->
+        (bool_ite guard if_ y)
+      | ({ kind = Op2 ((And), g, _); _ }, { kind = Op3 ((Ite), kanon__7, x, _); _ }, _)
+        when ((Int.equal g.tag kanon__7.tag)) ->
+        (bool_ite guard x else_)
+      | ({ kind = Op2 ((And), _, g); _ }, { kind = Op3 ((Ite), kanon__7, x, _); _ }, _)
+        when ((Int.equal g.tag kanon__7.tag)) ->
+        (bool_ite guard x else_)
+      | ({ kind = Op2 ((Or), g, _); _ }, _, { kind = Op3 ((Ite), kanon__8, _, y); _ })
+        when ((Int.equal g.tag kanon__8.tag)) ->
+        (bool_ite guard if_ y)
+      | ({ kind = Op2 ((Or), _, g); _ }, _, { kind = Op3 ((Ite), kanon__8, _, y); _ })
+        when ((Int.equal g.tag kanon__8.tag)) ->
+        (bool_ite guard if_ y)
+      | (_, x, kanon__3) when ((Int.equal x.tag kanon__3.tag)) -> if_
+      | (_, { kind = BitVec (kanon__2); _ }, { kind = BitVec (kanon__4); _ })
+        when (((((Z.equal kanon__2 Z.one)) && ((Z.equal kanon__4 Z.zero))) && (bitvec_is_bv if_.ty))) ->
+        (bitvec_of_bool (bitvec_size if_) guard)
+      | _ -> (node (Op3 (Ite, guard, if_, else_)) if_.ty)
+      ))
+  and bool_eq (v1 : t) (v2 : t) : t =
+      (assert ((match v1.ty, v2.ty with
+               | (kanon__a, kanon__s1)
+                 when (((equal_ty kanon__s1 kanon__a))) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v1, v2 with
+      | (v, kanon__2)
+        when ((Int.equal v.tag kanon__2.tag)) ->
+        Bv_prims.v_true
+      | ({ kind = Bool (b1); _ }, { kind = Bool (b2); _ }) ->
+        (bool_of_bool ((Stdlib.Bool.equal b1 b2)))
+      | ({ kind = Op3 ((Ite), b, l, r); _ }, { kind = Op3 ((Ite), kanon__7, l', r'); _ })
+        when ((Int.equal b.tag kanon__7.tag)) ->
+        (bool_ite b (bool_eq l l') (bool_eq r r'))
+      | ({ kind = Bool (false); _ }, x) -> (bool_not_ x)
+      | (x, { kind = Bool (false); _ }) -> (bool_not_ x)
+      | ({ kind = Bool (true); _ }, x) -> x
+      | (x, { kind = Bool (true); _ }) -> x
+      | ({ kind = Op1 ((Not), b); _ }, { kind = Op1 ((Not), c); _ }) ->
+        (bool_eq b c)
+      | ({ kind = BitVec (b1); _ }, { kind = BitVec (b2); _ }) ->
+        (bool_of_bool ((Z.equal b1 b2)))
+      | ({ kind = LocLit (b1); _ }, { kind = LocLit (b2); _ }) ->
+        (bool_of_bool ((Z.equal b1 b2)))
+      | (({ kind = BitVec (_); _ } as c), { kind = Op1 ((Neg (_)), x); _ }) ->
+        (bool_eq (bitvec_neg false c) x)
+      | ({ kind = Op1 ((Neg (_)), x); _ }, ({ kind = BitVec (_); _ } as c)) ->
+        (bool_eq (bitvec_neg false c) x)
+      | (({ kind = BitVec (_); _ } as c), { kind = Op1 ((BvNot), x); _ }) ->
+        (bool_eq (bitvec_not_ c) x)
+      | ({ kind = Op1 ((BvNot), x); _ }, ({ kind = BitVec (_); _ } as c)) ->
+        (bool_eq (bitvec_not_ c) x)
+      | (({ kind = BitVec (_); _ } as c), { kind = Op2 ((Add (_)), ({ kind = BitVec (_); _ } as l), r); _ }) ->
+        (bool_eq (bitvec_sub bitvec_unchecked c l) r)
+      | (({ kind = BitVec (_); _ } as c), { kind = Op2 ((Add (_)), r, ({ kind = BitVec (_); _ } as l)); _ }) ->
+        (bool_eq (bitvec_sub bitvec_unchecked c l) r)
+      | ({ kind = Op2 ((Add (_)), ({ kind = BitVec (_); _ } as l), r); _ }, ({ kind = BitVec (_); _ } as c)) ->
+        (bool_eq (bitvec_sub bitvec_unchecked c l) r)
+      | ({ kind = Op2 ((Add (_)), r, ({ kind = BitVec (_); _ } as l)); _ }, ({ kind = BitVec (_); _ } as c)) ->
+        (bool_eq (bitvec_sub bitvec_unchecked c l) r)
+      | (({ kind = BitVec (_); _ } as c), { kind = Op2 ((Sub (_)), l, ({ kind = BitVec (_); _ } as r)); _ }) ->
+        (bool_eq (bitvec_add bitvec_unchecked c r) l)
+      | ({ kind = Op2 ((Sub (_)), l, ({ kind = BitVec (_); _ } as r)); _ }, ({ kind = BitVec (_); _ } as c)) ->
+        (bool_eq (bitvec_add bitvec_unchecked c r) l)
+      | (({ kind = BitVec (_); _ } as c), { kind = Op2 ((Sub (_)), ({ kind = BitVec (_); _ } as l), r); _ }) ->
+        (bool_eq (bitvec_sub bitvec_unchecked l c) r)
+      | ({ kind = Op2 ((Sub (_)), ({ kind = BitVec (_); _ } as l), r); _ }, ({ kind = BitVec (_); _ } as c)) ->
+        (bool_eq (bitvec_sub bitvec_unchecked l c) r)
+      | (x, { kind = Op2 ((Add (_)), kanon__4, { kind = BitVec (bv); _ }); _ })
+        when ((Int.equal x.tag kanon__4.tag)) ->
+        (bool_of_bool ((Z.equal bv Z.zero)))
+      | (x, { kind = Op2 ((Add (_)), { kind = BitVec (bv); _ }, kanon__4); _ })
+        when ((Int.equal x.tag kanon__4.tag)) ->
+        (bool_of_bool ((Z.equal bv Z.zero)))
+      | ({ kind = Op2 ((Add (_)), kanon__4, { kind = BitVec (bv); _ }); _ }, x)
+        when ((Int.equal x.tag kanon__4.tag)) ->
+        (bool_of_bool ((Z.equal bv Z.zero)))
+      | ({ kind = Op2 ((Add (_)), { kind = BitVec (bv); _ }, kanon__4); _ }, x)
+        when ((Int.equal x.tag kanon__4.tag)) ->
+        (bool_of_bool ((Z.equal bv Z.zero)))
+      | ({ kind = Op2 ((Add (_)), ({ kind = BitVec (bv_l); _ } as l), y); _ }, { kind = Op2 ((Add (_)), ({ kind = BitVec (bv_r); _ } as r), x); _ }) ->
+        (if (Z.geq bv_l bv_r)
+        then (bool_eq x (bitvec_add bitvec_unchecked y (bitvec_sub bitvec_unchecked l r)))
+        else (bool_eq y (bitvec_add bitvec_unchecked x (bitvec_sub bitvec_unchecked r l))))
+      | ({ kind = Op2 ((Add (_)), ({ kind = BitVec (bv_l); _ } as l), y); _ }, { kind = Op2 ((Add (_)), x, ({ kind = BitVec (bv_r); _ } as r)); _ }) ->
+        (if (Z.geq bv_l bv_r)
+        then (bool_eq x (bitvec_add bitvec_unchecked y (bitvec_sub bitvec_unchecked l r)))
+        else (bool_eq y (bitvec_add bitvec_unchecked x (bitvec_sub bitvec_unchecked r l))))
+      | ({ kind = Op2 ((Add (_)), y, ({ kind = BitVec (bv_l); _ } as l)); _ }, { kind = Op2 ((Add (_)), ({ kind = BitVec (bv_r); _ } as r), x); _ }) ->
+        (if (Z.geq bv_l bv_r)
+        then (bool_eq x (bitvec_add bitvec_unchecked y (bitvec_sub bitvec_unchecked l r)))
+        else (bool_eq y (bitvec_add bitvec_unchecked x (bitvec_sub bitvec_unchecked r l))))
+      | ({ kind = Op2 ((Add (_)), y, ({ kind = BitVec (bv_l); _ } as l)); _ }, { kind = Op2 ((Add (_)), x, ({ kind = BitVec (bv_r); _ } as r)); _ }) ->
+        (if (Z.geq bv_l bv_r)
+        then (bool_eq x (bitvec_add bitvec_unchecked y (bitvec_sub bitvec_unchecked l r)))
+        else (bool_eq y (bitvec_add bitvec_unchecked x (bitvec_sub bitvec_unchecked r l))))
+      | ({ kind = BitVec (n); _ }, { kind = Op2 ((Mul (ck)), { kind = BitVec (m); _ }, x); _ })
+        when ((bitvec_is_checked ck)) ->
+        (let sz = (bitvec_size x) in
+        (let signed = (not ck.unsigned) in
+        (let m = (bitvec_to_z signed sz m) in
+        (let n = (bitvec_to_z signed sz n) in
+        (if ((Z.equal m Z.zero))
+        then (bool_of_bool ((Z.equal n Z.zero)))
+        else (if ((Z.equal n Z.zero))
+             then (bool_eq x (Bv_prims.bv_zero sz))
+             else (if (Bv_prims.divisible n m)
+                  then (let q = (Bv_prims.tdiv n m) in
+                       (let fits = (if signed
+                                   then (let h = (Bv_prims.z_lsl Z.one (Z.sub sz Z.one)) in
+                                        ((Z.leq (Z.neg h) q) && (Z.lt q h)))
+                                   else ((Z.leq Z.zero q) && (Z.lt q (Bv_prims.z_lsl Z.one sz)))) in
+                       (if fits
+                       then (bool_eq x (Bv_prims.mk_masked sz q))
+                       else Bv_prims.v_false)))
+                  else Bv_prims.v_false)))))))
+      | ({ kind = BitVec (n); _ }, { kind = Op2 ((Mul (ck)), x, { kind = BitVec (m); _ }); _ })
+        when ((bitvec_is_checked ck)) ->
+        (let sz = (bitvec_size x) in
+        (let signed = (not ck.unsigned) in
+        (let m = (bitvec_to_z signed sz m) in
+        (let n = (bitvec_to_z signed sz n) in
+        (if ((Z.equal m Z.zero))
+        then (bool_of_bool ((Z.equal n Z.zero)))
+        else (if ((Z.equal n Z.zero))
+             then (bool_eq x (Bv_prims.bv_zero sz))
+             else (if (Bv_prims.divisible n m)
+                  then (let q = (Bv_prims.tdiv n m) in
+                       (let fits = (if signed
+                                   then (let h = (Bv_prims.z_lsl Z.one (Z.sub sz Z.one)) in
+                                        ((Z.leq (Z.neg h) q) && (Z.lt q h)))
+                                   else ((Z.leq Z.zero q) && (Z.lt q (Bv_prims.z_lsl Z.one sz)))) in
+                       (if fits
+                       then (bool_eq x (Bv_prims.mk_masked sz q))
+                       else Bv_prims.v_false)))
+                  else Bv_prims.v_false)))))))
+      | ({ kind = Op2 ((Mul (ck)), { kind = BitVec (m); _ }, x); _ }, { kind = BitVec (n); _ })
+        when ((bitvec_is_checked ck)) ->
+        (let sz = (bitvec_size x) in
+        (let signed = (not ck.unsigned) in
+        (let m = (bitvec_to_z signed sz m) in
+        (let n = (bitvec_to_z signed sz n) in
+        (if ((Z.equal m Z.zero))
+        then (bool_of_bool ((Z.equal n Z.zero)))
+        else (if ((Z.equal n Z.zero))
+             then (bool_eq x (Bv_prims.bv_zero sz))
+             else (if (Bv_prims.divisible n m)
+                  then (let q = (Bv_prims.tdiv n m) in
+                       (let fits = (if signed
+                                   then (let h = (Bv_prims.z_lsl Z.one (Z.sub sz Z.one)) in
+                                        ((Z.leq (Z.neg h) q) && (Z.lt q h)))
+                                   else ((Z.leq Z.zero q) && (Z.lt q (Bv_prims.z_lsl Z.one sz)))) in
+                       (if fits
+                       then (bool_eq x (Bv_prims.mk_masked sz q))
+                       else Bv_prims.v_false)))
+                  else Bv_prims.v_false)))))))
+      | ({ kind = Op2 ((Mul (ck)), x, { kind = BitVec (m); _ }); _ }, { kind = BitVec (n); _ })
+        when ((bitvec_is_checked ck)) ->
+        (let sz = (bitvec_size x) in
+        (let signed = (not ck.unsigned) in
+        (let m = (bitvec_to_z signed sz m) in
+        (let n = (bitvec_to_z signed sz n) in
+        (if ((Z.equal m Z.zero))
+        then (bool_of_bool ((Z.equal n Z.zero)))
+        else (if ((Z.equal n Z.zero))
+             then (bool_eq x (Bv_prims.bv_zero sz))
+             else (if (Bv_prims.divisible n m)
+                  then (let q = (Bv_prims.tdiv n m) in
+                       (let fits = (if signed
+                                   then (let h = (Bv_prims.z_lsl Z.one (Z.sub sz Z.one)) in
+                                        ((Z.leq (Z.neg h) q) && (Z.lt q h)))
+                                   else ((Z.leq Z.zero q) && (Z.lt q (Bv_prims.z_lsl Z.one sz)))) in
+                       (if fits
+                       then (bool_eq x (Bv_prims.mk_masked sz q))
+                       else Bv_prims.v_false)))
+                  else Bv_prims.v_false)))))))
+      | ({ kind = Op2 ((Mul (ck1)), { kind = BitVec (a); _ }, b); _ }, { kind = Op2 ((Mul (ck2)), { kind = BitVec (a2); _ }, d); _ })
+        when ((((Z.equal a a2)) && (((Z.equal (Bv_prims.z_land a Z.one) Z.one)) || ((not (Z.equal a Z.zero)) && (bitvec_is_checked (bitvec_checked_meet ck1 ck2)))))) ->
+        (bool_eq b d)
+      | ({ kind = Op2 ((Mul (ck1)), { kind = BitVec (a); _ }, b); _ }, { kind = Op2 ((Mul (ck2)), d, { kind = BitVec (a2); _ }); _ })
+        when ((((Z.equal a a2)) && (((Z.equal (Bv_prims.z_land a Z.one) Z.one)) || ((not (Z.equal a Z.zero)) && (bitvec_is_checked (bitvec_checked_meet ck1 ck2)))))) ->
+        (bool_eq b d)
+      | ({ kind = Op2 ((Mul (ck1)), b, { kind = BitVec (a); _ }); _ }, { kind = Op2 ((Mul (ck2)), { kind = BitVec (a2); _ }, d); _ })
+        when ((((Z.equal a a2)) && (((Z.equal (Bv_prims.z_land a Z.one) Z.one)) || ((not (Z.equal a Z.zero)) && (bitvec_is_checked (bitvec_checked_meet ck1 ck2)))))) ->
+        (bool_eq b d)
+      | ({ kind = Op2 ((Mul (ck1)), b, { kind = BitVec (a); _ }); _ }, { kind = Op2 ((Mul (ck2)), d, { kind = BitVec (a2); _ }); _ })
+        when ((((Z.equal a a2)) && (((Z.equal (Bv_prims.z_land a Z.one) Z.one)) || ((not (Z.equal a Z.zero)) && (bitvec_is_checked (bitvec_checked_meet ck1 ck2)))))) ->
+        (bool_eq b d)
+      | ({ kind = BitVec (kanon__1); _ }, { kind = Op2 ((BitOr), l, r); _ })
+        when (((Z.equal kanon__1 Z.zero))) ->
+        (let z = (Bv_prims.bv_zero (bitvec_size l)) in
+        (bool_and_ (bool_eq l z) (bool_eq r z)))
+      | ({ kind = Op2 ((BitOr), l, r); _ }, { kind = BitVec (kanon__1); _ })
+        when (((Z.equal kanon__1 Z.zero))) ->
+        (let z = (Bv_prims.bv_zero (bitvec_size l)) in
+        (bool_and_ (bool_eq l z) (bool_eq r z)))
+      | (({ kind = BitVec (n); _ } as c), { kind = Op2 ((BitAnd), { kind = BitVec (mask); _ }, _); _ })
+        when ((not ((Z.equal (Bv_prims.z_land n (Bv_prims.lit_not c.ty mask)) Z.zero)))) ->
+        Bv_prims.v_false
+      | (({ kind = BitVec (n); _ } as c), { kind = Op2 ((BitAnd), _, { kind = BitVec (mask); _ }); _ })
+        when ((not ((Z.equal (Bv_prims.z_land n (Bv_prims.lit_not c.ty mask)) Z.zero)))) ->
+        Bv_prims.v_false
+      | ({ kind = Op2 ((BitAnd), { kind = BitVec (mask); _ }, _); _ }, ({ kind = BitVec (n); _ } as c))
+        when ((not ((Z.equal (Bv_prims.z_land n (Bv_prims.lit_not c.ty mask)) Z.zero)))) ->
+        Bv_prims.v_false
+      | ({ kind = Op2 ((BitAnd), _, { kind = BitVec (mask); _ }); _ }, ({ kind = BitVec (n); _ } as c))
+        when ((not ((Z.equal (Bv_prims.z_land n (Bv_prims.lit_not c.ty mask)) Z.zero)))) ->
+        Bv_prims.v_false
+      | (({ kind = BitVec (_); _ } as z), { kind = Op2 ((BvConcat), l, r); _ }) ->
+        (let size_r = (bitvec_size r) in
+        (let size_l = (bitvec_size l) in
+        (let z_r = (bitvec_extract Z.zero (Z.sub size_r Z.one) z) in
+        (let z_l = (bitvec_extract size_r (Z.sub (Z.add size_r size_l) Z.one) z) in
+        (bool_and_ (bool_eq l z_l) (bool_eq r z_r))))))
+      | ({ kind = Op2 ((BvConcat), l, r); _ }, ({ kind = BitVec (_); _ } as z)) ->
+        (let size_r = (bitvec_size r) in
+        (let size_l = (bitvec_size l) in
+        (let z_r = (bitvec_extract Z.zero (Z.sub size_r Z.one) z) in
+        (let z_l = (bitvec_extract size_r (Z.sub (Z.add size_r size_l) Z.one) z) in
+        (bool_and_ (bool_eq l z_l) (bool_eq r z_r))))))
+      | ({ kind = Op1 ((BvExtend (false, by)), bv); _ }, { kind = BitVec (z); _ }) ->
+        let by = Z.of_int by in
+        (let size_bv = (bitvec_size bv) in
+        (let mask = (Bv_prims.z_lsl (Z.sub (Bv_prims.z_lsl Z.one by) Z.one) size_bv) in
+        (if (not ((Z.equal (Bv_prims.z_land z mask) Z.zero)))
+        then Bv_prims.v_false
+        else (let z_bv = (Bv_prims.mk_bv size_bv z) in
+             (bool_eq bv z_bv)))))
+      | ({ kind = BitVec (z); _ }, { kind = Op1 ((BvExtend (false, by)), bv); _ }) ->
+        let by = Z.of_int by in
+        (let size_bv = (bitvec_size bv) in
+        (let mask = (Bv_prims.z_lsl (Z.sub (Bv_prims.z_lsl Z.one by) Z.one) size_bv) in
+        (if (not ((Z.equal (Bv_prims.z_land z mask) Z.zero)))
+        then Bv_prims.v_false
+        else (let z_bv = (Bv_prims.mk_bv size_bv z) in
+             (bool_eq bv z_bv)))))
+      | ({ kind = Op3 ((Ite), b, ({ kind = BitVec (_); _ } as t), ({ kind = BitVec (_); _ } as e)); _ }, { kind = Op2 ((BvConcat), l, r); _ }) ->
+        (let size_r = (bitvec_size r) in
+        (let size_l = (bitvec_size l) in
+        (let t_r = (bitvec_extract Z.zero (Z.sub size_r Z.one) t) in
+        (let t_l = (bitvec_extract size_r (Z.sub (Z.add size_r size_l) Z.one) t) in
+        (let e_r = (bitvec_extract Z.zero (Z.sub size_r Z.one) e) in
+        (let e_l = (bitvec_extract size_r (Z.sub (Z.add size_r size_l) Z.one) e) in
+        (bool_and_ (bool_eq (bool_ite b t_l e_l) l) (bool_eq (bool_ite b t_r e_r) r))))))))
+      | ({ kind = Op2 ((BvConcat), l, r); _ }, { kind = Op3 ((Ite), b, ({ kind = BitVec (_); _ } as t), ({ kind = BitVec (_); _ } as e)); _ }) ->
+        (let size_r = (bitvec_size r) in
+        (let size_l = (bitvec_size l) in
+        (let t_r = (bitvec_extract Z.zero (Z.sub size_r Z.one) t) in
+        (let t_l = (bitvec_extract size_r (Z.sub (Z.add size_r size_l) Z.one) t) in
+        (let e_r = (bitvec_extract Z.zero (Z.sub size_r Z.one) e) in
+        (let e_l = (bitvec_extract size_r (Z.sub (Z.add size_r size_l) Z.one) e) in
+        (bool_and_ (bool_eq (bool_ite b t_l e_l) l) (bool_eq (bool_ite b t_r e_r) r))))))))
+      | ({ kind = Op2 ((BvConcat), l1, r1); _ }, { kind = Op2 ((BvConcat), l2, r2); _ })
+        when (((Z.equal (bitvec_size l1) (bitvec_size l2)))) ->
+        (bool_and_ (bool_eq l1 l2) (bool_eq r1 r2))
+      | ({ kind = Op3 ((Ite), b, l, t); _ }, ({ kind = BitVec (_); _ } as c)) ->
+        (bool_ite b (bool_eq l c) (bool_eq t c))
+      | ({ kind = Op3 ((Ite), b, l, t); _ }, ({ kind = LocLit (_); _ } as c)) ->
+        (bool_ite b (bool_eq l c) (bool_eq t c))
+      | (({ kind = BitVec (_); _ } as c), { kind = Op3 ((Ite), b, l, t); _ }) ->
+        (bool_ite b (bool_eq l c) (bool_eq t c))
+      | (({ kind = LocLit (_); _ } as c), { kind = Op3 ((Ite), b, l, t); _ }) ->
+        (bool_ite b (bool_eq l c) (bool_eq t c))
+      | ({ kind = Op1 ((BvOfBool (_)), b); _ }, { kind = Op1 ((BvOfBool (_)), c); _ }) ->
+        (bool_eq b c)
+      | ({ kind = Op1 ((BvOfBool (_)), b); _ }, { kind = BitVec (z); _ }) ->
+        (if ((Z.equal z Z.one))
+        then b
+        else (if ((Z.equal z Z.zero))
+             then (bool_not_ b)
+             else Bv_prims.v_false))
+      | ({ kind = BitVec (z); _ }, { kind = Op1 ((BvOfBool (_)), b); _ }) ->
+        (if ((Z.equal z Z.one))
+        then b
+        else (if ((Z.equal z Z.zero))
+             then (bool_not_ b)
+             else Bv_prims.v_false))
+      | _
+        when (((bitvec_is_bv v1.ty) && ((bitvec_is_bv v2.ty) && (let msb = (bitvec_zmax (bitvec_msb_of v1) (bitvec_msb_of v2)) in
+                                                                ((Z.leq Z.zero msb) && (Z.lt msb (Z.sub (bitvec_size v1) Z.one))))))) ->
+        (let msb = (bitvec_zmax (bitvec_msb_of v1) (bitvec_msb_of v2)) in
+        (let v1_ = (bitvec_extract Z.zero msb v1) in
+        (let v2_ = (bitvec_extract Z.zero msb v2) in
+        (bool_eq v1_ v2_))))
+      | ({ kind = Float (f1); _ }, { kind = Float (f2); _ }) ->
+        (bool_of_bool (Bv_prims.f_bits_equal f1 f2))
+      | ({ kind = Op2 ((Ptr), l1, o1); _ }, { kind = Op2 ((Ptr), l2, o2); _ }) ->
+        (bool_and_ (bool_eq l1 l2) (bool_eq o1 o2))
+      | _ -> (node (mk_commut_binop Eq v1 v2) TBool)
+      ))
+  and bitvec_add (checked : checked) (v1 : t) (v2 : t) : t =
+      (assert ((match v1.ty, v2.ty with
+               | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
+                 when (let kanon__n = Z.of_int kanon__n in
+                 let kanon__s1 = Z.of_int kanon__s1 in
+                 ((Z.equal kanon__s1 kanon__n))) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v1, v2 with
+      | (({ kind = BitVec (i1); _ } as lit_i1), ({ kind = BitVec (i2); _ } as lit_i2)) ->
+        (node (BitVec ((Bv_prims.lit_add lit_i1.ty lit_i2.ty i1 i2))) v1.ty)
+      | (x, { kind = Op1 ((Neg (_)), y); _ }) ->
+        (bitvec_sub bitvec_unchecked x y)
+      | ({ kind = Op1 ((Neg (_)), y); _ }, x) ->
+        (bitvec_sub bitvec_unchecked x y)
+      | (x, { kind = BitVec (kanon__2); _ })
+        when (((Z.equal kanon__2 Z.zero))) ->
+        x
+      | ({ kind = BitVec (kanon__2); _ }, x)
+        when (((Z.equal kanon__2 Z.zero))) ->
+        x
+      | ({ kind = Op1 ((BvNot), x); _ }, { kind = BitVec (kanon__4); _ })
+        when (((Z.equal kanon__4 Z.one))) ->
+        (bitvec_neg false x)
+      | ({ kind = BitVec (kanon__4); _ }, { kind = Op1 ((BvNot), x); _ })
+        when (((Z.equal kanon__4 Z.one))) ->
+        (bitvec_neg false x)
+      | ({ kind = Op2 ((Add (c)), { kind = BitVec (k1); _ }, r); _ }, { kind = BitVec (k2); _ }) ->
+        (let n = (bitvec_size r) in
+        (let sty = r.ty in
+        (let checked = (bitvec_fold_checked (bitvec_checked_meet checked c) n k1 k2 true) in
+        (bitvec_add checked (Bv_prims.mk_bv n (Bv_prims.lit_add sty sty k1 k2)) r))))
+      | ({ kind = Op2 ((Add (c)), r, { kind = BitVec (k1); _ }); _ }, { kind = BitVec (k2); _ }) ->
+        (let n = (bitvec_size r) in
+        (let sty = r.ty in
+        (let checked = (bitvec_fold_checked (bitvec_checked_meet checked c) n k1 k2 true) in
+        (bitvec_add checked (Bv_prims.mk_bv n (Bv_prims.lit_add sty sty k1 k2)) r))))
+      | ({ kind = BitVec (k2); _ }, { kind = Op2 ((Add (c)), { kind = BitVec (k1); _ }, r); _ }) ->
+        (let n = (bitvec_size r) in
+        (let sty = r.ty in
+        (let checked = (bitvec_fold_checked (bitvec_checked_meet checked c) n k1 k2 true) in
+        (bitvec_add checked (Bv_prims.mk_bv n (Bv_prims.lit_add sty sty k1 k2)) r))))
+      | ({ kind = BitVec (k2); _ }, { kind = Op2 ((Add (c)), r, { kind = BitVec (k1); _ }); _ }) ->
+        (let n = (bitvec_size r) in
+        (let sty = r.ty in
+        (let checked = (bitvec_fold_checked (bitvec_checked_meet checked c) n k1 k2 true) in
+        (bitvec_add checked (Bv_prims.mk_bv n (Bv_prims.lit_add sty sty k1 k2)) r))))
+      | ({ kind = Op2 ((Sub (c)), l, { kind = BitVec (k1); _ }); _ }, { kind = BitVec (k2); _ }) ->
+        (let n = (bitvec_size l) in
+        (let sty = l.ty in
+        (let checked = (bitvec_fold_checked (bitvec_checked_meet checked c) n k2 k1 false) in
+        (bitvec_add checked l (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty k2 k1))))))
+      | ({ kind = BitVec (k2); _ }, { kind = Op2 ((Sub (c)), l, { kind = BitVec (k1); _ }); _ }) ->
+        (let n = (bitvec_size l) in
+        (let sty = l.ty in
+        (let checked = (bitvec_fold_checked (bitvec_checked_meet checked c) n k2 k1 false) in
+        (bitvec_add checked l (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty k2 k1))))))
+      | ({ kind = Op2 ((Sub (c)), { kind = BitVec (k1); _ }, r); _ }, { kind = BitVec (k2); _ }) ->
+        (let n = (bitvec_size r) in
+        (let sty = r.ty in
+        (let checked = (bitvec_fold_checked (bitvec_checked_meet checked c) n k1 k2 true) in
+        (bitvec_sub checked (Bv_prims.mk_bv n (Bv_prims.lit_add sty sty k1 k2)) r))))
+      | ({ kind = BitVec (k2); _ }, { kind = Op2 ((Sub (c)), { kind = BitVec (k1); _ }, r); _ }) ->
+        (let n = (bitvec_size r) in
+        (let sty = r.ty in
+        (let checked = (bitvec_fold_checked (bitvec_checked_meet checked c) n k1 k2 true) in
+        (bitvec_sub checked (Bv_prims.mk_bv n (Bv_prims.lit_add sty sty k1 k2)) r))))
+      | (r, { kind = Op2 ((Sub (_)), l, kanon__5); _ })
+        when ((Int.equal r.tag kanon__5.tag)) ->
+        l
+      | ({ kind = Op2 ((Sub (_)), l, kanon__5); _ }, r)
+        when ((Int.equal r.tag kanon__5.tag)) ->
+        l
+      | ({ kind = Op2 ((Add (_)), a, b); _ }, { kind = Op2 ((Sub (_)), c, kanon__10); _ })
+        when ((Int.equal a.tag kanon__10.tag)) ->
+        (bitvec_add bitvec_unchecked b c)
+      | ({ kind = Op2 ((Add (_)), b, a); _ }, { kind = Op2 ((Sub (_)), c, kanon__10); _ })
+        when ((Int.equal a.tag kanon__10.tag)) ->
+        (bitvec_add bitvec_unchecked b c)
+      | ({ kind = Op2 ((Sub (_)), c, kanon__10); _ }, { kind = Op2 ((Add (_)), a, b); _ })
+        when ((Int.equal a.tag kanon__10.tag)) ->
+        (bitvec_add bitvec_unchecked b c)
+      | ({ kind = Op2 ((Sub (_)), c, kanon__10); _ }, { kind = Op2 ((Add (_)), b, a); _ })
+        when ((Int.equal a.tag kanon__10.tag)) ->
+        (bitvec_add bitvec_unchecked b c)
+      | ({ kind = Op2 ((Mul (ck1)), a, b); _ }, { kind = Op2 ((Mul (ck2)), kanon__9, c); _ })
+        when ((Int.equal a.tag kanon__9.tag)) ->
+        (if (bitvec_checked_meet (bitvec_checked_meet checked ck1) ck2).unsigned
+        then (bitvec_mul bitvec_checked_unsigned a (bitvec_add bitvec_unchecked b c))
+        else (bitvec_mul bitvec_unchecked a (bitvec_add bitvec_unchecked b c)))
+      | ({ kind = Op2 ((Mul (ck1)), a, b); _ }, { kind = Op2 ((Mul (ck2)), c, kanon__9); _ })
+        when ((Int.equal a.tag kanon__9.tag)) ->
+        (if (bitvec_checked_meet (bitvec_checked_meet checked ck1) ck2).unsigned
+        then (bitvec_mul bitvec_checked_unsigned a (bitvec_add bitvec_unchecked b c))
+        else (bitvec_mul bitvec_unchecked a (bitvec_add bitvec_unchecked b c)))
+      | ({ kind = Op2 ((Mul (ck1)), b, a); _ }, { kind = Op2 ((Mul (ck2)), kanon__9, c); _ })
+        when ((Int.equal a.tag kanon__9.tag)) ->
+        (if (bitvec_checked_meet (bitvec_checked_meet checked ck1) ck2).unsigned
+        then (bitvec_mul bitvec_checked_unsigned a (bitvec_add bitvec_unchecked b c))
+        else (bitvec_mul bitvec_unchecked a (bitvec_add bitvec_unchecked b c)))
+      | ({ kind = Op2 ((Mul (ck1)), b, a); _ }, { kind = Op2 ((Mul (ck2)), c, kanon__9); _ })
+        when ((Int.equal a.tag kanon__9.tag)) ->
+        (if (bitvec_checked_meet (bitvec_checked_meet checked ck1) ck2).unsigned
+        then (bitvec_mul bitvec_checked_unsigned a (bitvec_add bitvec_unchecked b c))
+        else (bitvec_mul bitvec_unchecked a (bitvec_add bitvec_unchecked b c)))
+      | ({ kind = Op2 ((Mul (ck1)), ({ kind = BitVec (k1); _ } as v_k1), r1); _ }, { kind = Op2 ((Mul (ck2)), ({ kind = BitVec (k2); _ } as v_k2), r2); _ })
+        when (((bitvec_checked_meet (bitvec_checked_meet checked ck1) ck2).unsigned && (((not (Z.equal k1 Z.zero)) || (not (Z.equal k2 Z.zero))) && ((bitvec_udivides k1 k2) || (bitvec_udivides k2 k1))))) ->
+        (let checked = bitvec_checked_unsigned in
+        (let n = (bitvec_size r1) in
+        (let sty = r1.ty in
+        (if (bitvec_udivides k1 k2)
+        then (let common = (Bv_prims.mk_bv n (Bv_prims.lit_udiv sty sty k2 k1)) in
+             (bitvec_mul checked v_k1 (bitvec_add checked r1 (bitvec_mul checked common r2))))
+        else (let common = (Bv_prims.mk_bv n (Bv_prims.lit_udiv sty sty k1 k2)) in
+             (bitvec_mul checked v_k2 (bitvec_add checked r2 (bitvec_mul checked common r1))))))))
+      | ({ kind = Op2 ((Mul (ck1)), ({ kind = BitVec (k1); _ } as v_k1), r1); _ }, { kind = Op2 ((Mul (ck2)), r2, ({ kind = BitVec (k2); _ } as v_k2)); _ })
+        when (((bitvec_checked_meet (bitvec_checked_meet checked ck1) ck2).unsigned && (((not (Z.equal k1 Z.zero)) || (not (Z.equal k2 Z.zero))) && ((bitvec_udivides k1 k2) || (bitvec_udivides k2 k1))))) ->
+        (let checked = bitvec_checked_unsigned in
+        (let n = (bitvec_size r1) in
+        (let sty = r1.ty in
+        (if (bitvec_udivides k1 k2)
+        then (let common = (Bv_prims.mk_bv n (Bv_prims.lit_udiv sty sty k2 k1)) in
+             (bitvec_mul checked v_k1 (bitvec_add checked r1 (bitvec_mul checked common r2))))
+        else (let common = (Bv_prims.mk_bv n (Bv_prims.lit_udiv sty sty k1 k2)) in
+             (bitvec_mul checked v_k2 (bitvec_add checked r2 (bitvec_mul checked common r1))))))))
+      | ({ kind = Op2 ((Mul (ck1)), r1, ({ kind = BitVec (k1); _ } as v_k1)); _ }, { kind = Op2 ((Mul (ck2)), ({ kind = BitVec (k2); _ } as v_k2), r2); _ })
+        when (((bitvec_checked_meet (bitvec_checked_meet checked ck1) ck2).unsigned && (((not (Z.equal k1 Z.zero)) || (not (Z.equal k2 Z.zero))) && ((bitvec_udivides k1 k2) || (bitvec_udivides k2 k1))))) ->
+        (let checked = bitvec_checked_unsigned in
+        (let n = (bitvec_size r1) in
+        (let sty = r1.ty in
+        (if (bitvec_udivides k1 k2)
+        then (let common = (Bv_prims.mk_bv n (Bv_prims.lit_udiv sty sty k2 k1)) in
+             (bitvec_mul checked v_k1 (bitvec_add checked r1 (bitvec_mul checked common r2))))
+        else (let common = (Bv_prims.mk_bv n (Bv_prims.lit_udiv sty sty k1 k2)) in
+             (bitvec_mul checked v_k2 (bitvec_add checked r2 (bitvec_mul checked common r1))))))))
+      | ({ kind = Op2 ((Mul (ck1)), r1, ({ kind = BitVec (k1); _ } as v_k1)); _ }, { kind = Op2 ((Mul (ck2)), r2, ({ kind = BitVec (k2); _ } as v_k2)); _ })
+        when (((bitvec_checked_meet (bitvec_checked_meet checked ck1) ck2).unsigned && (((not (Z.equal k1 Z.zero)) || (not (Z.equal k2 Z.zero))) && ((bitvec_udivides k1 k2) || (bitvec_udivides k2 k1))))) ->
+        (let checked = bitvec_checked_unsigned in
+        (let n = (bitvec_size r1) in
+        (let sty = r1.ty in
+        (if (bitvec_udivides k1 k2)
+        then (let common = (Bv_prims.mk_bv n (Bv_prims.lit_udiv sty sty k2 k1)) in
+             (bitvec_mul checked v_k1 (bitvec_add checked r1 (bitvec_mul checked common r2))))
+        else (let common = (Bv_prims.mk_bv n (Bv_prims.lit_udiv sty sty k1 k2)) in
+             (bitvec_mul checked v_k2 (bitvec_add checked r2 (bitvec_mul checked common r1))))))))
+      | ({ kind = Op3 ((Ite), b, l, r); _ }, ({ kind = BitVec (_); _ } as x)) ->
+        (bool_ite b (bitvec_add checked l x) (bitvec_add checked r x))
+      | (({ kind = BitVec (_); _ } as x), { kind = Op3 ((Ite), b, l, r); _ }) ->
+        (bool_ite b (bitvec_add checked l x) (bitvec_add checked r x))
+      | _ ->
+        (node (mk_commut_binop (Add ((bitvec_no_wrap checked v1 v2))) v1 v2) v1.ty)
+      ))
+  and bitvec_sub (checked : checked) (v1 : t) (v2 : t) : t =
+      (assert ((match v1.ty, v2.ty with
+               | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
+                 when (let kanon__n = Z.of_int kanon__n in
+                 let kanon__s1 = Z.of_int kanon__s1 in
+                 ((Z.equal kanon__s1 kanon__n))) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v1, v2 with
+      | (({ kind = BitVec (i1); _ } as lit_i1), ({ kind = BitVec (i2); _ } as lit_i2)) ->
+        (node (BitVec ((Bv_prims.lit_sub lit_i1.ty lit_i2.ty i1 i2))) v1.ty)
+      | (_, { kind = BitVec (kanon__2); _ })
+        when (((Z.equal kanon__2 Z.zero))) ->
+        v1
+      | ({ kind = BitVec (kanon__1); _ }, _)
+        when (((Z.equal kanon__1 Z.zero))) ->
+        (bitvec_neg checked.signed v2)
+      | (v, kanon__2)
+        when ((Int.equal v.tag kanon__2.tag)) ->
+        (Bv_prims.bv_zero (bitvec_size v1))
+      | (_, { kind = Op1 ((Neg (_)), v2); _ }) ->
+        (bitvec_add bitvec_unchecked v1 v2)
+      | ({ kind = Op2 ((Sub (c)), { kind = BitVec (k1); _ }, s); _ }, { kind = BitVec (k2); _ }) ->
+        (let n = (bitvec_size v1) in
+        (let sty = v1.ty in
+        (let checked = (bitvec_fold_checked (bitvec_checked_meet c checked) n k1 k2 false) in
+        (bitvec_sub checked (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty k1 k2)) s))))
+      | ({ kind = Op2 ((Sub (c)), s, { kind = BitVec (k1); _ }); _ }, { kind = BitVec (k2); _ }) ->
+        (let n = (bitvec_size v1) in
+        (let sty = v1.ty in
+        (let checked = (bitvec_fold_checked (bitvec_checked_meet c checked) n k1 k2 true) in
+        (bitvec_sub checked s (Bv_prims.mk_bv n (Bv_prims.lit_add sty sty k1 k2))))))
+      | ({ kind = BitVec (k1); _ }, { kind = Op2 ((Add (c)), { kind = BitVec (k2); _ }, l); _ }) ->
+        (let n = (bitvec_size v1) in
+        (let sty = v1.ty in
+        (let checked = (bitvec_fold_checked (bitvec_checked_meet c checked) n k1 k2 false) in
+        (bitvec_sub checked (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty k1 k2)) l))))
+      | ({ kind = BitVec (k1); _ }, { kind = Op2 ((Add (c)), l, { kind = BitVec (k2); _ }); _ }) ->
+        (let n = (bitvec_size v1) in
+        (let sty = v1.ty in
+        (let checked = (bitvec_fold_checked (bitvec_checked_meet c checked) n k1 k2 false) in
+        (bitvec_sub checked (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty k1 k2)) l))))
+      | ({ kind = Op2 ((Add (c)), { kind = BitVec (k1); _ }, l); _ }, { kind = BitVec (k2); _ }) ->
+        (let n = (bitvec_size v1) in
+        (let sty = v1.ty in
+        (if (Z.lt k1 k2)
+        then (let checked = (bitvec_fold_checked (bitvec_checked_meet c checked) n k2 k1 false) in
+             (bitvec_sub checked l (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty k2 k1))))
+        else (let checked = (bitvec_fold_checked (bitvec_checked_meet c checked) n k1 k2 false) in
+             (bitvec_add checked l (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty k1 k2)))))))
+      | ({ kind = Op2 ((Add (c)), l, { kind = BitVec (k1); _ }); _ }, { kind = BitVec (k2); _ }) ->
+        (let n = (bitvec_size v1) in
+        (let sty = v1.ty in
+        (if (Z.lt k1 k2)
+        then (let checked = (bitvec_fold_checked (bitvec_checked_meet c checked) n k2 k1 false) in
+             (bitvec_sub checked l (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty k2 k1))))
+        else (let checked = (bitvec_fold_checked (bitvec_checked_meet c checked) n k1 k2 false) in
+             (bitvec_add checked l (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty k1 k2)))))))
+      | ({ kind = Op2 ((Add (_)), l, r); _ }, kanon__7)
+        when ((Int.equal l.tag kanon__7.tag)) ->
+        r
+      | ({ kind = Op2 ((Add (_)), r, l); _ }, kanon__7)
+        when ((Int.equal l.tag kanon__7.tag)) ->
+        r
+      | ({ kind = Op2 ((Add (_)), l, r); _ }, kanon__7)
+        when ((Int.equal r.tag kanon__7.tag)) ->
+        l
+      | ({ kind = Op2 ((Add (_)), r, l); _ }, kanon__7)
+        when ((Int.equal r.tag kanon__7.tag)) ->
+        l
+      | ({ kind = Op2 ((Add (_)), l, r1); _ }, { kind = Op2 ((Add (_)), kanon__9, r2); _ })
+        when ((Int.equal l.tag kanon__9.tag)) ->
+        (bitvec_sub bitvec_unchecked r1 r2)
+      | ({ kind = Op2 ((Add (_)), l, r1); _ }, { kind = Op2 ((Add (_)), r2, kanon__9); _ })
+        when ((Int.equal l.tag kanon__9.tag)) ->
+        (bitvec_sub bitvec_unchecked r1 r2)
+      | ({ kind = Op2 ((Add (_)), r1, l); _ }, { kind = Op2 ((Add (_)), kanon__9, r2); _ })
+        when ((Int.equal l.tag kanon__9.tag)) ->
+        (bitvec_sub bitvec_unchecked r1 r2)
+      | ({ kind = Op2 ((Add (_)), r1, l); _ }, { kind = Op2 ((Add (_)), r2, kanon__9); _ })
+        when ((Int.equal l.tag kanon__9.tag)) ->
+        (bitvec_sub bitvec_unchecked r1 r2)
+      | (l, { kind = Op2 ((Sub (_)), kanon__4, r); _ })
+        when ((Int.equal l.tag kanon__4.tag)) ->
+        r
+      | ({ kind = Op3 ((Ite), b, l, r); _ }, { kind = Op3 ((Ite), kanon__7, l2, r2); _ })
+        when ((Int.equal b.tag kanon__7.tag)) ->
+        (bool_ite b (bitvec_sub bitvec_unchecked l l2) (bitvec_sub bitvec_unchecked r r2))
+      | ({ kind = Op3 ((Ite), b, l, r); _ }, { kind = BitVec (_); _ }) ->
+        (bool_ite b (bitvec_sub bitvec_unchecked l v2) (bitvec_sub bitvec_unchecked r v2))
+      | ({ kind = BitVec (_); _ }, { kind = Op3 ((Ite), b, l, r); _ }) ->
+        (bool_ite b (bitvec_sub bitvec_unchecked v1 l) (bitvec_sub bitvec_unchecked v1 r))
+      | ({ kind = Op1 ((BvOfBool (n)), b); _ }, { kind = BitVec (_); _ }) ->
+        let n = Z.of_int n in
+        (bool_ite b (bitvec_sub bitvec_unchecked (Bv_prims.bv_one n) v2) (bitvec_neg false v2))
+      | ({ kind = BitVec (_); _ }, { kind = Op1 ((BvOfBool (n)), b); _ }) ->
+        let n = Z.of_int n in
+        (bool_ite b (bitvec_sub bitvec_unchecked v1 (Bv_prims.bv_one n)) v1)
+      | _ -> (node (Op2 ((Sub (checked)), v1, v2)) v1.ty)
+      ))
+  and bitvec_neg (checked : bool) (v : t) : t =
+      (assert ((match v.ty with
+               | (TBitVector (kanon__n)) -> true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v with
+      | ({ kind = BitVec (i); _ } as lit_i) ->
+        (node (BitVec ((Bv_prims.lit_neg lit_i.ty i))) v.ty)
+      | { kind = Op1 ((Neg (_)), x); _ } -> x
+      | { kind = Op3 ((Ite), b, l, r); _ } ->
+        (bool_ite b (bitvec_neg checked l) (bitvec_neg checked r))
+      | { kind = Op1 ((BvOfBool (n)), b); _ } ->
+        let n = Z.of_int n in
+        (bool_ite b (bitvec_neg false (Bv_prims.bv_one n)) (Bv_prims.bv_zero n))
+      | _ -> (node (Op1 ((Neg (checked)), v)) v.ty)
+      ))
+  and bitvec_rem (signed : bool) (v1 : t) (v2 : t) : t =
+      (assert ((match v1.ty, v2.ty with
+               | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
+                 when (let kanon__n = Z.of_int kanon__n in
+                 let kanon__s1 = Z.of_int kanon__s1 in
+                 ((Z.equal kanon__s1 kanon__n))) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v1, v2 with
+      | ({ kind = BitVec (l); _ }, { kind = BitVec (r); _ }) ->
+        (Bv_prims.mk_bv (bitvec_size v1) (if signed
+                                         then (Bv_prims.lit_srem v1.ty v2.ty l r)
+                                         else (Bv_prims.lit_urem v1.ty v2.ty l r)))
+      | (_, { kind = BitVec (kanon__2); _ })
+        when (((Z.equal kanon__2 Z.zero))) ->
+        v1
+      | ({ kind = BitVec (kanon__1); _ }, _)
+        when (((Z.equal kanon__1 Z.zero))) ->
+        (Bv_prims.bv_zero (bitvec_size v1))
+      | (_, { kind = BitVec (kanon__2); _ })
+        when ((((Z.equal kanon__2 Z.one)) && (not signed))) ->
+        (Bv_prims.bv_zero (bitvec_size v1))
+      | (_, { kind = BitVec (r); _ })
+        when (((not signed) && ((bitvec_is_pow2 r) && (Z.gt r Z.one)))) ->
+        (let sz = (bitvec_size v1) in
+        (let bitwidth = (Bv_prims.log2 r) in
+        (let lower = (bitvec_extract Z.zero (Z.sub bitwidth Z.one) v1) in
+        (bitvec_extend_ false (Z.sub sz bitwidth) lower))))
+      | ({ kind = Op2 ((Add (ck)), { kind = BitVec (d); _ }, r); _ }, { kind = BitVec (d2); _ })
+        when (((not signed) && (ck.unsigned && ((Z.equal d d2))))) ->
+        (bitvec_rem signed r v2)
+      | ({ kind = Op2 ((Add (ck)), r, { kind = BitVec (d); _ }); _ }, { kind = BitVec (d2); _ })
+        when (((not signed) && (ck.unsigned && ((Z.equal d d2))))) ->
+        (bitvec_rem signed r v2)
+      | ({ kind = Op2 ((Rem (false)), r, ({ kind = BitVec (r1); _ } as v_r1)); _ }, { kind = BitVec (r2); _ })
+        when (((not signed) && ((Z.gt r1 Z.zero) && ((Z.gt r2 Z.zero) && ((bitvec_udivides r2 r1) || (bitvec_udivides r1 r2)))))) ->
+        (let rhs = (if (Z.leq r1 r2) then v_r1 else v2) in
+        (bitvec_rem signed r rhs))
+      | _ -> (node (Op2 ((Rem (signed)), v1, v2)) v1.ty)
+      ))
+  and bitvec_not_ (v : t) : t =
+      (assert ((match v.ty with
+               | (TBitVector (kanon__n)) -> true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v with
+      | ({ kind = BitVec (i); _ } as lit_i) ->
+        (node (BitVec ((Bv_prims.lit_not lit_i.ty i))) v.ty)
+      | { kind = Op3 ((Ite), b, l, r); _ } ->
+        (bool_ite b (bitvec_not_ l) (bitvec_not_ r))
+      | _ -> (node (Op1 (BvNot, v)) v.ty)
+      ))
+  and bitvec_and_ (v1 : t) (v2 : t) : t =
+      (assert ((match v1.ty, v2.ty with
+               | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
+                 when (let kanon__n = Z.of_int kanon__n in
+                 let kanon__s1 = Z.of_int kanon__s1 in
+                 ((Z.equal kanon__s1 kanon__n))) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v1, v2 with
+      | (({ kind = BitVec (i1); _ } as lit_i1), ({ kind = BitVec (i2); _ } as lit_i2)) ->
+        (node (BitVec ((Bv_prims.lit_and lit_i1.ty lit_i2.ty i1 i2))) v1.ty)
+      | (x, { kind = BitVec (kanon__2); _ })
+        when (((Z.equal kanon__2 Z.zero))) ->
+        (Bv_prims.bv_zero (bitvec_size x))
+      | ({ kind = BitVec (kanon__2); _ }, x)
+        when (((Z.equal kanon__2 Z.zero))) ->
+        (Bv_prims.bv_zero (bitvec_size x))
+      | ({ kind = BitVec (mask); _ }, x)
+        when ((bitvec_is_ones (bitvec_size x) mask)) ->
+        x
+      | (x, { kind = BitVec (mask); _ })
+        when ((bitvec_is_ones (bitvec_size x) mask)) ->
+        x
+      | (({ kind = Op2 ((LShr), _, { kind = BitVec (shift); _ }); _ } as base), { kind = BitVec (mask); _ })
+        when (((Z.lt shift (bitvec_size base)) && (bitvec_bits_in (Bv_prims.lit_lshr base.ty base.ty (bitvec_ones (bitvec_size base)) shift) mask))) ->
+        base
+      | ({ kind = BitVec (mask); _ }, ({ kind = Op2 ((LShr), _, { kind = BitVec (shift); _ }); _ } as base))
+        when (((Z.lt shift (bitvec_size base)) && (bitvec_bits_in (Bv_prims.lit_lshr base.ty base.ty (bitvec_ones (bitvec_size base)) shift) mask))) ->
+        base
+      | (({ kind = BitVec (_); _ } as k), { kind = Op3 ((Ite), b, l, r); _ }) ->
+        (bool_ite b (bitvec_and_ k l) (bitvec_and_ k r))
+      | ({ kind = Op3 ((Ite), b, l, r); _ }, ({ kind = BitVec (_); _ } as k)) ->
+        (bool_ite b (bitvec_and_ k l) (bitvec_and_ k r))
+      | ({ kind = BitVec (m1); _ }, { kind = Op2 ((BitAnd), x, { kind = BitVec (m2); _ }); _ }) ->
+        (bitvec_and_ x (Bv_prims.mk_bv (bitvec_size x) (Bv_prims.lit_and x.ty x.ty m1 m2)))
+      | ({ kind = BitVec (m1); _ }, { kind = Op2 ((BitAnd), { kind = BitVec (m2); _ }, x); _ }) ->
+        (bitvec_and_ x (Bv_prims.mk_bv (bitvec_size x) (Bv_prims.lit_and x.ty x.ty m1 m2)))
+      | ({ kind = Op2 ((BitAnd), x, { kind = BitVec (m2); _ }); _ }, { kind = BitVec (m1); _ }) ->
+        (bitvec_and_ x (Bv_prims.mk_bv (bitvec_size x) (Bv_prims.lit_and x.ty x.ty m1 m2)))
+      | ({ kind = Op2 ((BitAnd), { kind = BitVec (m2); _ }, x); _ }, { kind = BitVec (m1); _ }) ->
+        (bitvec_and_ x (Bv_prims.mk_bv (bitvec_size x) (Bv_prims.lit_and x.ty x.ty m1 m2)))
+      | (({ kind = BitVec (_); _ } as m), { kind = Op2 ((BitOr), ({ kind = BitVec (_); _ } as n), { kind = Op2 ((BitAnd), ({ kind = BitVec (_); _ } as p), x); _ }); _ }) ->
+        (bitvec_or_ (bitvec_and_ m n) (bitvec_and_ x (bitvec_and_ m p)))
+      | (({ kind = BitVec (_); _ } as m), { kind = Op2 ((BitOr), ({ kind = BitVec (_); _ } as n), { kind = Op2 ((BitAnd), x, ({ kind = BitVec (_); _ } as p)); _ }); _ }) ->
+        (bitvec_or_ (bitvec_and_ m n) (bitvec_and_ x (bitvec_and_ m p)))
+      | (({ kind = BitVec (_); _ } as m), { kind = Op2 ((BitOr), { kind = Op2 ((BitAnd), ({ kind = BitVec (_); _ } as p), x); _ }, ({ kind = BitVec (_); _ } as n)); _ }) ->
+        (bitvec_or_ (bitvec_and_ m n) (bitvec_and_ x (bitvec_and_ m p)))
+      | (({ kind = BitVec (_); _ } as m), { kind = Op2 ((BitOr), { kind = Op2 ((BitAnd), x, ({ kind = BitVec (_); _ } as p)); _ }, ({ kind = BitVec (_); _ } as n)); _ }) ->
+        (bitvec_or_ (bitvec_and_ m n) (bitvec_and_ x (bitvec_and_ m p)))
+      | ({ kind = Op2 ((BitOr), ({ kind = BitVec (_); _ } as n), { kind = Op2 ((BitAnd), ({ kind = BitVec (_); _ } as p), x); _ }); _ }, ({ kind = BitVec (_); _ } as m)) ->
+        (bitvec_or_ (bitvec_and_ m n) (bitvec_and_ x (bitvec_and_ m p)))
+      | ({ kind = Op2 ((BitOr), ({ kind = BitVec (_); _ } as n), { kind = Op2 ((BitAnd), x, ({ kind = BitVec (_); _ } as p)); _ }); _ }, ({ kind = BitVec (_); _ } as m)) ->
+        (bitvec_or_ (bitvec_and_ m n) (bitvec_and_ x (bitvec_and_ m p)))
+      | ({ kind = Op2 ((BitOr), { kind = Op2 ((BitAnd), ({ kind = BitVec (_); _ } as p), x); _ }, ({ kind = BitVec (_); _ } as n)); _ }, ({ kind = BitVec (_); _ } as m)) ->
+        (bitvec_or_ (bitvec_and_ m n) (bitvec_and_ x (bitvec_and_ m p)))
+      | ({ kind = Op2 ((BitOr), { kind = Op2 ((BitAnd), x, ({ kind = BitVec (_); _ } as p)); _ }, ({ kind = BitVec (_); _ } as n)); _ }, ({ kind = BitVec (_); _ } as m)) ->
+        (bitvec_or_ (bitvec_and_ m n) (bitvec_and_ x (bitvec_and_ m p)))
+      | (({ kind = BitVec (m_and); _ } as v_m_and), { kind = Op2 ((BitOr), _, { kind = BitVec (m_or); _ }); _ })
+        when ((bitvec_bits_in m_and m_or)) ->
+        v_m_and
+      | (({ kind = BitVec (m_and); _ } as v_m_and), { kind = Op2 ((BitOr), { kind = BitVec (m_or); _ }, _); _ })
+        when ((bitvec_bits_in m_and m_or)) ->
+        v_m_and
+      | ({ kind = Op2 ((BitOr), _, { kind = BitVec (m_or); _ }); _ }, ({ kind = BitVec (m_and); _ } as v_m_and))
+        when ((bitvec_bits_in m_and m_or)) ->
+        v_m_and
+      | ({ kind = Op2 ((BitOr), { kind = BitVec (m_or); _ }, _); _ }, ({ kind = BitVec (m_and); _ } as v_m_and))
+        when ((bitvec_bits_in m_and m_or)) ->
+        v_m_and
+      | (({ kind = BitVec (m_and); _ } as v_m_and), { kind = Op2 ((BitOr), x, { kind = BitVec (m_or); _ }); _ })
+        when ((bitvec_disjoint m_and m_or)) ->
+        (bitvec_and_ x v_m_and)
+      | (({ kind = BitVec (m_and); _ } as v_m_and), { kind = Op2 ((BitOr), { kind = BitVec (m_or); _ }, x); _ })
+        when ((bitvec_disjoint m_and m_or)) ->
+        (bitvec_and_ x v_m_and)
+      | ({ kind = Op2 ((BitOr), x, { kind = BitVec (m_or); _ }); _ }, ({ kind = BitVec (m_and); _ } as v_m_and))
+        when ((bitvec_disjoint m_and m_or)) ->
+        (bitvec_and_ x v_m_and)
+      | ({ kind = Op2 ((BitOr), { kind = BitVec (m_or); _ }, x); _ }, ({ kind = BitVec (m_and); _ } as v_m_and))
+        when ((bitvec_disjoint m_and m_or)) ->
+        (bitvec_and_ x v_m_and)
+      | (({ kind = BitVec (mask); _ } as v_mask), { kind = Op2 ((BitAnd), l, r); _ })
+        when ((bitvec_is_right_mask mask)) ->
+        (bitvec_and_ (bitvec_and_ v_mask l) (bitvec_and_ v_mask r))
+      | ({ kind = Op2 ((BitAnd), l, r); _ }, ({ kind = BitVec (mask); _ } as v_mask))
+        when ((bitvec_is_right_mask mask)) ->
+        (bitvec_and_ (bitvec_and_ v_mask l) (bitvec_and_ v_mask r))
+      | ({ kind = BitVec (kanon__1); _ }, ({ kind = Op1 ((BvOfBool (_)), _); _ } as b))
         when (((Z.equal kanon__1 Z.one))) ->
-        (Some Bv_prims.v_true)
+        b
+      | (({ kind = Op1 ((BvOfBool (_)), _); _ } as b), { kind = BitVec (kanon__1); _ })
+        when (((Z.equal kanon__1 Z.one))) ->
+        b
+      | ({ kind = Op1 ((BvOfBool (n)), b1); _ }, { kind = Op1 ((BvOfBool (_)), b2); _ }) ->
+        let n = Z.of_int n in
+        (bitvec_of_bool n (bool_and_ b1 b2))
+      | ({ kind = Op3 ((Ite), b1, l1, { kind = BitVec (kanon__4); _ }); _ }, { kind = Op3 ((Ite), b2, l2, { kind = BitVec (kanon__10); _ }); _ })
+        when ((((Z.equal kanon__4 Z.zero)) && ((Z.equal kanon__10 Z.zero)))) ->
+        (bool_ite (bool_and_ b1 b2) (bitvec_and_ l1 l2) (Bv_prims.bv_zero (bitvec_size l1)))
+      | _ -> (node (mk_commut_binop BitAnd v1 v2) v1.ty)
+      ))
+  and bitvec_or_ (v1 : t) (v2 : t) : t =
+      (assert ((match v1.ty, v2.ty with
+               | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
+                 when (let kanon__n = Z.of_int kanon__n in
+                 let kanon__s1 = Z.of_int kanon__s1 in
+                 ((Z.equal kanon__s1 kanon__n))) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v1, v2 with
+      | (({ kind = BitVec (i1); _ } as lit_i1), ({ kind = BitVec (i2); _ } as lit_i2)) ->
+        (node (BitVec ((Bv_prims.lit_or lit_i1.ty lit_i2.ty i1 i2))) v1.ty)
+      | (x, { kind = BitVec (kanon__2); _ })
+        when (((Z.equal kanon__2 Z.zero))) ->
+        x
+      | ({ kind = BitVec (kanon__2); _ }, x)
+        when (((Z.equal kanon__2 Z.zero))) ->
+        x
+      | (x, kanon__2) when ((Int.equal x.tag kanon__2.tag)) -> x
+      | (({ kind = BitVec (m1); _ } as v_m1), { kind = Op2 ((BitAnd), _, { kind = BitVec (m2); _ }); _ })
+        when ((bitvec_bits_in m2 m1)) ->
+        v_m1
+      | (({ kind = BitVec (m1); _ } as v_m1), { kind = Op2 ((BitAnd), { kind = BitVec (m2); _ }, _); _ })
+        when ((bitvec_bits_in m2 m1)) ->
+        v_m1
+      | ({ kind = Op2 ((BitAnd), _, { kind = BitVec (m2); _ }); _ }, ({ kind = BitVec (m1); _ } as v_m1))
+        when ((bitvec_bits_in m2 m1)) ->
+        v_m1
+      | ({ kind = Op2 ((BitAnd), { kind = BitVec (m2); _ }, _); _ }, ({ kind = BitVec (m1); _ } as v_m1))
+        when ((bitvec_bits_in m2 m1)) ->
+        v_m1
+      | ({ kind = BitVec (m1); _ }, { kind = Op2 ((BitOr), x, { kind = BitVec (m2); _ }); _ }) ->
+        (bitvec_or_ x (Bv_prims.mk_bv (bitvec_size x) (Bv_prims.lit_or x.ty x.ty m1 m2)))
+      | ({ kind = BitVec (m1); _ }, { kind = Op2 ((BitOr), { kind = BitVec (m2); _ }, x); _ }) ->
+        (bitvec_or_ x (Bv_prims.mk_bv (bitvec_size x) (Bv_prims.lit_or x.ty x.ty m1 m2)))
+      | ({ kind = Op2 ((BitOr), x, { kind = BitVec (m2); _ }); _ }, { kind = BitVec (m1); _ }) ->
+        (bitvec_or_ x (Bv_prims.mk_bv (bitvec_size x) (Bv_prims.lit_or x.ty x.ty m1 m2)))
+      | ({ kind = Op2 ((BitOr), { kind = BitVec (m2); _ }, x); _ }, { kind = BitVec (m1); _ }) ->
+        (bitvec_or_ x (Bv_prims.mk_bv (bitvec_size x) (Bv_prims.lit_or x.ty x.ty m1 m2)))
+      | ({ kind = Op1 ((BvExtend (false, nx)), base); _ }, { kind = Op2 ((Shl), { kind = Op1 ((BvExtend (false, _)), tail); _ }, { kind = BitVec (shift); _ }); _ })
+        when (let nx = Z.of_int nx in
+        (((Z.equal shift (bitvec_size base))) && (Z.gt nx Z.zero))) ->
+        let nx = Z.of_int nx in
+        (let tail_size = (bitvec_size tail) in
+        (if ((Z.equal nx tail_size))
+        then (bitvec_concat tail base)
+        else (if (Z.gt nx tail_size)
+             then (let new_base = (bitvec_concat tail base) in
+                  (bitvec_extend_ false (Z.sub nx tail_size) new_base))
+             else (let new_tail = (bitvec_extract Z.zero (Z.sub nx Z.one) tail) in
+                  (bitvec_concat new_tail base)))))
+      | ({ kind = Op2 ((Shl), { kind = Op1 ((BvExtend (false, _)), tail); _ }, { kind = BitVec (shift); _ }); _ }, { kind = Op1 ((BvExtend (false, nx)), base); _ })
+        when (let nx = Z.of_int nx in
+        (((Z.equal shift (bitvec_size base))) && (Z.gt nx Z.zero))) ->
+        let nx = Z.of_int nx in
+        (let tail_size = (bitvec_size tail) in
+        (if ((Z.equal nx tail_size))
+        then (bitvec_concat tail base)
+        else (if (Z.gt nx tail_size)
+             then (let new_base = (bitvec_concat tail base) in
+                  (bitvec_extend_ false (Z.sub nx tail_size) new_base))
+             else (let new_tail = (bitvec_extract Z.zero (Z.sub nx Z.one) tail) in
+                  (bitvec_concat new_tail base)))))
+      | ({ kind = Op1 ((BvOfBool (n)), b1); _ }, { kind = Op1 ((BvOfBool (_)), b2); _ }) ->
+        let n = Z.of_int n in
+        (bitvec_of_bool n (bool_or_ b1 b2))
+      | _ -> (node (mk_commut_binop BitOr v1 v2) v1.ty)
+      ))
+  and bitvec_xor (v1 : t) (v2 : t) : t =
+      (assert ((match v1.ty, v2.ty with
+               | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
+                 when (let kanon__n = Z.of_int kanon__n in
+                 let kanon__s1 = Z.of_int kanon__s1 in
+                 ((Z.equal kanon__s1 kanon__n))) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v1, v2 with
+      | (({ kind = BitVec (i1); _ } as lit_i1), ({ kind = BitVec (i2); _ } as lit_i2)) ->
+        (node (BitVec ((Bv_prims.lit_xor lit_i1.ty lit_i2.ty i1 i2))) v1.ty)
+      | (x, { kind = BitVec (kanon__2); _ })
+        when (((Z.equal kanon__2 Z.zero))) ->
+        x
+      | ({ kind = BitVec (kanon__2); _ }, x)
+        when (((Z.equal kanon__2 Z.zero))) ->
+        x
+      | ({ kind = Op1 ((BvOfBool (n)), b1); _ }, { kind = Op1 ((BvOfBool (_)), b2); _ }) ->
+        let n = Z.of_int n in
+        (bitvec_of_bool n (bool_not_ (bool_eq b1 b2)))
+      | _ -> (node (mk_commut_binop BitXor v1 v2) v1.ty)
+      ))
+  and bitvec_extract (from_ : Z.t) (to_ : Z.t) (v : t) : t =
+      (assert ((match v.ty with
+               | (TBitVector (kanon__n))
+                 when (let kanon__n = Z.of_int kanon__n in
+                 ((Z.leq Z.zero from_) && ((Z.leq from_ to_) && (Z.lt to_ kanon__n)))) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v with
+      | ({ kind = BitVec (i); _ } as lit_i) ->
+        (node (BitVec ((Bv_prims.lit_extract from_ to_ lit_i.ty i))) (TBitVector ((Z.to_int (Z.add (Z.sub to_ from_) Z.one)))))
+      | _
+        when ((((Z.equal from_ Z.zero)) && ((Z.equal to_ (Z.sub (bitvec_size v) Z.one))))) ->
+        v
+      | { kind = Op2 ((BitAnd), v1, v2); _ } ->
+        (bitvec_and_ (bitvec_extract from_ to_ v1) (bitvec_extract from_ to_ v2))
+      | { kind = Op2 ((BitOr), v1, v2); _ } ->
+        (bitvec_or_ (bitvec_extract from_ to_ v1) (bitvec_extract from_ to_ v2))
+      | { kind = Op2 ((BitXor), v1, v2); _ } ->
+        (bitvec_xor (bitvec_extract from_ to_ v1) (bitvec_extract from_ to_ v2))
+      | { kind = Op2 ((Shl), v1, { kind = BitVec (shift); _ }); _ } ->
+        (if (Z.geq from_ shift)
+        then (bitvec_extract (Z.sub from_ shift) (Z.sub to_ shift) v1)
+        else (if (Z.lt to_ shift)
+             then (Bv_prims.bv_zero (Z.add (Z.sub to_ from_) Z.one))
+             else (let high_part = (bitvec_extract Z.zero (Z.sub to_ shift) v1) in
+                  (let low_zeros = (Bv_prims.bv_zero (Z.sub shift from_)) in
+                  (bitvec_concat high_part low_zeros)))))
+      | { kind = Op2 ((LShr), v1, { kind = BitVec (shift); _ }); _ } ->
+        (let prev_size = (bitvec_size v) in
+        (if (Z.geq (Z.add from_ shift) prev_size)
+        then (Bv_prims.bv_zero (Z.add (Z.sub to_ from_) Z.one))
+        else (if (Z.lt (Z.add to_ shift) prev_size)
+             then (bitvec_extract (Z.add from_ shift) (Z.add to_ shift) v1)
+             else (let low_part = (bitvec_extract (Z.add from_ shift) (Z.sub prev_size Z.one) v1) in
+                  (let high_zeros = (Bv_prims.bv_zero (Z.sub to_ (Z.sub (Z.sub prev_size shift) Z.one))) in
+                  (bitvec_concat high_zeros low_part))))))
+      | { kind = Op3 ((Ite), b, l, r); _ } ->
+        (bool_ite b (bitvec_extract from_ to_ l) (bitvec_extract from_ to_ r))
+      | { kind = Op1 ((BvExtend (false, by)), _); _ }
+        when (let by = Z.of_int by in
+        (Z.geq from_ (Z.sub (bitvec_size v) by))) ->
+        (Bv_prims.bv_zero (Z.add (Z.sub to_ from_) Z.one))
+      | { kind = Op1 ((BvExtend (true, by)), x); _ }
+        when (let by = Z.of_int by in
+        ((Z.geq from_ (Z.sub (bitvec_size v) by)) && ((Z.equal from_ to_)))) ->
+        (bitvec_extract (Z.sub (bitvec_size x) Z.one) (Z.sub (bitvec_size x) Z.one) x)
+      | { kind = Op1 ((BvExtend (signed, _)), x); _ }
+        when (((Z.equal from_ Z.zero))) ->
+        (let orig_size = (bitvec_size x) in
+        (if ((Z.equal to_ (Z.sub orig_size Z.one)))
+        then x
+        else (if (Z.lt to_ orig_size)
+             then (bitvec_extract from_ to_ x)
+             else (bitvec_extend_ signed (Z.add (Z.sub to_ orig_size) Z.one) x))))
+      | { kind = Op1 ((BvExtend (_, by)), x); _ }
+        when (let by = Z.of_int by in
+        (Z.leq to_ (Z.sub (Z.sub (bitvec_size v) by) Z.one))) ->
+        (bitvec_extract from_ to_ x)
+      | { kind = Op1 ((BvExtract (prev_from_, _)), x); _ } ->
+        let prev_from_ = Z.of_int prev_from_ in
+        (bitvec_extract (Z.add prev_from_ from_) (Z.add prev_from_ to_) x)
+      | { kind = Op2 ((BvConcat), l, r); _ } ->
+        (let size_r = (bitvec_size r) in
+        (if (Z.geq from_ size_r)
+        then (bitvec_extract (Z.sub from_ size_r) (Z.sub to_ size_r) l)
+        else (if (Z.lt to_ size_r)
+             then (bitvec_extract from_ to_ r)
+             else (let r_ = (bitvec_extract from_ (Z.sub size_r Z.one) r) in
+                  (let l_ = (bitvec_extract Z.zero (Z.sub to_ size_r) l) in
+                  (bitvec_concat l_ r_))))))
+      | { kind = Op2 ((Add (_)), l, r); _ }
+        when (((Z.equal from_ Z.zero))) ->
+        (bitvec_add bitvec_unchecked (bitvec_extract from_ to_ l) (bitvec_extract from_ to_ r))
+      | { kind = Op2 ((Add (_)), { kind = BitVec (n); _ }, x); _ }
+        when ((Z.lt to_ (bitvec_lsb n))) ->
+        (bitvec_extract from_ to_ x)
+      | { kind = Op2 ((Add (_)), x, { kind = BitVec (n); _ }); _ }
+        when ((Z.lt to_ (bitvec_lsb n))) ->
+        (bitvec_extract from_ to_ x)
+      | { kind = Op2 ((Mul (_)), { kind = BitVec (n); _ }, _); _ }
+        when (((bitvec_is_pow2 n) && (Z.lt to_ (Bv_prims.log2 n)))) ->
+        (Bv_prims.bv_zero (Z.add (Z.sub to_ from_) Z.one))
+      | { kind = Op2 ((Mul (_)), _, { kind = BitVec (n); _ }); _ }
+        when (((bitvec_is_pow2 n) && (Z.lt to_ (Bv_prims.log2 n)))) ->
+        (Bv_prims.bv_zero (Z.add (Z.sub to_ from_) Z.one))
+      | { kind = Op2 ((Mul (_)), l, r); _ }
+        when (((Z.equal from_ Z.zero))) ->
+        (bitvec_mul bitvec_unchecked (bitvec_extract from_ to_ l) (bitvec_extract from_ to_ r))
+      | { kind = Op2 ((Rem (false)), l, { kind = BitVec (n); _ }); _ }
+        when ((((Z.equal from_ Z.zero)) && ((bitvec_is_pow2 n) && (Z.lt (Bv_prims.log2 n) to_)))) ->
+        (bitvec_rem false (bitvec_extract from_ to_ l) (Bv_prims.mk_bv (Z.add (Z.sub to_ from_) Z.one) (Bv_prims.lit_extract from_ to_ v.ty n)))
+      | _ ->
+        (node (Op1 ((BvExtract ((Z.to_int from_), (Z.to_int to_))), v)) (TBitVector ((Z.to_int (Z.add (Z.sub to_ from_) Z.one)))))
+      ))
+  and bitvec_extend_ (signed : bool) (extend_by : Z.t) (v : t) : t =
+      (assert ((match v.ty with
+               | (TBitVector (kanon__n))
+                 when ((Z.leq Z.zero extend_by)) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v with
+      | _ when (((Z.equal extend_by Z.zero))) -> v
+      | { kind = BitVec (bv); _ } ->
+        (Bv_prims.mk_bv (Z.add (bitvec_size v) extend_by) (if signed
+                                                          then (Bv_prims.lit_sext extend_by v.ty bv)
+                                                          else (Bv_prims.lit_zext extend_by v.ty bv)))
+      | { kind = Op1 ((BvExtend (s, prev_by)), v); _ }
+        when (((Stdlib.Bool.equal s signed))) ->
+        let prev_by = Z.of_int prev_by in
+        (bitvec_extend_ signed (Z.add prev_by extend_by) v)
+      | { kind = Op3 ((Ite), b, l, r); _ } ->
+        (bool_ite b (bitvec_extend_ signed extend_by l) (bitvec_extend_ signed extend_by r))
+      | { kind = Op1 ((BvOfBool (n)), b); _ }
+        when (let n = Z.of_int n in
+        ((not signed) || (Z.gt n Z.one))) ->
+        (bitvec_of_bool (Z.add (bitvec_size v) extend_by) b)
+      | _ ->
+        (node (Op1 ((BvExtend (signed, (Z.to_int extend_by))), v)) (TBitVector ((Z.to_int (Z.add (bitvec_size v) extend_by)))))
+      ))
+  and bitvec_concat (v1 : t) (v2 : t) : t =
+      (assert ((match v1.ty, v2.ty with
+               | ((TBitVector (kanon__n)), (TBitVector (kanon__m))) -> true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v1, v2 with
+      | (({ kind = BitVec (i1); _ } as lit_i1), ({ kind = BitVec (i2); _ } as lit_i2)) ->
+        (node (BitVec ((Bv_prims.lit_concat lit_i1.ty lit_i2.ty i1 i2))) (TBitVector ((Z.to_int (Z.add (bitvec_size v1) (bitvec_size v2))))))
+      | ({ kind = Op1 ((BvExtract (from1, to1)), v); _ }, { kind = Op1 ((BvExtract (from2, to2)), kanon__9); _ })
+        when (let from1 = Z.of_int from1 in
+        let to2 = Z.of_int to2 in
+        ((Int.equal v.tag kanon__9.tag) && ((Z.equal (Z.add to2 Z.one) from1)))) ->
+        let to1 = Z.of_int to1 in
+        let from2 = Z.of_int from2 in
+        (bitvec_extract from2 to1 v)
+      | ({ kind = Op1 ((BvExtract (_, _)), _); _ }, { kind = Op2 ((BvConcat), { kind = Op1 ((BvExtract (_, _)), _); _ }, { kind = Op1 ((BvExtract (_, _)), _); _ }); _ }) ->
+        (node (Op2 (BvConcat, v1, v2)) (TBitVector ((Z.to_int (Z.add (bitvec_size v1) (bitvec_size v2))))))
+      | ({ kind = Op1 ((BvExtract (_, _)), x); _ }, { kind = Op2 ((BvConcat), ({ kind = Op1 ((BvExtract (_, _)), kanon__10); _ } as left), right); _ })
+        when ((Int.equal x.tag kanon__10.tag)) ->
+        (bitvec_concat (bitvec_concat v1 left) right)
+      | ({ kind = Op2 ((BvConcat), left, ({ kind = Op1 ((BvExtract (_, _)), x); _ } as right)); _ }, { kind = Op1 ((BvExtract (_, _)), kanon__13); _ })
+        when ((Int.equal x.tag kanon__13.tag)) ->
+        (bitvec_concat left (bitvec_concat right v2))
+      | ({ kind = Op3 ((Ite), b, l1, r1); _ }, { kind = Op3 ((Ite), kanon__7, l2, r2); _ })
+        when ((Int.equal b.tag kanon__7.tag)) ->
+        (bool_ite b (bitvec_concat l1 l2) (bitvec_concat r1 r2))
+      | _ ->
+        (node (Op2 (BvConcat, v1, v2)) (TBitVector ((Z.to_int (Z.add (bitvec_size v1) (bitvec_size v2))))))
+      ))
+  and bitvec_mul (checked : checked) (v1 : t) (v2 : t) : t =
+      (assert ((match v1.ty, v2.ty with
+               | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
+                 when (let kanon__n = Z.of_int kanon__n in
+                 let kanon__s1 = Z.of_int kanon__s1 in
+                 ((Z.equal kanon__s1 kanon__n))) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v1, v2 with
+      | (({ kind = BitVec (i1); _ } as lit_i1), ({ kind = BitVec (i2); _ } as lit_i2)) ->
+        (node (BitVec ((Bv_prims.lit_mul lit_i1.ty lit_i2.ty i1 i2))) v1.ty)
+      | (x, { kind = BitVec (kanon__2); _ })
+        when (((Z.equal kanon__2 Z.one))) ->
+        x
+      | ({ kind = BitVec (kanon__2); _ }, x)
+        when (((Z.equal kanon__2 Z.one))) ->
+        x
+      | (x, { kind = BitVec (kanon__2); _ })
+        when (((Z.equal kanon__2 Z.zero))) ->
+        (Bv_prims.bv_zero (bitvec_size x))
+      | ({ kind = BitVec (kanon__2); _ }, x)
+        when (((Z.equal kanon__2 Z.zero))) ->
+        (Bv_prims.bv_zero (bitvec_size x))
+      | ({ kind = BitVec (c); _ }, { kind = Op1 ((Neg (true)), x); _ })
+        when ((not (bitvec_is_int_min (bitvec_size x) c))) ->
+        (bitvec_mul (bitvec_checked_meet checked bitvec_checked_signed) (Bv_prims.mk_bv (bitvec_size x) (Bv_prims.lit_neg x.ty c)) x)
+      | ({ kind = Op1 ((Neg (true)), x); _ }, { kind = BitVec (c); _ })
+        when ((not (bitvec_is_int_min (bitvec_size x) c))) ->
+        (bitvec_mul (bitvec_checked_meet checked bitvec_checked_signed) (Bv_prims.mk_bv (bitvec_size x) (Bv_prims.lit_neg x.ty c)) x)
+      | ({ kind = Op2 ((Mul (ckm)), x, { kind = BitVec (n); _ }); _ }, { kind = BitVec (m); _ })
+        when ((bitvec_is_checked (bitvec_checked_meet checked ckm))) ->
+        (let checked = (bitvec_checked_meet checked ckm) in
+        (let checked = (if (bitvec_overflows_mul true (bitvec_size x) n m)
+                       then (bitvec_checked_meet checked bitvec_checked_unsigned)
+                       else checked) in
+        (bitvec_mul checked x (Bv_prims.mk_bv (bitvec_size x) (Bv_prims.lit_mul x.ty x.ty n m)))))
+      | ({ kind = Op2 ((Mul (ckm)), { kind = BitVec (n); _ }, x); _ }, { kind = BitVec (m); _ })
+        when ((bitvec_is_checked (bitvec_checked_meet checked ckm))) ->
+        (let checked = (bitvec_checked_meet checked ckm) in
+        (let checked = (if (bitvec_overflows_mul true (bitvec_size x) n m)
+                       then (bitvec_checked_meet checked bitvec_checked_unsigned)
+                       else checked) in
+        (bitvec_mul checked x (Bv_prims.mk_bv (bitvec_size x) (Bv_prims.lit_mul x.ty x.ty n m)))))
+      | ({ kind = BitVec (m); _ }, { kind = Op2 ((Mul (ckm)), x, { kind = BitVec (n); _ }); _ })
+        when ((bitvec_is_checked (bitvec_checked_meet checked ckm))) ->
+        (let checked = (bitvec_checked_meet checked ckm) in
+        (let checked = (if (bitvec_overflows_mul true (bitvec_size x) n m)
+                       then (bitvec_checked_meet checked bitvec_checked_unsigned)
+                       else checked) in
+        (bitvec_mul checked x (Bv_prims.mk_bv (bitvec_size x) (Bv_prims.lit_mul x.ty x.ty n m)))))
+      | ({ kind = BitVec (m); _ }, { kind = Op2 ((Mul (ckm)), { kind = BitVec (n); _ }, x); _ })
+        when ((bitvec_is_checked (bitvec_checked_meet checked ckm))) ->
+        (let checked = (bitvec_checked_meet checked ckm) in
+        (let checked = (if (bitvec_overflows_mul true (bitvec_size x) n m)
+                       then (bitvec_checked_meet checked bitvec_checked_unsigned)
+                       else checked) in
+        (bitvec_mul checked x (Bv_prims.mk_bv (bitvec_size x) (Bv_prims.lit_mul x.ty x.ty n m)))))
+      | ({ kind = Op3 ((Ite), b, l, r); _ }, ({ kind = BitVec (_); _ } as x)) ->
+        (bool_ite b (bitvec_mul bitvec_unchecked l x) (bitvec_mul bitvec_unchecked r x))
+      | (({ kind = BitVec (_); _ } as x), { kind = Op3 ((Ite), b, l, r); _ }) ->
+        (bool_ite b (bitvec_mul bitvec_unchecked l x) (bitvec_mul bitvec_unchecked r x))
+      | _ -> (node (mk_commut_binop (Mul (checked)) v1 v2) v1.ty)
+      ))
+  and bitvec_div (signed : bool) (v1 : t) (v2 : t) : t =
+      (assert ((match v1.ty, v2.ty with
+               | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
+                 when (let kanon__n = Z.of_int kanon__n in
+                 let kanon__s1 = Z.of_int kanon__s1 in
+                 ((Z.equal kanon__s1 kanon__n))) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v1, v2 with
+      | ({ kind = BitVec (l); _ }, { kind = BitVec (r); _ }) ->
+        (Bv_prims.mk_bv (bitvec_size v1) (if signed
+                                         then (Bv_prims.lit_sdiv v1.ty v2.ty l r)
+                                         else (Bv_prims.lit_udiv v1.ty v2.ty l r)))
+      | (_, { kind = BitVec (kanon__2); _ })
+        when (((Z.equal kanon__2 Z.one))) ->
+        v1
+      | ({ kind = Op2 ((Mul (checked)), ({ kind = BitVec (_); _ } as l), ({ kind = BitVec (_); _ } as r)); _ }, { kind = BitVec (_); _ }) ->
+        (bitvec_div signed (bitvec_mul checked l r) v2)
+      | ({ kind = Op2 ((Mul ({ unsigned = true; _ })), { kind = BitVec (n); _ }, x); _ }, { kind = BitVec (d); _ })
+        when (((not signed) && ((not (Z.equal d Z.zero)) && (bitvec_udivides d n)))) ->
+        (bitvec_mul bitvec_checked_unsigned x (Bv_prims.mk_bv (bitvec_size v1) (Bv_prims.lit_udiv v1.ty v2.ty n d)))
+      | ({ kind = Op2 ((Mul ({ unsigned = true; _ })), x, { kind = BitVec (n); _ }); _ }, { kind = BitVec (d); _ })
+        when (((not signed) && ((not (Z.equal d Z.zero)) && (bitvec_udivides d n)))) ->
+        (bitvec_mul bitvec_checked_unsigned x (Bv_prims.mk_bv (bitvec_size v1) (Bv_prims.lit_udiv v1.ty v2.ty n d)))
+      | ({ kind = Op2 ((Mul ({ unsigned = true; _ })), { kind = BitVec (n); _ }, x); _ }, { kind = BitVec (d); _ })
+        when (((not signed) && ((not (Z.equal n Z.zero)) && (bitvec_udivides n d)))) ->
+        (bitvec_div signed x (Bv_prims.mk_bv (bitvec_size v1) (Bv_prims.lit_udiv v2.ty v1.ty d n)))
+      | ({ kind = Op2 ((Mul ({ unsigned = true; _ })), x, { kind = BitVec (n); _ }); _ }, { kind = BitVec (d); _ })
+        when (((not signed) && ((not (Z.equal n Z.zero)) && (bitvec_udivides n d)))) ->
+        (bitvec_div signed x (Bv_prims.mk_bv (bitvec_size v1) (Bv_prims.lit_udiv v2.ty v1.ty d n)))
+      | ({ kind = Op2 ((Div (false)), x, { kind = BitVec (n); _ }); _ }, { kind = BitVec (d); _ })
+        when (((not signed) && ((not (Z.equal n Z.zero)) && (not (bitvec_overflows_mul false (bitvec_size v1) n d))))) ->
+        (bitvec_div signed x (Bv_prims.mk_bv (bitvec_size v1) (Bv_prims.lit_mul v1.ty v2.ty n d)))
+      | ({ kind = Op1 ((BvExtend (false, by)), x); _ }, { kind = BitVec (z); _ })
+        when (((not signed) && (Z.lt (bitvec_msb_of v2) (bitvec_size x)))) ->
+        let by = Z.of_int by in
+        (bitvec_extend_ false by (bitvec_div signed x (Bv_prims.mk_masked (bitvec_size x) z)))
+      | _ -> (node (Op2 ((Div (signed)), v1, v2)) v1.ty)
+      ))
+  and bitvec_lt_zero (v : t) : t =
+      (match v with
+      | { kind = Op1 ((BvExtend (true, _)), x); _ } -> (bitvec_lt_zero x)
+      | { kind = Op1 ((BvExtend (false, k)), _); _ }
+        when (let k = Z.of_int k in
+        (Z.gt k Z.zero)) ->
+        Bv_prims.v_false
+      | { kind = Op2 ((Rem (true)), l, _); _ } ->
+        (bool_and_ (bitvec_lt_zero l) (bool_not_ (bool_eq v (Bv_prims.bv_zero (bitvec_size v)))))
+      | { kind = Op2 ((BvConcat), l, _); _ } -> (bitvec_lt_zero l)
+      | { kind = Op1 ((BvNot), x); _ } -> (bool_not_ (bitvec_lt_zero x))
+      | { kind = Op1 ((BvOfBool (n)), _); _ }
+        when (let n = Z.of_int n in
+        (Z.gt n Z.one)) ->
+        Bv_prims.v_false
+      | { kind = Op3 ((Ite), _, l, r); _ } ->
+        (let pos_l = (bitvec_lt_zero l) in
+        (let pos_r = (bitvec_lt_zero r) in
+        (if (Int.equal pos_l.tag pos_r.tag)
+        then pos_l
+        else (node (Op2 ((Lt (true)), v, (Bv_prims.bv_zero (bitvec_size v)))) TBool))))
+      | _ ->
+        (node (Op2 ((Lt (true)), v, (Bv_prims.bv_zero (bitvec_size v)))) TBool)
+      )
+  and bitvec_lt (signed : bool) (v1 : t) (v2 : t) : t =
+      (assert ((match v1.ty, v2.ty with
+               | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
+                 when (let kanon__n = Z.of_int kanon__n in
+                 let kanon__s1 = Z.of_int kanon__s1 in
+                 ((Z.equal kanon__s1 kanon__n))) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v1, v2 with
+      | ({ kind = BitVec (l); _ }, { kind = BitVec (r); _ }) ->
+        (bool_of_bool (Z.lt (bitvec_to_z signed (bitvec_size v1) l) (bitvec_to_z signed (bitvec_size v1) r)))
+      | (v, kanon__2)
+        when ((Int.equal v.tag kanon__2.tag)) ->
+        Bv_prims.v_false
+      | ({ kind = Op1 ((Neg (true)), a); _ }, { kind = Op1 ((Neg (true)), b); _ })
+        when (signed) ->
+        (bitvec_lt signed b a)
+      | ({ kind = Op1 ((Neg (true)), a); _ }, { kind = BitVec (c); _ })
+        when ((signed && (not (bitvec_is_int_min (bitvec_size v1) c)))) ->
+        (bitvec_lt signed (bitvec_neg false v2) a)
+      | ({ kind = BitVec (c); _ }, { kind = Op1 ((Neg (true)), a); _ })
+        when ((signed && (not (bitvec_is_int_min (bitvec_size v1) c)))) ->
+        (bitvec_lt signed a (bitvec_neg false v1))
+      | ({ kind = BitVec (c); _ }, { kind = Op2 ((Add (checked)), { kind = BitVec (r); _ }, x); _ })
+        when ((bitvec_checked_has signed checked)) ->
+        (if (bitvec_overflows_sub signed (bitvec_size v1) c r)
+        then (if (not signed)
+             then Bv_prims.v_true
+             else (node (Op2 ((Lt (signed)), v1, v2)) TBool))
+        else (bitvec_lt signed (Bv_prims.mk_bv (bitvec_size v1) (Bv_prims.lit_sub v1.ty v1.ty c r)) x))
+      | ({ kind = BitVec (c); _ }, { kind = Op2 ((Add (checked)), x, { kind = BitVec (r); _ }); _ })
+        when ((bitvec_checked_has signed checked)) ->
+        (if (bitvec_overflows_sub signed (bitvec_size v1) c r)
+        then (if (not signed)
+             then Bv_prims.v_true
+             else (node (Op2 ((Lt (signed)), v1, v2)) TBool))
+        else (bitvec_lt signed (Bv_prims.mk_bv (bitvec_size v1) (Bv_prims.lit_sub v1.ty v1.ty c r)) x))
+      | ({ kind = Op2 ((Add (checked)), { kind = BitVec (l); _ }, x); _ }, { kind = BitVec (c); _ })
+        when ((bitvec_checked_has signed checked)) ->
+        (if (bitvec_overflows_sub signed (bitvec_size v1) c l)
+        then (if (not signed)
+             then Bv_prims.v_false
+             else (node (Op2 ((Lt (signed)), v1, v2)) TBool))
+        else (bitvec_lt signed x (Bv_prims.mk_bv (bitvec_size v1) (Bv_prims.lit_sub v1.ty v1.ty c l))))
+      | ({ kind = Op2 ((Add (checked)), x, { kind = BitVec (l); _ }); _ }, { kind = BitVec (c); _ })
+        when ((bitvec_checked_has signed checked)) ->
+        (if (bitvec_overflows_sub signed (bitvec_size v1) c l)
+        then (if (not signed)
+             then Bv_prims.v_false
+             else (node (Op2 ((Lt (signed)), v1, v2)) TBool))
+        else (bitvec_lt signed x (Bv_prims.mk_bv (bitvec_size v1) (Bv_prims.lit_sub v1.ty v1.ty c l))))
+      | (a, { kind = Op2 ((Add (checked)), kanon__4, b); _ })
+        when (((Int.equal a.tag kanon__4.tag) && (bitvec_checked_has signed checked))) ->
+        (bitvec_lt signed (Bv_prims.bv_zero (bitvec_size v1)) b)
+      | (a, { kind = Op2 ((Add (checked)), b, kanon__4); _ })
+        when (((Int.equal a.tag kanon__4.tag) && (bitvec_checked_has signed checked))) ->
+        (bitvec_lt signed (Bv_prims.bv_zero (bitvec_size v1)) b)
+      | ({ kind = Op2 ((Add (checked)), a, b); _ }, kanon__7)
+        when (((Int.equal a.tag kanon__7.tag) && (bitvec_checked_has signed checked))) ->
+        (bitvec_lt signed b (Bv_prims.bv_zero (bitvec_size v1)))
+      | ({ kind = Op2 ((Add (checked)), b, a); _ }, kanon__7)
+        when (((Int.equal a.tag kanon__7.tag) && (bitvec_checked_has signed checked))) ->
+        (bitvec_lt signed b (Bv_prims.bv_zero (bitvec_size v1)))
+      | ({ kind = Op2 ((Add (checked_l)), { kind = BitVec (l); _ }, y); _ }, { kind = Op2 ((Add (checked_r)), { kind = BitVec (r); _ }, x); _ })
+        when (((bitvec_checked_has signed checked_l) && (bitvec_checked_has signed checked_r))) ->
+        (let n = (bitvec_size v1) in
+        (let sty = v1.ty in
+        (if (bitvec_const_keeps_in_range signed n l r)
+        then (bitvec_lt signed (bitvec_add (bitvec_checked_of_signed signed) y (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty l r))) x)
+        else (if (bitvec_const_keeps_in_range signed n r l)
+             then (bitvec_lt signed y (bitvec_add (bitvec_checked_of_signed signed) x (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty r l))))
+             else (node (Op2 ((Lt (signed)), v1, v2)) TBool)))))
+      | ({ kind = Op2 ((Add (checked_l)), { kind = BitVec (l); _ }, y); _ }, { kind = Op2 ((Add (checked_r)), x, { kind = BitVec (r); _ }); _ })
+        when (((bitvec_checked_has signed checked_l) && (bitvec_checked_has signed checked_r))) ->
+        (let n = (bitvec_size v1) in
+        (let sty = v1.ty in
+        (if (bitvec_const_keeps_in_range signed n l r)
+        then (bitvec_lt signed (bitvec_add (bitvec_checked_of_signed signed) y (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty l r))) x)
+        else (if (bitvec_const_keeps_in_range signed n r l)
+             then (bitvec_lt signed y (bitvec_add (bitvec_checked_of_signed signed) x (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty r l))))
+             else (node (Op2 ((Lt (signed)), v1, v2)) TBool)))))
+      | ({ kind = Op2 ((Add (checked_l)), y, { kind = BitVec (l); _ }); _ }, { kind = Op2 ((Add (checked_r)), { kind = BitVec (r); _ }, x); _ })
+        when (((bitvec_checked_has signed checked_l) && (bitvec_checked_has signed checked_r))) ->
+        (let n = (bitvec_size v1) in
+        (let sty = v1.ty in
+        (if (bitvec_const_keeps_in_range signed n l r)
+        then (bitvec_lt signed (bitvec_add (bitvec_checked_of_signed signed) y (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty l r))) x)
+        else (if (bitvec_const_keeps_in_range signed n r l)
+             then (bitvec_lt signed y (bitvec_add (bitvec_checked_of_signed signed) x (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty r l))))
+             else (node (Op2 ((Lt (signed)), v1, v2)) TBool)))))
+      | ({ kind = Op2 ((Add (checked_l)), y, { kind = BitVec (l); _ }); _ }, { kind = Op2 ((Add (checked_r)), x, { kind = BitVec (r); _ }); _ })
+        when (((bitvec_checked_has signed checked_l) && (bitvec_checked_has signed checked_r))) ->
+        (let n = (bitvec_size v1) in
+        (let sty = v1.ty in
+        (if (bitvec_const_keeps_in_range signed n l r)
+        then (bitvec_lt signed (bitvec_add (bitvec_checked_of_signed signed) y (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty l r))) x)
+        else (if (bitvec_const_keeps_in_range signed n r l)
+             then (bitvec_lt signed y (bitvec_add (bitvec_checked_of_signed signed) x (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty r l))))
+             else (node (Op2 ((Lt (signed)), v1, v2)) TBool)))))
+      | (_, { kind = BitVec (kanon__2); _ })
+        when ((((Z.equal kanon__2 Z.one)) && (not signed))) ->
+        (bool_eq v1 (Bv_prims.bv_zero (bitvec_size v1)))
+      | (_, { kind = Op1 ((BvOfBool (n)), b); _ })
+        when ((not signed)) ->
+        let n = Z.of_int n in
+        (bool_and_ b (bool_eq v1 (Bv_prims.bv_zero n)))
+      | ({ kind = Op3 ((Ite), b, l, r); _ }, _) ->
+        (bool_ite b (bitvec_lt signed l v2) (bitvec_lt signed r v2))
+      | (_, { kind = Op3 ((Ite), b, l, r); _ }) ->
+        (bool_ite b (bitvec_lt signed v1 l) (bitvec_lt signed v1 r))
+      | (_, { kind = BitVec (kanon__2); _ })
+        when ((((Z.equal kanon__2 Z.zero)) && (signed && (not (bitvec_is_checked_unsigned_op v1))))) ->
+        (bitvec_lt_zero v1)
+      | ({ kind = BitVec (x); _ }, _)
+        when ((bitvec_is_max_of signed (bitvec_size v1) x)) ->
+        Bv_prims.v_false
+      | (_, { kind = BitVec (x); _ })
+        when ((bitvec_is_min_of signed (bitvec_size v1) x)) ->
+        Bv_prims.v_false
+      | ({ kind = BitVec (x); _ }, _)
+        when ((bitvec_is_min_of signed (bitvec_size v1) x)) ->
+        (bool_not_ (bool_eq v1 v2))
+      | (_, { kind = BitVec (x); _ })
+        when ((bitvec_is_max_of signed (bitvec_size v1) x)) ->
+        (bool_not_ (bool_eq v1 v2))
+      | ({ kind = BitVec (c2); _ }, { kind = Op2 ((Mul (checked)), x, ({ kind = BitVec (c1); _ } as vc1)); _ })
+        when (((bitvec_checked_has signed checked) && (not ((Z.equal c1 Z.zero))))) ->
+        (let z1 = (bitvec_to_z signed (bitvec_size v1) c1) in
+        (let z2 = (bitvec_to_z signed (bitvec_size v1) c2) in
+        (if ((Bv_prims.divisible z2 z1) || (Z.geq z2 Z.zero))
+        then (if (Z.lt z1 Z.zero)
+             then (if (signed && (((Z.equal z1 Z.minus_one)) && (bitvec_is_int_min (bitvec_size v1) c2)))
+                  then Bv_prims.v_true
+                  else (bitvec_lt signed x (bitvec_div signed v1 vc1)))
+             else (bitvec_lt signed (bitvec_div signed v1 vc1) x))
+        else (if (Z.lt z1 Z.zero)
+             then (bitvec_leq signed x (bitvec_div signed v1 vc1))
+             else (bitvec_leq signed (bitvec_div signed v1 vc1) x)))))
+      | ({ kind = BitVec (c2); _ }, { kind = Op2 ((Mul (checked)), ({ kind = BitVec (c1); _ } as vc1), x); _ })
+        when (((bitvec_checked_has signed checked) && (not ((Z.equal c1 Z.zero))))) ->
+        (let z1 = (bitvec_to_z signed (bitvec_size v1) c1) in
+        (let z2 = (bitvec_to_z signed (bitvec_size v1) c2) in
+        (if ((Bv_prims.divisible z2 z1) || (Z.geq z2 Z.zero))
+        then (if (Z.lt z1 Z.zero)
+             then (if (signed && (((Z.equal z1 Z.minus_one)) && (bitvec_is_int_min (bitvec_size v1) c2)))
+                  then Bv_prims.v_true
+                  else (bitvec_lt signed x (bitvec_div signed v1 vc1)))
+             else (bitvec_lt signed (bitvec_div signed v1 vc1) x))
+        else (if (Z.lt z1 Z.zero)
+             then (bitvec_leq signed x (bitvec_div signed v1 vc1))
+             else (bitvec_leq signed (bitvec_div signed v1 vc1) x)))))
+      | ({ kind = Op2 ((Mul (checked)), x, ({ kind = BitVec (c1); _ } as vc1)); _ }, { kind = BitVec (c2); _ })
+        when (((bitvec_checked_has signed checked) && (not ((Z.equal c1 Z.zero))))) ->
+        (let z1 = (bitvec_to_z signed (bitvec_size v1) c1) in
+        (let z2 = (bitvec_to_z signed (bitvec_size v1) c2) in
+        (if ((Bv_prims.divisible z2 z1) || (Z.lt z2 Z.zero))
+        then (if (Z.lt z1 Z.zero)
+             then (if (signed && (((Z.equal z1 Z.minus_one)) && (bitvec_is_int_min (bitvec_size v1) c2)))
+                  then Bv_prims.v_false
+                  else (bitvec_lt signed (bitvec_div signed v2 vc1) x))
+             else (bitvec_lt signed x (bitvec_div signed v2 vc1)))
+        else (if (Z.lt z1 Z.zero)
+             then (bitvec_leq signed (bitvec_div signed v2 vc1) x)
+             else (bitvec_leq signed x (bitvec_div signed v2 vc1))))))
+      | ({ kind = Op2 ((Mul (checked)), ({ kind = BitVec (c1); _ } as vc1), x); _ }, { kind = BitVec (c2); _ })
+        when (((bitvec_checked_has signed checked) && (not ((Z.equal c1 Z.zero))))) ->
+        (let z1 = (bitvec_to_z signed (bitvec_size v1) c1) in
+        (let z2 = (bitvec_to_z signed (bitvec_size v1) c2) in
+        (if ((Bv_prims.divisible z2 z1) || (Z.lt z2 Z.zero))
+        then (if (Z.lt z1 Z.zero)
+             then (if (signed && (((Z.equal z1 Z.minus_one)) && (bitvec_is_int_min (bitvec_size v1) c2)))
+                  then Bv_prims.v_false
+                  else (bitvec_lt signed (bitvec_div signed v2 vc1) x))
+             else (bitvec_lt signed x (bitvec_div signed v2 vc1)))
+        else (if (Z.lt z1 Z.zero)
+             then (bitvec_leq signed (bitvec_div signed v2 vc1) x)
+             else (bitvec_leq signed x (bitvec_div signed v2 vc1))))))
+      | ({ kind = Op2 ((Mul (checked_l)), a, x); _ }, { kind = Op2 ((Mul (checked_r)), kanon__9, y); _ })
+        when (((Int.equal a.tag kanon__9.tag) && ((bitvec_checked_has signed checked_l) && ((bitvec_checked_has signed checked_r) && (bitvec_cancellable signed a))))) ->
+        (bitvec_lt signed x y)
+      | ({ kind = Op2 ((Mul (checked_l)), a, x); _ }, { kind = Op2 ((Mul (checked_r)), y, kanon__9); _ })
+        when (((Int.equal a.tag kanon__9.tag) && ((bitvec_checked_has signed checked_l) && ((bitvec_checked_has signed checked_r) && (bitvec_cancellable signed a))))) ->
+        (bitvec_lt signed x y)
+      | ({ kind = Op2 ((Mul (checked_l)), x, a); _ }, { kind = Op2 ((Mul (checked_r)), kanon__9, y); _ })
+        when (((Int.equal a.tag kanon__9.tag) && ((bitvec_checked_has signed checked_l) && ((bitvec_checked_has signed checked_r) && (bitvec_cancellable signed a))))) ->
+        (bitvec_lt signed x y)
+      | ({ kind = Op2 ((Mul (checked_l)), x, a); _ }, { kind = Op2 ((Mul (checked_r)), y, kanon__9); _ })
+        when (((Int.equal a.tag kanon__9.tag) && ((bitvec_checked_has signed checked_l) && ((bitvec_checked_has signed checked_r) && (bitvec_cancellable signed a))))) ->
+        (bitvec_lt signed x y)
+      | ({ kind = BitVec (c); _ }, { kind = Op2 ((Sub (checked)), x, { kind = BitVec (k); _ }); _ })
+        when ((bitvec_checked_has signed checked)) ->
+        (if (bitvec_overflows_add signed (bitvec_size v1) c k)
+        then (if (not signed)
+             then Bv_prims.v_false
+             else (node (Op2 ((Lt (signed)), v1, v2)) TBool))
+        else (bitvec_lt signed (Bv_prims.mk_bv (bitvec_size v1) (Bv_prims.lit_add v1.ty v1.ty c k)) x))
+      | ({ kind = BitVec (c); _ }, { kind = Op2 ((Sub (checked)), { kind = BitVec (k); _ }, x); _ })
+        when ((bitvec_checked_has signed checked)) ->
+        (if (bitvec_overflows_sub signed (bitvec_size v1) k c)
+        then (if (not signed)
+             then Bv_prims.v_false
+             else (node (Op2 ((Lt (signed)), v1, v2)) TBool))
+        else (bitvec_lt signed x (Bv_prims.mk_bv (bitvec_size v1) (Bv_prims.lit_sub v1.ty v1.ty k c))))
+      | ({ kind = Op2 ((Sub (checked)), x, { kind = BitVec (k); _ }); _ }, { kind = BitVec (c); _ })
+        when ((bitvec_checked_has signed checked)) ->
+        (if (bitvec_overflows_add signed (bitvec_size v1) c k)
+        then (if (not signed)
+             then Bv_prims.v_true
+             else (node (Op2 ((Lt (signed)), v1, v2)) TBool))
+        else (bitvec_lt signed x (Bv_prims.mk_bv (bitvec_size v1) (Bv_prims.lit_add v1.ty v1.ty c k))))
+      | ({ kind = Op2 ((Sub (checked)), { kind = BitVec (k); _ }, x); _ }, { kind = BitVec (c); _ })
+        when ((bitvec_checked_has signed checked)) ->
+        (if (bitvec_overflows_sub signed (bitvec_size v1) k c)
+        then (if (not signed)
+             then Bv_prims.v_true
+             else (node (Op2 ((Lt (signed)), v1, v2)) TBool))
+        else (bitvec_lt signed (Bv_prims.mk_bv (bitvec_size v1) (Bv_prims.lit_sub v1.ty v1.ty k c)) x))
+      | (_, { kind = BitVec (c); _ })
+        when (((not signed) && (Z.lt (bitvec_unsigned_ub v1) c))) ->
+        Bv_prims.v_true
+      | ({ kind = BitVec (c); _ }, _)
+        when (((not signed) && (Z.leq (bitvec_unsigned_ub v2) c))) ->
+        Bv_prims.v_false
+      | ({ kind = BitVec (c); _ }, _)
+        when ((signed && (bitvec_is_checked_unsigned_op v2))) ->
+        (bitvec_signed_to_unsigned_cmp false true c v1 v2)
+      | (_, { kind = BitVec (c); _ })
+        when ((signed && (bitvec_is_checked_unsigned_op v1))) ->
+        (bitvec_signed_to_unsigned_cmp false false c v1 v2)
+      | _ -> (node (Op2 ((Lt (signed)), v1, v2)) TBool)
+      ))
+  and bitvec_leq (signed : bool) (v1 : t) (v2 : t) : t =
+      (assert ((match v1.ty, v2.ty with
+               | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
+                 when (let kanon__n = Z.of_int kanon__n in
+                 let kanon__s1 = Z.of_int kanon__s1 in
+                 ((Z.equal kanon__s1 kanon__n))) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v1, v2 with
+      | (v, kanon__2)
+        when ((Int.equal v.tag kanon__2.tag)) ->
+        Bv_prims.v_true
+      | ({ kind = BitVec (l); _ }, { kind = BitVec (r); _ }) ->
+        (bool_of_bool (Z.leq (bitvec_to_z signed (bitvec_size v1) l) (bitvec_to_z signed (bitvec_size v1) r)))
+      | ({ kind = Op1 ((Neg (true)), a); _ }, { kind = Op1 ((Neg (true)), b); _ })
+        when (signed) ->
+        (bitvec_leq signed b a)
+      | ({ kind = Op1 ((Neg (true)), a); _ }, { kind = BitVec (c); _ })
+        when ((signed && (not (bitvec_is_int_min (bitvec_size v1) c)))) ->
+        (bitvec_leq signed (bitvec_neg false v2) a)
+      | ({ kind = BitVec (c); _ }, { kind = Op1 ((Neg (true)), a); _ })
+        when ((signed && (not (bitvec_is_int_min (bitvec_size v1) c)))) ->
+        (bitvec_leq signed a (bitvec_neg false v1))
+      | ({ kind = BitVec (c); _ }, { kind = Op2 ((Add (checked)), { kind = BitVec (r); _ }, x); _ })
+        when ((bitvec_checked_has signed checked)) ->
+        (if (bitvec_overflows_sub signed (bitvec_size v1) c r)
+        then (if (not signed)
+             then Bv_prims.v_true
+             else (node (Op2 ((Leq (signed)), v1, v2)) TBool))
+        else (bitvec_leq signed (Bv_prims.mk_bv (bitvec_size v1) (Bv_prims.lit_sub v1.ty v1.ty c r)) x))
+      | ({ kind = BitVec (c); _ }, { kind = Op2 ((Add (checked)), x, { kind = BitVec (r); _ }); _ })
+        when ((bitvec_checked_has signed checked)) ->
+        (if (bitvec_overflows_sub signed (bitvec_size v1) c r)
+        then (if (not signed)
+             then Bv_prims.v_true
+             else (node (Op2 ((Leq (signed)), v1, v2)) TBool))
+        else (bitvec_leq signed (Bv_prims.mk_bv (bitvec_size v1) (Bv_prims.lit_sub v1.ty v1.ty c r)) x))
+      | ({ kind = Op2 ((Add (checked)), { kind = BitVec (l); _ }, x); _ }, { kind = BitVec (c); _ })
+        when ((bitvec_checked_has signed checked)) ->
+        (if (bitvec_overflows_sub signed (bitvec_size v1) c l)
+        then (if (not signed)
+             then Bv_prims.v_false
+             else (node (Op2 ((Leq (signed)), v1, v2)) TBool))
+        else (bitvec_leq signed x (Bv_prims.mk_bv (bitvec_size v1) (Bv_prims.lit_sub v1.ty v1.ty c l))))
+      | ({ kind = Op2 ((Add (checked)), x, { kind = BitVec (l); _ }); _ }, { kind = BitVec (c); _ })
+        when ((bitvec_checked_has signed checked)) ->
+        (if (bitvec_overflows_sub signed (bitvec_size v1) c l)
+        then (if (not signed)
+             then Bv_prims.v_false
+             else (node (Op2 ((Leq (signed)), v1, v2)) TBool))
+        else (bitvec_leq signed x (Bv_prims.mk_bv (bitvec_size v1) (Bv_prims.lit_sub v1.ty v1.ty c l))))
+      | ({ kind = Op2 ((Add (checked_l)), { kind = BitVec (l); _ }, y); _ }, { kind = Op2 ((Add (checked_r)), { kind = BitVec (r); _ }, x); _ })
+        when (((bitvec_checked_has signed checked_l) && (bitvec_checked_has signed checked_r))) ->
+        (let n = (bitvec_size v1) in
+        (let sty = v1.ty in
+        (if (bitvec_const_keeps_in_range signed n l r)
+        then (bitvec_leq signed (bitvec_add (bitvec_checked_of_signed signed) y (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty l r))) x)
+        else (if (bitvec_const_keeps_in_range signed n r l)
+             then (bitvec_leq signed y (bitvec_add (bitvec_checked_of_signed signed) x (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty r l))))
+             else (node (Op2 ((Leq (signed)), v1, v2)) TBool)))))
+      | ({ kind = Op2 ((Add (checked_l)), { kind = BitVec (l); _ }, y); _ }, { kind = Op2 ((Add (checked_r)), x, { kind = BitVec (r); _ }); _ })
+        when (((bitvec_checked_has signed checked_l) && (bitvec_checked_has signed checked_r))) ->
+        (let n = (bitvec_size v1) in
+        (let sty = v1.ty in
+        (if (bitvec_const_keeps_in_range signed n l r)
+        then (bitvec_leq signed (bitvec_add (bitvec_checked_of_signed signed) y (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty l r))) x)
+        else (if (bitvec_const_keeps_in_range signed n r l)
+             then (bitvec_leq signed y (bitvec_add (bitvec_checked_of_signed signed) x (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty r l))))
+             else (node (Op2 ((Leq (signed)), v1, v2)) TBool)))))
+      | ({ kind = Op2 ((Add (checked_l)), y, { kind = BitVec (l); _ }); _ }, { kind = Op2 ((Add (checked_r)), { kind = BitVec (r); _ }, x); _ })
+        when (((bitvec_checked_has signed checked_l) && (bitvec_checked_has signed checked_r))) ->
+        (let n = (bitvec_size v1) in
+        (let sty = v1.ty in
+        (if (bitvec_const_keeps_in_range signed n l r)
+        then (bitvec_leq signed (bitvec_add (bitvec_checked_of_signed signed) y (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty l r))) x)
+        else (if (bitvec_const_keeps_in_range signed n r l)
+             then (bitvec_leq signed y (bitvec_add (bitvec_checked_of_signed signed) x (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty r l))))
+             else (node (Op2 ((Leq (signed)), v1, v2)) TBool)))))
+      | ({ kind = Op2 ((Add (checked_l)), y, { kind = BitVec (l); _ }); _ }, { kind = Op2 ((Add (checked_r)), x, { kind = BitVec (r); _ }); _ })
+        when (((bitvec_checked_has signed checked_l) && (bitvec_checked_has signed checked_r))) ->
+        (let n = (bitvec_size v1) in
+        (let sty = v1.ty in
+        (if (bitvec_const_keeps_in_range signed n l r)
+        then (bitvec_leq signed (bitvec_add (bitvec_checked_of_signed signed) y (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty l r))) x)
+        else (if (bitvec_const_keeps_in_range signed n r l)
+             then (bitvec_leq signed y (bitvec_add (bitvec_checked_of_signed signed) x (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty r l))))
+             else (node (Op2 ((Leq (signed)), v1, v2)) TBool)))))
+      | (a, { kind = Op2 ((Add (checked)), kanon__4, b); _ })
+        when (((Int.equal a.tag kanon__4.tag) && (bitvec_checked_has signed checked))) ->
+        (bitvec_leq signed (Bv_prims.bv_zero (bitvec_size v1)) b)
+      | (a, { kind = Op2 ((Add (checked)), b, kanon__4); _ })
+        when (((Int.equal a.tag kanon__4.tag) && (bitvec_checked_has signed checked))) ->
+        (bitvec_leq signed (Bv_prims.bv_zero (bitvec_size v1)) b)
+      | ({ kind = Op2 ((Add (checked)), a, b); _ }, kanon__7)
+        when (((Int.equal a.tag kanon__7.tag) && (bitvec_checked_has signed checked))) ->
+        (bitvec_leq signed b (Bv_prims.bv_zero (bitvec_size v1)))
+      | ({ kind = Op2 ((Add (checked)), b, a); _ }, kanon__7)
+        when (((Int.equal a.tag kanon__7.tag) && (bitvec_checked_has signed checked))) ->
+        (bitvec_leq signed b (Bv_prims.bv_zero (bitvec_size v1)))
+      | ({ kind = BitVec (x); _ }, _)
+        when ((bitvec_is_min_of signed (bitvec_size v1) x)) ->
+        Bv_prims.v_true
+      | (_, { kind = BitVec (x); _ })
+        when ((bitvec_is_max_of signed (bitvec_size v1) x)) ->
+        Bv_prims.v_true
+      | ({ kind = BitVec (c2); _ }, { kind = Op2 ((Mul (checked)), x, ({ kind = BitVec (c1); _ } as vc1)); _ })
+        when (((bitvec_checked_has signed checked) && (not ((Z.equal c1 Z.zero))))) ->
+        (let z1 = (bitvec_to_z signed (bitvec_size v1) c1) in
+        (let z2 = (bitvec_to_z signed (bitvec_size v1) c2) in
+        (if (Bv_prims.divisible z2 z1)
+        then (if (Z.lt z1 Z.zero)
+             then (if (signed && (((Z.equal z1 Z.minus_one)) && (bitvec_is_int_min (bitvec_size v1) c2)))
+                  then Bv_prims.v_true
+                  else (bitvec_leq signed x (bitvec_div signed v1 vc1)))
+             else (bitvec_leq signed (bitvec_div signed v1 vc1) x))
+        else (if (Z.lt z1 Z.zero)
+             then (if (Z.lt z2 Z.zero)
+                  then (bitvec_leq signed x (bitvec_div signed v1 vc1))
+                  else (bitvec_lt signed x (bitvec_div signed v1 vc1)))
+             else (if (Z.lt z2 Z.zero)
+                  then (bitvec_leq signed (bitvec_div signed v1 vc1) x)
+                  else (bitvec_lt signed (bitvec_div signed v1 vc1) x))))))
+      | ({ kind = BitVec (c2); _ }, { kind = Op2 ((Mul (checked)), ({ kind = BitVec (c1); _ } as vc1), x); _ })
+        when (((bitvec_checked_has signed checked) && (not ((Z.equal c1 Z.zero))))) ->
+        (let z1 = (bitvec_to_z signed (bitvec_size v1) c1) in
+        (let z2 = (bitvec_to_z signed (bitvec_size v1) c2) in
+        (if (Bv_prims.divisible z2 z1)
+        then (if (Z.lt z1 Z.zero)
+             then (if (signed && (((Z.equal z1 Z.minus_one)) && (bitvec_is_int_min (bitvec_size v1) c2)))
+                  then Bv_prims.v_true
+                  else (bitvec_leq signed x (bitvec_div signed v1 vc1)))
+             else (bitvec_leq signed (bitvec_div signed v1 vc1) x))
+        else (if (Z.lt z1 Z.zero)
+             then (if (Z.lt z2 Z.zero)
+                  then (bitvec_leq signed x (bitvec_div signed v1 vc1))
+                  else (bitvec_lt signed x (bitvec_div signed v1 vc1)))
+             else (if (Z.lt z2 Z.zero)
+                  then (bitvec_leq signed (bitvec_div signed v1 vc1) x)
+                  else (bitvec_lt signed (bitvec_div signed v1 vc1) x))))))
+      | ({ kind = Op2 ((Mul (checked)), x, ({ kind = BitVec (c1); _ } as vc1)); _ }, { kind = BitVec (c2); _ })
+        when (((bitvec_checked_has signed checked) && (not ((Z.equal c1 Z.zero))))) ->
+        (let z1 = (bitvec_to_z signed (bitvec_size v1) c1) in
+        (let z2 = (bitvec_to_z signed (bitvec_size v1) c2) in
+        (if (Bv_prims.divisible z2 z1)
+        then (if (Z.lt z1 Z.zero)
+             then (if (signed && (((Z.equal z1 Z.minus_one)) && (bitvec_is_int_min (bitvec_size v1) c2)))
+                  then Bv_prims.v_false
+                  else (bitvec_leq signed (bitvec_div signed v2 vc1) x))
+             else (bitvec_leq signed x (bitvec_div signed v2 vc1)))
+        else (if (Z.lt z1 Z.zero)
+             then (if (Z.lt z2 Z.zero)
+                  then (bitvec_lt signed (bitvec_div signed v2 vc1) x)
+                  else (bitvec_leq signed (bitvec_div signed v2 vc1) x))
+             else (if (Z.lt z2 Z.zero)
+                  then (bitvec_lt signed x (bitvec_div signed v2 vc1))
+                  else (bitvec_leq signed x (bitvec_div signed v2 vc1)))))))
+      | ({ kind = Op2 ((Mul (checked)), ({ kind = BitVec (c1); _ } as vc1), x); _ }, { kind = BitVec (c2); _ })
+        when (((bitvec_checked_has signed checked) && (not ((Z.equal c1 Z.zero))))) ->
+        (let z1 = (bitvec_to_z signed (bitvec_size v1) c1) in
+        (let z2 = (bitvec_to_z signed (bitvec_size v1) c2) in
+        (if (Bv_prims.divisible z2 z1)
+        then (if (Z.lt z1 Z.zero)
+             then (if (signed && (((Z.equal z1 Z.minus_one)) && (bitvec_is_int_min (bitvec_size v1) c2)))
+                  then Bv_prims.v_false
+                  else (bitvec_leq signed (bitvec_div signed v2 vc1) x))
+             else (bitvec_leq signed x (bitvec_div signed v2 vc1)))
+        else (if (Z.lt z1 Z.zero)
+             then (if (Z.lt z2 Z.zero)
+                  then (bitvec_lt signed (bitvec_div signed v2 vc1) x)
+                  else (bitvec_leq signed (bitvec_div signed v2 vc1) x))
+             else (if (Z.lt z2 Z.zero)
+                  then (bitvec_lt signed x (bitvec_div signed v2 vc1))
+                  else (bitvec_leq signed x (bitvec_div signed v2 vc1)))))))
+      | ({ kind = Op2 ((Mul (checked_l)), a, x); _ }, { kind = Op2 ((Mul (checked_r)), kanon__9, y); _ })
+        when (((Int.equal a.tag kanon__9.tag) && ((bitvec_checked_has signed checked_l) && ((bitvec_checked_has signed checked_r) && (bitvec_cancellable signed a))))) ->
+        (bitvec_leq signed x y)
+      | ({ kind = Op2 ((Mul (checked_l)), a, x); _ }, { kind = Op2 ((Mul (checked_r)), y, kanon__9); _ })
+        when (((Int.equal a.tag kanon__9.tag) && ((bitvec_checked_has signed checked_l) && ((bitvec_checked_has signed checked_r) && (bitvec_cancellable signed a))))) ->
+        (bitvec_leq signed x y)
+      | ({ kind = Op2 ((Mul (checked_l)), x, a); _ }, { kind = Op2 ((Mul (checked_r)), kanon__9, y); _ })
+        when (((Int.equal a.tag kanon__9.tag) && ((bitvec_checked_has signed checked_l) && ((bitvec_checked_has signed checked_r) && (bitvec_cancellable signed a))))) ->
+        (bitvec_leq signed x y)
+      | ({ kind = Op2 ((Mul (checked_l)), x, a); _ }, { kind = Op2 ((Mul (checked_r)), y, kanon__9); _ })
+        when (((Int.equal a.tag kanon__9.tag) && ((bitvec_checked_has signed checked_l) && ((bitvec_checked_has signed checked_r) && (bitvec_cancellable signed a))))) ->
+        (bitvec_leq signed x y)
+      | ({ kind = Op2 ((Div (false)), _, { kind = BitVec (d); _ }); _ }, { kind = BitVec (n); _ })
+        when (((not signed) && (bitvec_overflows_mul false (bitvec_size v1) n d))) ->
+        Bv_prims.v_true
+      | ({ kind = Op3 ((Ite), b, l, r); _ }, { kind = BitVec (_); _ }) ->
+        (bool_ite b (bitvec_leq signed l v2) (bitvec_leq signed r v2))
+      | ({ kind = BitVec (_); _ }, { kind = Op3 ((Ite), b, l, r); _ }) ->
+        (bool_ite b (bitvec_leq signed v1 l) (bitvec_leq signed v1 r))
+      | ({ kind = BitVec (c); _ }, { kind = Op2 ((Sub (checked)), x, { kind = BitVec (k); _ }); _ })
+        when ((bitvec_checked_has signed checked)) ->
+        (if (bitvec_overflows_add signed (bitvec_size v1) c k)
+        then (if (not signed)
+             then Bv_prims.v_false
+             else (node (Op2 ((Leq (signed)), v1, v2)) TBool))
+        else (bitvec_leq signed (Bv_prims.mk_bv (bitvec_size v1) (Bv_prims.lit_add v1.ty v1.ty c k)) x))
+      | ({ kind = BitVec (c); _ }, { kind = Op2 ((Sub (checked)), { kind = BitVec (k); _ }, x); _ })
+        when ((bitvec_checked_has signed checked)) ->
+        (if (bitvec_overflows_sub signed (bitvec_size v1) k c)
+        then (if (not signed)
+             then Bv_prims.v_false
+             else (node (Op2 ((Leq (signed)), v1, v2)) TBool))
+        else (bitvec_leq signed x (Bv_prims.mk_bv (bitvec_size v1) (Bv_prims.lit_sub v1.ty v1.ty k c))))
+      | ({ kind = Op2 ((Sub (checked)), x, { kind = BitVec (k); _ }); _ }, { kind = BitVec (c); _ })
+        when ((bitvec_checked_has signed checked)) ->
+        (if (bitvec_overflows_add signed (bitvec_size v1) c k)
+        then (if (not signed)
+             then Bv_prims.v_true
+             else (node (Op2 ((Leq (signed)), v1, v2)) TBool))
+        else (bitvec_leq signed x (Bv_prims.mk_bv (bitvec_size v1) (Bv_prims.lit_add v1.ty v1.ty c k))))
+      | ({ kind = Op2 ((Sub (checked)), { kind = BitVec (k); _ }, x); _ }, { kind = BitVec (c); _ })
+        when ((bitvec_checked_has signed checked)) ->
+        (if (bitvec_overflows_sub signed (bitvec_size v1) k c)
+        then (if (not signed)
+             then Bv_prims.v_true
+             else (node (Op2 ((Leq (signed)), v1, v2)) TBool))
+        else (bitvec_leq signed (Bv_prims.mk_bv (bitvec_size v1) (Bv_prims.lit_sub v1.ty v1.ty k c)) x))
+      | (_, { kind = BitVec (c); _ })
+        when (((not signed) && (Z.leq (bitvec_unsigned_ub v1) c))) ->
+        Bv_prims.v_true
+      | ({ kind = BitVec (c); _ }, _)
+        when (((not signed) && (Z.lt (bitvec_unsigned_ub v2) c))) ->
+        Bv_prims.v_false
+      | ({ kind = BitVec (c); _ }, _)
+        when ((signed && (bitvec_is_checked_unsigned_op v2))) ->
+        (bitvec_signed_to_unsigned_cmp true true c v1 v2)
+      | (_, { kind = BitVec (c); _ })
+        when ((signed && (bitvec_is_checked_unsigned_op v1))) ->
+        (bitvec_signed_to_unsigned_cmp true false c v1 v2)
+      | _ -> (node (Op2 ((Leq (signed)), v1, v2)) TBool)
+      ))
+  and bitvec_signed_to_unsigned_cmp (is_leq : bool) (c_on_left : bool) (c : Z.t) (v1 : t) (v2 : t) : t =
+      (let bits = (bitvec_size v1) in
+      (let sign_bit = (Bv_prims.mk_bv bits (Bv_prims.z_lsl Z.one (Z.sub bits Z.one))) in
+      (let c_cmp = (if is_leq
+                   then (bitvec_leq false v1 v2)
+                   else (bitvec_lt false v1 v2)) in
+      (let nonneg = (Z.geq (bitvec_to_z true bits c) Z.zero) in
+      (if c_on_left
+      then (let in_pos = (bitvec_lt false v2 sign_bit) in
+           (if nonneg
+           then (bool_and_ c_cmp in_pos)
+           else (bool_or_ in_pos c_cmp)))
+      else (let in_neg = (bitvec_leq false sign_bit v1) in
+           (if nonneg
+           then (bool_or_ c_cmp in_neg)
+           else (bool_and_ in_neg c_cmp))))))))
+  
+  let bool_eq_untyped (v1 : t) (v2 : t) : t =
+      (match v1, v2 with
+      | _ when ((not ((equal_ty v1.ty v2.ty)))) -> Bv_prims.v_false
+      | _ -> (bool_eq v1 v2)
+      )
+  
+  let rec bool_distinct_check_one (a : t) (rest : (t list)) : (bool option) =
+      (match rest with
+      | [] -> (Some true)
+      | (b :: rest) ->
+        (if (Int.equal a.tag b.tag)
+        then (Some false)
+        else (if (bool_sure_neq a b)
+             then (bool_distinct_check_one a rest)
+             else None))
+      )
+  
+  let rec bool_distinct_check (l : (t list)) : (bool option) =
+      (match l with
+      | [] -> (Some true)
+      | (a :: rest) ->
+        (match (bool_distinct_check_one a rest) with
+        | (Some true) -> (bool_distinct_check rest)
+        | r -> r
+        )
+      )
+  
+  let bool_distinct (l : (t list)) : t =
+      (match l with
+      | _ when ((bool_at_most_one l)) -> Bv_prims.v_true
+      | _
+        when ((((Stdlib.Option.equal Stdlib.Bool.equal) (bool_distinct_check l) (Some true)))) ->
+        Bv_prims.v_true
+      | _
+        when ((((Stdlib.Option.equal Stdlib.Bool.equal) (bool_distinct_check l) (Some false)))) ->
+        Bv_prims.v_false
+      | _ -> (node (OpN (Distinct, (Bv_prims.sort_by_tag l))) TBool)
+      )
+  
+  let[@inline] exists_no_binders (l : ((var * ty) list)) : bool =
+      (match l with
+      | [] -> true
+      | _ -> false
+      )
+  
+  let exists_mk (binders : ((var * ty) list)) (body : t) : t =
+      (assert ((match body.ty with
+               | (TBool) -> true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match body with
+      | _
+        when ((exists_no_binders (Bv_prims.used_binders binders body))) ->
+        body
+      | _ ->
+        (node (Exists ((Bv_prims.used_binders binders body), body)) TBool)
+      ))
+  
+  let bitvec_checked_both : checked = { signed = true; unsigned = true }
+  
+  let[@inline] bitvec_right_mask_size (z : Z.t) : Z.t =
+      (Bv_prims.log2 (Z.add z Z.one))
+  
+  let[@inline] bitvec_covers_bitwidth (bits : Z.t) (z : Z.t) : bool =
+      ((bitvec_is_right_mask z) && ((Z.equal (bitvec_right_mask_size z) bits)))
+  
+  let bitvec_lit_add_overflows (signed : bool) (s : ty) (_ : ty) (l : Z.t) (r : Z.t) : bool =
+      (let n = (Bv_prims.size_of_ty s) in
+      (let res = (Z.add (bitvec_to_z signed n l) (bitvec_to_z signed n r)) in
+      ((Z.lt res (bitvec_min_for signed n)) || (Z.gt res (bitvec_max_for signed n)))))
+  
+  let bitvec_lit_sub_overflows (signed : bool) (s : ty) (_ : ty) (l : Z.t) (r : Z.t) : bool =
+      (let n = (Bv_prims.size_of_ty s) in
+      (let res = (Z.sub (bitvec_to_z signed n l) (bitvec_to_z signed n r)) in
+      ((Z.lt res (bitvec_min_for signed n)) || (Z.gt res (bitvec_max_for signed n)))))
+  
+  let bitvec_lit_mul_overflows (signed : bool) (s : ty) (_ : ty) (l : Z.t) (r : Z.t) : bool =
+      (let n = (Bv_prims.size_of_ty s) in
+      (let res = (Z.mul (bitvec_to_z signed n l) (bitvec_to_z signed n r)) in
+      ((Z.lt res (bitvec_min_for signed n)) || (Z.gt res (bitvec_max_for signed n)))))
+  
+  let bitvec_to_bool (v : t) : t =
+      (match v with
+      | { kind = BitVec (z); _ } -> (bool_of_bool (not ((Z.equal z Z.zero))))
+      | { kind = Op1 ((BvOfBool (_)), b); _ } -> b
+      | _ -> (bool_not_ (bool_eq v (Bv_prims.bv_zero (bitvec_size v))))
+      )
+  
+  let bitvec_not_bool (v : t) : t =
+      (match v with
+      | { kind = BitVec (z); _ } ->
+        (if ((Z.equal z Z.zero))
+        then (Bv_prims.bv_one (bitvec_size v))
+        else (Bv_prims.bv_zero (bitvec_size v)))
+      | { kind = Op1 ((BvOfBool (n)), g); _ } ->
+        let n = Z.of_int n in
+        (bitvec_of_bool n (bool_not_ g))
+      | _ ->
+        (bitvec_of_bool (bitvec_size v) (bool_eq v (Bv_prims.bv_zero (bitvec_size v))))
+      )
+  
+  let bitvec_mod_ (v1 : t) (v2 : t) : t =
+      (assert ((match v1.ty, v2.ty with
+               | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
+                 when (let kanon__n = Z.of_int kanon__n in
+                 let kanon__s1 = Z.of_int kanon__s1 in
+                 ((Z.equal kanon__s1 kanon__n))) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v1, v2 with
+      | (({ kind = BitVec (i1); _ } as lit_i1), ({ kind = BitVec (i2); _ } as lit_i2)) ->
+        (node (BitVec ((Bv_prims.lit_smod lit_i1.ty lit_i2.ty i1 i2))) v1.ty)
+      | (_, { kind = BitVec (kanon__2); _ })
+        when (((Z.equal kanon__2 Z.zero))) ->
+        v1
+      | _ -> (node (Op2 (Mod, v1, v2)) v1.ty)
+      ))
+  
+  let rec bitvec_lshr (v1 : t) (v2 : t) : t =
+      (assert ((match v1.ty, v2.ty with
+               | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
+                 when (let kanon__n = Z.of_int kanon__n in
+                 let kanon__s1 = Z.of_int kanon__s1 in
+                 ((Z.equal kanon__s1 kanon__n))) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v1, v2 with
+      | (({ kind = BitVec (i1); _ } as lit_i1), ({ kind = BitVec (i2); _ } as lit_i2)) ->
+        (node (BitVec ((Bv_prims.lit_lshr lit_i1.ty lit_i2.ty i1 i2))) v1.ty)
+      | (_, { kind = BitVec (kanon__2); _ })
+        when (((Z.equal kanon__2 Z.zero))) ->
+        v1
+      | (_, { kind = BitVec (s); _ })
+        when ((Z.geq s (bitvec_size v1))) ->
+        (Bv_prims.bv_zero (bitvec_size v1))
+      | ({ kind = Op2 ((LShr), v, { kind = BitVec (s1); _ }); _ }, { kind = BitVec (s2); _ }) ->
+        (let n = (bitvec_size v1) in
+        (bitvec_lshr v (Bv_prims.mk_masked n (bitvec_zmin (Z.add s1 s2) n))))
+      | ({ kind = Op2 ((BitAnd), x, { kind = BitVec (mask); _ }); _ }, { kind = BitVec (s); _ }) ->
+        (bitvec_and_ (bitvec_lshr x v2) (Bv_prims.mk_bv (bitvec_size v1) (Bv_prims.lit_lshr v1.ty v1.ty mask s)))
+      | ({ kind = Op2 ((BitAnd), { kind = BitVec (mask); _ }, x); _ }, { kind = BitVec (s); _ }) ->
+        (bitvec_and_ (bitvec_lshr x v2) (Bv_prims.mk_bv (bitvec_size v1) (Bv_prims.lit_lshr v1.ty v1.ty mask s)))
+      | ({ kind = Op2 ((BitOr), x, { kind = BitVec (mask); _ }); _ }, { kind = BitVec (s); _ }) ->
+        (bitvec_or_ (bitvec_lshr x v2) (Bv_prims.mk_bv (bitvec_size v1) (Bv_prims.lit_lshr v1.ty v1.ty mask s)))
+      | ({ kind = Op2 ((BitOr), { kind = BitVec (mask); _ }, x); _ }, { kind = BitVec (s); _ }) ->
+        (bitvec_or_ (bitvec_lshr x v2) (Bv_prims.mk_bv (bitvec_size v1) (Bv_prims.lit_lshr v1.ty v1.ty mask s)))
+      | _ -> (node (Op2 (LShr, v1, v2)) v1.ty)
+      ))
+  
+  let rec bitvec_shl (v1 : t) (v2 : t) : t =
+      (assert ((match v1.ty, v2.ty with
+               | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
+                 when (let kanon__n = Z.of_int kanon__n in
+                 let kanon__s1 = Z.of_int kanon__s1 in
+                 ((Z.equal kanon__s1 kanon__n))) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v1, v2 with
+      | (({ kind = BitVec (i1); _ } as lit_i1), ({ kind = BitVec (i2); _ } as lit_i2)) ->
+        (node (BitVec ((Bv_prims.lit_shl lit_i1.ty lit_i2.ty i1 i2))) v1.ty)
+      | (_, { kind = BitVec (kanon__2); _ })
+        when (((Z.equal kanon__2 Z.zero))) ->
+        v1
+      | (_, { kind = BitVec (s); _ })
+        when ((Z.geq s (bitvec_size v1))) ->
+        (Bv_prims.bv_zero (bitvec_size v1))
+      | ({ kind = Op2 ((Shl), v, { kind = BitVec (s1); _ }); _ }, { kind = BitVec (s2); _ }) ->
+        (let n = (bitvec_size v1) in
+        (bitvec_shl v (Bv_prims.mk_masked n (bitvec_zmin (Z.add s1 s2) n))))
+      | ({ kind = Op2 ((LShr), x, { kind = BitVec (sr); _ }); _ }, { kind = BitVec (sl); _ }) ->
+        (let n = (bitvec_size v1) in
+        (let sty = v1.ty in
+        (if (Z.leq sl sr)
+        then (bitvec_and_ (bitvec_lshr x (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty sr sl))) (Bv_prims.mk_bv n (Bv_prims.lit_shl sty sty (bitvec_ones n) sl)))
+        else (bitvec_shl (bitvec_and_ x (Bv_prims.mk_bv n (Bv_prims.lit_shl sty sty (bitvec_ones n) sr))) (Bv_prims.mk_bv n (Bv_prims.lit_sub sty sty sl sr))))))
+      | ({ kind = Op2 ((BitAnd), x, { kind = BitVec (mask); _ }); _ }, { kind = BitVec (s); _ }) ->
+        (bitvec_and_ (bitvec_shl x v2) (Bv_prims.mk_bv (bitvec_size v1) (Bv_prims.lit_shl v1.ty v1.ty mask s)))
+      | ({ kind = Op2 ((BitAnd), { kind = BitVec (mask); _ }, x); _ }, { kind = BitVec (s); _ }) ->
+        (bitvec_and_ (bitvec_shl x v2) (Bv_prims.mk_bv (bitvec_size v1) (Bv_prims.lit_shl v1.ty v1.ty mask s)))
+      | ({ kind = Op2 ((BitOr), x, { kind = BitVec (mask); _ }); _ }, { kind = BitVec (s); _ }) ->
+        (bitvec_or_ (bitvec_shl x v2) (Bv_prims.mk_bv (bitvec_size v1) (Bv_prims.lit_shl v1.ty v1.ty mask s)))
+      | ({ kind = Op2 ((BitOr), { kind = BitVec (mask); _ }, x); _ }, { kind = BitVec (s); _ }) ->
+        (bitvec_or_ (bitvec_shl x v2) (Bv_prims.mk_bv (bitvec_size v1) (Bv_prims.lit_shl v1.ty v1.ty mask s)))
+      | _ -> (node (Op2 (Shl, v1, v2)) v1.ty)
+      ))
+  
+  let rec bitvec_ashr (v1 : t) (v2 : t) : t =
+      (assert ((match v1.ty, v2.ty with
+               | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
+                 when (let kanon__n = Z.of_int kanon__n in
+                 let kanon__s1 = Z.of_int kanon__s1 in
+                 ((Z.equal kanon__s1 kanon__n))) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v1, v2 with
+      | (({ kind = BitVec (i1); _ } as lit_i1), ({ kind = BitVec (i2); _ } as lit_i2)) ->
+        (node (BitVec ((Bv_prims.lit_ashr lit_i1.ty lit_i2.ty i1 i2))) v1.ty)
+      | (_, { kind = BitVec (kanon__2); _ })
+        when (((Z.equal kanon__2 Z.zero))) ->
+        v1
+      | (_, { kind = BitVec (s); _ })
+        when ((Z.geq s (bitvec_size v1))) ->
+        (let sz = (bitvec_size v1) in
+        (bitvec_ashr v1 (Bv_prims.mk_masked sz (Z.sub sz Z.one))))
+      | ({ kind = Op2 ((AShr), v, { kind = BitVec (s1); _ }); _ }, { kind = BitVec (s2); _ }) ->
+        (let sz = (bitvec_size v1) in
+        (bitvec_ashr v (Bv_prims.mk_masked sz (bitvec_zmin (Z.add s1 s2) (Z.sub sz Z.one)))))
+      | _ -> (node (Op2 (AShr, v1, v2)) v1.ty)
+      ))
+  
+  let bitvec_add_overflows (signed : bool) (v1 : t) (v2 : t) : t =
+      (assert ((match v1.ty, v2.ty with
+               | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
+                 when (let kanon__n = Z.of_int kanon__n in
+                 let kanon__s1 = Z.of_int kanon__s1 in
+                 ((Z.equal kanon__s1 kanon__n))) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v1, v2 with
+      | (({ kind = BitVec (i1); _ } as lit_i1), ({ kind = BitVec (i2); _ } as lit_i2)) ->
+        (node (Bool ((bitvec_lit_add_overflows signed lit_i1.ty lit_i2.ty i1 i2))) TBool)
+      | ({ kind = BitVec (kanon__1); _ }, _)
+        when (((Z.equal kanon__1 Z.zero))) ->
+        Bv_prims.v_false
+      | (_, { kind = BitVec (kanon__1); _ })
+        when (((Z.equal kanon__1 Z.zero))) ->
+        Bv_prims.v_false
+      | _
+        when (((Z.equal (bitvec_size v1) Z.one))) ->
+        (let one = (Bv_prims.bv_one Z.one) in
+        (bool_and_ (bool_eq v1 one) (bool_eq v2 one)))
+      | ({ kind = BitVec (z); _ }, x)
+        when ((not signed)) ->
+        (bitvec_lt signed (Bv_prims.mk_bv (bitvec_size x) (Bv_prims.lit_not x.ty z)) x)
+      | (x, { kind = BitVec (z); _ })
+        when ((not signed)) ->
+        (bitvec_lt signed (Bv_prims.mk_bv (bitvec_size x) (Bv_prims.lit_not x.ty z)) x)
+      | ({ kind = BitVec (z); _ }, x)
+        when (signed) ->
+        (let n = (bitvec_size x) in
+        (let z = (bitvec_to_z signed n z) in
+        (if (Z.gt z Z.zero)
+        then (bitvec_lt signed (Bv_prims.mk_masked n (Z.sub (bitvec_max_for signed n) z)) x)
+        else (bitvec_lt signed x (Bv_prims.mk_masked n (Z.sub (bitvec_min_for signed n) z))))))
+      | (x, { kind = BitVec (z); _ })
+        when (signed) ->
+        (let n = (bitvec_size x) in
+        (let z = (bitvec_to_z signed n z) in
+        (if (Z.gt z Z.zero)
+        then (bitvec_lt signed (Bv_prims.mk_masked n (Z.sub (bitvec_max_for signed n) z)) x)
+        else (bitvec_lt signed x (Bv_prims.mk_masked n (Z.sub (bitvec_min_for signed n) z))))))
+      | ({ kind = Op1 ((BvOfBool (n)), b1); _ }, { kind = Op1 ((BvOfBool (_)), b2); _ })
+        when (let n = Z.of_int n in
+        (Z.gt n Z.one)) ->
+        let n = Z.of_int n in
+        (if (signed && ((Z.equal n (Z.of_int (2)))))
+        then (bool_and_ b1 b2)
+        else Bv_prims.v_false)
+      | ({ kind = Op1 ((BvOfBool (_)), b2); _ }, { kind = Op1 ((BvOfBool (n)), b1); _ })
+        when (let n = Z.of_int n in
+        (Z.gt n Z.one)) ->
+        let n = Z.of_int n in
+        (if (signed && ((Z.equal n (Z.of_int (2)))))
+        then (bool_and_ b1 b2)
+        else Bv_prims.v_false)
+      | ({ kind = Op1 ((BvOfBool (_)), b); _ }, other)
+        when ((Z.gt (bitvec_size other) Z.one)) ->
+        (let n = (bitvec_size other) in
+        (bool_and_ b (bool_eq other (Bv_prims.mk_masked n (bitvec_max_for signed n)))))
+      | (other, { kind = Op1 ((BvOfBool (_)), b); _ })
+        when ((Z.gt (bitvec_size other) Z.one)) ->
+        (let n = (bitvec_size other) in
+        (bool_and_ b (bool_eq other (Bv_prims.mk_masked n (bitvec_max_for signed n)))))
+      | _ -> (node (mk_commut_binop (AddOvf (signed)) v1 v2) TBool)
+      ))
+  
+  let bitvec_mul_overflows (signed : bool) (v1 : t) (v2 : t) : t =
+      (assert ((match v1.ty, v2.ty with
+               | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
+                 when (let kanon__n = Z.of_int kanon__n in
+                 let kanon__s1 = Z.of_int kanon__s1 in
+                 ((Z.equal kanon__s1 kanon__n))) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v1, v2 with
+      | (({ kind = BitVec (i1); _ } as lit_i1), ({ kind = BitVec (i2); _ } as lit_i2)) ->
+        (node (Bool ((bitvec_lit_mul_overflows signed lit_i1.ty lit_i2.ty i1 i2))) TBool)
+      | _
+        when ((signed && ((Z.equal (bitvec_size v1) Z.one)))) ->
+        (let one = (Bv_prims.bv_one Z.one) in
+        (bool_and_ (bool_eq v1 one) (bool_eq v2 one)))
+      | _
+        when (((signed && (Z.lt (Z.add (bitvec_msb_of v1) (bitvec_msb_of v2)) (Z.sub (bitvec_size v1) (Z.of_int (2))))) || ((not signed) && (Z.lt (Z.add (bitvec_msb_of v1) (bitvec_msb_of v2)) (Z.sub (bitvec_size v1) Z.one))))) ->
+        Bv_prims.v_false
+      | ({ kind = BitVec (z); _ }, x)
+        when (((not signed) || (Z.gt (bitvec_size x) Z.one))) ->
+        (if (((Z.equal z Z.zero)) || ((Z.equal z Z.one)))
+        then Bv_prims.v_false
+        else (let n = (bitvec_size x) in
+             (let z = (bitvec_to_z signed n z) in
+             (if signed
+             then (let min_val = (Z.neg (Bv_prims.z_lsl Z.one (Z.sub n Z.one))) in
+                  (let max_val = (Z.sub (Bv_prims.z_lsl Z.one (Z.sub n Z.one)) Z.one) in
+                  (if ((Z.equal z Z.minus_one))
+                  then (bool_eq x (Bv_prims.mk_masked n min_val))
+                  else (let (min_x, max_x) = (if (Z.gt z Z.zero)
+                                             then ((Bv_prims.tdiv min_val z), (Bv_prims.tdiv max_val z))
+                                             else ((Bv_prims.tdiv max_val z), (Bv_prims.tdiv min_val z))) in
+                       (bool_or_ (bitvec_lt signed x (Bv_prims.mk_masked n min_x)) (bitvec_lt signed (Bv_prims.mk_masked n max_x) x))))))
+             else (bitvec_lt signed (Bv_prims.mk_masked n (Bv_prims.tdiv (Z.sub (Bv_prims.z_lsl Z.one n) Z.one) z)) x)))))
+      | (x, { kind = BitVec (z); _ })
+        when (((not signed) || (Z.gt (bitvec_size x) Z.one))) ->
+        (if (((Z.equal z Z.zero)) || ((Z.equal z Z.one)))
+        then Bv_prims.v_false
+        else (let n = (bitvec_size x) in
+             (let z = (bitvec_to_z signed n z) in
+             (if signed
+             then (let min_val = (Z.neg (Bv_prims.z_lsl Z.one (Z.sub n Z.one))) in
+                  (let max_val = (Z.sub (Bv_prims.z_lsl Z.one (Z.sub n Z.one)) Z.one) in
+                  (if ((Z.equal z Z.minus_one))
+                  then (bool_eq x (Bv_prims.mk_masked n min_val))
+                  else (let (min_x, max_x) = (if (Z.gt z Z.zero)
+                                             then ((Bv_prims.tdiv min_val z), (Bv_prims.tdiv max_val z))
+                                             else ((Bv_prims.tdiv max_val z), (Bv_prims.tdiv min_val z))) in
+                       (bool_or_ (bitvec_lt signed x (Bv_prims.mk_masked n min_x)) (bitvec_lt signed (Bv_prims.mk_masked n max_x) x))))))
+             else (bitvec_lt signed (Bv_prims.mk_masked n (Bv_prims.tdiv (Z.sub (Bv_prims.z_lsl Z.one n) Z.one) z)) x)))))
+      | (x, { kind = Op2 ((Div (false)), _, kanon__5); _ })
+        when (((Int.equal x.tag kanon__5.tag) && (not signed))) ->
+        Bv_prims.v_false
+      | ({ kind = Op2 ((Div (false)), _, kanon__5); _ }, x)
+        when (((Int.equal x.tag kanon__5.tag) && (not signed))) ->
+        Bv_prims.v_false
+      | _ -> (node (mk_commut_binop (MulOvf (signed)) v1 v2) TBool)
+      ))
+  
+  let[@inline] bitvec_neg_overflows (v : t) : t =
+      (bool_eq (Bv_prims.mk_masked (bitvec_size v) (bitvec_min_for true (bitvec_size v))) v)
+  
+  let bitvec_sub_overflows (signed : bool) (v1 : t) (v2 : t) : t =
+      (assert ((match v1.ty, v2.ty with
+               | ((TBitVector (kanon__n)), (TBitVector (kanon__s1)))
+                 when (let kanon__n = Z.of_int kanon__n in
+                 let kanon__s1 = Z.of_int kanon__s1 in
+                 ((Z.equal kanon__s1 kanon__n))) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v1, v2 with
+      | (({ kind = BitVec (i1); _ } as lit_i1), ({ kind = BitVec (i2); _ } as lit_i2)) ->
+        (node (Bool ((bitvec_lit_sub_overflows signed lit_i1.ty lit_i2.ty i1 i2))) TBool)
+      | (v, kanon__2)
+        when ((Int.equal v.tag kanon__2.tag)) ->
+        Bv_prims.v_false
+      | _ when ((not signed)) -> (bitvec_lt signed v1 v2)
+      | _ -> (node (Op2 ((SubOvf (signed)), v1, v2)) TBool)
+      ))
+  
+  let bitvec_of_float (rounding : rm) (signed : bool) (sz : Z.t) (v : t) : t =
+      (assert ((match v.ty with
+               | (TFloat (kanon__p)) -> true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v with
+      | { kind = Float (f); _ } ->
+        (match (Bv_prims.f_to_int rounding signed sz f) with
+        | (Some z) -> (Bv_prims.mk_masked sz z)
+        | None ->
+          (node (Op1 ((BvOfFloat (rounding, signed, (Z.to_int sz))), v)) (TBitVector ((Z.to_int sz))))
+        )
+      | _ ->
+        (node (Op1 ((BvOfFloat (rounding, signed, (Z.to_int sz))), v)) (TBitVector ((Z.to_int sz))))
+      ))
+  
+  let bitvec_to_float (rounding : rm) (signed : bool) (fp : fp) (v : t) : t =
+      (assert ((match v.ty with
+               | (TBitVector (kanon__n)) -> true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v with
+      | { kind = BitVec (z); _ } ->
+        (match (Bv_prims.f_of_int rounding signed fp (bitvec_size v) z) with
+        | (Some f) -> (node (Float (f)) (TFloat ((Bv_prims.f_prec f))))
+        | None ->
+          (node (Op1 ((FloatOfBv (rounding, signed, fp)), v)) (TFloat (fp)))
+        )
+      | _ ->
+        (node (Op1 ((FloatOfBv (rounding, signed, fp)), v)) (TFloat (fp)))
+      ))
+  
+  let bitvec_to_float_raw (v : t) : t =
+      (assert ((match v.ty with
+               | (TBitVector (kanon__s1))
+                 when (let kanon__s1 = Z.of_int kanon__s1 in
+                 ((Z.equal kanon__s1 (Bv_prims.fp_size (Bv_prims.fp_of_size (bitvec_size v)))))) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v with
+      | { kind = BitVec (z); _ } ->
+        (let fp = (Bv_prims.fp_of_size (bitvec_size v)) in
+        (let kanon__a1 = (Bv_prims.f_of_bits fp z) in
+        (node (Float (kanon__a1)) (TFloat ((Bv_prims.f_prec kanon__a1))))))
+      | _ ->
+        (let kanon__a2 = (Bv_prims.fp_of_size (bitvec_size v)) in
+        (node (Op1 ((FloatOfBvRaw (kanon__a2)), v)) (TFloat (kanon__a2))))
+      ))
+  
+  let[@inline] float_fp_of (v : t) : fp = (Bv_prims.fp_of_ty v.ty)
+  
+  let float_is_floatclass (fc : fc) (sv : t) : t =
+      (assert ((match sv.ty with
+               | (TFloat (kanon__p)) -> true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match sv with
+      | { kind = Float (f); _ } ->
+        (node (Bool ((Bv_prims.f_is_class fc f))) TBool)
+      | _ -> (node (Op1 ((FIs (fc)), sv)) TBool)
+      ))
+  
+  let float_is_negative (v : t) : t =
+      (assert ((match v.ty with
+               | (TFloat (kanon__p)) -> true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v with
+      | { kind = Float (f); _ } ->
+        (node (Bool ((Bv_prims.f_is_negative f))) TBool)
+      | _ -> (node (Op1 (FIsNeg, v)) TBool)
+      ))
+  
+  let float_is_positive (v : t) : t =
+      (assert ((match v.ty with
+               | (TFloat (kanon__p)) -> true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v with
+      | { kind = Float (f); _ } ->
+        (node (Bool ((Bv_prims.f_is_positive f))) TBool)
+      | _ -> (node (Op1 (FIsPos, v)) TBool)
+      ))
+  
+  let float_cast (rounding : rm) (fp : fp) (v : t) : t =
+      (assert ((match v.ty with
+               | (TFloat (kanon__q)) -> true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v with
+      | { kind = Float (f); _ } ->
+        (let kanon__a1 = (Bv_prims.f_convert rounding fp f) in
+        (node (Float (kanon__a1)) (TFloat ((Bv_prims.f_prec kanon__a1)))))
+      | _ -> (node (Op1 ((FloatOfFloat (rounding, fp)), v)) (TFloat (fp)))
+      ))
+  
+  let float_eq (v1 : t) (v2 : t) : t =
+      (assert ((match v1.ty, v2.ty with
+               | ((TFloat (kanon__p)), (TFloat (kanon__s1)))
+                 when (((equal_fp kanon__s1 kanon__p))) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v1, v2 with
+      | ({ kind = Float (f1); _ }, { kind = Float (f2); _ }) ->
+        (node (Bool ((Bv_prims.f_eq f1 f2))) TBool)
+      | (v, kanon__2)
+        when ((Int.equal v.tag kanon__2.tag)) ->
+        (bool_not_ (float_is_floatclass NaN v))
+      | (({ kind = Float (f); _ } as l), x) ->
+        (if (Bv_prims.f_is_nan f)
+        then Bv_prims.v_false
+        else (if (Bv_prims.f_is_zero f)
+             then (float_is_floatclass Zero x)
+             else (bool_eq l x)))
+      | (x, ({ kind = Float (f); _ } as l)) ->
+        (if (Bv_prims.f_is_nan f)
+        then Bv_prims.v_false
+        else (if (Bv_prims.f_is_zero f)
+             then (float_is_floatclass Zero x)
+             else (bool_eq l x)))
+      | _ -> (node (mk_commut_binop FEq v1 v2) TBool)
+      ))
+  
+  let float_lt (v1 : t) (v2 : t) : t =
+      (assert ((match v1.ty, v2.ty with
+               | ((TFloat (kanon__p)), (TFloat (kanon__s1)))
+                 when (((equal_fp kanon__s1 kanon__p))) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v1, v2 with
+      | ({ kind = Float (f1); _ }, { kind = Float (f2); _ }) ->
+        (node (Bool ((Bv_prims.f_lt f1 f2))) TBool)
+      | _ -> (node (Op2 (FLt, v1, v2)) TBool)
+      ))
+  
+  let float_leq (v1 : t) (v2 : t) : t =
+      (assert ((match v1.ty, v2.ty with
+               | ((TFloat (kanon__p)), (TFloat (kanon__s1)))
+                 when (((equal_fp kanon__s1 kanon__p))) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v1, v2 with
+      | ({ kind = Float (f1); _ }, { kind = Float (f2); _ }) ->
+        (node (Bool ((Bv_prims.f_le f1 f2))) TBool)
+      | _ -> (node (Op2 (FLeq, v1, v2)) TBool)
+      ))
+  
+  let float_add (v1 : t) (v2 : t) : t =
+      (assert ((match v1.ty, v2.ty with
+               | ((TFloat (kanon__p)), (TFloat (kanon__s1)))
+                 when (((equal_fp kanon__s1 kanon__p))) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v1, v2 with
+      | ({ kind = Float (f1); _ }, { kind = Float (f2); _ }) ->
+        (let kanon__a1 = (Bv_prims.f_add f1 f2) in
+        (node (Float (kanon__a1)) (TFloat ((Bv_prims.f_prec kanon__a1)))))
+      | _ -> (node (Op2 (FAdd, v1, v2)) v1.ty)
+      ))
+  
+  let float_sub (v1 : t) (v2 : t) : t =
+      (assert ((match v1.ty, v2.ty with
+               | ((TFloat (kanon__p)), (TFloat (kanon__s1)))
+                 when (((equal_fp kanon__s1 kanon__p))) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v1, v2 with
+      | ({ kind = Float (f1); _ }, { kind = Float (f2); _ }) ->
+        (let kanon__a1 = (Bv_prims.f_sub f1 f2) in
+        (node (Float (kanon__a1)) (TFloat ((Bv_prims.f_prec kanon__a1)))))
+      | _ -> (node (Op2 (FSub, v1, v2)) v1.ty)
+      ))
+  
+  let float_div (v1 : t) (v2 : t) : t =
+      (assert ((match v1.ty, v2.ty with
+               | ((TFloat (kanon__p)), (TFloat (kanon__s1)))
+                 when (((equal_fp kanon__s1 kanon__p))) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v1, v2 with
+      | ({ kind = Float (f1); _ }, { kind = Float (f2); _ }) ->
+        (let kanon__a1 = (Bv_prims.f_div f1 f2) in
+        (node (Float (kanon__a1)) (TFloat ((Bv_prims.f_prec kanon__a1)))))
+      | _ -> (node (Op2 (FDiv, v1, v2)) v1.ty)
+      ))
+  
+  let float_mul (v1 : t) (v2 : t) : t =
+      (assert ((match v1.ty, v2.ty with
+               | ((TFloat (kanon__p)), (TFloat (kanon__s1)))
+                 when (((equal_fp kanon__s1 kanon__p))) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v1, v2 with
+      | ({ kind = Float (f1); _ }, { kind = Float (f2); _ }) ->
+        (let kanon__a1 = (Bv_prims.f_mul f1 f2) in
+        (node (Float (kanon__a1)) (TFloat ((Bv_prims.f_prec kanon__a1)))))
+      | _ -> (node (Op2 (FMul, v1, v2)) v1.ty)
+      ))
+  
+  let float_rem (v1 : t) (v2 : t) : t =
+      (assert ((match v1.ty, v2.ty with
+               | ((TFloat (kanon__p)), (TFloat (kanon__s1)))
+                 when (((equal_fp kanon__s1 kanon__p))) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v1, v2 with
+      | ({ kind = Float (f1); _ }, { kind = Float (f2); _ }) ->
+        (let kanon__a1 = (Bv_prims.f_rem f1 f2) in
+        (node (Float (kanon__a1)) (TFloat ((Bv_prims.f_prec kanon__a1)))))
+      | _ -> (node (Op2 (FRem, v1, v2)) v1.ty)
+      ))
+  
+  let float_abs (v : t) : t =
+      (assert ((match v.ty with
+               | (TFloat (kanon__p)) -> true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v with
+      | { kind = Float (f); _ } ->
+        (let kanon__a1 = (Bv_prims.f_abs f) in
+        (node (Float (kanon__a1)) (TFloat ((Bv_prims.f_prec kanon__a1)))))
+      | { kind = Op1 ((FAbs), _); _ } -> v
+      | _ -> (node (Op1 (FAbs, v)) v.ty)
+      ))
+  
+  let float_neg (v : t) : t =
+      (assert ((match v.ty with
+               | (TFloat (kanon__p)) -> true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v with
+      | { kind = Float (f); _ } ->
+        (let kanon__a1 = (Bv_prims.f_neg f) in
+        (node (Float (kanon__a1)) (TFloat ((Bv_prims.f_prec kanon__a1)))))
+      | { kind = Op1 ((FNeg), v); _ } -> v
+      | _ -> (node (Op1 (FNeg, v)) v.ty)
+      ))
+  
+  let float_fma (a : t) (b : t) (c : t) : t =
+      (assert ((match a.ty, b.ty, c.ty with
+               | ((TFloat (kanon__p)), (TFloat (kanon__s1)), (TFloat (kanon__s2)))
+                 when ((((equal_fp kanon__s1 kanon__p)) && ((equal_fp kanon__s2 kanon__p)))) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match a, b, c with
+      | ({ kind = Float (fa); _ }, { kind = Float (fb); _ }, { kind = Float (fc); _ }) ->
+        (let kanon__a1 = (Bv_prims.f_fma fa fb fc) in
+        (node (Float (kanon__a1)) (TFloat ((Bv_prims.f_prec kanon__a1)))))
+      | _ -> (node (Op3 (Fma, a, b, c)) a.ty)
+      ))
+  
+  let float_raw_fmod_of_rem (r : t) (v1 : t) (v2 : t) : t =
+      (let is_neg (v : t) =
+        (node (Op1 (FIsNeg, v)) TBool) in
+      (let abs2 = (node (Op1 (FAbs, v2)) v2.ty) in
+      (let correction = (node (Op3 (Ite, (is_neg v1), (node (Op1 (FNeg, abs2)) abs2.ty), abs2)) abs2.ty) in
+      (node (Op3 (Ite, (node (Op2 (Eq, (is_neg r), (is_neg v1))) TBool), r, (node (Op2 (FAdd, r, correction)) r.ty))) r.ty))))
+  
+  let float_fmod_of_rem (r : t) (v1 : t) (v2 : t) : t =
+      (bool_ite (bool_eq (float_is_negative r) (float_is_negative v1)) r (float_add r (bool_ite (float_is_negative v1) (float_neg (float_abs v2)) (float_abs v2))))
+  
+  let float_fmod (v1 : t) (v2 : t) : t =
+      (match v1, v2 with
+      | ({ kind = Float (f1); _ }, { kind = Float (f2); _ }) ->
+        (let kanon__a1 = (Bv_prims.f_fmod f1 f2) in
+        (node (Float (kanon__a1)) (TFloat ((Bv_prims.f_prec kanon__a1)))))
+      | _ -> (float_fmod_of_rem (float_rem v1 v2) v1 v2)
+      )
+  
+  let float_min (v1 : t) (v2 : t) : t =
+      (assert ((match v1.ty, v2.ty with
+               | ((TFloat (kanon__p)), (TFloat (kanon__s1)))
+                 when (((equal_fp kanon__s1 kanon__p))) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v1, v2 with
+      | ({ kind = Float (f1); _ }, { kind = Float (f2); _ }) ->
+        (let kanon__a1 = (Bv_prims.f_min f1 f2) in
+        (node (Float (kanon__a1)) (TFloat ((Bv_prims.f_prec kanon__a1)))))
+      | _ -> (node (Op2 (FMin, v1, v2)) v1.ty)
+      ))
+  
+  let float_max (v1 : t) (v2 : t) : t =
+      (assert ((match v1.ty, v2.ty with
+               | ((TFloat (kanon__p)), (TFloat (kanon__s1)))
+                 when (((equal_fp kanon__s1 kanon__p))) ->
+                 true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v1, v2 with
+      | ({ kind = Float (f1); _ }, { kind = Float (f2); _ }) ->
+        (let kanon__a1 = (Bv_prims.f_max f1 f2) in
+        (node (Float (kanon__a1)) (TFloat ((Bv_prims.f_prec kanon__a1)))))
+      | _ -> (node (Op2 (FMax, v1, v2)) v1.ty)
+      ))
+  
+  let float_sqrt (v : t) : t =
+      (assert ((match v.ty with
+               | (TFloat (kanon__p)) -> true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match v with
+      | { kind = Float (f); _ } ->
+        (let kanon__a1 = (Bv_prims.f_sqrt f) in
+        (node (Float (kanon__a1)) (TFloat ((Bv_prims.f_prec kanon__a1)))))
+      | _ -> (node (Op1 (FSqrt, v)) v.ty)
+      ))
+  
+  let float_round (rm : rm) (sv : t) : t =
+      (assert ((match sv.ty with
+               | (TFloat (kanon__p)) -> true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match sv with
+      | { kind = Float (f); _ } ->
+        (let kanon__a1 = (Bv_prims.f_round rm f) in
+        (node (Float (kanon__a1)) (TFloat ((Bv_prims.f_prec kanon__a1)))))
+      | _ -> (node (Op1 ((FRound (rm)), sv)) sv.ty)
+      ))
+  
+  let ptr_loc (p : t) : t =
+      (assert ((match p.ty with
+               | (TPointer (kanon__n)) -> true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match p with
+      | { kind = Op2 ((Ptr), l, _); _ } -> l
+      | _ -> (node (Op1 (GetPtrLoc, p)) (TLoc ((Z.to_int (bitvec_size p)))))
+      ))
+  
+  let ptr_ofs (p : t) : t =
+      (assert ((match p.ty with
+               | (TPointer (kanon__n)) -> true
+               | _ -> false
+               ) [@warning "-11"]);
+      (match p with
+      | { kind = Op2 ((Ptr), _, o); _ } -> o
+      | _ ->
+        (node (Op1 (GetPtrOfs, p)) (TBitVector ((Z.to_int (bitvec_size p)))))
+      ))
+  
+  let[@inline] view_sized_ty (s : ty) : (Z.t option) =
+      (match s with
+      | (TBitVector (n)) -> let n = Z.of_int n in (Some n)
+      | (TPointer (n)) -> let n = Z.of_int n in (Some n)
+      | (TLoc (n)) -> let n = Z.of_int n in (Some n)
       | _ -> None
       )
-    | ({ kind = Op2 ((Add (_)), _, e2); _ }, kanon__6)
-      when (((Z.equal kanon__6 Z.zero))) ->
-      (Some (bv_sub unchecked v e2))
-    | ({ kind = Op2 ((Add (_)), e1, _); _ }, kanon__6)
-      when (((Z.equal kanon__6 Z.one))) ->
-      (Some (bv_sub unchecked v e1))
-    | ({ kind = Op2 ((Sub (_)), _, e2); _ }, kanon__6)
-      when (((Z.equal kanon__6 Z.zero))) ->
-      (Some (bv_add unchecked v e2))
-    | ({ kind = Op2 ((Sub (_)), e1, _); _ }, kanon__6)
-      when (((Z.equal kanon__6 Z.one))) ->
-      (Some (bv_sub unchecked e1 v))
-    | ({ kind = Op2 ((BitXor), _, e2); _ }, kanon__5)
-      when (((Z.equal kanon__5 Z.zero))) ->
-      (Some (bv_xor v e2))
-    | ({ kind = Op2 ((BitXor), e1, _); _ }, kanon__5)
-      when (((Z.equal kanon__5 Z.one))) ->
-      (Some (bv_xor v e1))
-    | ({ kind = Op2 ((BvConcat), _, e2); _ }, kanon__5)
-      when (((Z.equal kanon__5 Z.one))) ->
-      (Some (bv_extract Z.zero (Z.sub (size e2) Z.one) v))
-    | ({ kind = Op2 ((BvConcat), e1, e2); _ }, kanon__5)
-      when (((Z.equal kanon__5 Z.zero))) ->
-      (Some (bv_extract (size e2) (Z.sub (Z.add (size e2) (size e1)) Z.one) v))
-    | ({ kind = Op2 ((Ptr), _, _); _ }, kanon__5)
-      when (((Z.equal kanon__5 Z.zero))) ->
-      (Some (ptr_loc v))
-    | ({ kind = Op2 ((Ptr), _, _); _ }, kanon__5)
-      when (((Z.equal kanon__5 Z.one))) ->
-      (Some (ptr_ofs v))
-    | _ -> None
-    )
-
-let as_var (t : t) =
-  match[@warning "-11"] t with { kind = Var (p1); _ } -> Some p1 | _ -> None
-
-let is_var (t : t) =
-  match[@warning "-11"] t with { kind = Var (_); _ } -> true | _ -> false
-
-let as_seq (t : t) =
-  match[@warning "-11"] t with { kind = Seq (p1); _ } -> Some p1 | _ -> None
-
-let is_seq (t : t) =
-  match[@warning "-11"] t with { kind = Seq (_); _ } -> true | _ -> false
-
-let as_bool (t : t) =
-  match[@warning "-11"] t with { kind = Bool (p1); _ } -> Some p1 | _ -> None
-
-let is_bool (t : t) =
-  match[@warning "-11"] t with { kind = Bool (_); _ } -> true | _ -> false
-
-let as_exists (t : t) =
-  match[@warning "-11"] t with { kind = Exists (p1, p2); _ } -> Some (p1, p2) | _ -> None
-
-let is_exists (t : t) =
-  match[@warning "-11"] t with { kind = Exists (_, _); _ } -> true | _ -> false
-
-let as_bitvec (t : t) =
-  match[@warning "-11"] t with { kind = BitVec (p1); _ } -> Some p1 | _ -> None
-
-let is_bitvec (t : t) =
-  match[@warning "-11"] t with { kind = BitVec (_); _ } -> true | _ -> false
-
-let as_loclit (t : t) =
-  match[@warning "-11"] t with { kind = LocLit (p1); _ } -> Some p1 | _ -> None
-
-let is_loclit (t : t) =
-  match[@warning "-11"] t with { kind = LocLit (_); _ } -> true | _ -> false
-
-let as_float (t : t) =
-  match[@warning "-11"] t with { kind = Float (p1); _ } -> Some p1 | _ -> None
-
-let is_float (t : t) =
-  match[@warning "-11"] t with { kind = Float (_); _ } -> true | _ -> false
-
-let as_not (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (Not, x1); _ } -> Some x1 | _ -> None
-
-let is_not (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (Not, _); _ } -> true | _ -> false
-
-let as_and (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (And, x1, x2); _ } -> Some (x1, x2) | _ -> None
-
-let is_and (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (And, _, _); _ } -> true | _ -> false
-
-let as_or (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (Or, x1, x2); _ } -> Some (x1, x2) | _ -> None
-
-let is_or (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (Or, _, _); _ } -> true | _ -> false
-
-let as_eq (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (Eq, x1, x2); _ } -> Some (x1, x2) | _ -> None
-
-let is_eq (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (Eq, _, _); _ } -> true | _ -> false
-
-let as_ite (t : t) =
-  match[@warning "-11"] t with { kind = Op3 (Ite, x1, x2, x3); _ } -> Some (x1, x2, x3) | _ -> None
-
-let is_ite (t : t) =
-  match[@warning "-11"] t with { kind = Op3 (Ite, _, _, _); _ } -> true | _ -> false
-
-let as_distinct (t : t) =
-  match[@warning "-11"] t with { kind = OpN (Distinct, xs); _ } -> Some xs | _ -> None
-
-let is_distinct (t : t) =
-  match[@warning "-11"] t with { kind = OpN (Distinct, _); _ } -> true | _ -> false
-
-let as_bvofbool (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (BvOfBool (p1), x1); _ } -> Some (p1, x1) | _ -> None
-
-let is_bvofbool (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (BvOfBool (_), _); _ } -> true | _ -> false
-
-let as_bvextract (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (BvExtract (p1, p2), x1); _ } -> Some (p1, p2, x1) | _ -> None
-
-let is_bvextract (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (BvExtract (_, _), _); _ } -> true | _ -> false
-
-let as_bvextend (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (BvExtend (p1, p2), x1); _ } -> Some (p1, p2, x1) | _ -> None
-
-let is_bvextend (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (BvExtend (_, _), _); _ } -> true | _ -> false
-
-let as_bvnot (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (BvNot, x1); _ } -> Some x1 | _ -> None
-
-let is_bvnot (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (BvNot, _); _ } -> true | _ -> false
-
-let as_neg (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (Neg (p1), x1); _ } -> Some (p1, x1) | _ -> None
-
-let is_neg (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (Neg (_), _); _ } -> true | _ -> false
-
-let as_add (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (Add (p1), x1, x2); _ } -> Some (p1, x1, x2) | _ -> None
-
-let is_add (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (Add (_), _, _); _ } -> true | _ -> false
-
-let as_sub (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (Sub (p1), x1, x2); _ } -> Some (p1, x1, x2) | _ -> None
-
-let is_sub (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (Sub (_), _, _); _ } -> true | _ -> false
-
-let as_mul (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (Mul (p1), x1, x2); _ } -> Some (p1, x1, x2) | _ -> None
-
-let is_mul (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (Mul (_), _, _); _ } -> true | _ -> false
-
-let as_div (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (Div (p1), x1, x2); _ } -> Some (p1, x1, x2) | _ -> None
-
-let is_div (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (Div (_), _, _); _ } -> true | _ -> false
-
-let as_rem (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (Rem (p1), x1, x2); _ } -> Some (p1, x1, x2) | _ -> None
-
-let is_rem (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (Rem (_), _, _); _ } -> true | _ -> false
-
-let as_mod (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (Mod, x1, x2); _ } -> Some (x1, x2) | _ -> None
-
-let is_mod (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (Mod, _, _); _ } -> true | _ -> false
-
-let as_addovf (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (AddOvf (p1), x1, x2); _ } -> Some (p1, x1, x2) | _ -> None
-
-let is_addovf (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (AddOvf (_), _, _); _ } -> true | _ -> false
-
-let as_subovf (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (SubOvf (p1), x1, x2); _ } -> Some (p1, x1, x2) | _ -> None
-
-let is_subovf (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (SubOvf (_), _, _); _ } -> true | _ -> false
-
-let as_mulovf (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (MulOvf (p1), x1, x2); _ } -> Some (p1, x1, x2) | _ -> None
-
-let is_mulovf (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (MulOvf (_), _, _); _ } -> true | _ -> false
-
-let as_lt (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (Lt (p1), x1, x2); _ } -> Some (p1, x1, x2) | _ -> None
-
-let is_lt (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (Lt (_), _, _); _ } -> true | _ -> false
-
-let as_leq (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (Leq (p1), x1, x2); _ } -> Some (p1, x1, x2) | _ -> None
-
-let is_leq (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (Leq (_), _, _); _ } -> true | _ -> false
-
-let as_bvconcat (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (BvConcat, x1, x2); _ } -> Some (x1, x2) | _ -> None
-
-let is_bvconcat (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (BvConcat, _, _); _ } -> true | _ -> false
-
-let as_bitand (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (BitAnd, x1, x2); _ } -> Some (x1, x2) | _ -> None
-
-let is_bitand (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (BitAnd, _, _); _ } -> true | _ -> false
-
-let as_bitor (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (BitOr, x1, x2); _ } -> Some (x1, x2) | _ -> None
-
-let is_bitor (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (BitOr, _, _); _ } -> true | _ -> false
-
-let as_bitxor (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (BitXor, x1, x2); _ } -> Some (x1, x2) | _ -> None
-
-let is_bitxor (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (BitXor, _, _); _ } -> true | _ -> false
-
-let as_shl (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (Shl, x1, x2); _ } -> Some (x1, x2) | _ -> None
-
-let is_shl (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (Shl, _, _); _ } -> true | _ -> false
-
-let as_lshr (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (LShr, x1, x2); _ } -> Some (x1, x2) | _ -> None
-
-let is_lshr (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (LShr, _, _); _ } -> true | _ -> false
-
-let as_ashr (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (AShr, x1, x2); _ } -> Some (x1, x2) | _ -> None
-
-let is_ashr (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (AShr, _, _); _ } -> true | _ -> false
-
-let as_bvoffloat (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (BvOfFloat (p1, p2, p3), x1); _ } -> Some (p1, p2, p3, x1) | _ -> None
-
-let is_bvoffloat (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (BvOfFloat (_, _, _), _); _ } -> true | _ -> false
-
-let as_floatofbv (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (FloatOfBv (p1, p2, p3), x1); _ } -> Some (p1, p2, p3, x1) | _ -> None
-
-let is_floatofbv (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (FloatOfBv (_, _, _), _); _ } -> true | _ -> false
-
-let as_floatofbvraw (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (FloatOfBvRaw (p1), x1); _ } -> Some (p1, x1) | _ -> None
-
-let is_floatofbvraw (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (FloatOfBvRaw (_), _); _ } -> true | _ -> false
-
-let as_floatoffloat (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (FloatOfFloat (p1, p2), x1); _ } -> Some (p1, p2, x1) | _ -> None
-
-let is_floatoffloat (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (FloatOfFloat (_, _), _); _ } -> true | _ -> false
-
-let as_fabs (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (FAbs, x1); _ } -> Some x1 | _ -> None
-
-let is_fabs (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (FAbs, _); _ } -> true | _ -> false
-
-let as_fneg (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (FNeg, x1); _ } -> Some x1 | _ -> None
-
-let is_fneg (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (FNeg, _); _ } -> true | _ -> false
-
-let as_fsqrt (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (FSqrt, x1); _ } -> Some x1 | _ -> None
-
-let is_fsqrt (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (FSqrt, _); _ } -> true | _ -> false
-
-let as_fis (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (FIs (p1), x1); _ } -> Some (p1, x1) | _ -> None
-
-let is_fis (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (FIs (_), _); _ } -> true | _ -> false
-
-let as_fisneg (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (FIsNeg, x1); _ } -> Some x1 | _ -> None
-
-let is_fisneg (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (FIsNeg, _); _ } -> true | _ -> false
-
-let as_fispos (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (FIsPos, x1); _ } -> Some x1 | _ -> None
-
-let is_fispos (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (FIsPos, _); _ } -> true | _ -> false
-
-let as_fround (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (FRound (p1), x1); _ } -> Some (p1, x1) | _ -> None
-
-let is_fround (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (FRound (_), _); _ } -> true | _ -> false
-
-let as_feq (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (FEq, x1, x2); _ } -> Some (x1, x2) | _ -> None
-
-let is_feq (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (FEq, _, _); _ } -> true | _ -> false
-
-let as_fleq (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (FLeq, x1, x2); _ } -> Some (x1, x2) | _ -> None
-
-let is_fleq (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (FLeq, _, _); _ } -> true | _ -> false
-
-let as_flt (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (FLt, x1, x2); _ } -> Some (x1, x2) | _ -> None
-
-let is_flt (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (FLt, _, _); _ } -> true | _ -> false
-
-let as_fadd (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (FAdd, x1, x2); _ } -> Some (x1, x2) | _ -> None
-
-let is_fadd (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (FAdd, _, _); _ } -> true | _ -> false
-
-let as_fsub (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (FSub, x1, x2); _ } -> Some (x1, x2) | _ -> None
-
-let is_fsub (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (FSub, _, _); _ } -> true | _ -> false
-
-let as_fmul (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (FMul, x1, x2); _ } -> Some (x1, x2) | _ -> None
-
-let is_fmul (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (FMul, _, _); _ } -> true | _ -> false
-
-let as_fdiv (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (FDiv, x1, x2); _ } -> Some (x1, x2) | _ -> None
-
-let is_fdiv (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (FDiv, _, _); _ } -> true | _ -> false
-
-let as_frem (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (FRem, x1, x2); _ } -> Some (x1, x2) | _ -> None
-
-let is_frem (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (FRem, _, _); _ } -> true | _ -> false
-
-let as_fmin (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (FMin, x1, x2); _ } -> Some (x1, x2) | _ -> None
-
-let is_fmin (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (FMin, _, _); _ } -> true | _ -> false
-
-let as_fmax (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (FMax, x1, x2); _ } -> Some (x1, x2) | _ -> None
-
-let is_fmax (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (FMax, _, _); _ } -> true | _ -> false
-
-let as_fma (t : t) =
-  match[@warning "-11"] t with { kind = Op3 (Fma, x1, x2, x3); _ } -> Some (x1, x2, x3) | _ -> None
-
-let is_fma (t : t) =
-  match[@warning "-11"] t with { kind = Op3 (Fma, _, _, _); _ } -> true | _ -> false
-
-let as_ptr (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (Ptr, x1, x2); _ } -> Some (x1, x2) | _ -> None
-
-let is_ptr (t : t) =
-  match[@warning "-11"] t with { kind = Op2 (Ptr, _, _); _ } -> true | _ -> false
-
-let as_getptrloc (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (GetPtrLoc, x1); _ } -> Some x1 | _ -> None
-
-let is_getptrloc (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (GetPtrLoc, _); _ } -> true | _ -> false
-
-let as_getptrofs (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (GetPtrOfs, x1); _ } -> Some x1 | _ -> None
-
-let is_getptrofs (t : t) =
-  match[@warning "-11"] t with { kind = Op1 (GetPtrOfs, _); _ } -> true | _ -> false
-
-let as_tseq (t : ty) =
-  match[@warning "-11"] t with TSeq (p1) -> Some p1 | _ -> None
-
-let is_tseq (t : ty) =
-  match[@warning "-11"] t with TSeq (_) -> true | _ -> false
-
-let as_tbool (t : ty) =
-  match[@warning "-11"] t with TBool -> Some () | _ -> None
-
-let is_tbool (t : ty) =
-  match[@warning "-11"] t with TBool -> true | _ -> false
-
-let as_tbitvector (t : ty) =
-  match[@warning "-11"] t with TBitVector (p1) -> Some p1 | _ -> None
-
-let is_tbitvector (t : ty) =
-  match[@warning "-11"] t with TBitVector (_) -> true | _ -> false
-
-let as_tfloat (t : ty) =
-  match[@warning "-11"] t with TFloat (p1) -> Some p1 | _ -> None
-
-let is_tfloat (t : ty) =
-  match[@warning "-11"] t with TFloat (_) -> true | _ -> false
-
-let as_tloc (t : ty) =
-  match[@warning "-11"] t with TLoc (p1) -> Some p1 | _ -> None
-
-let is_tloc (t : ty) =
-  match[@warning "-11"] t with TLoc (_) -> true | _ -> false
-
-let as_tpointer (t : ty) =
-  match[@warning "-11"] t with TPointer (p1) -> Some p1 | _ -> None
-
-let is_tpointer (t : ty) =
-  match[@warning "-11"] t with TPointer (_) -> true | _ -> false
+  
+  let[@inline] view_is_literal (v : t) : bool =
+      (match v with
+      | { kind = Bool (_); _ } -> true
+      | { kind = BitVec (_); _ } -> true
+      | { kind = LocLit (_); _ } -> true
+      | { kind = Float (_); _ } -> true
+      | _ -> false
+      )
+  
+  let rec view_append (l : (t list)) (r : (t list)) : (t list) =
+      (match l with
+      | [] -> r
+      | (x :: rest) -> (x :: (view_append rest r))
+      )
+  
+  let rec view_conjuncts (v : t) : (t list) =
+      (match v with
+      | { kind = Op2 ((And), a, b); _ } ->
+        (view_append (view_conjuncts a) (view_conjuncts b))
+      | _ -> (v :: [])
+      )
+  
+  let view_implies_or_contradicts (q : t) (neg_q : t) (pc : t) : (bool option) =
+      (if (Int.equal q.tag pc.tag)
+      then (Some true)
+      else (if (Int.equal neg_q.tag pc.tag)
+           then (Some false)
+           else (match q, pc with
+                | ({ kind = Op2 ((Leq (qs)), qa, qb); _ }, { kind = Op2 ((Lt (ps)), pa, pb); _ })
+                  when ((((Stdlib.Bool.equal qs ps)) && ((Int.equal qa.tag pa.tag) && (Int.equal qb.tag pb.tag)))) ->
+                  (Some true)
+                | ({ kind = Op2 ((Lt (qs)), qa, qb); _ }, { kind = Op2 ((Lt (ps)), pa, pb); _ })
+                  when ((((Stdlib.Bool.equal qs ps)) && ((Int.equal qa.tag pb.tag) && (Int.equal qb.tag pa.tag)))) ->
+                  (Some false)
+                | ({ kind = Op2 ((Leq (qs)), qa, qb); _ }, { kind = Op2 ((Lt (ps)), pa, pb); _ })
+                  when ((((Stdlib.Bool.equal qs ps)) && ((Int.equal qa.tag pb.tag) && (Int.equal qb.tag pa.tag)))) ->
+                  (Some false)
+                | ({ kind = Op2 ((Lt (qs)), qa, qb); _ }, { kind = Op2 ((Leq (ps)), pa, pb); _ })
+                  when ((((Stdlib.Bool.equal qs ps)) && ((Int.equal qa.tag pb.tag) && (Int.equal qb.tag pa.tag)))) ->
+                  (Some false)
+                | ({ kind = Op2 ((Eq), qa, qb); _ }, { kind = Op2 ((Lt (_)), pa, pb); _ })
+                  when ((((Int.equal qa.tag pa.tag) && (Int.equal qb.tag pb.tag)) || ((Int.equal qa.tag pb.tag) && (Int.equal qb.tag pa.tag)))) ->
+                  (Some false)
+                | ({ kind = Op1 ((Not), { kind = Op2 ((Eq), qa, qb); _ }); _ }, { kind = Op2 ((Lt (_)), pa, pb); _ })
+                  when ((((Int.equal qa.tag pa.tag) && (Int.equal qb.tag pb.tag)) || ((Int.equal qa.tag pb.tag) && (Int.equal qb.tag pa.tag)))) ->
+                  (Some true)
+                | _ -> None
+                )))
+  
+  let[@inline] view_to_bv (n : Z.t) (x : Z.t) : Z.t =
+      (Bv_prims.z_land x (Z.sub (Bv_prims.z_lsl Z.one n) Z.one))
+  
+  let[@inline] view_neg_mod (n : Z.t) (x : Z.t) : Z.t =
+      (Z.sub (Bv_prims.z_lsl Z.one n) x)
+  
+  let view_var_plus_const (v : t) : ((var * Z.t) option) =
+      (match v with
+      | { kind = Var (x); _ } -> (Some (x, Z.zero))
+      | { kind = Op2 ((Add (_)), { kind = Var (x); _ }, { kind = BitVec (c); _ }); _ } ->
+        (Some (x, c))
+      | { kind = Op2 ((Add (_)), { kind = BitVec (c); _ }, { kind = Var (x); _ }); _ } ->
+        (Some (x, c))
+      | _ -> None
+      )
+  
+  let view_range_const_ult (strict : bool) (sz : Z.t) (c1 : Z.t) (rhs : t) : ((var * Z.t * (range_sign * (Z.t * Z.t))) option) =
+      (match (view_var_plus_const rhs) with
+      | None -> None
+      | (Some (x, c2)) ->
+        (let c1 = (if strict then (Z.add c1 Z.one) else c1) in
+        (if (Z.lt c1 c2)
+        then (Some (x, sz, (Outside, ((view_neg_mod sz c2), (view_to_bv sz (Z.sub (Z.sub c1 c2) Z.one))))))
+        else (Some (x, sz, (Inside, ((Z.sub c1 c2), (view_to_bv sz (Z.sub (view_neg_mod sz c2) Z.one))))))))
+      )
+  
+  let view_range_ult_const (strict : bool) (sz : Z.t) (c2 : Z.t) (lhs : t) : ((var * Z.t * (range_sign * (Z.t * Z.t))) option) =
+      (match (view_var_plus_const lhs) with
+      | None -> None
+      | (Some (x, c1)) ->
+        (let c2 = (if strict then (Z.sub c2 Z.one) else c2) in
+        (if (Z.leq c1 c2)
+        then (Some (x, sz, (Outside, ((Z.add (Z.sub c2 c1) Z.one), (view_neg_mod sz Z.one)))))
+        else (Some (x, sz, (Inside, ((view_neg_mod sz c1), (Z.add (view_neg_mod sz c1) c2)))))))
+      )
+  
+  let view_range_var_slt (sz : Z.t) (x : var) (c1 : Z.t) : ((var * Z.t * (range_sign * (Z.t * Z.t))) option) =
+      (let mid = (Bv_prims.z_lsl Z.one (Z.sub sz Z.one)) in
+      (if (Z.lt c1 mid)
+      then (Some (x, sz, (Outside, ((Z.add c1 Z.one), (Z.sub mid Z.one)))))
+      else (Some (x, sz, (Inside, (mid, c1))))))
+  
+  let view_range_slt_var (sz : Z.t) (c1 : Z.t) (x : var) : ((var * Z.t * (range_sign * (Z.t * Z.t))) option) =
+      (let mid = (Bv_prims.z_lsl Z.one (Z.sub sz Z.one)) in
+      (if (Z.lt c1 mid)
+      then (Some (x, sz, (Inside, (c1, (Z.sub mid Z.one)))))
+      else (Some (x, sz, (Outside, (mid, (Z.sub c1 Z.one)))))))
+  
+  let[@inline] view_flip (s : range_sign) : range_sign =
+      (match s with
+      | (Inside) -> Outside
+      | (Outside) -> Inside
+      )
+  
+  let rec view_as_range (v : t) : ((var * Z.t * (range_sign * (Z.t * Z.t))) option) =
+      (match v with
+      | { kind = Op2 ((Lt (false)), ({ kind = BitVec (c1); _ } as l), r); _ } ->
+        (view_range_const_ult true (bitvec_size l) c1 r)
+      | { kind = Op2 ((Leq (false)), ({ kind = BitVec (c1); _ } as l), r); _ } ->
+        (view_range_const_ult false (bitvec_size l) c1 r)
+      | { kind = Op2 ((Lt (false)), l, ({ kind = BitVec (c2); _ } as r)); _ } ->
+        (view_range_ult_const true (bitvec_size r) c2 l)
+      | { kind = Op2 ((Leq (false)), l, ({ kind = BitVec (c2); _ } as r)); _ } ->
+        (view_range_ult_const false (bitvec_size r) c2 l)
+      | { kind = Op2 ((Lt (true)), { kind = Var (x); _ }, ({ kind = BitVec (c1); _ } as r)); _ } ->
+        (view_range_var_slt (bitvec_size r) x (Z.sub c1 Z.one))
+      | { kind = Op2 ((Leq (true)), { kind = Var (x); _ }, ({ kind = BitVec (c1); _ } as r)); _ } ->
+        (view_range_var_slt (bitvec_size r) x c1)
+      | { kind = Op2 ((Lt (true)), ({ kind = BitVec (c1); _ } as l), { kind = Var (x); _ }); _ } ->
+        (view_range_slt_var (bitvec_size l) (Z.add c1 Z.one) x)
+      | { kind = Op2 ((Leq (true)), ({ kind = BitVec (c1); _ } as l), { kind = Var (x); _ }); _ } ->
+        (view_range_slt_var (bitvec_size l) c1 x)
+      | { kind = Op2 ((Eq), ({ kind = BitVec (c); _ } as l), { kind = Var (x); _ }); _ } ->
+        (Some (x, (bitvec_size l), (Inside, (c, c))))
+      | { kind = Op2 ((Eq), { kind = Var (x); _ }, ({ kind = BitVec (c); _ } as l)); _ } ->
+        (Some (x, (bitvec_size l), (Inside, (c, c))))
+      | { kind = Op1 ((Not), x); _ } ->
+        (match (view_as_range x) with
+        | (Some (y, sz, (s, r))) -> (Some (y, sz, ((view_flip s), r)))
+        | None -> None
+        )
+      | _ -> None
+      )
+  
+  let view_operands (v : t) : (t list) =
+      (match v with
+      | { kind = Var (_); _ } -> []
+      | { kind = Bool (_); _ } -> []
+      | { kind = BitVec (_); _ } -> []
+      | { kind = LocLit (_); _ } -> []
+      | { kind = Float (_); _ } -> []
+      | { kind = Seq (l); _ } -> l
+      | { kind = Exists (_, a); _ } -> (a :: [])
+      | { kind = Op1 ((Not), a); _ } -> (a :: [])
+      | { kind = Op1 ((FAbs), a); _ } -> (a :: [])
+      | { kind = Op1 ((FNeg), a); _ } -> (a :: [])
+      | { kind = Op1 ((FSqrt), a); _ } -> (a :: [])
+      | { kind = Op1 ((GetPtrLoc), a); _ } -> (a :: [])
+      | { kind = Op1 ((GetPtrOfs), a); _ } -> (a :: [])
+      | { kind = Op1 ((BvOfBool (_)), a); _ } -> (a :: [])
+      | { kind = Op1 ((BvOfFloat (_, _, _)), a); _ } -> (a :: [])
+      | { kind = Op1 ((FloatOfBv (_, _, _)), a); _ } -> (a :: [])
+      | { kind = Op1 ((FloatOfBvRaw (_)), a); _ } -> (a :: [])
+      | { kind = Op1 ((FloatOfFloat (_, _)), a); _ } -> (a :: [])
+      | { kind = Op1 ((BvExtract (_, _)), a); _ } -> (a :: [])
+      | { kind = Op1 ((BvExtend (_, _)), a); _ } -> (a :: [])
+      | { kind = Op1 ((BvNot), a); _ } -> (a :: [])
+      | { kind = Op1 ((Neg (_)), a); _ } -> (a :: [])
+      | { kind = Op1 ((FIs (_)), a); _ } -> (a :: [])
+      | { kind = Op1 ((FIsNeg), a); _ } -> (a :: [])
+      | { kind = Op1 ((FIsPos), a); _ } -> (a :: [])
+      | { kind = Op1 ((FRound (_)), a); _ } -> (a :: [])
+      | { kind = Op2 ((Ptr), a, b); _ } -> (a :: (b :: []))
+      | { kind = Op2 ((Eq), a, b); _ } -> (a :: (b :: []))
+      | { kind = Op2 ((And), a, b); _ } -> (a :: (b :: []))
+      | { kind = Op2 ((Or), a, b); _ } -> (a :: (b :: []))
+      | { kind = Op2 ((FEq), a, b); _ } -> (a :: (b :: []))
+      | { kind = Op2 ((FLeq), a, b); _ } -> (a :: (b :: []))
+      | { kind = Op2 ((FLt), a, b); _ } -> (a :: (b :: []))
+      | { kind = Op2 ((FAdd), a, b); _ } -> (a :: (b :: []))
+      | { kind = Op2 ((FSub), a, b); _ } -> (a :: (b :: []))
+      | { kind = Op2 ((FMul), a, b); _ } -> (a :: (b :: []))
+      | { kind = Op2 ((FDiv), a, b); _ } -> (a :: (b :: []))
+      | { kind = Op2 ((FRem), a, b); _ } -> (a :: (b :: []))
+      | { kind = Op2 ((FMin), a, b); _ } -> (a :: (b :: []))
+      | { kind = Op2 ((FMax), a, b); _ } -> (a :: (b :: []))
+      | { kind = Op2 ((BitAnd), a, b); _ } -> (a :: (b :: []))
+      | { kind = Op2 ((BitOr), a, b); _ } -> (a :: (b :: []))
+      | { kind = Op2 ((BitXor), a, b); _ } -> (a :: (b :: []))
+      | { kind = Op2 ((Shl), a, b); _ } -> (a :: (b :: []))
+      | { kind = Op2 ((LShr), a, b); _ } -> (a :: (b :: []))
+      | { kind = Op2 ((AShr), a, b); _ } -> (a :: (b :: []))
+      | { kind = Op2 ((Add (_)), a, b); _ } -> (a :: (b :: []))
+      | { kind = Op2 ((Sub (_)), a, b); _ } -> (a :: (b :: []))
+      | { kind = Op2 ((Mul (_)), a, b); _ } -> (a :: (b :: []))
+      | { kind = Op2 ((Div (_)), a, b); _ } -> (a :: (b :: []))
+      | { kind = Op2 ((Rem (_)), a, b); _ } -> (a :: (b :: []))
+      | { kind = Op2 ((Mod), a, b); _ } -> (a :: (b :: []))
+      | { kind = Op2 ((AddOvf (_)), a, b); _ } -> (a :: (b :: []))
+      | { kind = Op2 ((SubOvf (_)), a, b); _ } -> (a :: (b :: []))
+      | { kind = Op2 ((MulOvf (_)), a, b); _ } -> (a :: (b :: []))
+      | { kind = Op2 ((Lt (_)), a, b); _ } -> (a :: (b :: []))
+      | { kind = Op2 ((Leq (_)), a, b); _ } -> (a :: (b :: []))
+      | { kind = Op2 ((BvConcat), a, b); _ } -> (a :: (b :: []))
+      | { kind = Op3 ((Fma), a, b, c); _ } -> (a :: (b :: (c :: [])))
+      | { kind = Op3 ((Ite), a, b, c); _ } -> (a :: (b :: (c :: [])))
+      | { kind = OpN ((Distinct), l); _ } -> l
+      )
+  
+  let view_rebuild (v : t) (cs : (t list)) : t =
+      (match v with
+      | { kind = Var (_); _ } ->
+        (match cs with
+        | [] -> v
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Bool (_); _ } ->
+        (match cs with
+        | [] -> v
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = BitVec (_); _ } ->
+        (match cs with
+        | [] -> v
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = LocLit (_); _ } ->
+        (match cs with
+        | [] -> v
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Float (_); _ } ->
+        (match cs with
+        | [] -> v
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Seq (_); _ } -> (Bv_prims.mk_seq v.ty cs)
+      | { kind = Exists (bs, _); _ } ->
+        (match cs with
+        | (a :: []) -> (exists_mk bs a)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op1 ((Not), _); _ } ->
+        (match cs with
+        | (a :: []) -> (bool_not_ a)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op1 ((FAbs), _); _ } ->
+        (match cs with
+        | (a :: []) -> (float_abs a)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op1 ((FNeg), _); _ } ->
+        (match cs with
+        | (a :: []) -> (float_neg a)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op1 ((FSqrt), _); _ } ->
+        (match cs with
+        | (a :: []) -> (float_sqrt a)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op1 ((GetPtrLoc), _); _ } ->
+        (match cs with
+        | (a :: []) -> (ptr_loc a)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op1 ((GetPtrOfs), _); _ } ->
+        (match cs with
+        | (a :: []) -> (ptr_ofs a)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op1 ((BvOfBool (n)), _); _ } ->
+        let n = Z.of_int n in
+        (match cs with
+        | (a :: []) -> (bitvec_of_bool n a)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op1 ((BvOfFloat (rm, s, n)), _); _ } ->
+        let n = Z.of_int n in
+        (match cs with
+        | (a :: []) -> (bitvec_of_float rm s n a)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op1 ((FloatOfBv (rm, s, p)), _); _ } ->
+        (match cs with
+        | (a :: []) -> (bitvec_to_float rm s p a)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op1 ((FloatOfBvRaw (_)), _); _ } ->
+        (match cs with
+        | (a :: []) -> (bitvec_to_float_raw a)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op1 ((FloatOfFloat (rm, p)), _); _ } ->
+        (match cs with
+        | (a :: []) -> (float_cast rm p a)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op1 ((BvExtract (f, t)), _); _ } ->
+        let f = Z.of_int f in
+        let t = Z.of_int t in
+        (match cs with
+        | (a :: []) -> (bitvec_extract f t a)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op1 ((BvExtend (s, k)), _); _ } ->
+        let k = Z.of_int k in
+        (match cs with
+        | (a :: []) -> (bitvec_extend_ s k a)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op1 ((BvNot), _); _ } ->
+        (match cs with
+        | (a :: []) -> (bitvec_not_ a)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op1 ((Neg (c)), _); _ } ->
+        (match cs with
+        | (a :: []) -> (bitvec_neg c a)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op1 ((FIs (fc)), _); _ } ->
+        (match cs with
+        | (a :: []) -> (float_is_floatclass fc a)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op1 ((FIsNeg), _); _ } ->
+        (match cs with
+        | (a :: []) -> (float_is_negative a)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op1 ((FIsPos), _); _ } ->
+        (match cs with
+        | (a :: []) -> (float_is_positive a)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op1 ((FRound (rm)), _); _ } ->
+        (match cs with
+        | (a :: []) -> (float_round rm a)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op2 ((And), _, _); _ } ->
+        (match cs with
+        | (a :: (b :: [])) -> (bool_and_ a b)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op2 ((Or), _, _); _ } ->
+        (match cs with
+        | (a :: (b :: [])) -> (bool_or_ a b)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op2 ((Eq), _, _); _ } ->
+        (match cs with
+        | (a :: (b :: [])) -> (bool_eq a b)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op2 ((Add (c)), _, _); _ } ->
+        (match cs with
+        | (a :: (b :: [])) -> (bitvec_add c a b)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op2 ((Sub (c)), _, _); _ } ->
+        (match cs with
+        | (a :: (b :: [])) -> (bitvec_sub c a b)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op2 ((Mul (c)), _, _); _ } ->
+        (match cs with
+        | (a :: (b :: [])) -> (bitvec_mul c a b)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op2 ((Div (s)), _, _); _ } ->
+        (match cs with
+        | (a :: (b :: [])) -> (bitvec_div s a b)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op2 ((Rem (s)), _, _); _ } ->
+        (match cs with
+        | (a :: (b :: [])) -> (bitvec_rem s a b)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op2 ((Mod), _, _); _ } ->
+        (match cs with
+        | (a :: (b :: [])) -> (bitvec_mod_ a b)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op2 ((AddOvf (s)), _, _); _ } ->
+        (match cs with
+        | (a :: (b :: [])) -> (bitvec_add_overflows s a b)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op2 ((SubOvf (s)), _, _); _ } ->
+        (match cs with
+        | (a :: (b :: [])) -> (bitvec_sub_overflows s a b)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op2 ((MulOvf (s)), _, _); _ } ->
+        (match cs with
+        | (a :: (b :: [])) -> (bitvec_mul_overflows s a b)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op2 ((Lt (s)), _, _); _ } ->
+        (match cs with
+        | (a :: (b :: [])) -> (bitvec_lt s a b)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op2 ((Leq (s)), _, _); _ } ->
+        (match cs with
+        | (a :: (b :: [])) -> (bitvec_leq s a b)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op2 ((BvConcat), _, _); _ } ->
+        (match cs with
+        | (a :: (b :: [])) -> (bitvec_concat a b)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op2 ((BitAnd), _, _); _ } ->
+        (match cs with
+        | (a :: (b :: [])) -> (bitvec_and_ a b)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op2 ((BitOr), _, _); _ } ->
+        (match cs with
+        | (a :: (b :: [])) -> (bitvec_or_ a b)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op2 ((BitXor), _, _); _ } ->
+        (match cs with
+        | (a :: (b :: [])) -> (bitvec_xor a b)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op2 ((Shl), _, _); _ } ->
+        (match cs with
+        | (a :: (b :: [])) -> (bitvec_shl a b)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op2 ((LShr), _, _); _ } ->
+        (match cs with
+        | (a :: (b :: [])) -> (bitvec_lshr a b)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op2 ((AShr), _, _); _ } ->
+        (match cs with
+        | (a :: (b :: [])) -> (bitvec_ashr a b)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op2 ((FEq), _, _); _ } ->
+        (match cs with
+        | (a :: (b :: [])) -> (float_eq a b)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op2 ((FLeq), _, _); _ } ->
+        (match cs with
+        | (a :: (b :: [])) -> (float_leq a b)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op2 ((FLt), _, _); _ } ->
+        (match cs with
+        | (a :: (b :: [])) -> (float_lt a b)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op2 ((FAdd), _, _); _ } ->
+        (match cs with
+        | (a :: (b :: [])) -> (float_add a b)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op2 ((FSub), _, _); _ } ->
+        (match cs with
+        | (a :: (b :: [])) -> (float_sub a b)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op2 ((FMul), _, _); _ } ->
+        (match cs with
+        | (a :: (b :: [])) -> (float_mul a b)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op2 ((FDiv), _, _); _ } ->
+        (match cs with
+        | (a :: (b :: [])) -> (float_div a b)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op2 ((FRem), _, _); _ } ->
+        (match cs with
+        | (a :: (b :: [])) -> (float_rem a b)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op2 ((FMin), _, _); _ } ->
+        (match cs with
+        | (a :: (b :: [])) -> (float_min a b)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op2 ((FMax), _, _); _ } ->
+        (match cs with
+        | (a :: (b :: [])) -> (float_max a b)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op2 ((Ptr), _, _); _ } ->
+        (match cs with
+        | (a :: (b :: [])) -> (Bv_prims.mk_ptr a b)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op3 ((Ite), _, _, _); _ } ->
+        (match cs with
+        | (a :: (b :: (c :: []))) -> (bool_ite a b c)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = Op3 ((Fma), _, _, _); _ } ->
+        (match cs with
+        | (a :: (b :: (c :: []))) -> (float_fma a b c)
+        | _ -> (Bv_prims.bad_operands v)
+        )
+      | { kind = OpN ((Distinct), _); _ } -> (bool_distinct cs)
+      )
+  
+  let view_maps_operands (v : t) : bool =
+      (match v with
+      | { kind = Op2 ((Ptr), _, _); _ } -> false
+      | { kind = Op1 ((Not), _); _ } -> true
+      | { kind = Op1 ((FAbs), _); _ } -> true
+      | { kind = Op1 ((FNeg), _); _ } -> true
+      | { kind = Op1 ((FSqrt), _); _ } -> true
+      | { kind = Op1 ((GetPtrLoc), _); _ } -> true
+      | { kind = Op1 ((GetPtrOfs), _); _ } -> true
+      | { kind = Op1 ((BvOfBool (_)), _); _ } -> true
+      | { kind = Op1 ((BvOfFloat (_, _, _)), _); _ } -> true
+      | { kind = Op1 ((FloatOfBv (_, _, _)), _); _ } -> true
+      | { kind = Op1 ((FloatOfBvRaw (_)), _); _ } -> true
+      | { kind = Op1 ((FloatOfFloat (_, _)), _); _ } -> true
+      | { kind = Op1 ((BvExtract (_, _)), _); _ } -> true
+      | { kind = Op1 ((BvExtend (_, _)), _); _ } -> true
+      | { kind = Op1 ((BvNot), _); _ } -> true
+      | { kind = Op1 ((Neg (_)), _); _ } -> true
+      | { kind = Op1 ((FIs (_)), _); _ } -> true
+      | { kind = Op1 ((FIsNeg), _); _ } -> true
+      | { kind = Op1 ((FIsPos), _); _ } -> true
+      | { kind = Op1 ((FRound (_)), _); _ } -> true
+      | { kind = Op2 ((Eq), _, _); _ } -> true
+      | { kind = Op2 ((And), _, _); _ } -> true
+      | { kind = Op2 ((Or), _, _); _ } -> true
+      | { kind = Op2 ((FEq), _, _); _ } -> true
+      | { kind = Op2 ((FLeq), _, _); _ } -> true
+      | { kind = Op2 ((FLt), _, _); _ } -> true
+      | { kind = Op2 ((FAdd), _, _); _ } -> true
+      | { kind = Op2 ((FSub), _, _); _ } -> true
+      | { kind = Op2 ((FMul), _, _); _ } -> true
+      | { kind = Op2 ((FDiv), _, _); _ } -> true
+      | { kind = Op2 ((FRem), _, _); _ } -> true
+      | { kind = Op2 ((FMin), _, _); _ } -> true
+      | { kind = Op2 ((FMax), _, _); _ } -> true
+      | { kind = Op2 ((BitAnd), _, _); _ } -> true
+      | { kind = Op2 ((BitOr), _, _); _ } -> true
+      | { kind = Op2 ((BitXor), _, _); _ } -> true
+      | { kind = Op2 ((Shl), _, _); _ } -> true
+      | { kind = Op2 ((LShr), _, _); _ } -> true
+      | { kind = Op2 ((AShr), _, _); _ } -> true
+      | { kind = Op2 ((Add (_)), _, _); _ } -> true
+      | { kind = Op2 ((Sub (_)), _, _); _ } -> true
+      | { kind = Op2 ((Mul (_)), _, _); _ } -> true
+      | { kind = Op2 ((Div (_)), _, _); _ } -> true
+      | { kind = Op2 ((Rem (_)), _, _); _ } -> true
+      | { kind = Op2 ((Mod), _, _); _ } -> true
+      | { kind = Op2 ((AddOvf (_)), _, _); _ } -> true
+      | { kind = Op2 ((SubOvf (_)), _, _); _ } -> true
+      | { kind = Op2 ((MulOvf (_)), _, _); _ } -> true
+      | { kind = Op2 ((Lt (_)), _, _); _ } -> true
+      | { kind = Op2 ((Leq (_)), _, _); _ } -> true
+      | { kind = Op2 ((BvConcat), _, _); _ } -> true
+      | _ -> false
+      )
+  
+  let rec view_cost (v : t) : Z.t =
+      (match v with
+      | { kind = Op2 ((FRem), _, _); _ } ->
+        (Z.add (Z.of_int (12900)) (view_costs (view_operands v)))
+      | { kind = Op2 ((Mod), _, _); _ } ->
+        (Z.add (Z.of_int (12700)) (view_costs (view_operands v)))
+      | { kind = Op2 ((Div (s)), _, _); _ } ->
+        (Z.add (if s then (Z.of_int (12700)) else (Z.of_int (3600))) (view_costs (view_operands v)))
+      | { kind = Op2 ((Rem (s)), _, _); _ } ->
+        (Z.add (if s then (Z.of_int (12700)) else (Z.of_int (7100))) (view_costs (view_operands v)))
+      | { kind = Op2 ((Mul (_)), _, _); _ } ->
+        (Z.add (Z.of_int (1900)) (view_costs (view_operands v)))
+      | { kind = Op2 ((FDiv), _, _); _ } ->
+        (Z.add (Z.of_int (1300)) (view_costs (view_operands v)))
+      | { kind = Op2 ((FMul), _, _); _ } ->
+        (Z.add (Z.of_int (345)) (view_costs (view_operands v)))
+      | { kind = Op2 ((MulOvf (_)), _, _); _ } ->
+        (Z.add (Z.of_int (200)) (view_costs (view_operands v)))
+      | { kind = Op2 ((FAdd), _, _); _ } ->
+        (Z.add (Z.of_int (130)) (view_costs (view_operands v)))
+      | { kind = Op2 ((FSub), _, _); _ } ->
+        (Z.add (Z.of_int (130)) (view_costs (view_operands v)))
+      | { kind = Op2 ((Sub (_)), _, _); _ } ->
+        (Z.add (Z.of_int (97)) (view_costs (view_operands v)))
+      | { kind = Op2 ((Add (_)), _, _); _ } ->
+        (Z.add (Z.of_int (75)) (view_costs (view_operands v)))
+      | { kind = Op2 ((Shl), _, _); _ } ->
+        (Z.add (Z.of_int (35)) (view_costs (view_operands v)))
+      | { kind = Op2 ((LShr), _, _); _ } ->
+        (Z.add (Z.of_int (35)) (view_costs (view_operands v)))
+      | { kind = Op2 ((AShr), _, _); _ } ->
+        (Z.add (Z.of_int (35)) (view_costs (view_operands v)))
+      | { kind = Op2 ((FMin), _, _); _ } ->
+        (Z.add (Z.of_int (24)) (view_costs (view_operands v)))
+      | { kind = Op2 ((FMax), _, _); _ } ->
+        (Z.add (Z.of_int (24)) (view_costs (view_operands v)))
+      | { kind = Op2 ((FLt), _, _); _ } ->
+        (Z.add (Z.of_int (12)) (view_costs (view_operands v)))
+      | { kind = Op2 ((FLeq), _, _); _ } ->
+        (Z.add (Z.of_int (12)) (view_costs (view_operands v)))
+      | { kind = Op2 ((SubOvf (s)), _, _); _ } ->
+        (Z.add (if s then (Z.of_int (12)) else (Z.of_int (5))) (view_costs (view_operands v)))
+      | { kind = Op2 ((AddOvf (s)), _, _); _ } ->
+        (Z.add (if s then (Z.of_int (9)) else (Z.of_int (5))) (view_costs (view_operands v)))
+      | { kind = Op2 ((Lt (_)), _, _); _ } ->
+        (Z.add (Z.of_int (5)) (view_costs (view_operands v)))
+      | { kind = Op2 ((Leq (_)), _, _); _ } ->
+        (Z.add (Z.of_int (5)) (view_costs (view_operands v)))
+      | { kind = Op2 ((FEq), _, _); _ } ->
+        (Z.add (Z.of_int (3)) (view_costs (view_operands v)))
+      | { kind = Op2 ((And), _, _); _ } ->
+        (Z.add Z.one (view_costs (view_operands v)))
+      | { kind = Op2 ((Or), _, _); _ } ->
+        (Z.add Z.one (view_costs (view_operands v)))
+      | { kind = Op2 ((Eq), _, _); _ } ->
+        (Z.add Z.one (view_costs (view_operands v)))
+      | { kind = Op2 ((BitAnd), _, _); _ } ->
+        (Z.add Z.one (view_costs (view_operands v)))
+      | { kind = Op2 ((BitOr), _, _); _ } ->
+        (Z.add Z.one (view_costs (view_operands v)))
+      | { kind = Op2 ((BitXor), _, _); _ } ->
+        (Z.add Z.one (view_costs (view_operands v)))
+      | { kind = Op2 ((BvConcat), _, _); _ } ->
+        (Z.add Z.one (view_costs (view_operands v)))
+      | { kind = Op1 ((BvOfFloat (_, _, _)), _); _ } ->
+        (Z.add (Z.of_int (1400)) (view_costs (view_operands v)))
+      | { kind = Op1 ((FSqrt), _); _ } ->
+        (Z.add (Z.of_int (280)) (view_costs (view_operands v)))
+      | { kind = Op1 ((FloatOfFloat (_, _)), _); _ } ->
+        (Z.add (Z.of_int (255)) (view_costs (view_operands v)))
+      | { kind = Op1 ((FloatOfBv (_, _, _)), _); _ } ->
+        (Z.add (Z.of_int (78)) (view_costs (view_operands v)))
+      | { kind = Op1 ((FRound (_)), _); _ } ->
+        (Z.add (Z.of_int (65)) (view_costs (view_operands v)))
+      | { kind = Op1 ((Neg (_)), _); _ } ->
+        (Z.add (Z.of_int (10)) (view_costs (view_operands v)))
+      | { kind = Op1 ((FAbs), _); _ } ->
+        (Z.add (Z.of_int (4)) (view_costs (view_operands v)))
+      | { kind = Op1 ((FNeg), _); _ } ->
+        (Z.add (Z.of_int (4)) (view_costs (view_operands v)))
+      | { kind = Op1 ((FloatOfBvRaw (_)), _); _ } ->
+        (Z.add (Z.of_int (4)) (view_costs (view_operands v)))
+      | { kind = Op1 ((Not), _); _ } ->
+        (Z.add Z.one (view_costs (view_operands v)))
+      | { kind = Op1 ((GetPtrLoc), _); _ } ->
+        (Z.add Z.one (view_costs (view_operands v)))
+      | { kind = Op1 ((GetPtrOfs), _); _ } ->
+        (Z.add Z.one (view_costs (view_operands v)))
+      | { kind = Op1 ((BvNot), _); _ } ->
+        (Z.add Z.one (view_costs (view_operands v)))
+      | { kind = Op1 ((BvOfBool (_)), _); _ } ->
+        (Z.add Z.one (view_costs (view_operands v)))
+      | { kind = Op1 ((BvExtend (_, _)), _); _ } ->
+        (Z.add Z.one (view_costs (view_operands v)))
+      | { kind = Op1 ((BvExtract (_, _)), _); _ } ->
+        (Z.add Z.one (view_costs (view_operands v)))
+      | { kind = Op1 ((FIs (_)), _); _ } ->
+        (Z.add Z.one (view_costs (view_operands v)))
+      | { kind = Op1 ((FIsNeg), _); _ } ->
+        (Z.add Z.one (view_costs (view_operands v)))
+      | { kind = Op1 ((FIsPos), _); _ } ->
+        (Z.add Z.one (view_costs (view_operands v)))
+      | { kind = Op3 ((Fma), _, _, _); _ } ->
+        (Z.add (Z.of_int (400)) (view_costs (view_operands v)))
+      | { kind = Op3 ((Ite), _, _, _); _ } -> (view_costs (view_operands v))
+      | { kind = OpN ((Distinct), _); _ } -> (view_costs (view_operands v))
+      | { kind = Seq (_); _ } -> (view_costs (view_operands v))
+      | { kind = Var (_); _ } -> (Z.of_int (3))
+      | { kind = Float (_); _ } -> (Z.of_int (2))
+      | { kind = Exists (_, _); _ } ->
+        (Z.add (Z.of_int (100000)) (view_costs (view_operands v)))
+      | { kind = Op2 ((Ptr), _, _); _ } -> Z.one
+      | { kind = Bool (_); _ } -> Z.one
+      | { kind = BitVec (_); _ } -> Z.one
+      | { kind = LocLit (_); _ } -> Z.one
+      )
+  and view_costs (l : (t list)) : Z.t =
+      (match l with
+      | [] -> Z.zero
+      | (x :: rest) -> (Z.add (view_cost x) (view_costs rest))
+      )
+  
+  let view_random_bound (s : ty) : (Z.t option) =
+      (match s with
+      | (TLoc (n)) -> let n = Z.of_int n in (Some (Bv_prims.z_lsl Z.one n))
+      | (TBitVector (n)) ->
+        let n = Z.of_int n in
+        (Some (Bv_prims.z_lsl Z.one n))
+      | (TBool) -> (Some (Z.of_int (2)))
+      | (TFloat (p)) -> (Some (Bv_prims.z_lsl Z.one (Bv_prims.fp_size p)))
+      | _ -> None
+      )
+  
+  let view_random_of_z (s : ty) (z : Z.t) : (t option) =
+      (match s with
+      | (TLoc (n)) ->
+        let n = Z.of_int n in
+        (Some (node (LocLit (z)) (TLoc ((Z.to_int n)))))
+      | (TBitVector (n)) -> let n = Z.of_int n in (Some (Bv_prims.mk_bv n z))
+      | (TBool) -> (Some (bool_of_bool ((Z.equal z Z.one))))
+      | (TFloat (p)) ->
+        (Some (let kanon__a1 = (Bv_prims.f_of_bits p z) in
+              (node (Float (kanon__a1)) (TFloat ((Bv_prims.f_prec kanon__a1))))))
+      | _ -> None
+      )
+  
+  let[@inline] view_sort_operands (s : ty) : (ty list) =
+      (match s with
+      | (TSeq (e)) -> (e :: [])
+      | _ -> []
+      )
+  
+  let[@inline] view_encode_sort (s : ty) : smt_sort_op =
+      (match s with
+      | (TBool) -> Bv_prims.so_bool
+      | (TLoc (n)) -> let n = Z.of_int n in (Bv_prims.so_bits n)
+      | (TFloat (p)) -> (Bv_prims.so_float p)
+      | (TSeq (_)) -> Bv_prims.so_seq
+      | (TPointer (n)) -> let n = Z.of_int n in (Bv_prims.so_ptr n)
+      | (TBitVector (n)) -> let n = Z.of_int n in (Bv_prims.so_bits n)
+      )
+  
+  let view_encode_head (v : t) : smt_op =
+      (match v with
+      | { kind = Var (x); _ } -> (Bv_prims.h_var x)
+      | { kind = Float (f); _ } -> (Bv_prims.h_float v.ty f)
+      | { kind = Bool (b); _ } -> (Bv_prims.h_bool b)
+      | { kind = BitVec (z); _ } -> (Bv_prims.h_bits v.ty z)
+      | { kind = LocLit (z); _ } -> (Bv_prims.h_bits v.ty z)
+      | { kind = Op2 ((Ptr), _, _); _ } -> (Bv_prims.h_ptr v.ty)
+      | { kind = Seq (_); _ } -> Bv_prims.h_seq
+      | { kind = Exists (bs, _); _ } -> (Bv_prims.h_exists bs)
+      | { kind = OpN ((Distinct), _); _ } -> Bv_prims.h_distinct
+      | { kind = Op1 ((Not), _); _ } -> Bv_prims.h_not
+      | { kind = Op1 ((FAbs), _); _ } -> Bv_prims.h_fabs
+      | { kind = Op1 ((FNeg), _); _ } -> Bv_prims.h_fneg
+      | { kind = Op1 ((FSqrt), _); _ } -> Bv_prims.h_fsqrt
+      | { kind = Op1 ((GetPtrLoc), _); _ } -> Bv_prims.h_ptr_loc
+      | { kind = Op1 ((GetPtrOfs), _); _ } -> Bv_prims.h_ptr_ofs
+      | { kind = Op1 ((BvOfBool (n)), _); _ } ->
+        let n = Z.of_int n in
+        (Bv_prims.h_bv_of_bool n)
+      | { kind = Op1 ((BvOfFloat (rm, s, n)), _); _ } ->
+        let n = Z.of_int n in
+        (Bv_prims.h_bv_of_float rm s n)
+      | { kind = Op1 ((FloatOfBv (rm, s, p)), _); _ } ->
+        (Bv_prims.h_float_of_bv rm s p)
+      | { kind = Op1 ((FloatOfBvRaw (p)), _); _ } ->
+        (Bv_prims.h_float_of_bv_raw p)
+      | { kind = Op1 ((FloatOfFloat (rm, p)), _); _ } ->
+        (Bv_prims.h_float_of_float rm p)
+      | { kind = Op1 ((BvExtract (f, t)), _); _ } ->
+        let f = Z.of_int f in
+        let t = Z.of_int t in
+        (Bv_prims.h_bv_extract f t)
+      | { kind = Op1 ((BvExtend (s, k)), _); _ } ->
+        let k = Z.of_int k in
+        (Bv_prims.h_bv_extend s k)
+      | { kind = Op1 ((BvNot), _); _ } -> Bv_prims.h_bv_not
+      | { kind = Op1 ((Neg (_)), _); _ } -> Bv_prims.h_neg
+      | { kind = Op1 ((FIs (fc)), _); _ } -> (Bv_prims.h_fis fc)
+      | { kind = Op1 ((FIsNeg), _); _ } -> Bv_prims.h_fisneg
+      | { kind = Op1 ((FIsPos), _); _ } -> Bv_prims.h_fispos
+      | { kind = Op1 ((FRound (rm)), _); _ } -> (Bv_prims.h_fround rm)
+      | { kind = Op2 ((Eq), _, _); _ } -> Bv_prims.h_eq
+      | { kind = Op2 ((And), _, _); _ } -> Bv_prims.h_and
+      | { kind = Op2 ((Or), _, _); _ } -> Bv_prims.h_or
+      | { kind = Op2 ((FEq), _, _); _ } -> Bv_prims.h_feq
+      | { kind = Op2 ((FLeq), _, _); _ } -> Bv_prims.h_fleq
+      | { kind = Op2 ((FLt), _, _); _ } -> Bv_prims.h_flt
+      | { kind = Op2 ((FAdd), _, _); _ } -> Bv_prims.h_fadd
+      | { kind = Op2 ((FSub), _, _); _ } -> Bv_prims.h_fsub
+      | { kind = Op2 ((FMul), _, _); _ } -> Bv_prims.h_fmul
+      | { kind = Op2 ((FDiv), _, _); _ } -> Bv_prims.h_fdiv
+      | { kind = Op2 ((FRem), _, _); _ } -> Bv_prims.h_frem
+      | { kind = Op2 ((FMin), _, _); _ } -> Bv_prims.h_fmin
+      | { kind = Op2 ((FMax), _, _); _ } -> Bv_prims.h_fmax
+      | { kind = Op2 ((BitAnd), _, _); _ } -> Bv_prims.h_bit_and
+      | { kind = Op2 ((BitOr), _, _); _ } -> Bv_prims.h_bit_or
+      | { kind = Op2 ((BitXor), _, _); _ } -> Bv_prims.h_bit_xor
+      | { kind = Op2 ((Shl), _, _); _ } -> Bv_prims.h_shl
+      | { kind = Op2 ((LShr), _, _); _ } -> Bv_prims.h_lshr
+      | { kind = Op2 ((AShr), _, _); _ } -> Bv_prims.h_ashr
+      | { kind = Op2 ((Add (_)), _, _); _ } -> Bv_prims.h_add
+      | { kind = Op2 ((Sub (_)), _, _); _ } -> Bv_prims.h_sub
+      | { kind = Op2 ((Mul (_)), _, _); _ } -> Bv_prims.h_mul
+      | { kind = Op2 ((Div (s)), _, _); _ } -> (Bv_prims.h_div s)
+      | { kind = Op2 ((Rem (s)), _, _); _ } -> (Bv_prims.h_rem s)
+      | { kind = Op2 ((Mod), _, _); _ } -> Bv_prims.h_mod
+      | { kind = Op2 ((AddOvf (s)), _, _); _ } -> (Bv_prims.h_add_ovf s)
+      | { kind = Op2 ((SubOvf (s)), _, _); _ } -> (Bv_prims.h_sub_ovf s)
+      | { kind = Op2 ((MulOvf (s)), _, _); _ } -> (Bv_prims.h_mul_ovf s)
+      | { kind = Op2 ((Lt (s)), _, _); _ } -> (Bv_prims.h_lt s)
+      | { kind = Op2 ((Leq (s)), _, _); _ } -> (Bv_prims.h_leq s)
+      | { kind = Op2 ((BvConcat), _, _); _ } -> Bv_prims.h_concat
+      | { kind = Op3 ((Fma), _, _, _); _ } -> Bv_prims.h_fma
+      | { kind = Op3 ((Ite), _, _, _); _ } -> Bv_prims.h_ite
+      )
+  
+  let view_learn_alts (v : t) : learn_plan =
+      (match v with
+      | { kind = Op1 ((Not), _); _ } -> (LAll ([], (Z.zero :: [])))
+      | { kind = Op1 ((BvNot), _); _ } -> (LAll ([], (Z.zero :: [])))
+      | { kind = Op1 ((Neg (_)), _); _ } -> (LAll ([], (Z.zero :: [])))
+      | { kind = Op1 ((BvExtend (_, _)), _); _ } ->
+        (LAll ([], (Z.zero :: [])))
+      | { kind = Op1 ((BvOfBool (_)), _); _ } -> (LAll ([], (Z.zero :: [])))
+      | { kind = Op2 ((Add (_)), _, _); _ } ->
+        (LAlts (((Z.zero, Z.one) :: ((Z.one, Z.zero) :: []))))
+      | { kind = Op2 ((Sub (_)), _, _); _ } ->
+        (LAlts (((Z.zero, Z.one) :: ((Z.one, Z.zero) :: []))))
+      | { kind = Op2 ((BitXor), _, _); _ } ->
+        (LAlts (((Z.zero, Z.one) :: ((Z.one, Z.zero) :: []))))
+      | { kind = Op2 ((BvConcat), _, _); _ } ->
+        (LAll ((Z.one :: (Z.zero :: [])), (Z.zero :: (Z.one :: []))))
+      | { kind = Op2 ((Ptr), _, _); _ } ->
+        (LAll ([], (Z.zero :: (Z.one :: []))))
+      | _ -> LNone
+      )
+  
+  let view_learn_value (e : t) (i : Z.t) (v : t) : (t option) =
+      (match e, i with
+      | ({ kind = Op1 ((Not), _); _ }, kanon__4)
+        when (((Z.equal kanon__4 Z.zero))) ->
+        (Some (bool_not_ v))
+      | ({ kind = Op1 ((BvNot), _); _ }, kanon__4)
+        when (((Z.equal kanon__4 Z.zero))) ->
+        (Some (bitvec_not_ v))
+      | ({ kind = Op1 ((Neg (_)), _); _ }, kanon__5)
+        when (((Z.equal kanon__5 Z.zero))) ->
+        (Some (bitvec_neg false v))
+      | ({ kind = Op1 ((BvExtend (_, _)), e1); _ }, kanon__6)
+        when (((Z.equal kanon__6 Z.zero))) ->
+        (Some (bitvec_extract Z.zero (Z.sub (bitvec_size e1) Z.one) v))
+      | ({ kind = Op1 ((BvOfBool (_)), _); _ }, kanon__5)
+        when (((Z.equal kanon__5 Z.zero))) ->
+        (match v with
+        | { kind = BitVec (kanon__1); _ }
+          when (((Z.equal kanon__1 Z.zero))) ->
+          (Some Bv_prims.v_false)
+        | { kind = BitVec (kanon__1); _ }
+          when (((Z.equal kanon__1 Z.one))) ->
+          (Some Bv_prims.v_true)
+        | _ -> None
+        )
+      | ({ kind = Op2 ((Add (_)), _, e2); _ }, kanon__6)
+        when (((Z.equal kanon__6 Z.zero))) ->
+        (Some (bitvec_sub bitvec_unchecked v e2))
+      | ({ kind = Op2 ((Add (_)), e1, _); _ }, kanon__6)
+        when (((Z.equal kanon__6 Z.one))) ->
+        (Some (bitvec_sub bitvec_unchecked v e1))
+      | ({ kind = Op2 ((Sub (_)), _, e2); _ }, kanon__6)
+        when (((Z.equal kanon__6 Z.zero))) ->
+        (Some (bitvec_add bitvec_unchecked v e2))
+      | ({ kind = Op2 ((Sub (_)), e1, _); _ }, kanon__6)
+        when (((Z.equal kanon__6 Z.one))) ->
+        (Some (bitvec_sub bitvec_unchecked e1 v))
+      | ({ kind = Op2 ((BitXor), _, e2); _ }, kanon__5)
+        when (((Z.equal kanon__5 Z.zero))) ->
+        (Some (bitvec_xor v e2))
+      | ({ kind = Op2 ((BitXor), e1, _); _ }, kanon__5)
+        when (((Z.equal kanon__5 Z.one))) ->
+        (Some (bitvec_xor v e1))
+      | ({ kind = Op2 ((BvConcat), _, e2); _ }, kanon__5)
+        when (((Z.equal kanon__5 Z.one))) ->
+        (Some (bitvec_extract Z.zero (Z.sub (bitvec_size e2) Z.one) v))
+      | ({ kind = Op2 ((BvConcat), e1, e2); _ }, kanon__5)
+        when (((Z.equal kanon__5 Z.zero))) ->
+        (Some (bitvec_extract (bitvec_size e2) (Z.sub (Z.add (bitvec_size e2) (bitvec_size e1)) Z.one) v))
+      | ({ kind = Op2 ((Ptr), _, _); _ }, kanon__5)
+        when (((Z.equal kanon__5 Z.zero))) ->
+        (Some (ptr_loc v))
+      | ({ kind = Op2 ((Ptr), _, _); _ }, kanon__5)
+        when (((Z.equal kanon__5 Z.one))) ->
+        (Some (ptr_ofs v))
+      | _ -> None
+      )
+end
+
+(** The Kanon module core. *)
+module Core = struct
+  let t_seq (a1 : ty) : ty = TSeq (a1)
+  
+  let as_var (t : t) =
+    match[@warning "-11"] t with { kind = Var (p1); _ } -> Some p1 | _ -> None
+  
+  let is_var (t : t) =
+    match[@warning "-11"] t with { kind = Var (_); _ } -> true | _ -> false
+  
+  let as_seq (t : t) =
+    match[@warning "-11"] t with { kind = Seq (p1); _ } -> Some p1 | _ -> None
+  
+  let is_seq (t : t) =
+    match[@warning "-11"] t with { kind = Seq (_); _ } -> true | _ -> false
+  
+  let as_tseq (t : ty) =
+    match[@warning "-11"] t with TSeq (p1) -> Some p1 | _ -> None
+  
+  let is_tseq (t : ty) =
+    match[@warning "-11"] t with TSeq (_) -> true | _ -> false
+end
+
+(** The Kanon module bool. *)
+module Bool = struct
+  let t_bool : ty = TBool
+  let of_bool = Kanon_flat.bool_of_bool
+  let sure_neq = Kanon_flat.bool_sure_neq
+  let at_most_one = Kanon_flat.bool_at_most_one
+  let and_ = Kanon_flat.bool_and_
+  let or_ = Kanon_flat.bool_or_
+  let not_ = Kanon_flat.bool_not_
+  let ite = Kanon_flat.bool_ite
+  let eq = Kanon_flat.bool_eq
+  let eq_untyped = Kanon_flat.bool_eq_untyped
+  let distinct_check_one = Kanon_flat.bool_distinct_check_one
+  let distinct_check = Kanon_flat.bool_distinct_check
+  let distinct = Kanon_flat.bool_distinct
+  
+  let as_bool (t : t) =
+    match[@warning "-11"] t with { kind = Bool (p1); _ } -> Some p1 | _ -> None
+  
+  let is_bool (t : t) =
+    match[@warning "-11"] t with { kind = Bool (_); _ } -> true | _ -> false
+  
+  let as_not (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (Not, x1); _ } -> Some x1 | _ -> None
+  
+  let is_not (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (Not, _); _ } -> true | _ -> false
+  
+  let as_and (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (And, x1, x2); _ } -> Some (x1, x2) | _ -> None
+  
+  let is_and (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (And, _, _); _ } -> true | _ -> false
+  
+  let as_or (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (Or, x1, x2); _ } -> Some (x1, x2) | _ -> None
+  
+  let is_or (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (Or, _, _); _ } -> true | _ -> false
+  
+  let as_eq (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (Eq, x1, x2); _ } -> Some (x1, x2) | _ -> None
+  
+  let is_eq (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (Eq, _, _); _ } -> true | _ -> false
+  
+  let as_ite (t : t) =
+    match[@warning "-11"] t with { kind = Op3 (Ite, x1, x2, x3); _ } -> Some (x1, x2, x3) | _ -> None
+  
+  let is_ite (t : t) =
+    match[@warning "-11"] t with { kind = Op3 (Ite, _, _, _); _ } -> true | _ -> false
+  
+  let as_distinct (t : t) =
+    match[@warning "-11"] t with { kind = OpN (Distinct, xs); _ } -> Some xs | _ -> None
+  
+  let is_distinct (t : t) =
+    match[@warning "-11"] t with { kind = OpN (Distinct, _); _ } -> true | _ -> false
+  
+  let as_tbool (t : ty) =
+    match[@warning "-11"] t with TBool -> Some () | _ -> None
+  
+  let is_tbool (t : ty) =
+    match[@warning "-11"] t with TBool -> true | _ -> false
+end
+
+(** The Kanon module bitvec. *)
+module Bitvec = struct
+  let t_bitvector (a1 : int) : ty = TBitVector (a1)
+  let size = Kanon_flat.bitvec_size
+  let is_bv = Kanon_flat.bitvec_is_bv
+  let zmin = Kanon_flat.bitvec_zmin
+  let zmax = Kanon_flat.bitvec_zmax
+  let unchecked = Kanon_flat.bitvec_unchecked
+  let checked_both = Kanon_flat.bitvec_checked_both
+  let checked_signed = Kanon_flat.bitvec_checked_signed
+  let checked_unsigned = Kanon_flat.bitvec_checked_unsigned
+  let checked_of_signed = Kanon_flat.bitvec_checked_of_signed
+  let checked_has = Kanon_flat.bitvec_checked_has
+  let is_checked = Kanon_flat.bitvec_is_checked
+  let checked_meet = Kanon_flat.bitvec_checked_meet
+  let to_z = Kanon_flat.bitvec_to_z
+  let max_for = Kanon_flat.bitvec_max_for
+  let min_for = Kanon_flat.bitvec_min_for
+  let is_right_mask = Kanon_flat.bitvec_is_right_mask
+  let right_mask_size = Kanon_flat.bitvec_right_mask_size
+  let covers_bitwidth = Kanon_flat.bitvec_covers_bitwidth
+  let is_pow2 = Kanon_flat.bitvec_is_pow2
+  let lsb = Kanon_flat.bitvec_lsb
+  let msb_of = Kanon_flat.bitvec_msb_of
+  let overflows_add = Kanon_flat.bitvec_overflows_add
+  let overflows_sub = Kanon_flat.bitvec_overflows_sub
+  let overflows_mul = Kanon_flat.bitvec_overflows_mul
+  let is_int_min = Kanon_flat.bitvec_is_int_min
+  let lit_add_overflows = Kanon_flat.bitvec_lit_add_overflows
+  let lit_sub_overflows = Kanon_flat.bitvec_lit_sub_overflows
+  let lit_mul_overflows = Kanon_flat.bitvec_lit_mul_overflows
+  let udivides = Kanon_flat.bitvec_udivides
+  let fold_checked = Kanon_flat.bitvec_fold_checked
+  let ones = Kanon_flat.bitvec_ones
+  let is_ones = Kanon_flat.bitvec_is_ones
+  let bits_in = Kanon_flat.bitvec_bits_in
+  let disjoint = Kanon_flat.bitvec_disjoint
+  let upper_bound = Kanon_flat.bitvec_upper_bound
+  let lower_bound = Kanon_flat.bitvec_lower_bound
+  let is_min_of = Kanon_flat.bitvec_is_min_of
+  let is_max_of = Kanon_flat.bitvec_is_max_of
+  let of_bool = Kanon_flat.bitvec_of_bool
+  let to_bool = Kanon_flat.bitvec_to_bool
+  let not_bool = Kanon_flat.bitvec_not_bool
+  let add = Kanon_flat.bitvec_add
+  let no_wrap = Kanon_flat.bitvec_no_wrap
+  let sub = Kanon_flat.bitvec_sub
+  let neg = Kanon_flat.bitvec_neg
+  let mod_ = Kanon_flat.bitvec_mod_
+  let rem = Kanon_flat.bitvec_rem
+  let not_ = Kanon_flat.bitvec_not_
+  let and_ = Kanon_flat.bitvec_and_
+  let or_ = Kanon_flat.bitvec_or_
+  let xor = Kanon_flat.bitvec_xor
+  let extract = Kanon_flat.bitvec_extract
+  let extend_ = Kanon_flat.bitvec_extend_
+  let concat = Kanon_flat.bitvec_concat
+  let shl = Kanon_flat.bitvec_shl
+  let lshr = Kanon_flat.bitvec_lshr
+  let ashr = Kanon_flat.bitvec_ashr
+  let mul = Kanon_flat.bitvec_mul
+  let div = Kanon_flat.bitvec_div
+  let is_checked_unsigned_op = Kanon_flat.bitvec_is_checked_unsigned_op
+  let unsigned_ub = Kanon_flat.bitvec_unsigned_ub
+  let const_keeps_in_range = Kanon_flat.bitvec_const_keeps_in_range
+  let cancellable = Kanon_flat.bitvec_cancellable
+  let lt_zero = Kanon_flat.bitvec_lt_zero
+  let lt = Kanon_flat.bitvec_lt
+  let leq = Kanon_flat.bitvec_leq
+  let signed_to_unsigned_cmp = Kanon_flat.bitvec_signed_to_unsigned_cmp
+  let add_overflows = Kanon_flat.bitvec_add_overflows
+  let mul_overflows = Kanon_flat.bitvec_mul_overflows
+  let neg_overflows = Kanon_flat.bitvec_neg_overflows
+  let sub_overflows = Kanon_flat.bitvec_sub_overflows
+  let of_float = Kanon_flat.bitvec_of_float
+  let to_float = Kanon_flat.bitvec_to_float
+  let to_float_raw = Kanon_flat.bitvec_to_float_raw
+  
+  let as_bitvec (t : t) =
+    match[@warning "-11"] t with { kind = BitVec (p1); _ } -> Some p1 | _ -> None
+  
+  let is_bitvec (t : t) =
+    match[@warning "-11"] t with { kind = BitVec (_); _ } -> true | _ -> false
+  
+  let as_loclit (t : t) =
+    match[@warning "-11"] t with { kind = LocLit (p1); _ } -> Some p1 | _ -> None
+  
+  let is_loclit (t : t) =
+    match[@warning "-11"] t with { kind = LocLit (_); _ } -> true | _ -> false
+  
+  let as_bvofbool (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (BvOfBool (p1), x1); _ } -> Some (p1, x1) | _ -> None
+  
+  let is_bvofbool (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (BvOfBool (_), _); _ } -> true | _ -> false
+  
+  let as_bvextract (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (BvExtract (p1, p2), x1); _ } -> Some (p1, p2, x1) | _ -> None
+  
+  let is_bvextract (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (BvExtract (_, _), _); _ } -> true | _ -> false
+  
+  let as_bvextend (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (BvExtend (p1, p2), x1); _ } -> Some (p1, p2, x1) | _ -> None
+  
+  let is_bvextend (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (BvExtend (_, _), _); _ } -> true | _ -> false
+  
+  let as_bvnot (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (BvNot, x1); _ } -> Some x1 | _ -> None
+  
+  let is_bvnot (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (BvNot, _); _ } -> true | _ -> false
+  
+  let as_neg (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (Neg (p1), x1); _ } -> Some (p1, x1) | _ -> None
+  
+  let is_neg (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (Neg (_), _); _ } -> true | _ -> false
+  
+  let as_add (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (Add (p1), x1, x2); _ } -> Some (p1, x1, x2) | _ -> None
+  
+  let is_add (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (Add (_), _, _); _ } -> true | _ -> false
+  
+  let as_sub (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (Sub (p1), x1, x2); _ } -> Some (p1, x1, x2) | _ -> None
+  
+  let is_sub (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (Sub (_), _, _); _ } -> true | _ -> false
+  
+  let as_mul (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (Mul (p1), x1, x2); _ } -> Some (p1, x1, x2) | _ -> None
+  
+  let is_mul (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (Mul (_), _, _); _ } -> true | _ -> false
+  
+  let as_div (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (Div (p1), x1, x2); _ } -> Some (p1, x1, x2) | _ -> None
+  
+  let is_div (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (Div (_), _, _); _ } -> true | _ -> false
+  
+  let as_rem (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (Rem (p1), x1, x2); _ } -> Some (p1, x1, x2) | _ -> None
+  
+  let is_rem (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (Rem (_), _, _); _ } -> true | _ -> false
+  
+  let as_mod (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (Mod, x1, x2); _ } -> Some (x1, x2) | _ -> None
+  
+  let is_mod (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (Mod, _, _); _ } -> true | _ -> false
+  
+  let as_addovf (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (AddOvf (p1), x1, x2); _ } -> Some (p1, x1, x2) | _ -> None
+  
+  let is_addovf (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (AddOvf (_), _, _); _ } -> true | _ -> false
+  
+  let as_subovf (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (SubOvf (p1), x1, x2); _ } -> Some (p1, x1, x2) | _ -> None
+  
+  let is_subovf (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (SubOvf (_), _, _); _ } -> true | _ -> false
+  
+  let as_mulovf (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (MulOvf (p1), x1, x2); _ } -> Some (p1, x1, x2) | _ -> None
+  
+  let is_mulovf (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (MulOvf (_), _, _); _ } -> true | _ -> false
+  
+  let as_lt (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (Lt (p1), x1, x2); _ } -> Some (p1, x1, x2) | _ -> None
+  
+  let is_lt (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (Lt (_), _, _); _ } -> true | _ -> false
+  
+  let as_leq (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (Leq (p1), x1, x2); _ } -> Some (p1, x1, x2) | _ -> None
+  
+  let is_leq (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (Leq (_), _, _); _ } -> true | _ -> false
+  
+  let as_bvconcat (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (BvConcat, x1, x2); _ } -> Some (x1, x2) | _ -> None
+  
+  let is_bvconcat (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (BvConcat, _, _); _ } -> true | _ -> false
+  
+  let as_bitand (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (BitAnd, x1, x2); _ } -> Some (x1, x2) | _ -> None
+  
+  let is_bitand (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (BitAnd, _, _); _ } -> true | _ -> false
+  
+  let as_bitor (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (BitOr, x1, x2); _ } -> Some (x1, x2) | _ -> None
+  
+  let is_bitor (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (BitOr, _, _); _ } -> true | _ -> false
+  
+  let as_bitxor (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (BitXor, x1, x2); _ } -> Some (x1, x2) | _ -> None
+  
+  let is_bitxor (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (BitXor, _, _); _ } -> true | _ -> false
+  
+  let as_shl (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (Shl, x1, x2); _ } -> Some (x1, x2) | _ -> None
+  
+  let is_shl (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (Shl, _, _); _ } -> true | _ -> false
+  
+  let as_lshr (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (LShr, x1, x2); _ } -> Some (x1, x2) | _ -> None
+  
+  let is_lshr (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (LShr, _, _); _ } -> true | _ -> false
+  
+  let as_ashr (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (AShr, x1, x2); _ } -> Some (x1, x2) | _ -> None
+  
+  let is_ashr (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (AShr, _, _); _ } -> true | _ -> false
+  
+  let as_tbitvector (t : ty) =
+    match[@warning "-11"] t with TBitVector (p1) -> Some p1 | _ -> None
+  
+  let is_tbitvector (t : ty) =
+    match[@warning "-11"] t with TBitVector (_) -> true | _ -> false
+end
+
+(** The Kanon module float. *)
+module Float = struct
+  let t_float (a1 : fp) : ty = TFloat (a1)
+  let fp_of = Kanon_flat.float_fp_of
+  let is_floatclass = Kanon_flat.float_is_floatclass
+  let is_negative = Kanon_flat.float_is_negative
+  let is_positive = Kanon_flat.float_is_positive
+  let cast = Kanon_flat.float_cast
+  let eq = Kanon_flat.float_eq
+  let lt = Kanon_flat.float_lt
+  let leq = Kanon_flat.float_leq
+  let add = Kanon_flat.float_add
+  let sub = Kanon_flat.float_sub
+  let div = Kanon_flat.float_div
+  let mul = Kanon_flat.float_mul
+  let rem = Kanon_flat.float_rem
+  let abs = Kanon_flat.float_abs
+  let neg = Kanon_flat.float_neg
+  let fma = Kanon_flat.float_fma
+  let raw_fmod_of_rem = Kanon_flat.float_raw_fmod_of_rem
+  let fmod_of_rem = Kanon_flat.float_fmod_of_rem
+  let fmod = Kanon_flat.float_fmod
+  let min = Kanon_flat.float_min
+  let max = Kanon_flat.float_max
+  let sqrt = Kanon_flat.float_sqrt
+  let round = Kanon_flat.float_round
+  
+  let as_float (t : t) =
+    match[@warning "-11"] t with { kind = Float (p1); _ } -> Some p1 | _ -> None
+  
+  let is_float (t : t) =
+    match[@warning "-11"] t with { kind = Float (_); _ } -> true | _ -> false
+  
+  let as_bvoffloat (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (BvOfFloat (p1, p2, p3), x1); _ } -> Some (p1, p2, p3, x1) | _ -> None
+  
+  let is_bvoffloat (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (BvOfFloat (_, _, _), _); _ } -> true | _ -> false
+  
+  let as_floatofbv (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (FloatOfBv (p1, p2, p3), x1); _ } -> Some (p1, p2, p3, x1) | _ -> None
+  
+  let is_floatofbv (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (FloatOfBv (_, _, _), _); _ } -> true | _ -> false
+  
+  let as_floatofbvraw (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (FloatOfBvRaw (p1), x1); _ } -> Some (p1, x1) | _ -> None
+  
+  let is_floatofbvraw (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (FloatOfBvRaw (_), _); _ } -> true | _ -> false
+  
+  let as_floatoffloat (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (FloatOfFloat (p1, p2), x1); _ } -> Some (p1, p2, x1) | _ -> None
+  
+  let is_floatoffloat (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (FloatOfFloat (_, _), _); _ } -> true | _ -> false
+  
+  let as_fabs (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (FAbs, x1); _ } -> Some x1 | _ -> None
+  
+  let is_fabs (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (FAbs, _); _ } -> true | _ -> false
+  
+  let as_fneg (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (FNeg, x1); _ } -> Some x1 | _ -> None
+  
+  let is_fneg (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (FNeg, _); _ } -> true | _ -> false
+  
+  let as_fsqrt (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (FSqrt, x1); _ } -> Some x1 | _ -> None
+  
+  let is_fsqrt (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (FSqrt, _); _ } -> true | _ -> false
+  
+  let as_fis (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (FIs (p1), x1); _ } -> Some (p1, x1) | _ -> None
+  
+  let is_fis (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (FIs (_), _); _ } -> true | _ -> false
+  
+  let as_fisneg (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (FIsNeg, x1); _ } -> Some x1 | _ -> None
+  
+  let is_fisneg (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (FIsNeg, _); _ } -> true | _ -> false
+  
+  let as_fispos (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (FIsPos, x1); _ } -> Some x1 | _ -> None
+  
+  let is_fispos (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (FIsPos, _); _ } -> true | _ -> false
+  
+  let as_fround (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (FRound (p1), x1); _ } -> Some (p1, x1) | _ -> None
+  
+  let is_fround (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (FRound (_), _); _ } -> true | _ -> false
+  
+  let as_feq (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (FEq, x1, x2); _ } -> Some (x1, x2) | _ -> None
+  
+  let is_feq (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (FEq, _, _); _ } -> true | _ -> false
+  
+  let as_fleq (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (FLeq, x1, x2); _ } -> Some (x1, x2) | _ -> None
+  
+  let is_fleq (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (FLeq, _, _); _ } -> true | _ -> false
+  
+  let as_flt (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (FLt, x1, x2); _ } -> Some (x1, x2) | _ -> None
+  
+  let is_flt (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (FLt, _, _); _ } -> true | _ -> false
+  
+  let as_fadd (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (FAdd, x1, x2); _ } -> Some (x1, x2) | _ -> None
+  
+  let is_fadd (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (FAdd, _, _); _ } -> true | _ -> false
+  
+  let as_fsub (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (FSub, x1, x2); _ } -> Some (x1, x2) | _ -> None
+  
+  let is_fsub (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (FSub, _, _); _ } -> true | _ -> false
+  
+  let as_fmul (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (FMul, x1, x2); _ } -> Some (x1, x2) | _ -> None
+  
+  let is_fmul (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (FMul, _, _); _ } -> true | _ -> false
+  
+  let as_fdiv (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (FDiv, x1, x2); _ } -> Some (x1, x2) | _ -> None
+  
+  let is_fdiv (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (FDiv, _, _); _ } -> true | _ -> false
+  
+  let as_frem (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (FRem, x1, x2); _ } -> Some (x1, x2) | _ -> None
+  
+  let is_frem (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (FRem, _, _); _ } -> true | _ -> false
+  
+  let as_fmin (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (FMin, x1, x2); _ } -> Some (x1, x2) | _ -> None
+  
+  let is_fmin (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (FMin, _, _); _ } -> true | _ -> false
+  
+  let as_fmax (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (FMax, x1, x2); _ } -> Some (x1, x2) | _ -> None
+  
+  let is_fmax (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (FMax, _, _); _ } -> true | _ -> false
+  
+  let as_fma (t : t) =
+    match[@warning "-11"] t with { kind = Op3 (Fma, x1, x2, x3); _ } -> Some (x1, x2, x3) | _ -> None
+  
+  let is_fma (t : t) =
+    match[@warning "-11"] t with { kind = Op3 (Fma, _, _, _); _ } -> true | _ -> false
+  
+  let as_tfloat (t : ty) =
+    match[@warning "-11"] t with TFloat (p1) -> Some p1 | _ -> None
+  
+  let is_tfloat (t : ty) =
+    match[@warning "-11"] t with TFloat (_) -> true | _ -> false
+end
+
+(** The Kanon module ptr. *)
+module Ptr = struct
+  let t_loc (a1 : int) : ty = TLoc (a1)
+  let t_pointer (a1 : int) : ty = TPointer (a1)
+  let loc = Kanon_flat.ptr_loc
+  let ofs = Kanon_flat.ptr_ofs
+  
+  let as_ptr (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (Ptr, x1, x2); _ } -> Some (x1, x2) | _ -> None
+  
+  let is_ptr (t : t) =
+    match[@warning "-11"] t with { kind = Op2 (Ptr, _, _); _ } -> true | _ -> false
+  
+  let as_getptrloc (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (GetPtrLoc, x1); _ } -> Some x1 | _ -> None
+  
+  let is_getptrloc (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (GetPtrLoc, _); _ } -> true | _ -> false
+  
+  let as_getptrofs (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (GetPtrOfs, x1); _ } -> Some x1 | _ -> None
+  
+  let is_getptrofs (t : t) =
+    match[@warning "-11"] t with { kind = Op1 (GetPtrOfs, _); _ } -> true | _ -> false
+  
+  let as_tloc (t : ty) =
+    match[@warning "-11"] t with TLoc (p1) -> Some p1 | _ -> None
+  
+  let is_tloc (t : ty) =
+    match[@warning "-11"] t with TLoc (_) -> true | _ -> false
+  
+  let as_tpointer (t : ty) =
+    match[@warning "-11"] t with TPointer (p1) -> Some p1 | _ -> None
+  
+  let is_tpointer (t : ty) =
+    match[@warning "-11"] t with TPointer (_) -> true | _ -> false
+end
+
+(** The Kanon module exists. *)
+module Exists = struct
+  let no_binders = Kanon_flat.exists_no_binders
+  let mk = Kanon_flat.exists_mk
+  
+  let as_exists (t : t) =
+    match[@warning "-11"] t with { kind = Exists (p1, p2); _ } -> Some (p1, p2) | _ -> None
+  
+  let is_exists (t : t) =
+    match[@warning "-11"] t with { kind = Exists (_, _); _ } -> true | _ -> false
+end
+
+(** The Kanon module view. *)
+module View = struct
+  let sized_ty = Kanon_flat.view_sized_ty
+  let is_literal = Kanon_flat.view_is_literal
+  let append = Kanon_flat.view_append
+  let conjuncts = Kanon_flat.view_conjuncts
+  let implies_or_contradicts = Kanon_flat.view_implies_or_contradicts
+  let to_bv = Kanon_flat.view_to_bv
+  let neg_mod = Kanon_flat.view_neg_mod
+  let var_plus_const = Kanon_flat.view_var_plus_const
+  let range_const_ult = Kanon_flat.view_range_const_ult
+  let range_ult_const = Kanon_flat.view_range_ult_const
+  let range_var_slt = Kanon_flat.view_range_var_slt
+  let range_slt_var = Kanon_flat.view_range_slt_var
+  let flip = Kanon_flat.view_flip
+  let as_range = Kanon_flat.view_as_range
+  let operands = Kanon_flat.view_operands
+  let rebuild = Kanon_flat.view_rebuild
+  let maps_operands = Kanon_flat.view_maps_operands
+  let cost = Kanon_flat.view_cost
+  let costs = Kanon_flat.view_costs
+  let random_bound = Kanon_flat.view_random_bound
+  let random_of_z = Kanon_flat.view_random_of_z
+  let sort_operands = Kanon_flat.view_sort_operands
+  let encode_sort = Kanon_flat.view_encode_sort
+  let encode_head = Kanon_flat.view_encode_head
+  let learn_alts = Kanon_flat.view_learn_alts
+  let learn_value = Kanon_flat.view_learn_value
+end
 
 

@@ -157,10 +157,11 @@ let cast_ptr_f v = cast_checked ~ty:(t_ptr_f ()) v
 let cast_ptr_t v = cast_checked ~ty:(t_ptr_t ()) v
 
 let cast_tuple v =
-  if K.is_ttuple (get_ty v) then v else cast_error v (t_tuple [])
+  if K.Rust.is_ttuple (get_ty v) then v else cast_error v (t_tuple [])
 
 let cast_array v =
-  if K.is_tarray (get_ty v) then v else cast_error v (t_array (t_int 1) Z.zero)
+  if K.Rust.is_tarray (get_ty v) then v
+  else cast_error v (t_array (t_int 1) Z.zero)
 
 (* The [adt] ref, when given, additionally checks the value is that precise
    enum/union; callers that only know the kind (e.g. the generic store
@@ -311,7 +312,7 @@ module Ptr = struct
 
   (* {1 Internal raw-pointer plumbing (never exposed)} *)
 
-  let _thin_part part ptr = K.thin_ptr_part part ptr
+  let _thin_part part ptr = K.Rust.thin_ptr_part part ptr
 
   let _set_ptr ptr f =
     let inner =
@@ -327,12 +328,12 @@ module Ptr = struct
             ptag = None;
           }
     in
-    K.mk_thin_ptr (f inner)
+    K.Rust.mk_thin_ptr (f inner)
 
   let _inner ptr = _thin_part R.PtrInner ptr
 
   let of_raw ~ptr ~size ~align ~tag =
-    K.mk_thin_ptr { R.ptr; ptag = tag; psize = size; palign = align }
+    K.Rust.mk_thin_ptr { R.ptr; ptag = tag; psize = size; palign = align }
 
   let mk_ptr_t ~loc ~ofs ~size ~align ~tag =
     of_raw ~ptr:(Self.Ptr.mk loc ofs) ~size ~align ~tag
@@ -393,17 +394,17 @@ module Ptr = struct
 
   (* {1 Full/wide pointers ([sptr_f])} *)
 
-  let of_ptr_t ptr = K.of_thin_ptr ptr
-  let with_ptr fptr tptr = K.full_ptr_set_inner tptr fptr
+  let of_ptr_t ptr = K.Rust.of_thin_ptr ptr
+  let with_ptr fptr tptr = K.Rust.full_ptr_set_inner tptr fptr
 
   let mk_ptr_f ptr (meta : _ t) =
     let meta =
       match get_ty meta with
-      | R.TBitVector _ -> K.mk_len_meta meta
-      | R.TThinPtr -> K.mk_vtable_meta meta
+      | R.TBitVector _ -> K.Rust.mk_len_meta meta
+      | R.TThinPtr -> K.Rust.mk_vtable_meta meta
       | ty -> L.failwith "mk_ptr_f: invalid metadata type %a" ppa_ty ty
     in
-    K.mk_full_ptr ptr meta
+    K.Rust.mk_full_ptr ptr meta
 
   let mk_ptr_f_opt ptr meta_opt =
     match meta_opt with Some meta -> mk_ptr_f ptr meta | None -> of_ptr_t ptr
@@ -414,17 +415,17 @@ module Ptr = struct
   (** Like {!of_address}, but produces a full pointer with no metadata. *)
   let of_address_f addr = of_ptr_t (of_address addr)
 
-  let len_meta ptr = K.full_ptr_meta R.PartLen ptr
-  let vtable_meta ptr = K.full_ptr_meta R.PartVTable ptr
-  let ptr_of ptr = K.full_ptr_inner ptr
+  let len_meta ptr = K.Rust.full_ptr_meta R.PartLen ptr
+  let vtable_meta ptr = K.Rust.full_ptr_meta R.PartVTable ptr
+  let ptr_of ptr = K.Rust.full_ptr_inner ptr
 end
 
 module Adt = struct
   (** {2 Tuples} *)
 
-  let mk_tuple vs = K.mk_tuple vs
+  let mk_tuple vs = K.Rust.mk_tuple vs
   let unit = mk_tuple []
-  let as_tuple v = K.tuple_fields v
+  let as_tuple v = K.Rust.tuple_fields v
 
   let as_tuple1 v =
     match as_tuple v with [ a ] -> a | _ -> cast_error v (t_tuple [ t_int 1 ])
@@ -439,23 +440,23 @@ module Adt = struct
     | [ a; b; c ] -> (a, b, c)
     | _ -> cast_error v (t_tuple [ t_int 3 ])
 
-  let field_of idx v = K.field_of (Z.of_int idx) v
-  let set_field idx f v = K.set_field (Z.of_int idx) f v
+  let field_of idx v = K.Rust.field_of (Z.of_int idx) v
+  let set_field idx f v = K.Rust.set_field (Z.of_int idx) f v
   let update_field idx f v = set_field idx (f (field_of idx v)) v
 
   (** {2 Enums} *)
 
-  let mk_enum adt v_id vs = K.mk_enum adt v_id vs
-  let as_enum_of_variant var v = K.as_enum_of_variant var v
-  let field_of_variant var idx v = K.field_of_variant var (Z.of_int idx) v
+  let mk_enum adt v_id vs = K.Rust.mk_enum adt v_id vs
+  let as_enum_of_variant var v = K.Rust.as_enum_of_variant var v
+  let field_of_variant var idx v = K.Rust.field_of_variant var (Z.of_int idx) v
 
   let set_field_of_variant var idx f v =
-    K.set_field_of_variant var (Z.of_int idx) f v
+    K.Rust.set_field_of_variant var (Z.of_int idx) f v
 
   let update_field_of_variant var idx f v =
     set_field_of_variant var idx (f (field_of_variant var idx v)) v
 
-  let is_variant var_id v = K.is_variant var_id v
+  let is_variant var_id v = K.Rust.is_variant var_id v
 
   let discriminant_of (v : _ t) =
     let variants = Crate.as_enum (Rust_charon.t_as_enum (get_ty v)) in
@@ -469,23 +470,23 @@ module Adt = struct
 
   (** {2 Arrays} *)
 
-  let mk_array elem_ty arr = K.mk_array elem_ty arr
-  let as_array v = K.array_elems v
-  let array_field_of idx v = K.array_field_of (Z.of_int idx) v
-  let set_array_field idx f v = K.set_array_field (Z.of_int idx) f v
+  let mk_array elem_ty arr = K.Rust.mk_array elem_ty arr
+  let as_array v = K.Rust.array_elems v
+  let array_field_of idx v = K.Rust.array_field_of (Z.of_int idx) v
+  let set_array_field idx f v = K.Rust.set_array_field (Z.of_int idx) f v
 
   let update_array_field idx f v =
     set_array_field idx (f (array_field_of idx v)) v
 
   (** {2 Unions and PolyVal} *)
 
-  let mk_union adt blocks = K.mk_union adt (List.map block_to_raw blocks)
-  let mk_poly ty_id = K.mk_poly ty_id
+  let mk_union adt blocks = K.Rust.mk_union adt (List.map block_to_raw blocks)
+  let mk_poly ty_id = K.Rust.mk_poly ty_id
 
   (* HACK: i have no idea what this really means or how to lift this for
      variables... *)
-  let as_union v = List.map block_of_raw (Option.get (K.as_union v))
-  let as_type_var v = Option.get (K.as_polyval v)
+  let as_union v = List.map block_of_raw (Option.get (K.Rust.as_union v))
+  let as_type_var v = Option.get (K.Rust.as_polyval v)
 
   module Checked = struct
     let mk_enum tref variant vs =

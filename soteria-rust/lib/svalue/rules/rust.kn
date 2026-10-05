@@ -189,7 +189,7 @@ fn set_field_of_variant (var : variant_id) (idx : int) (x v : t) :
   mk_enum (t_as_enum (type_of v)) var vs
 
 rule is_variant : IsVariant (var, v) =
-  | enum: Enum (cur, _) -> of_bool (var = cur)
+  | enum: Enum (cur, _) -> Bool.of_bool (var = cur)
 
 (* {1 Arrays} *)
 
@@ -252,7 +252,7 @@ fn block_operands (bs : block list) : t list [@no_lean] =
   | { bvalue = bv; boffset = o; bsize = s } :: rest ->
       block_value_term bv :: o :: s :: block_operands rest
 
-extend fn operands =
+extend fn View.operands =
   | ThinPtr { ptr = p; psize = s; palign = a; _ } -> [ p; s; a ]
   | FullPtr (p, m) -> [ p; m ]
   | PtrMeta m -> meta_operands m
@@ -289,48 +289,48 @@ fn rebuild_blocks (v : t) (bs : block list) (cs : t list) : block list
           :: rebuild_blocks v rest cs_rest
       | _ -> bad_blocks v)
 
-extend fn rebuild =
+extend fn View.rebuild =
   | ThinPtr { ptag = g; _ } -> (
       match cs with
       | [ p; s; a ] ->
           mk_thin_ptr { ptr = p; ptag = g; psize = s; palign = a }
-      | _ -> bad_operands v)
+      | _ -> View.bad_operands v)
   | FullPtr _ -> (
-      match cs with [ p; m ] -> mk_full_ptr p m | _ -> bad_operands v)
+      match cs with [ p; m ] -> mk_full_ptr p m | _ -> View.bad_operands v)
   | PtrMeta m -> (
       match m with
-      | MetaUnit -> ( match cs with [] -> mk_unit_meta () | _ -> bad_operands v)
+      | MetaUnit -> ( match cs with [] -> mk_unit_meta () | _ -> View.bad_operands v)
       | MetaLen _ -> (
-          match cs with [ l ] -> mk_len_meta l | _ -> bad_operands v)
+          match cs with [ l ] -> mk_len_meta l | _ -> View.bad_operands v)
       | MetaVTable _ -> (
-          match cs with [ l ] -> mk_vtable_meta l | _ -> bad_operands v))
+          match cs with [ l ] -> mk_vtable_meta l | _ -> View.bad_operands v))
   | Enum (var, _) -> mk_enum (t_as_enum (type_of v)) var cs
   | Tuple _ -> mk_tuple cs
   | Array _ -> mk_array_of_svty (array_elem_ty (type_of v)) (array_of_list cs)
   | Union bs -> mk_union (t_as_union (type_of v)) (rebuild_blocks v bs cs)
-  | PolyVal id -> ( match cs with [] -> mk_poly id | _ -> bad_operands v)
+  | PolyVal id -> ( match cs with [] -> mk_poly id | _ -> View.bad_operands v)
   | ThinPtrPart (part, _) -> (
-      match cs with [ a ] -> thin_ptr_part part a | _ -> bad_operands v)
+      match cs with [ a ] -> thin_ptr_part part a | _ -> View.bad_operands v)
   | FullPtrInner _ -> (
-      match cs with [ a ] -> full_ptr_inner a | _ -> bad_operands v)
+      match cs with [ a ] -> full_ptr_inner a | _ -> View.bad_operands v)
   | FullPtrMeta _ -> (
-      match cs with [ a ] -> full_ptr_meta_raw a | _ -> bad_operands v)
+      match cs with [ a ] -> full_ptr_meta_raw a | _ -> View.bad_operands v)
   | PtrMetaAs (part, _) -> (
-      match cs with [ a ] -> ptr_meta_as part a | _ -> bad_operands v)
-  | Field (i, _) -> ( match cs with [ a ] -> field_of i a | _ -> bad_operands v)
+      match cs with [ a ] -> ptr_meta_as part a | _ -> View.bad_operands v)
+  | Field (i, _) -> ( match cs with [ a ] -> field_of i a | _ -> View.bad_operands v)
   | VariantField (var, i, _) -> (
-      match cs with [ a ] -> field_of_variant var i a | _ -> bad_operands v)
+      match cs with [ a ] -> field_of_variant var i a | _ -> View.bad_operands v)
   | IsVariant (var, _) -> (
-      match cs with [ a ] -> is_variant var a | _ -> bad_operands v)
+      match cs with [ a ] -> is_variant var a | _ -> View.bad_operands v)
   | ArrayField (i, _) -> (
-      match cs with [ a ] -> array_field_of i a | _ -> bad_operands v)
+      match cs with [ a ] -> array_field_of i a | _ -> View.bad_operands v)
 
 (* {2 Cost}
 
    Every node of this module costs 100_000, whatever its operands: the old code
    did not count them ("TODO: cost for extensions") *)
 
-extend fn cost =
+extend fn View.cost =
   | ThinPtr _ | FullPtr _ | PtrMeta _ | Enum _ | Tuple _ | Array _ | Union _
   | PolyVal _ | ThinPtrPart _ | FullPtrInner _ | FullPtrMeta _ | PtrMetaAs _
   | Field _ | VariantField _ | IsVariant _ | ArrayField _ ->
@@ -344,8 +344,8 @@ extend fn cost =
 fn range_from (i n : int) : int list [@no_lean] =
   if i >= n then [] else i :: range_from (i + 1) n
 
-extend fn learn_alts = | Tuple vs -> LAll ([], range_from 0 (list_length vs))
-extend fn learn_value = | Tuple _, k -> Some (field_of k v)
+extend fn View.learn_alts = | Tuple vs -> LAll ([], range_from 0 (list_length vs))
+extend fn View.learn_value = | Tuple _, k -> Some (field_of k v)
 
 (* {2 Sorts in the SMT encoding}
 
@@ -360,12 +360,12 @@ prim so_ptr_meta : smt_sort_op [@no_lean]
 prim so_union : decl_ref -> smt_sort_op [@no_lean]
 prim so_poly : smt_sort_op [@no_lean]
 
-extend fn sort_operands = | TTuple tys -> tys | TArray (e, _) -> [ e ]
+extend fn View.sort_operands = | TTuple tys -> tys | TArray (e, _) -> [ e ]
 
-extend fn encode_sort =
+extend fn View.encode_sort =
   | TTuple _ -> so_tuple
   | TEnum adt -> so_enum adt
-  | TArray _ -> so_seq
+  | TArray _ -> View.so_seq
   | TThinPtr -> so_thin_ptr
   | TFullPtr -> so_full_ptr
   | TPtrMeta -> so_ptr_meta
@@ -398,7 +398,7 @@ prim h_variant_field : variant_id -> int -> smt_op [@no_lean]
 prim h_is_variant : variant_id -> smt_op [@no_lean]
 prim h_array_field : int -> smt_op [@no_lean]
 
-extend fn encode_head =
+extend fn View.encode_head =
   | ThinPtr _ -> h_thin_ptr
   | FullPtr _ -> h_full_ptr
   | PtrMeta m -> (

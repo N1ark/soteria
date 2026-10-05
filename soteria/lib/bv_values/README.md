@@ -55,7 +55,7 @@ Files (see `INTERFACES.md` for the contracts):
   (`include Soteria.Bv_values.Typed`). It is not a functor: it is `Bv_typed.Derived` (the typed smart constructors that
   Kanon generates), the groups of tags (`T.cval`, `T.any`), and thin wrappers that give them the public API
   (`Typed_intf.S`: nested modules, labelled and optional arguments, `int` sizes: `BitVec.add ?checked` is
-  `Bv_typed.Derived.Bitvec.bv_add`). The leaves and the operations that the rules do not type come from `Lang.Svalue`.
+  `Bv_typed.Derived.Bitvec.add`). The leaves and the operations that the rules do not type come from `Lang.Svalue`.
   The terms live in one global table, which is initialised, with the constants
   and the literal cache, when `Lang` is.
 - the generic code: `Value_lang`, `Eval`, `Expr`, `Svalue_sugar`,
@@ -113,18 +113,21 @@ rules define; the view functions and the primitives marked `[@no_lean]`
 
 The subsorts are in the statements: `TNonzero` is `Nonzero` and `TZero` is
 `Zero` (`Semantics.lean`: the term never has a bit-vector value that is zero,
-resp. always has zero). The rules of `Div` and `Rem` (`bv_div`, `bv_rem`) are
+resp. always has zero). The rules of `Div` and `Rem` (`Bitvec.div`, `Bitvec.rem`) are
 sound for a divisor that is `Nonzero`, which is the contract of the typed
-interface that the OCaml side trusts, and `Ops.Sound` assumes it of `bv_div` and
-`bv_rem`. The rules that call them prove `Nonzero` of the divisor they pass
+interface that the OCaml side trusts, and `Ops.Sound` assumes it of `Bitvec.div` and
+`Bitvec.rem`. The rules that call them prove `Nonzero` of the divisor they pass
 (`Lib/Lit.lean`, `kanon_nonzero`).
 
 The proof of an arm is the theorem tagged `@[kanon_arm]` that proves
-`f.r_name.arm.Stmt` in `Kanon/Proofs/`, if there is one; otherwise the tactic
-given to its function by `attribute [kanon_tactic tac] f.spec`, in the library
-that defines `tac` (`Kanon/Lib/`); otherwise `kanon_auto` (`Kanon/Lib/Rule.lean`).
-The arms proved by these defaults are listed in `Kanon/Proofs/Auto*.lean`, ten per
-module: elaborated in one file (`Soundness.lean`) they need over 14 GB of memory.
+`M.f.r_name.arm.Stmt` in `Kanon/Proofs/`. The arms that the default tactics
+prove are listed in `Kanon/Proofs/Auto*.lean`, ten per module: elaborated in one
+file (`Soundness.lean`) they need over 14 GB of memory. Each is proved by the
+tactic given to its function by `attribute [kanon_tactic tac] M.f.spec`, in the
+library that defines `tac` (`Kanon/Lib/`), or else by `kanon_auto`
+(`Kanon/Lib/Rule.lean`); the Auto files spell that tactic out, since Kanon's
+`kanon_proof%` looks the attribute up under the first component of the arm (the
+module `M`), not under the function `M.f`.
 The arms of the bool module are proved once, in Kanon's library
 (`KanonCore.BoolMod`), for the language `boolLang` of `Kanon/Lib/Bool.lean`. The
 integers of the bit-vector literals are related to Lean's `BitVec` by

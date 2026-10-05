@@ -46,6 +46,29 @@ structure Syntax {S : Kanon.Sem} [DecidableEq S.Term] [DecidableEq S.Ty] (B : Ka
   FMinK : S.Term → S.Term → B.Kind
   FMaxK : S.Term → S.Term → B.Kind
   FmaK : S.Term → S.Term → S.Term → B.Kind
+  FloatK_name : ∀ (f : CoreMod.Float), B.kindName (FloatK f) = "Float"
+  BvOfFloatK_name : ∀ (x1 : CoreMod.Rm) (x2 : Bool) (n : Int) (a1 : S.Term), B.kindName (BvOfFloatK x1 x2 n a1) = "BvOfFloat"
+  FloatOfBvK_name : ∀ (x1 : CoreMod.Rm) (x2 : Bool) (p : CoreMod.Fp) (a1 : S.Term), B.kindName (FloatOfBvK x1 x2 p a1) = "FloatOfBv"
+  FloatOfBvRawK_name : ∀ (p : CoreMod.Fp) (a1 : S.Term), B.kindName (FloatOfBvRawK p a1) = "FloatOfBvRaw"
+  FloatOfFloatK_name : ∀ (x1 : CoreMod.Rm) (p : CoreMod.Fp) (a1 : S.Term), B.kindName (FloatOfFloatK x1 p a1) = "FloatOfFloat"
+  FAbsK_name : ∀ (a1 : S.Term), B.kindName (FAbsK a1) = "FAbs"
+  FNegK_name : ∀ (a1 : S.Term), B.kindName (FNegK a1) = "FNeg"
+  FSqrtK_name : ∀ (a1 : S.Term), B.kindName (FSqrtK a1) = "FSqrt"
+  FIsK_name : ∀ (x1 : CoreMod.Fc) (a1 : S.Term), B.kindName (FIsK x1 a1) = "FIs"
+  FIsNegK_name : ∀ (a1 : S.Term), B.kindName (FIsNegK a1) = "FIsNeg"
+  FIsPosK_name : ∀ (a1 : S.Term), B.kindName (FIsPosK a1) = "FIsPos"
+  FRoundK_name : ∀ (x1 : CoreMod.Rm) (a1 : S.Term), B.kindName (FRoundK x1 a1) = "FRound"
+  FEqK_name : ∀ (a1 : S.Term) (a2 : S.Term), B.kindName (FEqK a1 a2) = "FEq"
+  FLeqK_name : ∀ (a1 : S.Term) (a2 : S.Term), B.kindName (FLeqK a1 a2) = "FLeq"
+  FLtK_name : ∀ (a1 : S.Term) (a2 : S.Term), B.kindName (FLtK a1 a2) = "FLt"
+  FAddK_name : ∀ (a1 : S.Term) (a2 : S.Term), B.kindName (FAddK a1 a2) = "FAdd"
+  FSubK_name : ∀ (a1 : S.Term) (a2 : S.Term), B.kindName (FSubK a1 a2) = "FSub"
+  FMulK_name : ∀ (a1 : S.Term) (a2 : S.Term), B.kindName (FMulK a1 a2) = "FMul"
+  FDivK_name : ∀ (a1 : S.Term) (a2 : S.Term), B.kindName (FDivK a1 a2) = "FDiv"
+  FRemK_name : ∀ (a1 : S.Term) (a2 : S.Term), B.kindName (FRemK a1 a2) = "FRem"
+  FMinK_name : ∀ (a1 : S.Term) (a2 : S.Term), B.kindName (FMinK a1 a2) = "FMin"
+  FMaxK_name : ∀ (a1 : S.Term) (a2 : S.Term), B.kindName (FMaxK a1 a2) = "FMax"
+  FmaK_name : ∀ (a1 : S.Term) (a2 : S.Term) (a3 : S.Term), B.kindName (FmaK a1 a2 a3) = "Fma"
   /-- The invariant of the terms of `Float`. -/
   float_wf : S.Term → Prop
   float_fp_of_ty : S.Ty → CoreMod.Fp
@@ -96,94 +119,117 @@ structure Syntax {S : Kanon.Sem} [DecidableEq S.Term] [DecidableEq S.Ty] (B : Ka
   asFloat : S.Term → Option CoreMod.Float
   asFloat_node : ∀ (f : CoreMod.Float) (t : S.Ty), asFloat (B.node (FloatK f) t) = some f
   asFloat_sound : ∀ (v : S.Term) (f : CoreMod.Float), asFloat v = some f → v = (B.node (FloatK f) (S.ty v))
+  asFloat_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "Float" → asFloat (B.node k t) = none
   /-- The arguments of a `BvOfFloat` node. -/
   asBvOfFloat : S.Term → Option (CoreMod.Rm × Bool × Int × S.Term)
   asBvOfFloat_node : ∀ (x1 : CoreMod.Rm) (x2 : Bool) (n : Int) (a1 : S.Term) (t : S.Ty), asBvOfFloat (B.node (BvOfFloatK x1 x2 n a1) t) = some (x1, x2, n, a1)
   asBvOfFloat_sound : ∀ (v : S.Term) (x1 : CoreMod.Rm) (x2 : Bool) (n : Int) (a1 : S.Term), asBvOfFloat v = some (x1, x2, n, a1) → v = (B.node (BvOfFloatK x1 x2 n a1) (S.ty v))
+  asBvOfFloat_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "BvOfFloat" → asBvOfFloat (B.node k t) = none
   /-- The arguments of a `FloatOfBv` node. -/
   asFloatOfBv : S.Term → Option (CoreMod.Rm × Bool × CoreMod.Fp × S.Term)
   asFloatOfBv_node : ∀ (x1 : CoreMod.Rm) (x2 : Bool) (p : CoreMod.Fp) (a1 : S.Term) (t : S.Ty), asFloatOfBv (B.node (FloatOfBvK x1 x2 p a1) t) = some (x1, x2, p, a1)
   asFloatOfBv_sound : ∀ (v : S.Term) (x1 : CoreMod.Rm) (x2 : Bool) (p : CoreMod.Fp) (a1 : S.Term), asFloatOfBv v = some (x1, x2, p, a1) → v = (B.node (FloatOfBvK x1 x2 p a1) (S.ty v))
+  asFloatOfBv_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "FloatOfBv" → asFloatOfBv (B.node k t) = none
   /-- The arguments of a `FloatOfBvRaw` node. -/
   asFloatOfBvRaw : S.Term → Option (CoreMod.Fp × S.Term)
   asFloatOfBvRaw_node : ∀ (p : CoreMod.Fp) (a1 : S.Term) (t : S.Ty), asFloatOfBvRaw (B.node (FloatOfBvRawK p a1) t) = some (p, a1)
   asFloatOfBvRaw_sound : ∀ (v : S.Term) (p : CoreMod.Fp) (a1 : S.Term), asFloatOfBvRaw v = some (p, a1) → v = (B.node (FloatOfBvRawK p a1) (S.ty v))
+  asFloatOfBvRaw_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "FloatOfBvRaw" → asFloatOfBvRaw (B.node k t) = none
   /-- The arguments of a `FloatOfFloat` node. -/
   asFloatOfFloat : S.Term → Option (CoreMod.Rm × CoreMod.Fp × S.Term)
   asFloatOfFloat_node : ∀ (x1 : CoreMod.Rm) (p : CoreMod.Fp) (a1 : S.Term) (t : S.Ty), asFloatOfFloat (B.node (FloatOfFloatK x1 p a1) t) = some (x1, p, a1)
   asFloatOfFloat_sound : ∀ (v : S.Term) (x1 : CoreMod.Rm) (p : CoreMod.Fp) (a1 : S.Term), asFloatOfFloat v = some (x1, p, a1) → v = (B.node (FloatOfFloatK x1 p a1) (S.ty v))
+  asFloatOfFloat_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "FloatOfFloat" → asFloatOfFloat (B.node k t) = none
   /-- The arguments of a `FAbs` node. -/
   asFAbs : S.Term → Option S.Term
   asFAbs_node : ∀ (a1 : S.Term) (t : S.Ty), asFAbs (B.node (FAbsK a1) t) = some a1
   asFAbs_sound : ∀ (v : S.Term) (a1 : S.Term), asFAbs v = some a1 → v = (B.node (FAbsK a1) (S.ty v))
+  asFAbs_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "FAbs" → asFAbs (B.node k t) = none
   /-- The arguments of a `FNeg` node. -/
   asFNeg : S.Term → Option S.Term
   asFNeg_node : ∀ (a1 : S.Term) (t : S.Ty), asFNeg (B.node (FNegK a1) t) = some a1
   asFNeg_sound : ∀ (v : S.Term) (a1 : S.Term), asFNeg v = some a1 → v = (B.node (FNegK a1) (S.ty v))
+  asFNeg_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "FNeg" → asFNeg (B.node k t) = none
   /-- The arguments of a `FSqrt` node. -/
   asFSqrt : S.Term → Option S.Term
   asFSqrt_node : ∀ (a1 : S.Term) (t : S.Ty), asFSqrt (B.node (FSqrtK a1) t) = some a1
   asFSqrt_sound : ∀ (v : S.Term) (a1 : S.Term), asFSqrt v = some a1 → v = (B.node (FSqrtK a1) (S.ty v))
+  asFSqrt_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "FSqrt" → asFSqrt (B.node k t) = none
   /-- The arguments of a `FIs` node. -/
   asFIs : S.Term → Option (CoreMod.Fc × S.Term)
   asFIs_node : ∀ (x1 : CoreMod.Fc) (a1 : S.Term) (t : S.Ty), asFIs (B.node (FIsK x1 a1) t) = some (x1, a1)
   asFIs_sound : ∀ (v : S.Term) (x1 : CoreMod.Fc) (a1 : S.Term), asFIs v = some (x1, a1) → v = (B.node (FIsK x1 a1) (S.ty v))
+  asFIs_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "FIs" → asFIs (B.node k t) = none
   /-- The arguments of a `FIsNeg` node. -/
   asFIsNeg : S.Term → Option S.Term
   asFIsNeg_node : ∀ (a1 : S.Term) (t : S.Ty), asFIsNeg (B.node (FIsNegK a1) t) = some a1
   asFIsNeg_sound : ∀ (v : S.Term) (a1 : S.Term), asFIsNeg v = some a1 → v = (B.node (FIsNegK a1) (S.ty v))
+  asFIsNeg_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "FIsNeg" → asFIsNeg (B.node k t) = none
   /-- The arguments of a `FIsPos` node. -/
   asFIsPos : S.Term → Option S.Term
   asFIsPos_node : ∀ (a1 : S.Term) (t : S.Ty), asFIsPos (B.node (FIsPosK a1) t) = some a1
   asFIsPos_sound : ∀ (v : S.Term) (a1 : S.Term), asFIsPos v = some a1 → v = (B.node (FIsPosK a1) (S.ty v))
+  asFIsPos_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "FIsPos" → asFIsPos (B.node k t) = none
   /-- The arguments of a `FRound` node. -/
   asFRound : S.Term → Option (CoreMod.Rm × S.Term)
   asFRound_node : ∀ (x1 : CoreMod.Rm) (a1 : S.Term) (t : S.Ty), asFRound (B.node (FRoundK x1 a1) t) = some (x1, a1)
   asFRound_sound : ∀ (v : S.Term) (x1 : CoreMod.Rm) (a1 : S.Term), asFRound v = some (x1, a1) → v = (B.node (FRoundK x1 a1) (S.ty v))
+  asFRound_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "FRound" → asFRound (B.node k t) = none
   /-- The arguments of a `FEq` node. -/
   asFEq : S.Term → Option (S.Term × S.Term)
   asFEq_node : ∀ (a1 : S.Term) (a2 : S.Term) (t : S.Ty), asFEq (B.node (FEqK a1 a2) t) = some (a1, a2)
   asFEq_sound : ∀ (v : S.Term) (a1 : S.Term) (a2 : S.Term), asFEq v = some (a1, a2) → v = (B.node (FEqK a1 a2) (S.ty v))
+  asFEq_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "FEq" → asFEq (B.node k t) = none
   /-- The arguments of a `FLeq` node. -/
   asFLeq : S.Term → Option (S.Term × S.Term)
   asFLeq_node : ∀ (a1 : S.Term) (a2 : S.Term) (t : S.Ty), asFLeq (B.node (FLeqK a1 a2) t) = some (a1, a2)
   asFLeq_sound : ∀ (v : S.Term) (a1 : S.Term) (a2 : S.Term), asFLeq v = some (a1, a2) → v = (B.node (FLeqK a1 a2) (S.ty v))
+  asFLeq_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "FLeq" → asFLeq (B.node k t) = none
   /-- The arguments of a `FLt` node. -/
   asFLt : S.Term → Option (S.Term × S.Term)
   asFLt_node : ∀ (a1 : S.Term) (a2 : S.Term) (t : S.Ty), asFLt (B.node (FLtK a1 a2) t) = some (a1, a2)
   asFLt_sound : ∀ (v : S.Term) (a1 : S.Term) (a2 : S.Term), asFLt v = some (a1, a2) → v = (B.node (FLtK a1 a2) (S.ty v))
+  asFLt_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "FLt" → asFLt (B.node k t) = none
   /-- The arguments of a `FAdd` node. -/
   asFAdd : S.Term → Option (S.Term × S.Term)
   asFAdd_node : ∀ (a1 : S.Term) (a2 : S.Term) (t : S.Ty), asFAdd (B.node (FAddK a1 a2) t) = some (a1, a2)
   asFAdd_sound : ∀ (v : S.Term) (a1 : S.Term) (a2 : S.Term), asFAdd v = some (a1, a2) → v = (B.node (FAddK a1 a2) (S.ty v))
+  asFAdd_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "FAdd" → asFAdd (B.node k t) = none
   /-- The arguments of a `FSub` node. -/
   asFSub : S.Term → Option (S.Term × S.Term)
   asFSub_node : ∀ (a1 : S.Term) (a2 : S.Term) (t : S.Ty), asFSub (B.node (FSubK a1 a2) t) = some (a1, a2)
   asFSub_sound : ∀ (v : S.Term) (a1 : S.Term) (a2 : S.Term), asFSub v = some (a1, a2) → v = (B.node (FSubK a1 a2) (S.ty v))
+  asFSub_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "FSub" → asFSub (B.node k t) = none
   /-- The arguments of a `FMul` node. -/
   asFMul : S.Term → Option (S.Term × S.Term)
   asFMul_node : ∀ (a1 : S.Term) (a2 : S.Term) (t : S.Ty), asFMul (B.node (FMulK a1 a2) t) = some (a1, a2)
   asFMul_sound : ∀ (v : S.Term) (a1 : S.Term) (a2 : S.Term), asFMul v = some (a1, a2) → v = (B.node (FMulK a1 a2) (S.ty v))
+  asFMul_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "FMul" → asFMul (B.node k t) = none
   /-- The arguments of a `FDiv` node. -/
   asFDiv : S.Term → Option (S.Term × S.Term)
   asFDiv_node : ∀ (a1 : S.Term) (a2 : S.Term) (t : S.Ty), asFDiv (B.node (FDivK a1 a2) t) = some (a1, a2)
   asFDiv_sound : ∀ (v : S.Term) (a1 : S.Term) (a2 : S.Term), asFDiv v = some (a1, a2) → v = (B.node (FDivK a1 a2) (S.ty v))
+  asFDiv_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "FDiv" → asFDiv (B.node k t) = none
   /-- The arguments of a `FRem` node. -/
   asFRem : S.Term → Option (S.Term × S.Term)
   asFRem_node : ∀ (a1 : S.Term) (a2 : S.Term) (t : S.Ty), asFRem (B.node (FRemK a1 a2) t) = some (a1, a2)
   asFRem_sound : ∀ (v : S.Term) (a1 : S.Term) (a2 : S.Term), asFRem v = some (a1, a2) → v = (B.node (FRemK a1 a2) (S.ty v))
+  asFRem_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "FRem" → asFRem (B.node k t) = none
   /-- The arguments of a `FMin` node. -/
   asFMin : S.Term → Option (S.Term × S.Term)
   asFMin_node : ∀ (a1 : S.Term) (a2 : S.Term) (t : S.Ty), asFMin (B.node (FMinK a1 a2) t) = some (a1, a2)
   asFMin_sound : ∀ (v : S.Term) (a1 : S.Term) (a2 : S.Term), asFMin v = some (a1, a2) → v = (B.node (FMinK a1 a2) (S.ty v))
+  asFMin_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "FMin" → asFMin (B.node k t) = none
   /-- The arguments of a `FMax` node. -/
   asFMax : S.Term → Option (S.Term × S.Term)
   asFMax_node : ∀ (a1 : S.Term) (a2 : S.Term) (t : S.Ty), asFMax (B.node (FMaxK a1 a2) t) = some (a1, a2)
   asFMax_sound : ∀ (v : S.Term) (a1 : S.Term) (a2 : S.Term), asFMax v = some (a1, a2) → v = (B.node (FMaxK a1 a2) (S.ty v))
+  asFMax_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "FMax" → asFMax (B.node k t) = none
   /-- The arguments of a `Fma` node. -/
   asFma : S.Term → Option (S.Term × S.Term × S.Term)
   asFma_node : ∀ (a1 : S.Term) (a2 : S.Term) (a3 : S.Term) (t : S.Ty), asFma (B.node (FmaK a1 a2 a3) t) = some (a1, a2, a3)
   asFma_sound : ∀ (v : S.Term) (a1 : S.Term) (a2 : S.Term) (a3 : S.Term), asFma v = some (a1, a2, a3) → v = (B.node (FmaK a1 a2 a3) (S.ty v))
+  asFma_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "Fma" → asFma (B.node k t) = none
   /-- The arguments of the sort `TFloat`. -/
   asTFloat : S.Ty → Option CoreMod.Fp
   asTFloat_sort : ∀ (x1 : CoreMod.Fp), asTFloat (TFloat x1) = some x1
@@ -196,5 +242,53 @@ structure Syntax {S : Kanon.Sem} [DecidableEq S.Term] [DecidableEq S.Ty] (B : Ka
       (let abs2 := (B.node (FAbsK v2) (S.ty v2));
       (let correction := (B.node (LBool.IteK (is_neg v1) (B.node (FNegK abs2) (S.ty abs2)) abs2) (S.ty abs2));
       (B.node (LBool.IteK (B.node (LBool.EqK (is_neg r) (is_neg v1)) LBool.TBool) r (B.node (FAddK r correction) (S.ty r))) (S.ty r)))))
+
+attribute [kanon_law]
+  Syntax.FloatK_name
+  Syntax.asFloat_other
+  Syntax.BvOfFloatK_name
+  Syntax.asBvOfFloat_other
+  Syntax.FloatOfBvK_name
+  Syntax.asFloatOfBv_other
+  Syntax.FloatOfBvRawK_name
+  Syntax.asFloatOfBvRaw_other
+  Syntax.FloatOfFloatK_name
+  Syntax.asFloatOfFloat_other
+  Syntax.FAbsK_name
+  Syntax.asFAbs_other
+  Syntax.FNegK_name
+  Syntax.asFNeg_other
+  Syntax.FSqrtK_name
+  Syntax.asFSqrt_other
+  Syntax.FIsK_name
+  Syntax.asFIs_other
+  Syntax.FIsNegK_name
+  Syntax.asFIsNeg_other
+  Syntax.FIsPosK_name
+  Syntax.asFIsPos_other
+  Syntax.FRoundK_name
+  Syntax.asFRound_other
+  Syntax.FEqK_name
+  Syntax.asFEq_other
+  Syntax.FLeqK_name
+  Syntax.asFLeq_other
+  Syntax.FLtK_name
+  Syntax.asFLt_other
+  Syntax.FAddK_name
+  Syntax.asFAdd_other
+  Syntax.FSubK_name
+  Syntax.asFSub_other
+  Syntax.FMulK_name
+  Syntax.asFMul_other
+  Syntax.FDivK_name
+  Syntax.asFDiv_other
+  Syntax.FRemK_name
+  Syntax.asFRem_other
+  Syntax.FMinK_name
+  Syntax.asFMin_other
+  Syntax.FMaxK_name
+  Syntax.asFMax_other
+  Syntax.FmaK_name
+  Syntax.asFma_other
 
 end FloatMod

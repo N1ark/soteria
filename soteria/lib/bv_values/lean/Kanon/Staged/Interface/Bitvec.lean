@@ -78,128 +78,178 @@ def bitvecSyntax (FS : FloatSem) : BitvecMod.Syntax (S := (sem FS)) (modBase FS)
   BitVecK := fun x1 => (Kind.BitVec x1)
   WT_BitVec := by intros; first | exact Iff.rfl | kanon_law
   asBitVec := fun v => match v with | Term.mk (Kind.BitVec x1) _ => some x1 | _ => none
+  BitVecK_name := by intros; rfl
   asBitVec_node := by intros; rfl
   asBitVec_sound := by intro v x1 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asBitVec_other := by kanon_other
   LocLitK := fun x1 => (Kind.LocLit x1)
   WT_LocLit := by intros; first | exact Iff.rfl | kanon_law
   asLocLit := fun v => match v with | Term.mk (Kind.LocLit x1) _ => some x1 | _ => none
+  LocLitK_name := by intros; rfl
   asLocLit_node := by intros; rfl
   asLocLit_sound := by intro v x1 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asLocLit_other := by kanon_other
   BvOfBoolK := fun n a1 => (Kind.Op1 (Op1.BvOfBool n) a1)
   WT_BvOfBool := by intros; first | exact Iff.rfl | kanon_law
   asBvOfBool := fun v => match v with | Term.mk (Kind.Op1 (Op1.BvOfBool n) a1) _ => some (n, a1) | _ => none
+  BvOfBoolK_name := by intros; rfl
   asBvOfBool_node := by intros; rfl
   asBvOfBool_sound := by intro v n a1 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asBvOfBool_other := by kanon_other
   BvExtractK := fun from_ to_ a1 => (Kind.Op1 (Op1.BvExtract from_ to_) a1)
   WT_BvExtract := by intros; first | exact Iff.rfl | kanon_law
   asBvExtract := fun v => match v with | Term.mk (Kind.Op1 (Op1.BvExtract from_ to_) a1) _ => some (from_, to_, a1) | _ => none
+  BvExtractK_name := by intros; rfl
   asBvExtract_node := by intros; rfl
   asBvExtract_sound := by intro v from_ to_ a1 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asBvExtract_other := by kanon_other
   BvExtendK := fun x1 k a1 => (Kind.Op1 (Op1.BvExtend x1 k) a1)
   WT_BvExtend := by intros; first | exact Iff.rfl | kanon_law
   asBvExtend := fun v => match v with | Term.mk (Kind.Op1 (Op1.BvExtend x1 k) a1) _ => some (x1, k, a1) | _ => none
+  BvExtendK_name := by intros; rfl
   asBvExtend_node := by intros; rfl
   asBvExtend_sound := by intro v x1 k a1 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asBvExtend_other := by kanon_other
   BvNotK := fun a1 => (Kind.Op1 Op1.BvNot a1)
   WT_BvNot := by intros; first | exact Iff.rfl | kanon_law
   asBvNot := fun v => match v with | Term.mk (Kind.Op1 Op1.BvNot a1) _ => some a1 | _ => none
+  BvNotK_name := by intros; rfl
   asBvNot_node := by intros; rfl
   asBvNot_sound := by intro v a1 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asBvNot_other := by kanon_other
   NegK := fun x1 a1 => (Kind.Op1 (Op1.Neg x1) a1)
   WT_Neg := by intros; first | exact Iff.rfl | kanon_law
   asNeg := fun v => match v with | Term.mk (Kind.Op1 (Op1.Neg x1) a1) _ => some (x1, a1) | _ => none
+  NegK_name := by intros; rfl
   asNeg_node := by intros; rfl
   asNeg_sound := by intro v x1 a1 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asNeg_other := by kanon_other
   AddK := fun x1 a1 a2 => (Kind.Op2 (Op2.Add x1) a1 a2)
   WT_Add := by intros; first | exact Iff.rfl | kanon_law
   asAdd := fun v => match v with | Term.mk (Kind.Op2 (Op2.Add x1) a1 a2) _ => some (x1, a1, a2) | _ => none
+  AddK_name := by intros; rfl
   asAdd_node := by intros; rfl
   asAdd_sound := by intro v x1 a1 a2 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asAdd_other := by kanon_other
   SubK := fun x1 a1 a2 => (Kind.Op2 (Op2.Sub x1) a1 a2)
   WT_Sub := by intros; first | exact Iff.rfl | kanon_law
   asSub := fun v => match v with | Term.mk (Kind.Op2 (Op2.Sub x1) a1 a2) _ => some (x1, a1, a2) | _ => none
+  SubK_name := by intros; rfl
   asSub_node := by intros; rfl
   asSub_sound := by intro v x1 a1 a2 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asSub_other := by kanon_other
   MulK := fun x1 a1 a2 => (Kind.Op2 (Op2.Mul x1) a1 a2)
   WT_Mul := by intros; first | exact Iff.rfl | kanon_law
   asMul := fun v => match v with | Term.mk (Kind.Op2 (Op2.Mul x1) a1 a2) _ => some (x1, a1, a2) | _ => none
+  MulK_name := by intros; rfl
   asMul_node := by intros; rfl
   asMul_sound := by intro v x1 a1 a2 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asMul_other := by kanon_other
   DivK := fun x1 a1 a2 => (Kind.Op2 (Op2.Div x1) a1 a2)
   WT_Div := by intros; first | exact Iff.rfl | kanon_law
   asDiv := fun v => match v with | Term.mk (Kind.Op2 (Op2.Div x1) a1 a2) _ => some (x1, a1, a2) | _ => none
+  DivK_name := by intros; rfl
   asDiv_node := by intros; rfl
   asDiv_sound := by intro v x1 a1 a2 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asDiv_other := by kanon_other
   RemK := fun x1 a1 a2 => (Kind.Op2 (Op2.Rem x1) a1 a2)
   WT_Rem := by intros; first | exact Iff.rfl | kanon_law
   asRem := fun v => match v with | Term.mk (Kind.Op2 (Op2.Rem x1) a1 a2) _ => some (x1, a1, a2) | _ => none
+  RemK_name := by intros; rfl
   asRem_node := by intros; rfl
   asRem_sound := by intro v x1 a1 a2 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asRem_other := by kanon_other
   ModK := fun a1 a2 => (Kind.Op2 Op2.Mod a1 a2)
   WT_Mod := by intros; first | exact Iff.rfl | kanon_law
   asMod := fun v => match v with | Term.mk (Kind.Op2 Op2.Mod a1 a2) _ => some (a1, a2) | _ => none
+  ModK_name := by intros; rfl
   asMod_node := by intros; rfl
   asMod_sound := by intro v a1 a2 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asMod_other := by kanon_other
   AddOvfK := fun x1 a1 a2 => (Kind.Op2 (Op2.AddOvf x1) a1 a2)
   WT_AddOvf := by intros; first | exact Iff.rfl | kanon_law
   asAddOvf := fun v => match v with | Term.mk (Kind.Op2 (Op2.AddOvf x1) a1 a2) _ => some (x1, a1, a2) | _ => none
+  AddOvfK_name := by intros; rfl
   asAddOvf_node := by intros; rfl
   asAddOvf_sound := by intro v x1 a1 a2 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asAddOvf_other := by kanon_other
   SubOvfK := fun x1 a1 a2 => (Kind.Op2 (Op2.SubOvf x1) a1 a2)
   WT_SubOvf := by intros; first | exact Iff.rfl | kanon_law
   asSubOvf := fun v => match v with | Term.mk (Kind.Op2 (Op2.SubOvf x1) a1 a2) _ => some (x1, a1, a2) | _ => none
+  SubOvfK_name := by intros; rfl
   asSubOvf_node := by intros; rfl
   asSubOvf_sound := by intro v x1 a1 a2 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asSubOvf_other := by kanon_other
   MulOvfK := fun x1 a1 a2 => (Kind.Op2 (Op2.MulOvf x1) a1 a2)
   WT_MulOvf := by intros; first | exact Iff.rfl | kanon_law
   asMulOvf := fun v => match v with | Term.mk (Kind.Op2 (Op2.MulOvf x1) a1 a2) _ => some (x1, a1, a2) | _ => none
+  MulOvfK_name := by intros; rfl
   asMulOvf_node := by intros; rfl
   asMulOvf_sound := by intro v x1 a1 a2 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asMulOvf_other := by kanon_other
   LtK := fun x1 a1 a2 => (Kind.Op2 (Op2.Lt x1) a1 a2)
   WT_Lt := by intros; first | exact Iff.rfl | kanon_law
   asLt := fun v => match v with | Term.mk (Kind.Op2 (Op2.Lt x1) a1 a2) _ => some (x1, a1, a2) | _ => none
+  LtK_name := by intros; rfl
   asLt_node := by intros; rfl
   asLt_sound := by intro v x1 a1 a2 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asLt_other := by kanon_other
   LeqK := fun x1 a1 a2 => (Kind.Op2 (Op2.Leq x1) a1 a2)
   WT_Leq := by intros; first | exact Iff.rfl | kanon_law
   asLeq := fun v => match v with | Term.mk (Kind.Op2 (Op2.Leq x1) a1 a2) _ => some (x1, a1, a2) | _ => none
+  LeqK_name := by intros; rfl
   asLeq_node := by intros; rfl
   asLeq_sound := by intro v x1 a1 a2 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asLeq_other := by kanon_other
   BvConcatK := fun a1 a2 => (Kind.Op2 Op2.BvConcat a1 a2)
   WT_BvConcat := by intros; first | exact Iff.rfl | kanon_law
   asBvConcat := fun v => match v with | Term.mk (Kind.Op2 Op2.BvConcat a1 a2) _ => some (a1, a2) | _ => none
+  BvConcatK_name := by intros; rfl
   asBvConcat_node := by intros; rfl
   asBvConcat_sound := by intro v a1 a2 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asBvConcat_other := by kanon_other
   BitAndK := fun a1 a2 => (Kind.Op2 Op2.BitAnd a1 a2)
   WT_BitAnd := by intros; first | exact Iff.rfl | kanon_law
   asBitAnd := fun v => match v with | Term.mk (Kind.Op2 Op2.BitAnd a1 a2) _ => some (a1, a2) | _ => none
+  BitAndK_name := by intros; rfl
   asBitAnd_node := by intros; rfl
   asBitAnd_sound := by intro v a1 a2 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asBitAnd_other := by kanon_other
   BitOrK := fun a1 a2 => (Kind.Op2 Op2.BitOr a1 a2)
   WT_BitOr := by intros; first | exact Iff.rfl | kanon_law
   asBitOr := fun v => match v with | Term.mk (Kind.Op2 Op2.BitOr a1 a2) _ => some (a1, a2) | _ => none
+  BitOrK_name := by intros; rfl
   asBitOr_node := by intros; rfl
   asBitOr_sound := by intro v a1 a2 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asBitOr_other := by kanon_other
   BitXorK := fun a1 a2 => (Kind.Op2 Op2.BitXor a1 a2)
   WT_BitXor := by intros; first | exact Iff.rfl | kanon_law
   asBitXor := fun v => match v with | Term.mk (Kind.Op2 Op2.BitXor a1 a2) _ => some (a1, a2) | _ => none
+  BitXorK_name := by intros; rfl
   asBitXor_node := by intros; rfl
   asBitXor_sound := by intro v a1 a2 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asBitXor_other := by kanon_other
   ShlK := fun a1 a2 => (Kind.Op2 Op2.Shl a1 a2)
   WT_Shl := by intros; first | exact Iff.rfl | kanon_law
   asShl := fun v => match v with | Term.mk (Kind.Op2 Op2.Shl a1 a2) _ => some (a1, a2) | _ => none
+  ShlK_name := by intros; rfl
   asShl_node := by intros; rfl
   asShl_sound := by intro v a1 a2 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asShl_other := by kanon_other
   LShrK := fun a1 a2 => (Kind.Op2 Op2.LShr a1 a2)
   WT_LShr := by intros; first | exact Iff.rfl | kanon_law
   asLShr := fun v => match v with | Term.mk (Kind.Op2 Op2.LShr a1 a2) _ => some (a1, a2) | _ => none
+  LShrK_name := by intros; rfl
   asLShr_node := by intros; rfl
   asLShr_sound := by intro v a1 a2 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asLShr_other := by kanon_other
   AShrK := fun a1 a2 => (Kind.Op2 Op2.AShr a1 a2)
   WT_AShr := by intros; first | exact Iff.rfl | kanon_law
   asAShr := fun v => match v with | Term.mk (Kind.Op2 Op2.AShr a1 a2) _ => some (a1, a2) | _ => none
+  AShrK_name := by intros; rfl
   asAShr_node := by intros; rfl
   asAShr_sound := by intro v a1 a2 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asAShr_other := by kanon_other
   Nonzero := Nonzero
   Zero := Zero
   bitvec_size_of_ty := size_of_ty

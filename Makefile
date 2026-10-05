@@ -6,8 +6,8 @@ OCAMLFORMAT_VERSION=0.29.0
 DUNE_VERSION=3.23.1
 # Kanon, the rule language of the smart constructors of the value languages,
 # is not on opam
-# [versionsync: KANON_COMMIT_HASH=4a308aa34ee0ebc0615f386f47570bd870939664]
-KANON_COMMIT_HASH=4a308aa34ee0ebc0615f386f47570bd870939664
+# [versionsync: KANON_COMMIT_HASH=211be08e387701befffe9fc944baba26f8e448f3]
+KANON_COMMIT_HASH=211be08e387701befffe9fc944baba26f8e448f3
 KANON_PIN=$(OPAM) pin add -n -y kanon git+https://github.com/N1ark/kanon\#$(KANON_COMMIT_HASH)
 
 OPAM=opam

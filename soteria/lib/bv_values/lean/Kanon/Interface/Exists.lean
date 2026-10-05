@@ -20,8 +20,10 @@ def existsSyntax (FS : FloatSem) : ExistsMod.Syntax (S := (sem FS)) (modBase FS)
   ExistsK := fun x1 x2 => (Kind.Exists x1 x2)
   WT_Exists := by intros; first | exact Iff.rfl | kanon_law
   asExists := fun v => match v with | Term.mk (Kind.Exists x1 x2) _ => some (x1, x2) | _ => none
+  ExistsK_name := by intros; rfl
   asExists_node := by intros; rfl
   asExists_sound := by intro v x1 x2 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asExists_other := by kanon_other
   exists_used_binders := used_binders
   exists_no_binders := Exists.no_binders
   exists_no_binders_eq := by kanon_bridge Exists.no_binders

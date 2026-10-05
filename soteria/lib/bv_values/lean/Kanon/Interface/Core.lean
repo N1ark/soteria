@@ -22,13 +22,17 @@ def coreSyntax (FS : FloatSem) : CoreMod.Syntax (S := (sem FS)) (modBase FS) whe
   VarK := fun x1 => (Kind.Var x1)
   WT_Var := by intros; first | exact Iff.rfl | kanon_law
   asVar := fun v => match v with | Term.mk (Kind.Var x1) _ => some x1 | _ => none
+  VarK_name := by intros; rfl
   asVar_node := by intros; rfl
   asVar_sound := by intro v x1 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asVar_other := by kanon_other
   SeqK := fun x1 => (Kind.Seq x1)
   WT_Seq := by intros; first | exact Iff.rfl | kanon_law
   asSeq := fun v => match v with | Term.mk (Kind.Seq x1) _ => some x1 | _ => none
+  SeqK_name := by intros; rfl
   asSeq_node := by intros; rfl
   asSeq_sound := by intro v x1 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asSeq_other := by kanon_other
 
 attribute [kanon_law] coreSyntax
 

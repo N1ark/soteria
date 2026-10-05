@@ -29,18 +29,24 @@ def ptrSyntax (FS : FloatSem) : PtrMod.Syntax (S := (sem FS)) (modBase FS) (bool
   PtrK := fun a1 a2 => (Kind.Op2 Op2.Ptr a1 a2)
   WT_Ptr := by intros; first | exact Iff.rfl | kanon_law
   asPtr := fun v => match v with | Term.mk (Kind.Op2 Op2.Ptr a1 a2) _ => some (a1, a2) | _ => none
+  PtrK_name := by intros; rfl
   asPtr_node := by intros; rfl
   asPtr_sound := by intro v a1 a2 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asPtr_other := by kanon_other
   GetPtrLocK := fun a1 => (Kind.Op1 Op1.GetPtrLoc a1)
   WT_GetPtrLoc := by intros; first | exact Iff.rfl | kanon_law
   asGetPtrLoc := fun v => match v with | Term.mk (Kind.Op1 Op1.GetPtrLoc a1) _ => some a1 | _ => none
+  GetPtrLocK_name := by intros; rfl
   asGetPtrLoc_node := by intros; rfl
   asGetPtrLoc_sound := by intro v a1 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asGetPtrLoc_other := by kanon_other
   GetPtrOfsK := fun a1 => (Kind.Op1 Op1.GetPtrOfs a1)
   WT_GetPtrOfs := by intros; first | exact Iff.rfl | kanon_law
   asGetPtrOfs := fun v => match v with | Term.mk (Kind.Op1 Op1.GetPtrOfs a1) _ => some a1 | _ => none
+  GetPtrOfsK_name := by intros; rfl
   asGetPtrOfs_node := by intros; rfl
   asGetPtrOfs_sound := by intro v a1 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asGetPtrOfs_other := by kanon_other
 
 attribute [kanon_law] ptrSyntax
 

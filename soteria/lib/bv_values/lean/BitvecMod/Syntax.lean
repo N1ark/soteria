@@ -50,6 +50,31 @@ structure Syntax {S : Kanon.Sem} [DecidableEq S.Term] [DecidableEq S.Ty] (B : Ka
   ShlK : S.Term → S.Term → B.Kind
   LShrK : S.Term → S.Term → B.Kind
   AShrK : S.Term → S.Term → B.Kind
+  BitVecK_name : ∀ (x1 : Int), B.kindName (BitVecK x1) = "BitVec"
+  LocLitK_name : ∀ (x1 : Int), B.kindName (LocLitK x1) = "LocLit"
+  BvOfBoolK_name : ∀ (n : Int) (a1 : S.Term), B.kindName (BvOfBoolK n a1) = "BvOfBool"
+  BvExtractK_name : ∀ (from_ : Int) (to_ : Int) (a1 : S.Term), B.kindName (BvExtractK from_ to_ a1) = "BvExtract"
+  BvExtendK_name : ∀ (x1 : Bool) (k : Int) (a1 : S.Term), B.kindName (BvExtendK x1 k a1) = "BvExtend"
+  BvNotK_name : ∀ (a1 : S.Term), B.kindName (BvNotK a1) = "BvNot"
+  NegK_name : ∀ (x1 : Bool) (a1 : S.Term), B.kindName (NegK x1 a1) = "Neg"
+  AddK_name : ∀ (x1 : CoreMod.Checked) (a1 : S.Term) (a2 : S.Term), B.kindName (AddK x1 a1 a2) = "Add"
+  SubK_name : ∀ (x1 : CoreMod.Checked) (a1 : S.Term) (a2 : S.Term), B.kindName (SubK x1 a1 a2) = "Sub"
+  MulK_name : ∀ (x1 : CoreMod.Checked) (a1 : S.Term) (a2 : S.Term), B.kindName (MulK x1 a1 a2) = "Mul"
+  DivK_name : ∀ (x1 : Bool) (a1 : S.Term) (a2 : S.Term), B.kindName (DivK x1 a1 a2) = "Div"
+  RemK_name : ∀ (x1 : Bool) (a1 : S.Term) (a2 : S.Term), B.kindName (RemK x1 a1 a2) = "Rem"
+  ModK_name : ∀ (a1 : S.Term) (a2 : S.Term), B.kindName (ModK a1 a2) = "Mod"
+  AddOvfK_name : ∀ (x1 : Bool) (a1 : S.Term) (a2 : S.Term), B.kindName (AddOvfK x1 a1 a2) = "AddOvf"
+  SubOvfK_name : ∀ (x1 : Bool) (a1 : S.Term) (a2 : S.Term), B.kindName (SubOvfK x1 a1 a2) = "SubOvf"
+  MulOvfK_name : ∀ (x1 : Bool) (a1 : S.Term) (a2 : S.Term), B.kindName (MulOvfK x1 a1 a2) = "MulOvf"
+  LtK_name : ∀ (x1 : Bool) (a1 : S.Term) (a2 : S.Term), B.kindName (LtK x1 a1 a2) = "Lt"
+  LeqK_name : ∀ (x1 : Bool) (a1 : S.Term) (a2 : S.Term), B.kindName (LeqK x1 a1 a2) = "Leq"
+  BvConcatK_name : ∀ (a1 : S.Term) (a2 : S.Term), B.kindName (BvConcatK a1 a2) = "BvConcat"
+  BitAndK_name : ∀ (a1 : S.Term) (a2 : S.Term), B.kindName (BitAndK a1 a2) = "BitAnd"
+  BitOrK_name : ∀ (a1 : S.Term) (a2 : S.Term), B.kindName (BitOrK a1 a2) = "BitOr"
+  BitXorK_name : ∀ (a1 : S.Term) (a2 : S.Term), B.kindName (BitXorK a1 a2) = "BitXor"
+  ShlK_name : ∀ (a1 : S.Term) (a2 : S.Term), B.kindName (ShlK a1 a2) = "Shl"
+  LShrK_name : ∀ (a1 : S.Term) (a2 : S.Term), B.kindName (LShrK a1 a2) = "LShr"
+  AShrK_name : ∀ (a1 : S.Term) (a2 : S.Term), B.kindName (AShrK a1 a2) = "AShr"
   /-- The invariant of the terms of `BitVec`, `LocLit`. -/
   bv_wf : S.Term → Prop
   bitvec_size_of_ty : S.Ty → Int
@@ -157,102 +182,127 @@ structure Syntax {S : Kanon.Sem} [DecidableEq S.Term] [DecidableEq S.Ty] (B : Ka
   asBitVec : S.Term → Option Int
   asBitVec_node : ∀ (x1 : Int) (t : S.Ty), asBitVec (B.node (BitVecK x1) t) = some x1
   asBitVec_sound : ∀ (v : S.Term) (x1 : Int), asBitVec v = some x1 → v = (B.node (BitVecK x1) (S.ty v))
+  asBitVec_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "BitVec" → asBitVec (B.node k t) = none
   /-- The arguments of a `LocLit` node. -/
   asLocLit : S.Term → Option Int
   asLocLit_node : ∀ (x1 : Int) (t : S.Ty), asLocLit (B.node (LocLitK x1) t) = some x1
   asLocLit_sound : ∀ (v : S.Term) (x1 : Int), asLocLit v = some x1 → v = (B.node (LocLitK x1) (S.ty v))
+  asLocLit_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "LocLit" → asLocLit (B.node k t) = none
   /-- The arguments of a `BvOfBool` node. -/
   asBvOfBool : S.Term → Option (Int × S.Term)
   asBvOfBool_node : ∀ (n : Int) (a1 : S.Term) (t : S.Ty), asBvOfBool (B.node (BvOfBoolK n a1) t) = some (n, a1)
   asBvOfBool_sound : ∀ (v : S.Term) (n : Int) (a1 : S.Term), asBvOfBool v = some (n, a1) → v = (B.node (BvOfBoolK n a1) (S.ty v))
+  asBvOfBool_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "BvOfBool" → asBvOfBool (B.node k t) = none
   /-- The arguments of a `BvExtract` node. -/
   asBvExtract : S.Term → Option (Int × Int × S.Term)
   asBvExtract_node : ∀ (from_ : Int) (to_ : Int) (a1 : S.Term) (t : S.Ty), asBvExtract (B.node (BvExtractK from_ to_ a1) t) = some (from_, to_, a1)
   asBvExtract_sound : ∀ (v : S.Term) (from_ : Int) (to_ : Int) (a1 : S.Term), asBvExtract v = some (from_, to_, a1) → v = (B.node (BvExtractK from_ to_ a1) (S.ty v))
+  asBvExtract_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "BvExtract" → asBvExtract (B.node k t) = none
   /-- The arguments of a `BvExtend` node. -/
   asBvExtend : S.Term → Option (Bool × Int × S.Term)
   asBvExtend_node : ∀ (x1 : Bool) (k : Int) (a1 : S.Term) (t : S.Ty), asBvExtend (B.node (BvExtendK x1 k a1) t) = some (x1, k, a1)
   asBvExtend_sound : ∀ (v : S.Term) (x1 : Bool) (k : Int) (a1 : S.Term), asBvExtend v = some (x1, k, a1) → v = (B.node (BvExtendK x1 k a1) (S.ty v))
+  asBvExtend_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "BvExtend" → asBvExtend (B.node k t) = none
   /-- The arguments of a `BvNot` node. -/
   asBvNot : S.Term → Option S.Term
   asBvNot_node : ∀ (a1 : S.Term) (t : S.Ty), asBvNot (B.node (BvNotK a1) t) = some a1
   asBvNot_sound : ∀ (v : S.Term) (a1 : S.Term), asBvNot v = some a1 → v = (B.node (BvNotK a1) (S.ty v))
+  asBvNot_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "BvNot" → asBvNot (B.node k t) = none
   /-- The arguments of a `Neg` node. -/
   asNeg : S.Term → Option (Bool × S.Term)
   asNeg_node : ∀ (x1 : Bool) (a1 : S.Term) (t : S.Ty), asNeg (B.node (NegK x1 a1) t) = some (x1, a1)
   asNeg_sound : ∀ (v : S.Term) (x1 : Bool) (a1 : S.Term), asNeg v = some (x1, a1) → v = (B.node (NegK x1 a1) (S.ty v))
+  asNeg_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "Neg" → asNeg (B.node k t) = none
   /-- The arguments of a `Add` node. -/
   asAdd : S.Term → Option (CoreMod.Checked × S.Term × S.Term)
   asAdd_node : ∀ (x1 : CoreMod.Checked) (a1 : S.Term) (a2 : S.Term) (t : S.Ty), asAdd (B.node (AddK x1 a1 a2) t) = some (x1, a1, a2)
   asAdd_sound : ∀ (v : S.Term) (x1 : CoreMod.Checked) (a1 : S.Term) (a2 : S.Term), asAdd v = some (x1, a1, a2) → v = (B.node (AddK x1 a1 a2) (S.ty v))
+  asAdd_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "Add" → asAdd (B.node k t) = none
   /-- The arguments of a `Sub` node. -/
   asSub : S.Term → Option (CoreMod.Checked × S.Term × S.Term)
   asSub_node : ∀ (x1 : CoreMod.Checked) (a1 : S.Term) (a2 : S.Term) (t : S.Ty), asSub (B.node (SubK x1 a1 a2) t) = some (x1, a1, a2)
   asSub_sound : ∀ (v : S.Term) (x1 : CoreMod.Checked) (a1 : S.Term) (a2 : S.Term), asSub v = some (x1, a1, a2) → v = (B.node (SubK x1 a1 a2) (S.ty v))
+  asSub_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "Sub" → asSub (B.node k t) = none
   /-- The arguments of a `Mul` node. -/
   asMul : S.Term → Option (CoreMod.Checked × S.Term × S.Term)
   asMul_node : ∀ (x1 : CoreMod.Checked) (a1 : S.Term) (a2 : S.Term) (t : S.Ty), asMul (B.node (MulK x1 a1 a2) t) = some (x1, a1, a2)
   asMul_sound : ∀ (v : S.Term) (x1 : CoreMod.Checked) (a1 : S.Term) (a2 : S.Term), asMul v = some (x1, a1, a2) → v = (B.node (MulK x1 a1 a2) (S.ty v))
+  asMul_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "Mul" → asMul (B.node k t) = none
   /-- The arguments of a `Div` node. -/
   asDiv : S.Term → Option (Bool × S.Term × S.Term)
   asDiv_node : ∀ (x1 : Bool) (a1 : S.Term) (a2 : S.Term) (t : S.Ty), asDiv (B.node (DivK x1 a1 a2) t) = some (x1, a1, a2)
   asDiv_sound : ∀ (v : S.Term) (x1 : Bool) (a1 : S.Term) (a2 : S.Term), asDiv v = some (x1, a1, a2) → v = (B.node (DivK x1 a1 a2) (S.ty v))
+  asDiv_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "Div" → asDiv (B.node k t) = none
   /-- The arguments of a `Rem` node. -/
   asRem : S.Term → Option (Bool × S.Term × S.Term)
   asRem_node : ∀ (x1 : Bool) (a1 : S.Term) (a2 : S.Term) (t : S.Ty), asRem (B.node (RemK x1 a1 a2) t) = some (x1, a1, a2)
   asRem_sound : ∀ (v : S.Term) (x1 : Bool) (a1 : S.Term) (a2 : S.Term), asRem v = some (x1, a1, a2) → v = (B.node (RemK x1 a1 a2) (S.ty v))
+  asRem_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "Rem" → asRem (B.node k t) = none
   /-- The arguments of a `Mod` node. -/
   asMod : S.Term → Option (S.Term × S.Term)
   asMod_node : ∀ (a1 : S.Term) (a2 : S.Term) (t : S.Ty), asMod (B.node (ModK a1 a2) t) = some (a1, a2)
   asMod_sound : ∀ (v : S.Term) (a1 : S.Term) (a2 : S.Term), asMod v = some (a1, a2) → v = (B.node (ModK a1 a2) (S.ty v))
+  asMod_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "Mod" → asMod (B.node k t) = none
   /-- The arguments of a `AddOvf` node. -/
   asAddOvf : S.Term → Option (Bool × S.Term × S.Term)
   asAddOvf_node : ∀ (x1 : Bool) (a1 : S.Term) (a2 : S.Term) (t : S.Ty), asAddOvf (B.node (AddOvfK x1 a1 a2) t) = some (x1, a1, a2)
   asAddOvf_sound : ∀ (v : S.Term) (x1 : Bool) (a1 : S.Term) (a2 : S.Term), asAddOvf v = some (x1, a1, a2) → v = (B.node (AddOvfK x1 a1 a2) (S.ty v))
+  asAddOvf_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "AddOvf" → asAddOvf (B.node k t) = none
   /-- The arguments of a `SubOvf` node. -/
   asSubOvf : S.Term → Option (Bool × S.Term × S.Term)
   asSubOvf_node : ∀ (x1 : Bool) (a1 : S.Term) (a2 : S.Term) (t : S.Ty), asSubOvf (B.node (SubOvfK x1 a1 a2) t) = some (x1, a1, a2)
   asSubOvf_sound : ∀ (v : S.Term) (x1 : Bool) (a1 : S.Term) (a2 : S.Term), asSubOvf v = some (x1, a1, a2) → v = (B.node (SubOvfK x1 a1 a2) (S.ty v))
+  asSubOvf_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "SubOvf" → asSubOvf (B.node k t) = none
   /-- The arguments of a `MulOvf` node. -/
   asMulOvf : S.Term → Option (Bool × S.Term × S.Term)
   asMulOvf_node : ∀ (x1 : Bool) (a1 : S.Term) (a2 : S.Term) (t : S.Ty), asMulOvf (B.node (MulOvfK x1 a1 a2) t) = some (x1, a1, a2)
   asMulOvf_sound : ∀ (v : S.Term) (x1 : Bool) (a1 : S.Term) (a2 : S.Term), asMulOvf v = some (x1, a1, a2) → v = (B.node (MulOvfK x1 a1 a2) (S.ty v))
+  asMulOvf_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "MulOvf" → asMulOvf (B.node k t) = none
   /-- The arguments of a `Lt` node. -/
   asLt : S.Term → Option (Bool × S.Term × S.Term)
   asLt_node : ∀ (x1 : Bool) (a1 : S.Term) (a2 : S.Term) (t : S.Ty), asLt (B.node (LtK x1 a1 a2) t) = some (x1, a1, a2)
   asLt_sound : ∀ (v : S.Term) (x1 : Bool) (a1 : S.Term) (a2 : S.Term), asLt v = some (x1, a1, a2) → v = (B.node (LtK x1 a1 a2) (S.ty v))
+  asLt_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "Lt" → asLt (B.node k t) = none
   /-- The arguments of a `Leq` node. -/
   asLeq : S.Term → Option (Bool × S.Term × S.Term)
   asLeq_node : ∀ (x1 : Bool) (a1 : S.Term) (a2 : S.Term) (t : S.Ty), asLeq (B.node (LeqK x1 a1 a2) t) = some (x1, a1, a2)
   asLeq_sound : ∀ (v : S.Term) (x1 : Bool) (a1 : S.Term) (a2 : S.Term), asLeq v = some (x1, a1, a2) → v = (B.node (LeqK x1 a1 a2) (S.ty v))
+  asLeq_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "Leq" → asLeq (B.node k t) = none
   /-- The arguments of a `BvConcat` node. -/
   asBvConcat : S.Term → Option (S.Term × S.Term)
   asBvConcat_node : ∀ (a1 : S.Term) (a2 : S.Term) (t : S.Ty), asBvConcat (B.node (BvConcatK a1 a2) t) = some (a1, a2)
   asBvConcat_sound : ∀ (v : S.Term) (a1 : S.Term) (a2 : S.Term), asBvConcat v = some (a1, a2) → v = (B.node (BvConcatK a1 a2) (S.ty v))
+  asBvConcat_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "BvConcat" → asBvConcat (B.node k t) = none
   /-- The arguments of a `BitAnd` node. -/
   asBitAnd : S.Term → Option (S.Term × S.Term)
   asBitAnd_node : ∀ (a1 : S.Term) (a2 : S.Term) (t : S.Ty), asBitAnd (B.node (BitAndK a1 a2) t) = some (a1, a2)
   asBitAnd_sound : ∀ (v : S.Term) (a1 : S.Term) (a2 : S.Term), asBitAnd v = some (a1, a2) → v = (B.node (BitAndK a1 a2) (S.ty v))
+  asBitAnd_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "BitAnd" → asBitAnd (B.node k t) = none
   /-- The arguments of a `BitOr` node. -/
   asBitOr : S.Term → Option (S.Term × S.Term)
   asBitOr_node : ∀ (a1 : S.Term) (a2 : S.Term) (t : S.Ty), asBitOr (B.node (BitOrK a1 a2) t) = some (a1, a2)
   asBitOr_sound : ∀ (v : S.Term) (a1 : S.Term) (a2 : S.Term), asBitOr v = some (a1, a2) → v = (B.node (BitOrK a1 a2) (S.ty v))
+  asBitOr_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "BitOr" → asBitOr (B.node k t) = none
   /-- The arguments of a `BitXor` node. -/
   asBitXor : S.Term → Option (S.Term × S.Term)
   asBitXor_node : ∀ (a1 : S.Term) (a2 : S.Term) (t : S.Ty), asBitXor (B.node (BitXorK a1 a2) t) = some (a1, a2)
   asBitXor_sound : ∀ (v : S.Term) (a1 : S.Term) (a2 : S.Term), asBitXor v = some (a1, a2) → v = (B.node (BitXorK a1 a2) (S.ty v))
+  asBitXor_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "BitXor" → asBitXor (B.node k t) = none
   /-- The arguments of a `Shl` node. -/
   asShl : S.Term → Option (S.Term × S.Term)
   asShl_node : ∀ (a1 : S.Term) (a2 : S.Term) (t : S.Ty), asShl (B.node (ShlK a1 a2) t) = some (a1, a2)
   asShl_sound : ∀ (v : S.Term) (a1 : S.Term) (a2 : S.Term), asShl v = some (a1, a2) → v = (B.node (ShlK a1 a2) (S.ty v))
+  asShl_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "Shl" → asShl (B.node k t) = none
   /-- The arguments of a `LShr` node. -/
   asLShr : S.Term → Option (S.Term × S.Term)
   asLShr_node : ∀ (a1 : S.Term) (a2 : S.Term) (t : S.Ty), asLShr (B.node (LShrK a1 a2) t) = some (a1, a2)
   asLShr_sound : ∀ (v : S.Term) (a1 : S.Term) (a2 : S.Term), asLShr v = some (a1, a2) → v = (B.node (LShrK a1 a2) (S.ty v))
+  asLShr_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "LShr" → asLShr (B.node k t) = none
   /-- The arguments of a `AShr` node. -/
   asAShr : S.Term → Option (S.Term × S.Term)
   asAShr_node : ∀ (a1 : S.Term) (a2 : S.Term) (t : S.Ty), asAShr (B.node (AShrK a1 a2) t) = some (a1, a2)
   asAShr_sound : ∀ (v : S.Term) (a1 : S.Term) (a2 : S.Term), asAShr v = some (a1, a2) → v = (B.node (AShrK a1 a2) (S.ty v))
+  asAShr_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "AShr" → asAShr (B.node k t) = none
   /-- The arguments of the sort `TBitVector`. -/
   asTBitVector : S.Ty → Option Int
   asTBitVector_sort : ∀ (x1 : Int), asTBitVector (TBitVector x1) = some x1
@@ -502,5 +552,57 @@ structure Syntax {S : Kanon.Sem} [DecidableEq S.Term] [DecidableEq S.Ty] (B : Ka
                           | _ => none)]).getD
              (match a with | _ => false))
       else (LBool.bool_sure_neq a (bitvec_bv_zero (bitvec_size a))))
+
+attribute [kanon_law]
+  Syntax.BitVecK_name
+  Syntax.asBitVec_other
+  Syntax.LocLitK_name
+  Syntax.asLocLit_other
+  Syntax.BvOfBoolK_name
+  Syntax.asBvOfBool_other
+  Syntax.BvExtractK_name
+  Syntax.asBvExtract_other
+  Syntax.BvExtendK_name
+  Syntax.asBvExtend_other
+  Syntax.BvNotK_name
+  Syntax.asBvNot_other
+  Syntax.NegK_name
+  Syntax.asNeg_other
+  Syntax.AddK_name
+  Syntax.asAdd_other
+  Syntax.SubK_name
+  Syntax.asSub_other
+  Syntax.MulK_name
+  Syntax.asMul_other
+  Syntax.DivK_name
+  Syntax.asDiv_other
+  Syntax.RemK_name
+  Syntax.asRem_other
+  Syntax.ModK_name
+  Syntax.asMod_other
+  Syntax.AddOvfK_name
+  Syntax.asAddOvf_other
+  Syntax.SubOvfK_name
+  Syntax.asSubOvf_other
+  Syntax.MulOvfK_name
+  Syntax.asMulOvf_other
+  Syntax.LtK_name
+  Syntax.asLt_other
+  Syntax.LeqK_name
+  Syntax.asLeq_other
+  Syntax.BvConcatK_name
+  Syntax.asBvConcat_other
+  Syntax.BitAndK_name
+  Syntax.asBitAnd_other
+  Syntax.BitOrK_name
+  Syntax.asBitOr_other
+  Syntax.BitXorK_name
+  Syntax.asBitXor_other
+  Syntax.ShlK_name
+  Syntax.asShl_other
+  Syntax.LShrK_name
+  Syntax.asLShr_other
+  Syntax.AShrK_name
+  Syntax.asAShr_other
 
 end BitvecMod

@@ -17,6 +17,7 @@ modules that it uses have the interfaces of the parameters: Kanon generates it, 
 language that uses the module gives it, by definition. -/
 structure Syntax {S : Kanon.Sem} [DecidableEq S.Term] [DecidableEq S.Ty] (B : Kanon.Base S) (LBool : KanonBool.Syntax B) (LCore : CoreMod.Syntax B) where
   ExistsK : (List (Int × S.Ty)) → S.Term → B.Kind
+  ExistsK_name : ∀ (x1 : (List (Int × S.Ty))) (x2 : S.Term), B.kindName (ExistsK x1 x2) = "Exists"
   /-- The invariant of the terms of `Exists`. -/
   exists_wf : S.Term → Prop
   exists_used_binders : (List (Int × S.Ty)) → S.Term → (List (Int × S.Ty))
@@ -26,8 +27,11 @@ structure Syntax {S : Kanon.Sem} [DecidableEq S.Term] [DecidableEq S.Ty] (B : Ka
   asExists : S.Term → Option ((List (Int × S.Ty)) × S.Term)
   asExists_node : ∀ (x1 : (List (Int × S.Ty))) (x2 : S.Term) (t : S.Ty), asExists (B.node (ExistsK x1 x2) t) = some (x1, x2)
   asExists_sound : ∀ (v : S.Term) (x1 : (List (Int × S.Ty))) (x2 : S.Term), asExists v = some (x1, x2) → v = (B.node (ExistsK x1 x2) (S.ty v))
+  asExists_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "Exists" → asExists (B.node k t) = none
   exists_no_binders_eq : ∀ (l : (List (Int × S.Ty))), (exists_no_binders l) =
       ((firstSome [(match l with | [] => some (true) | _ => none)]).getD
         (match l with | _ => false))
+
+attribute [kanon_law] Syntax.ExistsK_name Syntax.asExists_other
 
 end ExistsMod

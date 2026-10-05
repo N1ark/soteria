@@ -32,118 +32,164 @@ def floatSyntax (FS : FloatSem) : FloatMod.Syntax (S := (sem FS)) (modBase FS) (
   FloatK := fun f => (Kind.Float f)
   WT_Float := by intros; first | exact Iff.rfl | kanon_law
   asFloat := fun v => match v with | Term.mk (Kind.Float f) _ => some f | _ => none
+  FloatK_name := by intros; rfl
   asFloat_node := by intros; rfl
   asFloat_sound := by intro v f h; dsimp only at h; split at h <;> cases h <;> rfl
+  asFloat_other := by kanon_other
   BvOfFloatK := fun x1 x2 n a1 => (Kind.Op1 (Op1.BvOfFloat x1 x2 n) a1)
   WT_BvOfFloat := by intros; first | exact Iff.rfl | kanon_law
   asBvOfFloat := fun v => match v with | Term.mk (Kind.Op1 (Op1.BvOfFloat x1 x2 n) a1) _ => some (x1, x2, n, a1) | _ => none
+  BvOfFloatK_name := by intros; rfl
   asBvOfFloat_node := by intros; rfl
   asBvOfFloat_sound := by intro v x1 x2 n a1 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asBvOfFloat_other := by kanon_other
   FloatOfBvK := fun x1 x2 p a1 => (Kind.Op1 (Op1.FloatOfBv x1 x2 p) a1)
   WT_FloatOfBv := by intros; first | exact Iff.rfl | kanon_law
   asFloatOfBv := fun v => match v with | Term.mk (Kind.Op1 (Op1.FloatOfBv x1 x2 p) a1) _ => some (x1, x2, p, a1) | _ => none
+  FloatOfBvK_name := by intros; rfl
   asFloatOfBv_node := by intros; rfl
   asFloatOfBv_sound := by intro v x1 x2 p a1 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asFloatOfBv_other := by kanon_other
   FloatOfBvRawK := fun p a1 => (Kind.Op1 (Op1.FloatOfBvRaw p) a1)
   WT_FloatOfBvRaw := by intros; first | exact Iff.rfl | kanon_law
   asFloatOfBvRaw := fun v => match v with | Term.mk (Kind.Op1 (Op1.FloatOfBvRaw p) a1) _ => some (p, a1) | _ => none
+  FloatOfBvRawK_name := by intros; rfl
   asFloatOfBvRaw_node := by intros; rfl
   asFloatOfBvRaw_sound := by intro v p a1 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asFloatOfBvRaw_other := by kanon_other
   FloatOfFloatK := fun x1 p a1 => (Kind.Op1 (Op1.FloatOfFloat x1 p) a1)
   WT_FloatOfFloat := by intros; first | exact Iff.rfl | kanon_law
   asFloatOfFloat := fun v => match v with | Term.mk (Kind.Op1 (Op1.FloatOfFloat x1 p) a1) _ => some (x1, p, a1) | _ => none
+  FloatOfFloatK_name := by intros; rfl
   asFloatOfFloat_node := by intros; rfl
   asFloatOfFloat_sound := by intro v x1 p a1 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asFloatOfFloat_other := by kanon_other
   FAbsK := fun a1 => (Kind.Op1 Op1.FAbs a1)
   WT_FAbs := by intros; first | exact Iff.rfl | kanon_law
   asFAbs := fun v => match v with | Term.mk (Kind.Op1 Op1.FAbs a1) _ => some a1 | _ => none
+  FAbsK_name := by intros; rfl
   asFAbs_node := by intros; rfl
   asFAbs_sound := by intro v a1 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asFAbs_other := by kanon_other
   FNegK := fun a1 => (Kind.Op1 Op1.FNeg a1)
   WT_FNeg := by intros; first | exact Iff.rfl | kanon_law
   asFNeg := fun v => match v with | Term.mk (Kind.Op1 Op1.FNeg a1) _ => some a1 | _ => none
+  FNegK_name := by intros; rfl
   asFNeg_node := by intros; rfl
   asFNeg_sound := by intro v a1 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asFNeg_other := by kanon_other
   FSqrtK := fun a1 => (Kind.Op1 Op1.FSqrt a1)
   WT_FSqrt := by intros; first | exact Iff.rfl | kanon_law
   asFSqrt := fun v => match v with | Term.mk (Kind.Op1 Op1.FSqrt a1) _ => some a1 | _ => none
+  FSqrtK_name := by intros; rfl
   asFSqrt_node := by intros; rfl
   asFSqrt_sound := by intro v a1 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asFSqrt_other := by kanon_other
   FIsK := fun x1 a1 => (Kind.Op1 (Op1.FIs x1) a1)
   WT_FIs := by intros; first | exact Iff.rfl | kanon_law
   asFIs := fun v => match v with | Term.mk (Kind.Op1 (Op1.FIs x1) a1) _ => some (x1, a1) | _ => none
+  FIsK_name := by intros; rfl
   asFIs_node := by intros; rfl
   asFIs_sound := by intro v x1 a1 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asFIs_other := by kanon_other
   FIsNegK := fun a1 => (Kind.Op1 Op1.FIsNeg a1)
   WT_FIsNeg := by intros; first | exact Iff.rfl | kanon_law
   asFIsNeg := fun v => match v with | Term.mk (Kind.Op1 Op1.FIsNeg a1) _ => some a1 | _ => none
+  FIsNegK_name := by intros; rfl
   asFIsNeg_node := by intros; rfl
   asFIsNeg_sound := by intro v a1 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asFIsNeg_other := by kanon_other
   FIsPosK := fun a1 => (Kind.Op1 Op1.FIsPos a1)
   WT_FIsPos := by intros; first | exact Iff.rfl | kanon_law
   asFIsPos := fun v => match v with | Term.mk (Kind.Op1 Op1.FIsPos a1) _ => some a1 | _ => none
+  FIsPosK_name := by intros; rfl
   asFIsPos_node := by intros; rfl
   asFIsPos_sound := by intro v a1 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asFIsPos_other := by kanon_other
   FRoundK := fun x1 a1 => (Kind.Op1 (Op1.FRound x1) a1)
   WT_FRound := by intros; first | exact Iff.rfl | kanon_law
   asFRound := fun v => match v with | Term.mk (Kind.Op1 (Op1.FRound x1) a1) _ => some (x1, a1) | _ => none
+  FRoundK_name := by intros; rfl
   asFRound_node := by intros; rfl
   asFRound_sound := by intro v x1 a1 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asFRound_other := by kanon_other
   FEqK := fun a1 a2 => (Kind.Op2 Op2.FEq a1 a2)
   WT_FEq := by intros; first | exact Iff.rfl | kanon_law
   asFEq := fun v => match v with | Term.mk (Kind.Op2 Op2.FEq a1 a2) _ => some (a1, a2) | _ => none
+  FEqK_name := by intros; rfl
   asFEq_node := by intros; rfl
   asFEq_sound := by intro v a1 a2 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asFEq_other := by kanon_other
   FLeqK := fun a1 a2 => (Kind.Op2 Op2.FLeq a1 a2)
   WT_FLeq := by intros; first | exact Iff.rfl | kanon_law
   asFLeq := fun v => match v with | Term.mk (Kind.Op2 Op2.FLeq a1 a2) _ => some (a1, a2) | _ => none
+  FLeqK_name := by intros; rfl
   asFLeq_node := by intros; rfl
   asFLeq_sound := by intro v a1 a2 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asFLeq_other := by kanon_other
   FLtK := fun a1 a2 => (Kind.Op2 Op2.FLt a1 a2)
   WT_FLt := by intros; first | exact Iff.rfl | kanon_law
   asFLt := fun v => match v with | Term.mk (Kind.Op2 Op2.FLt a1 a2) _ => some (a1, a2) | _ => none
+  FLtK_name := by intros; rfl
   asFLt_node := by intros; rfl
   asFLt_sound := by intro v a1 a2 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asFLt_other := by kanon_other
   FAddK := fun a1 a2 => (Kind.Op2 Op2.FAdd a1 a2)
   WT_FAdd := by intros; first | exact Iff.rfl | kanon_law
   asFAdd := fun v => match v with | Term.mk (Kind.Op2 Op2.FAdd a1 a2) _ => some (a1, a2) | _ => none
+  FAddK_name := by intros; rfl
   asFAdd_node := by intros; rfl
   asFAdd_sound := by intro v a1 a2 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asFAdd_other := by kanon_other
   FSubK := fun a1 a2 => (Kind.Op2 Op2.FSub a1 a2)
   WT_FSub := by intros; first | exact Iff.rfl | kanon_law
   asFSub := fun v => match v with | Term.mk (Kind.Op2 Op2.FSub a1 a2) _ => some (a1, a2) | _ => none
+  FSubK_name := by intros; rfl
   asFSub_node := by intros; rfl
   asFSub_sound := by intro v a1 a2 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asFSub_other := by kanon_other
   FMulK := fun a1 a2 => (Kind.Op2 Op2.FMul a1 a2)
   WT_FMul := by intros; first | exact Iff.rfl | kanon_law
   asFMul := fun v => match v with | Term.mk (Kind.Op2 Op2.FMul a1 a2) _ => some (a1, a2) | _ => none
+  FMulK_name := by intros; rfl
   asFMul_node := by intros; rfl
   asFMul_sound := by intro v a1 a2 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asFMul_other := by kanon_other
   FDivK := fun a1 a2 => (Kind.Op2 Op2.FDiv a1 a2)
   WT_FDiv := by intros; first | exact Iff.rfl | kanon_law
   asFDiv := fun v => match v with | Term.mk (Kind.Op2 Op2.FDiv a1 a2) _ => some (a1, a2) | _ => none
+  FDivK_name := by intros; rfl
   asFDiv_node := by intros; rfl
   asFDiv_sound := by intro v a1 a2 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asFDiv_other := by kanon_other
   FRemK := fun a1 a2 => (Kind.Op2 Op2.FRem a1 a2)
   WT_FRem := by intros; first | exact Iff.rfl | kanon_law
   asFRem := fun v => match v with | Term.mk (Kind.Op2 Op2.FRem a1 a2) _ => some (a1, a2) | _ => none
+  FRemK_name := by intros; rfl
   asFRem_node := by intros; rfl
   asFRem_sound := by intro v a1 a2 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asFRem_other := by kanon_other
   FMinK := fun a1 a2 => (Kind.Op2 Op2.FMin a1 a2)
   WT_FMin := by intros; first | exact Iff.rfl | kanon_law
   asFMin := fun v => match v with | Term.mk (Kind.Op2 Op2.FMin a1 a2) _ => some (a1, a2) | _ => none
+  FMinK_name := by intros; rfl
   asFMin_node := by intros; rfl
   asFMin_sound := by intro v a1 a2 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asFMin_other := by kanon_other
   FMaxK := fun a1 a2 => (Kind.Op2 Op2.FMax a1 a2)
   WT_FMax := by intros; first | exact Iff.rfl | kanon_law
   asFMax := fun v => match v with | Term.mk (Kind.Op2 Op2.FMax a1 a2) _ => some (a1, a2) | _ => none
+  FMaxK_name := by intros; rfl
   asFMax_node := by intros; rfl
   asFMax_sound := by intro v a1 a2 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asFMax_other := by kanon_other
   FmaK := fun a1 a2 a3 => (Kind.Op3 Op3.Fma a1 a2 a3)
   WT_Fma := by intros; first | exact Iff.rfl | kanon_law
   asFma := fun v => match v with | Term.mk (Kind.Op3 Op3.Fma a1 a2 a3) _ => some (a1, a2, a3) | _ => none
+  FmaK_name := by intros; rfl
   asFma_node := by intros; rfl
   asFma_sound := by intro v a1 a2 a3 h; dsimp only at h; split at h <;> cases h <;> rfl
+  asFma_other := by kanon_other
   float_fp_of_ty := fp_of_ty
   float_fp_size := fp_size
   float_f_prec := f_prec

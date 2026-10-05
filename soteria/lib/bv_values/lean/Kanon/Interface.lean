@@ -11,11 +11,76 @@ namespace Kanon
 
 open Classical Kanon
 
+/-- The name of the node of a kind. -/
+def kindName : Kind → String
+  | (Kind.Var _) => "Var"
+  | (Kind.Seq _) => "Seq"
+  | (Kind.Bool _) => "Bool"
+  | (Kind.Exists _ _) => "Exists"
+  | (Kind.BitVec _) => "BitVec"
+  | (Kind.LocLit _) => "LocLit"
+  | (Kind.Float _) => "Float"
+  | (Kind.Op1 Op1.Not _) => "Not"
+  | (Kind.Op2 Op2.And _ _) => "And"
+  | (Kind.Op2 Op2.Or _ _) => "Or"
+  | (Kind.Op2 Op2.Eq _ _) => "Eq"
+  | (Kind.Op3 Op3.Ite _ _ _) => "Ite"
+  | (Kind.OpN OpN.Distinct _) => "Distinct"
+  | (Kind.Op1 (Op1.BvOfBool _) _) => "BvOfBool"
+  | (Kind.Op1 (Op1.BvExtract _ _) _) => "BvExtract"
+  | (Kind.Op1 (Op1.BvExtend _ _) _) => "BvExtend"
+  | (Kind.Op1 Op1.BvNot _) => "BvNot"
+  | (Kind.Op1 (Op1.Neg _) _) => "Neg"
+  | (Kind.Op2 (Op2.Add _) _ _) => "Add"
+  | (Kind.Op2 (Op2.Sub _) _ _) => "Sub"
+  | (Kind.Op2 (Op2.Mul _) _ _) => "Mul"
+  | (Kind.Op2 (Op2.Div _) _ _) => "Div"
+  | (Kind.Op2 (Op2.Rem _) _ _) => "Rem"
+  | (Kind.Op2 Op2.Mod _ _) => "Mod"
+  | (Kind.Op2 (Op2.AddOvf _) _ _) => "AddOvf"
+  | (Kind.Op2 (Op2.SubOvf _) _ _) => "SubOvf"
+  | (Kind.Op2 (Op2.MulOvf _) _ _) => "MulOvf"
+  | (Kind.Op2 (Op2.Lt _) _ _) => "Lt"
+  | (Kind.Op2 (Op2.Leq _) _ _) => "Leq"
+  | (Kind.Op2 Op2.BvConcat _ _) => "BvConcat"
+  | (Kind.Op2 Op2.BitAnd _ _) => "BitAnd"
+  | (Kind.Op2 Op2.BitOr _ _) => "BitOr"
+  | (Kind.Op2 Op2.BitXor _ _) => "BitXor"
+  | (Kind.Op2 Op2.Shl _ _) => "Shl"
+  | (Kind.Op2 Op2.LShr _ _) => "LShr"
+  | (Kind.Op2 Op2.AShr _ _) => "AShr"
+  | (Kind.Op1 (Op1.BvOfFloat _ _ _) _) => "BvOfFloat"
+  | (Kind.Op1 (Op1.FloatOfBv _ _ _) _) => "FloatOfBv"
+  | (Kind.Op1 (Op1.FloatOfBvRaw _) _) => "FloatOfBvRaw"
+  | (Kind.Op1 (Op1.FloatOfFloat _ _) _) => "FloatOfFloat"
+  | (Kind.Op1 Op1.FAbs _) => "FAbs"
+  | (Kind.Op1 Op1.FNeg _) => "FNeg"
+  | (Kind.Op1 Op1.FSqrt _) => "FSqrt"
+  | (Kind.Op1 (Op1.FIs _) _) => "FIs"
+  | (Kind.Op1 Op1.FIsNeg _) => "FIsNeg"
+  | (Kind.Op1 Op1.FIsPos _) => "FIsPos"
+  | (Kind.Op1 (Op1.FRound _) _) => "FRound"
+  | (Kind.Op2 Op2.FEq _ _) => "FEq"
+  | (Kind.Op2 Op2.FLeq _ _) => "FLeq"
+  | (Kind.Op2 Op2.FLt _ _) => "FLt"
+  | (Kind.Op2 Op2.FAdd _ _) => "FAdd"
+  | (Kind.Op2 Op2.FSub _ _) => "FSub"
+  | (Kind.Op2 Op2.FMul _ _) => "FMul"
+  | (Kind.Op2 Op2.FDiv _ _) => "FDiv"
+  | (Kind.Op2 Op2.FRem _ _) => "FRem"
+  | (Kind.Op2 Op2.FMin _ _) => "FMin"
+  | (Kind.Op2 Op2.FMax _ _) => "FMax"
+  | (Kind.Op3 Op3.Fma _ _ _) => "Fma"
+  | (Kind.Op2 Op2.Ptr _ _) => "Ptr"
+  | (Kind.Op1 Op1.GetPtrLoc _) => "GetPtrLoc"
+  | (Kind.Op1 Op1.GetPtrOfs _) => "GetPtrOfs"
+
 /-- The terms of the language, for the interfaces of its modules. -/
 def modBase (FS : FloatSem) : Kanon.Base (sem FS) where
   Kind := Kind
   node := Term.mk
   ty_node _ _ := rfl
+  kindName := kindName
 
 attribute [kanon_law] modBase
 

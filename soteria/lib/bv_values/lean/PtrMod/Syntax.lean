@@ -25,6 +25,9 @@ structure Syntax {S : Kanon.Sem} [DecidableEq S.Term] [DecidableEq S.Ty] (B : Ka
   PtrK : S.Term → S.Term → B.Kind
   GetPtrLocK : S.Term → B.Kind
   GetPtrOfsK : S.Term → B.Kind
+  PtrK_name : ∀ (a1 : S.Term) (a2 : S.Term), B.kindName (PtrK a1 a2) = "Ptr"
+  GetPtrLocK_name : ∀ (a1 : S.Term), B.kindName (GetPtrLocK a1) = "GetPtrLoc"
+  GetPtrOfsK_name : ∀ (a1 : S.Term), B.kindName (GetPtrOfsK a1) = "GetPtrOfs"
   WT_Ptr : ∀ (a1 : S.Term) (a2 : S.Term) (t : S.Ty), S.WT (B.node (PtrK a1 a2) t) ↔ (∃ n : Int, 0 < n ∧ (S.ty a1) = (LBitvec.TLoc n) ∧ (S.ty a2) = (LBitvec.TBitVector n) ∧ t = (TPointer n)) ∧ S.WT a1 ∧ S.WT a2
   WT_GetPtrLoc : ∀ (a1 : S.Term) (t : S.Ty), S.WT (B.node (GetPtrLocK a1) t) ↔ (∃ n : Int, 0 < n ∧ (S.ty a1) = (TPointer n) ∧ t = (LBitvec.TLoc n)) ∧ S.WT a1
   WT_GetPtrOfs : ∀ (a1 : S.Term) (t : S.Ty), S.WT (B.node (GetPtrOfsK a1) t) ↔ (∃ n : Int, 0 < n ∧ (S.ty a1) = (TPointer n) ∧ t = (LBitvec.TBitVector n)) ∧ S.WT a1
@@ -32,17 +35,28 @@ structure Syntax {S : Kanon.Sem} [DecidableEq S.Term] [DecidableEq S.Ty] (B : Ka
   asPtr : S.Term → Option (S.Term × S.Term)
   asPtr_node : ∀ (a1 : S.Term) (a2 : S.Term) (t : S.Ty), asPtr (B.node (PtrK a1 a2) t) = some (a1, a2)
   asPtr_sound : ∀ (v : S.Term) (a1 : S.Term) (a2 : S.Term), asPtr v = some (a1, a2) → v = (B.node (PtrK a1 a2) (S.ty v))
+  asPtr_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "Ptr" → asPtr (B.node k t) = none
   /-- The arguments of a `GetPtrLoc` node. -/
   asGetPtrLoc : S.Term → Option S.Term
   asGetPtrLoc_node : ∀ (a1 : S.Term) (t : S.Ty), asGetPtrLoc (B.node (GetPtrLocK a1) t) = some a1
   asGetPtrLoc_sound : ∀ (v : S.Term) (a1 : S.Term), asGetPtrLoc v = some a1 → v = (B.node (GetPtrLocK a1) (S.ty v))
+  asGetPtrLoc_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "GetPtrLoc" → asGetPtrLoc (B.node k t) = none
   /-- The arguments of a `GetPtrOfs` node. -/
   asGetPtrOfs : S.Term → Option S.Term
   asGetPtrOfs_node : ∀ (a1 : S.Term) (t : S.Ty), asGetPtrOfs (B.node (GetPtrOfsK a1) t) = some a1
   asGetPtrOfs_sound : ∀ (v : S.Term) (a1 : S.Term), asGetPtrOfs v = some a1 → v = (B.node (GetPtrOfsK a1) (S.ty v))
+  asGetPtrOfs_other : ∀ (k : B.Kind) (t : S.Ty), B.kindName k ≠ "GetPtrOfs" → asGetPtrOfs (B.node k t) = none
   /-- The arguments of the sort `TPointer`. -/
   asTPointer : S.Ty → Option Int
   asTPointer_sort : ∀ (x1 : Int), asTPointer (TPointer x1) = some x1
   asTPointer_sound : ∀ (s : S.Ty) (x1 : Int), asTPointer s = some x1 → s = (TPointer x1)
+
+attribute [kanon_law]
+  Syntax.PtrK_name
+  Syntax.asPtr_other
+  Syntax.GetPtrLocK_name
+  Syntax.asGetPtrLoc_other
+  Syntax.GetPtrOfsK_name
+  Syntax.asGetPtrOfs_other
 
 end PtrMod

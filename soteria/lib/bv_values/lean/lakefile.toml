@@ -2,14 +2,12 @@ name = "kanon_bv_values"
 defaultTargets = ["Kanon"]
 
 # The Lean library of Kanon, which the generated proofs build on
-# (run `lake update kanon` after changing the revision). This is not the Kanon
-# that generates the OCaml of the language: the hand-written proofs and the
-# KanonCore library they use are not ported to it yet.
-# [versionsync: KANON_LEAN_COMMIT_HASH=cbbccba57e2156777b29389287c128a79e6ee9f0]
+# (run `lake update kanon` after changing the revision).
+# [versionsync: KANON_LEAN_COMMIT_HASH=3e921e4275ac5a28ed28e689c0f603b3c6423d06]
 [[require]]
 name = "kanon"
 git = "https://github.com/N1ark/kanon"
-rev = "cbbccba57e2156777b29389287c128a79e6ee9f0"
+rev = "3e921e4275ac5a28ed28e689c0f603b3c6423d06"
 subDir = "lean"
 
 [[lean_lib]]

@@ -46,8 +46,8 @@ node Shl : TBitVector n -> TBitVector n -> TBitVector n [@fold lit_shl]
 node LShr : TBitVector n -> TBitVector n -> TBitVector n [@fold lit_lshr]
 node AShr : TBitVector n -> TBitVector n -> TBitVector n [@fold lit_ashr]
 sort TBitVector of nat [@get size]
-subsort TNonzero of nat : TBitVector n
-subsort TZero of nat : TBitVector n
+subsort TNonzero of nat : TBitVector n [@lean "Nonzero"]
+subsort TZero of nat : TBitVector n [@lean "Zero"]
 
 (* The laws [@unit] and [@zero] (and [@idem]) of the operators above, which
    Kanon derives as the rules [unit_zero], [zero_zero], ..., are written by hand

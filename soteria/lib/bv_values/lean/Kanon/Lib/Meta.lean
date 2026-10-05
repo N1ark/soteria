@@ -65,13 +65,4 @@ partial def natWidths (g : MVarId) : MetaM MVarId := g.withContext do
 open Lean Meta Elab Tactic in
 elab "kanon_nat_widths" : tactic => liftMetaTactic fun g => return [← natWidths g]
 
-open Lean Meta Elab Tactic in
-/-- Clears the tag of the main goal; fails if it has none. -/
-elab "kanon_untag" : tactic => do
-  let g ← getMainGoal
-  if (← g.getTag).isAnonymous then throwError "kanon_untag: no tag"
-  g.setTag .anonymous
-
-macro_rules | `(tactic| kanon_lift_body) => `(tactic| (kanon_untag; kanon_lift_body))
-
 end Kanon.Lib

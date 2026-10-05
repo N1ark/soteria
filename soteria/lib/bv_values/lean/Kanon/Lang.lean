@@ -50,6 +50,6 @@ instance existsSem : ExistsMod.Sem (S := sem FS) (existsSyntax FS) where
   exists_wf_Exists _ _ _ := by simp [existsSyntax, boolSyntax, modBase, sem, exists_wf]
   ev_Exists _ _ _ _ := by simp only [existsSyntax, boolSyntax, modBase, sem, ev]; rfl
   used_binders_sublist _ _ := List.filter_sublist
-  ev_used_binders _ _ _ _ _ hn hw := ev_exists_used hn hw
+  ev_used_binders _ _ _ t t' hn hw := ev_exists_used (T := t) (T' := t') hn hw
 
 end Kanon

@@ -132,15 +132,6 @@ def Term.WTAll : List Term → Prop
   | x :: xs => x.WT ∧ Term.WTAll xs
 end
 
--- Unfolded by their equations only (generated first): a failed unification of two terms
--- (a commutativity lemma that `kanon_comm` tries on another operator) would otherwise
--- evaluate both.
-open Lean Meta in
-run_meta for n in [``Term.WT, ``Term.WTList, ``Term.WTAll] do
-  let _ ← getEqnsFor? n
-  let _ ← getUnfoldEqnFor? n (nonRec := true)
-attribute [irreducible] Term.WT Term.WTList Term.WTAll
-
 @[kanon_law] theorem WTList_iff {e : Ty} :
     ∀ {l : List Term}, Term.WTList e l ↔ ∀ t ∈ l, t.ty = e ∧ t.WT
   | [] => by simp [Term.WTList]
@@ -304,12 +295,6 @@ def evList (FS : FloatSem) : Env → List Term → Option (List Val)
       | some v, some vs => some (v :: vs)
       | _, _ => none
 end
-
-open Lean Meta in
-run_meta for n in [``ev, ``evList] do
-  let _ ← getEqnsFor? n
-  let _ ← getUnfoldEqnFor? n (nonRec := true)
-attribute [irreducible] ev evList
 
 /-! ## Refinement
 

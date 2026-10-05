@@ -123,6 +123,8 @@ The proof of an arm is the theorem tagged `@[kanon_arm]` that proves
 `f.r_name.arm.Stmt` in `Kanon/Proofs/`, if there is one; otherwise the tactic
 given to its function by `attribute [kanon_tactic tac] f.spec`, in the library
 that defines `tac` (`Kanon/Lib/`); otherwise `kanon_auto` (`Kanon/Lib/Rule.lean`).
+The arms proved by these defaults are listed in `Kanon/Proofs/Auto*.lean`, ten per
+module: elaborated in one file (`Soundness.lean`) they need over 14 GB of memory.
 The arms of the bool module are proved once, in Kanon's library
 (`KanonCore.BoolMod`), for the language `boolLang` of `Kanon/Lib/Bool.lean`. The
 integers of the bit-vector literals are related to Lean's `BitVec` by

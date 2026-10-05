@@ -19,64 +19,24 @@ namespace Kanon
 
 open Classical Kanon
 
-@[kanon_arm] theorem bv_and.r_masks.main.proof : bv_and.r_masks.main.Stmt := kanon_proof% bv_and.r_masks.main
+@[kanon_arm] theorem sem_eq.r_or_zero.swap.proof : sem_eq.r_or_zero.swap.Stmt := kanon_proof% sem_eq.r_or_zero.swap
 
-@[kanon_arm] theorem bv_and.r_masks.swap2.proof : bv_and.r_masks.swap2.Stmt := kanon_proof% bv_and.r_masks.swap2
+@[kanon_arm] theorem sem_eq.r_concat_const.main.proof : sem_eq.r_concat_const.main.Stmt := kanon_proof% sem_eq.r_concat_const.main
 
-@[kanon_arm] theorem bv_and.r_masks.swap1_swap2.proof : bv_and.r_masks.swap1_swap2.Stmt := kanon_proof% bv_and.r_masks.swap1_swap2
+@[kanon_arm] theorem sem_eq.r_concat_concat.main.proof : sem_eq.r_concat_concat.main.Stmt := kanon_proof% sem_eq.r_concat_concat.main
 
-@[kanon_arm] theorem bv_and.r_mask_or_mask.main.proof : bv_and.r_mask_or_mask.main.Stmt := kanon_proof% bv_and.r_mask_or_mask.main
+@[kanon_arm] theorem sem_eq.r_ite_const.bitVec.proof : sem_eq.r_ite_const.bitVec.Stmt := kanon_proof% sem_eq.r_ite_const.bitVec
 
-@[kanon_arm] theorem bv_and.r_mask_or.main.proof : bv_and.r_mask_or.main.Stmt := kanon_proof% bv_and.r_mask_or.main
+@[kanon_arm] theorem sem_eq.r_ite_const.locLit.proof : sem_eq.r_ite_const.locLit.Stmt := kanon_proof% sem_eq.r_ite_const.locLit
 
-@[kanon_arm] theorem bv_and.r_mask_or_disj.main.proof : bv_and.r_mask_or_disj.main.Stmt := kanon_proof% bv_and.r_mask_or_disj.main
+@[kanon_arm] theorem sem_eq.r_of_bools.main.proof : sem_eq.r_of_bools.main.Stmt := kanon_proof% sem_eq.r_of_bools.main
 
-@[kanon_arm] theorem bv_and.r_right_mask.main.proof : bv_and.r_right_mask.main.Stmt := kanon_proof% bv_and.r_right_mask.main
+@[kanon_arm] theorem sem_eq.r_of_bool_const.main.proof : sem_eq.r_of_bool_const.main.Stmt := kanon_proof% sem_eq.r_of_bool_const.main
 
-@[kanon_arm] theorem bv_and.r_of_bool.main.proof : bv_and.r_of_bool.main.Stmt := kanon_proof% bv_and.r_of_bool.main
+@[kanon_arm] theorem sem_eq.r_msb.main.proof : sem_eq.r_msb.main.Stmt := kanon_proof% sem_eq.r_msb.main
 
-@[kanon_arm] theorem bv_and.r_of_bools.main.proof : bv_and.r_of_bools.main.Stmt := kanon_proof% bv_and.r_of_bools.main
+@[kanon_arm] theorem sem_eq.r_floats.main.proof : sem_eq.r_floats.main.Stmt := kanon_proof% sem_eq.r_floats.main
 
-@[kanon_arm] theorem bv_and.r_ites.main.proof : bv_and.r_ites.main.Stmt := kanon_proof% bv_and.r_ites.main
-
-@[kanon_arm] theorem bv_and.r_default.main.proof : bv_and.r_default.main.Stmt := kanon_proof% bv_and.r_default.main
-
-@[kanon_arm] theorem bv_or.r_lits.main.proof : bv_or.r_lits.main.Stmt := kanon_proof% bv_or.r_lits.main
-
-@[kanon_arm] theorem bv_or.r_zero.main.proof : bv_or.r_zero.main.Stmt := kanon_proof% bv_or.r_zero.main
-
-@[kanon_arm] theorem bv_or.r_same.main.proof : bv_or.r_same.main.Stmt := kanon_proof% bv_or.r_same.main
-
-@[kanon_arm] theorem bv_or.r_mask_and.main.proof : bv_or.r_mask_and.main.Stmt := kanon_proof% bv_or.r_mask_and.main
-
-@[kanon_arm] theorem bv_or.r_masks.main.proof : bv_or.r_masks.main.Stmt := kanon_proof% bv_or.r_masks.main
-
-@[kanon_arm] theorem bv_or.r_masks.swap2.proof : bv_or.r_masks.swap2.Stmt := kanon_proof% bv_or.r_masks.swap2
-
-@[kanon_arm] theorem bv_or.r_masks.swap1_swap2.proof : bv_or.r_masks.swap1_swap2.Stmt := kanon_proof% bv_or.r_masks.swap1_swap2
-
-@[kanon_arm] theorem bv_or.r_of_bools.main.proof : bv_or.r_of_bools.main.Stmt := kanon_proof% bv_or.r_of_bools.main
-
-@[kanon_arm] theorem bv_or.r_default.main.proof : bv_or.r_default.main.Stmt := kanon_proof% bv_or.r_default.main
-
-@[kanon_arm] theorem bv_xor.r_lits.main.proof : bv_xor.r_lits.main.Stmt := kanon_proof% bv_xor.r_lits.main
-
-@[kanon_arm] theorem bv_xor.r_zero.main.proof : bv_xor.r_zero.main.Stmt := kanon_proof% bv_xor.r_zero.main
-
-@[kanon_arm] theorem bv_xor.r_of_bools.main.proof : bv_xor.r_of_bools.main.Stmt := kanon_proof% bv_xor.r_of_bools.main
-
-@[kanon_arm] theorem bv_xor.r_default.main.proof : bv_xor.r_default.main.Stmt := kanon_proof% bv_xor.r_default.main
-
-@[kanon_arm] theorem bv_extract.r_lit.main.proof : bv_extract.r_lit.main.Stmt := kanon_proof% bv_extract.r_lit.main
-
-@[kanon_arm] theorem bv_extract.r_full.main.proof : bv_extract.r_full.main.Stmt := kanon_proof% bv_extract.r_full.main
-
-@[kanon_arm] theorem bv_extract.r_and_.main.proof : bv_extract.r_and_.main.Stmt := kanon_proof% bv_extract.r_and_.main
-
-@[kanon_arm] theorem bv_extract.r_or_.main.proof : bv_extract.r_or_.main.Stmt := kanon_proof% bv_extract.r_or_.main
-
-@[kanon_arm] theorem bv_extract.r_xor.main.proof : bv_extract.r_xor.main.Stmt := kanon_proof% bv_extract.r_xor.main
-
-@[kanon_arm] theorem bv_extract.r_shl.main.proof : bv_extract.r_shl.main.Stmt := kanon_proof% bv_extract.r_shl.main
+@[kanon_arm] theorem sem_eq.r_ptrs.main.proof : sem_eq.r_ptrs.main.Stmt := kanon_proof% sem_eq.r_ptrs.main
 
 end Kanon

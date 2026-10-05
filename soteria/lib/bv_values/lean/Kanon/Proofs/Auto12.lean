@@ -19,62 +19,24 @@ namespace Kanon
 
 open Classical Kanon
 
-@[kanon_arm] theorem float_add.r_lits.main.proof : float_add.r_lits.main.Stmt := kanon_proof% float_add.r_lits.main
+@[kanon_arm] theorem bv_not.r_ite.main.proof : bv_not.r_ite.main.Stmt := kanon_proof% bv_not.r_ite.main
 
-@[kanon_arm] theorem float_add.r_default.main.proof : float_add.r_default.main.Stmt := kanon_proof% float_add.r_default.main
+@[kanon_arm] theorem bv_not.r_default.main.proof : bv_not.r_default.main.Stmt := kanon_proof% bv_not.r_default.main
 
-@[kanon_arm] theorem float_sub.r_lits.main.proof : float_sub.r_lits.main.Stmt := kanon_proof% float_sub.r_lits.main
+@[kanon_arm] theorem bv_and.r_lits.main.proof : bv_and.r_lits.main.Stmt := kanon_proof% bv_and.r_lits.main
 
-@[kanon_arm] theorem float_sub.r_default.main.proof : float_sub.r_default.main.Stmt := kanon_proof% float_sub.r_default.main
+@[kanon_arm] theorem bv_and.r_zero.main.proof : bv_and.r_zero.main.Stmt := kanon_proof% bv_and.r_zero.main
 
-@[kanon_arm] theorem float_div.r_lits.main.proof : float_div.r_lits.main.Stmt := kanon_proof% float_div.r_lits.main
+@[kanon_arm] theorem bv_and.r_zero.swap.proof : bv_and.r_zero.swap.Stmt := kanon_proof% bv_and.r_zero.swap
 
-@[kanon_arm] theorem float_div.r_default.main.proof : float_div.r_default.main.Stmt := kanon_proof% float_div.r_default.main
+@[kanon_arm] theorem bv_and.r_ones.main.proof : bv_and.r_ones.main.Stmt := kanon_proof% bv_and.r_ones.main
 
-@[kanon_arm] theorem float_mul.r_lits.main.proof : float_mul.r_lits.main.Stmt := kanon_proof% float_mul.r_lits.main
+@[kanon_arm] theorem bv_and.r_ones.swap.proof : bv_and.r_ones.swap.Stmt := kanon_proof% bv_and.r_ones.swap
 
-@[kanon_arm] theorem float_mul.r_default.main.proof : float_mul.r_default.main.Stmt := kanon_proof% float_mul.r_default.main
+@[kanon_arm] theorem bv_and.r_lshr_mask.main.proof : bv_and.r_lshr_mask.main.Stmt := kanon_proof% bv_and.r_lshr_mask.main
 
-@[kanon_arm] theorem float_rem.r_lits.main.proof : float_rem.r_lits.main.Stmt := kanon_proof% float_rem.r_lits.main
+@[kanon_arm] theorem bv_and.r_lshr_mask.swap.proof : bv_and.r_lshr_mask.swap.Stmt := kanon_proof% bv_and.r_lshr_mask.swap
 
-@[kanon_arm] theorem float_rem.r_default.main.proof : float_rem.r_default.main.Stmt := kanon_proof% float_rem.r_default.main
-
-@[kanon_arm] theorem float_abs.r_lit.main.proof : float_abs.r_lit.main.Stmt := kanon_proof% float_abs.r_lit.main
-
-@[kanon_arm] theorem float_abs.r_default.main.proof : float_abs.r_default.main.Stmt := kanon_proof% float_abs.r_default.main
-
-@[kanon_arm] theorem float_neg.r_lit.main.proof : float_neg.r_lit.main.Stmt := kanon_proof% float_neg.r_lit.main
-
-@[kanon_arm] theorem float_neg.r_default.main.proof : float_neg.r_default.main.Stmt := kanon_proof% float_neg.r_default.main
-
-@[kanon_arm] theorem float_fma.r_default.main.proof : float_fma.r_default.main.Stmt := kanon_proof% float_fma.r_default.main
-
-@[kanon_arm] theorem float_fmod_of_rem.r_main.main.proof : float_fmod_of_rem.r_main.main.Stmt := kanon_proof% float_fmod_of_rem.r_main.main
-
-@[kanon_arm] theorem float_fmod.r_default.main.proof : float_fmod.r_default.main.Stmt := kanon_proof% float_fmod.r_default.main
-
-@[kanon_arm] theorem float_min.r_lits.main.proof : float_min.r_lits.main.Stmt := kanon_proof% float_min.r_lits.main
-
-@[kanon_arm] theorem float_min.r_default.main.proof : float_min.r_default.main.Stmt := kanon_proof% float_min.r_default.main
-
-@[kanon_arm] theorem float_max.r_lits.main.proof : float_max.r_lits.main.Stmt := kanon_proof% float_max.r_lits.main
-
-@[kanon_arm] theorem float_max.r_default.main.proof : float_max.r_default.main.Stmt := kanon_proof% float_max.r_default.main
-
-@[kanon_arm] theorem float_sqrt.r_lit.main.proof : float_sqrt.r_lit.main.Stmt := kanon_proof% float_sqrt.r_lit.main
-
-@[kanon_arm] theorem float_sqrt.r_default.main.proof : float_sqrt.r_default.main.Stmt := kanon_proof% float_sqrt.r_default.main
-
-@[kanon_arm] theorem float_round.r_lit.main.proof : float_round.r_lit.main.Stmt := kanon_proof% float_round.r_lit.main
-
-@[kanon_arm] theorem float_round.r_default.main.proof : float_round.r_default.main.Stmt := kanon_proof% float_round.r_default.main
-
-@[kanon_arm] theorem ptr_loc.r_ptr.main.proof : ptr_loc.r_ptr.main.Stmt := kanon_proof% ptr_loc.r_ptr.main
-
-@[kanon_arm] theorem ptr_loc.r_default.main.proof : ptr_loc.r_default.main.Stmt := kanon_proof% ptr_loc.r_default.main
-
-@[kanon_arm] theorem ptr_ofs.r_ptr.main.proof : ptr_ofs.r_ptr.main.Stmt := kanon_proof% ptr_ofs.r_ptr.main
-
-@[kanon_arm] theorem ptr_ofs.r_default.main.proof : ptr_ofs.r_default.main.Stmt := kanon_proof% ptr_ofs.r_default.main
+@[kanon_arm] theorem bv_and.r_ite.main.proof : bv_and.r_ite.main.Stmt := kanon_proof% bv_and.r_ite.main
 
 end Kanon

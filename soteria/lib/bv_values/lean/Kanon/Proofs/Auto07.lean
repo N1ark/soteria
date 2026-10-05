@@ -19,64 +19,24 @@ namespace Kanon
 
 open Classical Kanon
 
-@[kanon_arm] theorem bv_shl.r_shl.main.proof : bv_shl.r_shl.main.Stmt := kanon_proof% bv_shl.r_shl.main
+@[kanon_arm] theorem bv_add.r_not_one.main.proof : bv_add.r_not_one.main.Stmt := kanon_proof% bv_add.r_not_one.main
 
-@[kanon_arm] theorem bv_shl.r_lshr.main.proof : bv_shl.r_lshr.main.Stmt := kanon_proof% bv_shl.r_lshr.main
+@[kanon_arm] theorem bv_add.r_add_const.main.proof : bv_add.r_add_const.main.Stmt := kanon_proof% bv_add.r_add_const.main
 
-@[kanon_arm] theorem bv_shl.r_and_mask.main.proof : bv_shl.r_and_mask.main.Stmt := kanon_proof% bv_shl.r_and_mask.main
+@[kanon_arm] theorem bv_add.r_add_const.swap2.proof : bv_add.r_add_const.swap2.Stmt := kanon_proof% bv_add.r_add_const.swap2
 
-@[kanon_arm] theorem bv_shl.r_or_mask.main.proof : bv_shl.r_or_mask.main.Stmt := kanon_proof% bv_shl.r_or_mask.main
+@[kanon_arm] theorem bv_add.r_add_const.swap1_swap2.proof : bv_add.r_add_const.swap1_swap2.Stmt := kanon_proof% bv_add.r_add_const.swap1_swap2
 
-@[kanon_arm] theorem bv_shl.r_default.main.proof : bv_shl.r_default.main.Stmt := kanon_proof% bv_shl.r_default.main
+@[kanon_arm] theorem bv_add.r_sub_const_r.main.proof : bv_add.r_sub_const_r.main.Stmt := kanon_proof% bv_add.r_sub_const_r.main
 
-@[kanon_arm] theorem bv_lshr.r_lits.main.proof : bv_lshr.r_lits.main.Stmt := kanon_proof% bv_lshr.r_lits.main
+@[kanon_arm] theorem bv_add.r_sub_const_r.swap.proof : bv_add.r_sub_const_r.swap.Stmt := kanon_proof% bv_add.r_sub_const_r.swap
 
-@[kanon_arm] theorem bv_lshr.r_zero.main.proof : bv_lshr.r_zero.main.Stmt := kanon_proof% bv_lshr.r_zero.main
+@[kanon_arm] theorem bv_add.r_sub_const_l.main.proof : bv_add.r_sub_const_l.main.Stmt := kanon_proof% bv_add.r_sub_const_l.main
 
-@[kanon_arm] theorem bv_lshr.r_big.main.proof : bv_lshr.r_big.main.Stmt := kanon_proof% bv_lshr.r_big.main
+@[kanon_arm] theorem bv_add.r_sub_const_l.swap.proof : bv_add.r_sub_const_l.swap.Stmt := kanon_proof% bv_add.r_sub_const_l.swap
 
-@[kanon_arm] theorem bv_lshr.r_lshr.main.proof : bv_lshr.r_lshr.main.Stmt := kanon_proof% bv_lshr.r_lshr.main
+@[kanon_arm] theorem bv_add.r_sub_cancel.main.proof : bv_add.r_sub_cancel.main.Stmt := kanon_proof% bv_add.r_sub_cancel.main
 
-@[kanon_arm] theorem bv_lshr.r_and_mask.main.proof : bv_lshr.r_and_mask.main.Stmt := kanon_proof% bv_lshr.r_and_mask.main
-
-@[kanon_arm] theorem bv_lshr.r_or_mask.main.proof : bv_lshr.r_or_mask.main.Stmt := kanon_proof% bv_lshr.r_or_mask.main
-
-@[kanon_arm] theorem bv_lshr.r_default.main.proof : bv_lshr.r_default.main.Stmt := kanon_proof% bv_lshr.r_default.main
-
-@[kanon_arm] theorem bv_ashr.r_lits.main.proof : bv_ashr.r_lits.main.Stmt := kanon_proof% bv_ashr.r_lits.main
-
-@[kanon_arm] theorem bv_ashr.r_zero.main.proof : bv_ashr.r_zero.main.Stmt := kanon_proof% bv_ashr.r_zero.main
-
-@[kanon_arm] theorem bv_ashr.r_big.main.proof : bv_ashr.r_big.main.Stmt := kanon_proof% bv_ashr.r_big.main
-
-@[kanon_arm] theorem bv_ashr.r_ashr.main.proof : bv_ashr.r_ashr.main.Stmt := kanon_proof% bv_ashr.r_ashr.main
-
-@[kanon_arm] theorem bv_ashr.r_default.main.proof : bv_ashr.r_default.main.Stmt := kanon_proof% bv_ashr.r_default.main
-
-@[kanon_arm] theorem bv_mul.r_lits.main.proof : bv_mul.r_lits.main.Stmt := kanon_proof% bv_mul.r_lits.main
-
-@[kanon_arm] theorem bv_mul.r_one.main.proof : bv_mul.r_one.main.Stmt := kanon_proof% bv_mul.r_one.main
-
-@[kanon_arm] theorem bv_mul.r_zero.main.proof : bv_mul.r_zero.main.Stmt := kanon_proof% bv_mul.r_zero.main
-
-@[kanon_arm] theorem bv_mul.r_zero.swap.proof : bv_mul.r_zero.swap.Stmt := kanon_proof% bv_mul.r_zero.swap
-
-@[kanon_arm] theorem bv_mul.r_neg.main.proof : bv_mul.r_neg.main.Stmt := kanon_proof% bv_mul.r_neg.main
-
-@[kanon_arm] theorem bv_mul.r_neg.swap.proof : bv_mul.r_neg.swap.Stmt := kanon_proof% bv_mul.r_neg.swap
-
-@[kanon_arm] theorem bv_mul.r_mul_const.main.proof : bv_mul.r_mul_const.main.Stmt := kanon_proof% bv_mul.r_mul_const.main
-
-@[kanon_arm] theorem bv_mul.r_mul_const.swap2.proof : bv_mul.r_mul_const.swap2.Stmt := kanon_proof% bv_mul.r_mul_const.swap2
-
-@[kanon_arm] theorem bv_mul.r_mul_const.swap1_swap2.proof : bv_mul.r_mul_const.swap1_swap2.Stmt := kanon_proof% bv_mul.r_mul_const.swap1_swap2
-
-@[kanon_arm] theorem bv_mul.r_ite.main.proof : bv_mul.r_ite.main.Stmt := kanon_proof% bv_mul.r_ite.main
-
-@[kanon_arm] theorem bv_mul.r_default.main.proof : bv_mul.r_default.main.Stmt := kanon_proof% bv_mul.r_default.main
-
-@[kanon_arm] theorem bv_div.r_lits.main.proof : bv_div.r_lits.main.Stmt := kanon_proof% bv_div.r_lits.main
-
-@[kanon_arm] theorem bv_div.r_one.main.proof : bv_div.r_one.main.Stmt := kanon_proof% bv_div.r_one.main
+@[kanon_arm] theorem bv_add.r_add_sub.main.proof : bv_add.r_add_sub.main.Stmt := kanon_proof% bv_add.r_add_sub.main
 
 end Kanon

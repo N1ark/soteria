@@ -10,6 +10,9 @@
   (source_tree .)
   (source_tree ../CoreMod)
   (source_tree ../ExistsMod)
+  (source_tree ../BitvecMod)
+  (source_tree ../FloatMod)
+  (source_tree ../PtrMod)
   (glob_files %{project_root}/soteria/lib/bv_values/rules/*.{kn,knl}))
  (action
   (run

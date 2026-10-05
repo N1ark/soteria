@@ -1043,6 +1043,18 @@ rule to_float_bits : FloatOfBvRaw (fp, v) =
 fn to_float_raw (v : TBitVector n) : TFloat (Float.fp_of_size n) =
   to_float_bits (Float.fp_of_size n) v
 
+(* {1 Typed helpers}
+
+   The operations of the typed interface that are derived from the rules: the
+   wrapping arithmetic and the reversed comparisons. *)
+
+fn wrapping_add (a b : TBitVector n) : TBitVector n [@no_lean] = add unchecked a b
+fn wrapping_sub (a b : TBitVector n) : TBitVector n [@no_lean] = sub unchecked a b
+fn wrapping_mul (a b : TBitVector n) : TBitVector n [@no_lean] = mul unchecked a b
+fn wrapping_neg (v : TBitVector n) : TBitVector n [@no_lean] = neg false v
+fn gt (signed : bool) (a b : TBitVector n) : TBool [@no_lean] = lt signed b a
+fn geq (signed : bool) (a b : TBitVector n) : TBool [@no_lean] = leq signed b a
+
 (* The rules of the bool module on bit-vectors *)
 
 extend rule Bool.and_ =

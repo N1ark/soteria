@@ -129,6 +129,19 @@ rule sqrt : FSqrt v
 
 rule round : FRound (rm, sv)
 
+(* {1 Typed helpers}
+
+   The classes of a float and the reversed comparisons, for the typed
+   interface. *)
+
+fn is_normal (v : TFloat p) : TBool [@no_lean] = is_floatclass Normal v
+fn is_subnormal (v : TFloat p) : TBool [@no_lean] = is_floatclass Subnormal v
+fn is_zero (v : TFloat p) : TBool [@no_lean] = is_floatclass Zero v
+fn is_infinite (v : TFloat p) : TBool [@no_lean] = is_floatclass Infinite v
+fn is_nan (v : TFloat p) : TBool [@no_lean] = is_floatclass NaN v
+fn gt (a b : TFloat p) : TBool [@no_lean] = lt b a
+fn geq (a b : TFloat p) : TBool [@no_lean] = leq b a
+
 (* The rules of the bool module on floats *)
 
 extend rule Bool.eq =

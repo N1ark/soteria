@@ -136,6 +136,17 @@ module type S = sig
       [> Tag.tfloat ] t
     val to_float_bits : fp -> [< Tag.tbitvector ] t -> [> Tag.tfloat ] t
     val to_float_raw : [< Tag.tbitvector ] t -> [> Tag.tfloat ] t
+    val wrapping_add : [< Tag.tbitvector ] t -> [< Tag.tbitvector ] t ->
+      [> Tag.tbitvector ] t
+    val wrapping_sub : [< Tag.tbitvector ] t -> [< Tag.tbitvector ] t ->
+      [> Tag.tbitvector ] t
+    val wrapping_mul : [< Tag.tbitvector ] t -> [< Tag.tbitvector ] t ->
+      [> Tag.tbitvector ] t
+    val wrapping_neg : [< Tag.tbitvector ] t -> [> Tag.tbitvector ] t
+    val gt : bool -> [< Tag.tbitvector ] t -> [< Tag.tbitvector ] t ->
+      [> Tag.tbool ] t
+    val geq : bool -> [< Tag.tbitvector ] t -> [< Tag.tbitvector ] t ->
+      [> Tag.tbool ] t
     val as_bitvec : _ t -> Z.t option
     val is_bitvec : _ t -> bool
     val as_loclit : _ t -> Z.t option
@@ -233,6 +244,13 @@ module type S = sig
     val max : [< Tag.tfloat ] t -> [< Tag.tfloat ] t -> [> Tag.tfloat ] t
     val sqrt : [< Tag.tfloat ] t -> [> Tag.tfloat ] t
     val round : rm -> [< Tag.tfloat ] t -> [> Tag.tfloat ] t
+    val is_normal : [< Tag.tfloat ] t -> [> Tag.tbool ] t
+    val is_subnormal : [< Tag.tfloat ] t -> [> Tag.tbool ] t
+    val is_zero : [< Tag.tfloat ] t -> [> Tag.tbool ] t
+    val is_infinite : [< Tag.tfloat ] t -> [> Tag.tbool ] t
+    val is_nan : [< Tag.tfloat ] t -> [> Tag.tbool ] t
+    val gt : [< Tag.tfloat ] t -> [< Tag.tfloat ] t -> [> Tag.tbool ] t
+    val geq : [< Tag.tfloat ] t -> [< Tag.tfloat ] t -> [> Tag.tbool ] t
     val as_float : _ t -> float option
     val is_float : _ t -> bool
     val as_bvoffloat : _ t -> (rm * bool * int * [> Tag.tfloat ] t) option

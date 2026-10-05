@@ -2726,6 +2726,87 @@ module Kanon_flat = struct
       (assert (((equal_ty kanon__result.ty (TFloat ((Bv_prims.fp_of_size n))))) [@warning "-11"]);
       kanon__result)))
   
+  let bitvec_wrapping_add (a : t) (b : t) : t =
+      (let n = (bitvec_size a) in
+      (let n = (bitvec_size b) in
+      (let kanon__result = (assert ((match a.ty, b.ty with
+                                    | ((TBitVector (kanon__v_n)), (TBitVector (kanon__s1)))
+                                      when (let kanon__v_n = Z.of_int kanon__v_n in
+                                      let kanon__s1 = Z.of_int kanon__s1 in
+                                      ((Z.equal kanon__s1 kanon__v_n))) ->
+                                      true
+                                    | _ -> false
+                                    ) [@warning "-11"]);
+                           (bitvec_add bitvec_unchecked a b)) in
+      (assert (((equal_ty kanon__result.ty (TBitVector ((Z.to_int n))))) [@warning "-11"]);
+      kanon__result))))
+  
+  let bitvec_wrapping_sub (a : t) (b : t) : t =
+      (let n = (bitvec_size a) in
+      (let n = (bitvec_size b) in
+      (let kanon__result = (assert ((match a.ty, b.ty with
+                                    | ((TBitVector (kanon__v_n)), (TBitVector (kanon__s1)))
+                                      when (let kanon__v_n = Z.of_int kanon__v_n in
+                                      let kanon__s1 = Z.of_int kanon__s1 in
+                                      ((Z.equal kanon__s1 kanon__v_n))) ->
+                                      true
+                                    | _ -> false
+                                    ) [@warning "-11"]);
+                           (bitvec_sub bitvec_unchecked a b)) in
+      (assert (((equal_ty kanon__result.ty (TBitVector ((Z.to_int n))))) [@warning "-11"]);
+      kanon__result))))
+  
+  let bitvec_wrapping_mul (a : t) (b : t) : t =
+      (let n = (bitvec_size a) in
+      (let n = (bitvec_size b) in
+      (let kanon__result = (assert ((match a.ty, b.ty with
+                                    | ((TBitVector (kanon__v_n)), (TBitVector (kanon__s1)))
+                                      when (let kanon__v_n = Z.of_int kanon__v_n in
+                                      let kanon__s1 = Z.of_int kanon__s1 in
+                                      ((Z.equal kanon__s1 kanon__v_n))) ->
+                                      true
+                                    | _ -> false
+                                    ) [@warning "-11"]);
+                           (bitvec_mul bitvec_unchecked a b)) in
+      (assert (((equal_ty kanon__result.ty (TBitVector ((Z.to_int n))))) [@warning "-11"]);
+      kanon__result))))
+  
+  let bitvec_wrapping_neg (v : t) : t =
+      (let n = (bitvec_size v) in
+      (let kanon__result = (assert ((match v.ty with
+                                    | (TBitVector (kanon__v_n)) -> true
+                                    | _ -> false
+                                    ) [@warning "-11"]);
+                           (bitvec_neg false v)) in
+      (assert (((equal_ty kanon__result.ty (TBitVector ((Z.to_int n))))) [@warning "-11"]);
+      kanon__result)))
+  
+  let bitvec_gt (signed : bool) (a : t) (b : t) : t =
+      (let kanon__result = (assert ((match a.ty, b.ty with
+                                    | ((TBitVector (kanon__v_n)), (TBitVector (kanon__s1)))
+                                      when (let kanon__v_n = Z.of_int kanon__v_n in
+                                      let kanon__s1 = Z.of_int kanon__s1 in
+                                      ((Z.equal kanon__s1 kanon__v_n))) ->
+                                      true
+                                    | _ -> false
+                                    ) [@warning "-11"]);
+                           (bitvec_lt signed b a)) in
+      (assert (((equal_ty kanon__result.ty TBool)) [@warning "-11"]);
+      kanon__result))
+  
+  let bitvec_geq (signed : bool) (a : t) (b : t) : t =
+      (let kanon__result = (assert ((match a.ty, b.ty with
+                                    | ((TBitVector (kanon__v_n)), (TBitVector (kanon__s1)))
+                                      when (let kanon__v_n = Z.of_int kanon__v_n in
+                                      let kanon__s1 = Z.of_int kanon__s1 in
+                                      ((Z.equal kanon__s1 kanon__v_n))) ->
+                                      true
+                                    | _ -> false
+                                    ) [@warning "-11"]);
+                           (bitvec_leq signed b a)) in
+      (assert (((equal_ty kanon__result.ty TBool)) [@warning "-11"]);
+      kanon__result))
+  
   let[@inline] float_fp_of (v : t) : fp = (Bv_prims.fp_of_ty v.ty)
   
   let float_is_floatclass (fc : fc) (sv : t) : t =
@@ -3006,6 +3087,73 @@ module Kanon_flat = struct
         (node (Float (kanon__a1)) (TFloat ((Bv_prims.f_prec kanon__a1)))))
       | _ -> (node (Op1 ((FRound (rm)), sv)) sv.ty)
       ))
+  
+  let float_is_normal (v : t) : t =
+      (let kanon__result = (assert ((match v.ty with
+                                    | (TFloat (kanon__v_p)) -> true
+                                    | _ -> false
+                                    ) [@warning "-11"]);
+                           (float_is_floatclass Normal v)) in
+      (assert (((equal_ty kanon__result.ty TBool)) [@warning "-11"]);
+      kanon__result))
+  
+  let float_is_subnormal (v : t) : t =
+      (let kanon__result = (assert ((match v.ty with
+                                    | (TFloat (kanon__v_p)) -> true
+                                    | _ -> false
+                                    ) [@warning "-11"]);
+                           (float_is_floatclass Subnormal v)) in
+      (assert (((equal_ty kanon__result.ty TBool)) [@warning "-11"]);
+      kanon__result))
+  
+  let float_is_zero (v : t) : t =
+      (let kanon__result = (assert ((match v.ty with
+                                    | (TFloat (kanon__v_p)) -> true
+                                    | _ -> false
+                                    ) [@warning "-11"]);
+                           (float_is_floatclass Zero v)) in
+      (assert (((equal_ty kanon__result.ty TBool)) [@warning "-11"]);
+      kanon__result))
+  
+  let float_is_infinite (v : t) : t =
+      (let kanon__result = (assert ((match v.ty with
+                                    | (TFloat (kanon__v_p)) -> true
+                                    | _ -> false
+                                    ) [@warning "-11"]);
+                           (float_is_floatclass Infinite v)) in
+      (assert (((equal_ty kanon__result.ty TBool)) [@warning "-11"]);
+      kanon__result))
+  
+  let float_is_nan (v : t) : t =
+      (let kanon__result = (assert ((match v.ty with
+                                    | (TFloat (kanon__v_p)) -> true
+                                    | _ -> false
+                                    ) [@warning "-11"]);
+                           (float_is_floatclass NaN v)) in
+      (assert (((equal_ty kanon__result.ty TBool)) [@warning "-11"]);
+      kanon__result))
+  
+  let float_gt (a : t) (b : t) : t =
+      (let kanon__result = (assert ((match a.ty, b.ty with
+                                    | ((TFloat (kanon__v_p)), (TFloat (kanon__s1)))
+                                      when (((equal_fp kanon__s1 kanon__v_p))) ->
+                                      true
+                                    | _ -> false
+                                    ) [@warning "-11"]);
+                           (float_lt b a)) in
+      (assert (((equal_ty kanon__result.ty TBool)) [@warning "-11"]);
+      kanon__result))
+  
+  let float_geq (a : t) (b : t) : t =
+      (let kanon__result = (assert ((match a.ty, b.ty with
+                                    | ((TFloat (kanon__v_p)), (TFloat (kanon__s1)))
+                                      when (((equal_fp kanon__s1 kanon__v_p))) ->
+                                      true
+                                    | _ -> false
+                                    ) [@warning "-11"]);
+                           (float_leq b a)) in
+      (assert (((equal_ty kanon__result.ty TBool)) [@warning "-11"]);
+      kanon__result))
   
   let ptr_loc (p : t) : t =
       (assert ((match p.ty with
@@ -4276,6 +4424,12 @@ module Bitvec = struct
   let to_float = Kanon_flat.bitvec_to_float
   let to_float_bits = Kanon_flat.bitvec_to_float_bits
   let to_float_raw = Kanon_flat.bitvec_to_float_raw
+  let wrapping_add = Kanon_flat.bitvec_wrapping_add
+  let wrapping_sub = Kanon_flat.bitvec_wrapping_sub
+  let wrapping_mul = Kanon_flat.bitvec_wrapping_mul
+  let wrapping_neg = Kanon_flat.bitvec_wrapping_neg
+  let gt = Kanon_flat.bitvec_gt
+  let geq = Kanon_flat.bitvec_geq
   
   let as_bitvec (t : t) =
     match[@warning "-11"] t with { kind = BitVec (p1); _ } -> Some p1 | _ -> None
@@ -4460,6 +4614,13 @@ module Float = struct
   let max = Kanon_flat.float_max
   let sqrt = Kanon_flat.float_sqrt
   let round = Kanon_flat.float_round
+  let is_normal = Kanon_flat.float_is_normal
+  let is_subnormal = Kanon_flat.float_is_subnormal
+  let is_zero = Kanon_flat.float_is_zero
+  let is_infinite = Kanon_flat.float_is_infinite
+  let is_nan = Kanon_flat.float_is_nan
+  let gt = Kanon_flat.float_gt
+  let geq = Kanon_flat.float_geq
   
   let as_float (t : t) =
     match[@warning "-11"] t with { kind = Float (p1); _ } -> Some p1 | _ -> None

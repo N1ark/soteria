@@ -20,3 +20,15 @@ name = "CoreMod"
 # The exists module (../rules/exists.knl), proved once.
 [[lean_lib]]
 name = "ExistsMod"
+
+# The bitvec module (../rules/bitvec.knl), proved once.
+[[lean_lib]]
+name = "BitvecMod"
+
+# The float module (../rules/float.knl), proved once.
+[[lean_lib]]
+name = "FloatMod"
+
+# The ptr module (../rules/ptr.knl), proved once.
+[[lean_lib]]
+name = "PtrMod"

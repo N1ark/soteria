@@ -35,41 +35,53 @@ theorem binB_ite_r {α : Type} {f : α → α → Bool} {c : Prop} [Decidable c]
 /-! ## The helpers, on values of known width -/
 
 section
-variable {n : Nat} (x : BitVec n)
+variable {n : Nat} (hn : 0 < n) {x y : Int} (hx0 : 0 ≤ x) (hx1 : x < 2 ^ n)
+include hn hx0 hx1
 
-theorem is_min_of_mk (s : Bool) (hn : 0 < n) :
-    is_min_of s ⟨n, x⟩ = decide (if s then x.toInt = -2 ^ (n - 1) else x.toNat = 0) := by
-  cases s <;> simp [is_min_of, min_for_true hn]
+theorem is_min_of_ofInt (s : Bool) :
+    is_min_of s n x =
+      decide (if s then (BitVec.ofInt n x).toInt = -2 ^ (n - 1) else (BitVec.ofInt n x).toNat = 0) := by
+  cases s
+  · simp only [is_min_of, min_for_false, bv_to_z_ofInt hn _ hx0 hx1, iv, Bool.false_eq_true,
+      if_false, decide_eq_decide]
+    omega
+  · simp [is_min_of, min_for_true hn, bv_to_z_ofInt hn _ hx0 hx1, iv]
 
-theorem is_max_of_mk (s : Bool) (hn : 0 < n) :
-    is_max_of s ⟨n, x⟩ =
-      decide (if s then x.toInt = 2 ^ (n - 1) - 1 else (x.toNat : Int) = 2 ^ n - 1) := by
-  cases s <;> simp [is_max_of, max_for_true hn]
+theorem is_max_of_ofInt (s : Bool) :
+    is_max_of s n x =
+      decide (if s then (BitVec.ofInt n x).toInt = 2 ^ (n - 1) - 1
+        else ((BitVec.ofInt n x).toNat : Int) = 2 ^ n - 1) := by
+  cases s <;> simp [is_max_of, max_for_true hn, bv_to_z_ofInt hn _ hx0 hx1, iv]
 
-theorem const_keeps_in_range_mk (s : Bool) (y : BitVec n) :
-    const_keeps_in_range s ⟨n, x⟩ ⟨n, y⟩ =
-      decide ((0 ≤ to_z s ⟨n, x⟩ ∧ 0 ≤ to_z s ⟨n, x⟩ - to_z s ⟨n, y⟩ ∧
-          to_z s ⟨n, x⟩ - to_z s ⟨n, y⟩ ≤ to_z s ⟨n, x⟩) ∨
-        (to_z s ⟨n, x⟩ ≤ 0 ∧ to_z s ⟨n, x⟩ ≤ to_z s ⟨n, x⟩ - to_z s ⟨n, y⟩ ∧
-          to_z s ⟨n, x⟩ - to_z s ⟨n, y⟩ ≤ 0)) := by
+include hn in
+theorem const_keeps_in_range_ofInt (s : Bool) {y : Int} (hy0 : 0 ≤ y) (hy1 : y < 2 ^ n) :
+    const_keeps_in_range s n x y =
+      decide ((0 ≤ iv s (BitVec.ofInt n x) ∧ 0 ≤ iv s (BitVec.ofInt n x) - iv s (BitVec.ofInt n y) ∧
+          iv s (BitVec.ofInt n x) - iv s (BitVec.ofInt n y) ≤ iv s (BitVec.ofInt n x)) ∨
+        (iv s (BitVec.ofInt n x) ≤ 0 ∧
+          iv s (BitVec.ofInt n x) ≤ iv s (BitVec.ofInt n x) - iv s (BitVec.ofInt n y) ∧
+          iv s (BitVec.ofInt n x) - iv s (BitVec.ofInt n y) ≤ 0)) := by
   unfold const_keeps_in_range zmin zmax
-  generalize to_z s ⟨n, x⟩ = a; generalize to_z s ⟨n, y⟩ = b
+  rw [bv_to_z_ofInt hn _ hx0 hx1, bv_to_z_ofInt hn _ hy0 hy1]
+  generalize iv s (BitVec.ofInt n x) = a
+  generalize iv s (BitVec.ofInt n y) = b
   rw [Bool.eq_iff_iff]
   simp only [Bool.and_eq_true, decide_eq_true_eq]
   split <;> split <;> omega
 
-theorem is_int_min_mk' (hn : 0 < n) : is_int_min ⟨n, x⟩ = decide (x.toInt = -2 ^ (n - 1)) := by
-  simp [is_int_min, min_for_true hn]
-
 end
 
 theorem sign_bit_eq {n : Nat} (hn : 0 < n) :
-    BitVec.ofInt n (zshiftl 1 ((n : Int) - 1) % 2 ^ n) = BitVec.intMin n := by
-  have e : zshiftl 1 ((n : Int) - 1) = ((2 ^ (n - 1) : Nat) : Int) := by
-    simp only [zshiftl, Int.one_mul]; push_cast; congr 1; omega
+    BitVec.ofInt n (z_lsl 1 ((n : Int) - 1) % 2 ^ n) = BitVec.intMin n := by
+  have e : z_lsl 1 ((n : Int) - 1) = ((2 ^ (n - 1) : Nat) : Int) := by
+    simp only [z_lsl, Int.one_mul]; push_cast; congr 1; omega
   rw [BitVec.ofInt_emod_two_pow, e, BitVec.ofInt_natCast, ← BitVec.toNat_inj,
     BitVec.toNat_intMin_of_pos hn, BitVec.toNat_ofNat,
     Nat.mod_eq_of_lt (Nat.two_pow_pred_lt_two_pow hn)]
+
+theorem sign_bit_eq' {n : Nat} (hn : 0 < n) :
+    BitVec.ofInt n (z_lsl 1 ((n : Int) - 1)) = BitVec.intMin n := by
+  rw [← sign_bit_eq hn, BitVec.ofInt_emod_two_pow]
 
 theorem eq_intMin_iff {n : Nat} (hn : 0 < n) (x : BitVec n) :
     x = BitVec.intMin n ↔ x.toInt = -2 ^ (n - 1) := by
@@ -89,7 +101,7 @@ theorem den_le_unsigned_ub {FS : FloatSem} {ρ : Env} {k : Kind} {n : Nat}
       (x.toNat : Int) ≤ unsigned_ub (Term.mk k (.TBitVector n)) := by
   intro x h
   have := msb_of_bound w rfl h
-  simp only [unsigned_ub, zshiftl, Int.one_mul]; omega
+  simp only [unsigned_ub, z_lsl, Int.one_mul]; omega
 
 open Lean in
 /-- The float semantics and the environment of the context. -/
@@ -129,14 +141,16 @@ theorem cancellable_den {FS : FloatSem} {ρ : Env} {s : Bool} {k : Kind} {n : Na
   intro A hA
   cases k
   case BitVec z =>
-    obtain ⟨-, h0, h1⟩ := WT_bitVec_bv.1 w
+    obtain ⟨hn, h0, h1⟩ := WT_bitVec_bv.1 w
     simp only [den, Option.some.injEq] at hA; subst hA
     cases s
     · unfold cancellable sure_neq at h
       simp [firstSome, ty, size, bv_zero, HOrElse.hOrElse, OrElse.orElse, Option.orElse] at h
       simp only [Bool.false_eq_true, ite_false]
       rw [toNat_ofInt_of_lt h0 (by simpa using h1)]; omega
-    · simpa [cancellable, firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse] using h
+    · simp [cancellable, firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse] at h
+      rw [bv_to_z_true (by omega)] at h
+      simpa using h
   all_goals cases s
   all_goals (unfold cancellable at h; try unfold sure_neq at h)
   all_goals simp [firstSome, ty, size, bv_zero, HOrElse.hOrElse, OrElse.orElse, Option.orElse] at h
@@ -168,28 +182,27 @@ elab "kanon_cancel_facts" : tactic => liftMetaTactic fun g => g.withContext do
 /-- An addition that cannot wrap around, by the bounds on its operands, may be
 checked unsigned. -/
 theorem Refines.add_no_wrap {FS : FloatSem} {c : Checked} {a b : Term} {t : Ty} :
-    Refines FS (.mk (.Binop (.Add c) a b) t) (.mk (.Binop (.Add (no_wrap c a b)) a b) t) := by
+    Refines FS (.mk (.Op2 (.Add c) a b) t) (.mk (.Op2 (.Add (no_wrap c a b)) a b) t) := by
   unfold no_wrap
   split
   · rename_i h
     simp only [Bool.and_eq_true, decide_eq_true_eq] at h
     obtain ⟨_, h⟩ := h
     refine Refines.den (fun w => ?_) (fun w => ?_) (fun n w ht ρ x e => ?_)
-    · have ⟨w1, _, _⟩ := WT_binop.1 w
-      simp only [Binop.WT] at w1
+    · have ⟨w1, _, _⟩ := WT_op2.1 w
+      simp only [Op2.WT] at w1
       obtain ⟨⟨m, _, _⟩, _, ht⟩ := w1
       exact ⟨m, by simp_all⟩
-    · have ⟨w1, wa, wb⟩ := WT_binop.1 w
-      exact ⟨WT_binop.2 ⟨by simpa [Binop.WT] using w1, wa, wb⟩, rfl⟩
-    · have ⟨w1, wa, wb⟩ := WT_binop.1 w
-      simp only [Binop.WT, Term.ty_mk] at w1 ht
+    · have ⟨w1, wa, wb⟩ := WT_op2.1 w
+      exact ⟨WT_op2.2 ⟨by simpa [Op2.WT] using w1, wa, wb⟩, rfl⟩
+    · have ⟨w1, wa, wb⟩ := WT_op2.1 w
+      simp only [Op2.WT, Term.ty_mk] at w1 ht
       obtain ⟨⟨_, _, ha⟩, hb, htt⟩ := w1
       rcases a with ⟨ka, Ta⟩
       rcases b with ⟨kb, Tb⟩
       simp only [Term.ty_mk] at ha hb htt
       subst htt; subst hb
       subst ht
-      simp only [Ty.sort_eq] at *
       simp only [Lib.den] at e ⊢
       cases ea : Lib.den FS ρ n (Term.mk ka (.TBitVector n)) <;>
         cases eb : Lib.den FS ρ n (Term.mk kb (.TBitVector n)) <;> rw [ea, eb] at e <;>
@@ -197,7 +210,7 @@ theorem Refines.add_no_wrap {FS : FloatSem} {c : Checked} {a b : Term} {t : Ty} 
       rename_i xa xb
       have la := den_le_unsigned_ub wa xa ea
       have lb := den_le_unsigned_ub wb xb eb
-      simp only [size_eq, Term.ty_mk, size_of_ty_bitVector, zshiftl, Int.one_mul] at h
+      simp only [size_eq, Term.ty_mk, size_of_ty_bitVector, z_lsl, Int.one_mul] at h
       have hn : ((2 ^ n : Nat) : Int) = (2 : Int) ^ ((n : Int)).toNat := by simp
       have hov : xa.uaddOverflow xb = false := uadd_ok.2 (by omega)
       simp only [hov, Bool.and_false, Bool.or_false] at e ⊢
@@ -403,6 +416,70 @@ def addFacts2 (g : MVarId) (lem : Name) (xys : Array (Expr × Expr)) : MetaM MVa
     g := g'
   return g
 
+theorem toNat_ofInt_fact {n : Nat} {z : Int} (h0 : 0 ≤ z) (h1 : z < 2 ^ n) :
+    ((BitVec.ofInt n z).toNat : Int) = z := by
+  rw [toNat_ofInt_of_lt h0 h1]; omega
+
+theorem toInt_ofInt_fact {n : Nat} {z : Int} (h0 : 0 ≤ z) (h1 : z < 2 ^ n) :
+    ((BitVec.ofInt n z).toInt = z ∧ 2 * z < 2 ^ n) ∨
+      ((BitVec.ofInt n z).toInt = z - 2 ^ n ∧ 2 ^ n ≤ 2 * z) := by
+  have e : ((BitVec.ofInt n z).toNat : Int) = z := toNat_ofInt_fact h0 h1
+  have hp : ((2 ^ n : Nat) : Int) = 2 ^ n := by push_cast; rfl
+  rw [BitVec.toInt_eq_toNat_cond]
+  split
+  · rename_i h
+    have h' : 2 * ((BitVec.ofInt n z).toNat : Int) < ((2 ^ n : Nat) : Int) := by exact_mod_cast h
+    left; refine ⟨e, ?_⟩; omega
+  · rename_i h
+    have h' : ((2 ^ n : Nat) : Int) ≤ 2 * ((BitVec.ofInt n z).toNat : Int) := by
+      exact_mod_cast Nat.le_of_not_lt h
+    right; refine ⟨?_, ?_⟩
+    · omega
+    · omega
+
+theorem bmod_ofInt_fact {n : Nat} {z : Int} (h0 : 0 ≤ z) (h1 : z < 2 ^ n) :
+    (z.bmod (2 ^ n) = z ∧ 2 * z < 2 ^ n) ∨ (z.bmod (2 ^ n) = z - 2 ^ n ∧ 2 ^ n ≤ 2 * z) := by
+  have := toInt_ofInt_fact h0 h1
+  rwa [BitVec.toInt_ofInt] at this
+
+open Lean Meta Elab Tactic in
+/-- Adds the values (`toNat`, `toInt`) of the literals `BitVec.ofInt n z` of the goal and
+hypotheses, from their range. -/
+elab "kanon_lit_facts" : tactic => withMainContext do
+  let g ← getMainGoal
+  let atoms ← collectArgs g fun e =>
+    if (e.isAppOfArity ``BitVec.toNat 2 || e.isAppOfArity ``BitVec.toInt 2) &&
+        e.appArg!.isAppOfArity ``BitVec.ofInt 2 then some e.appArg! else none
+  let bmods ← collectArgs g fun e =>
+    if e.isAppOfArity ``Int.bmod 2 then some e else none
+  for a in bmods do
+    let c ← mkConstWithFreshMVarLevels ``bmod_ofInt_fact
+    let (mvs, _, _) ← forallMetaTelescopeReducing (← inferType c)
+    unless (← isDefEq mvs[1]! (a.getArg! 0)) do continue
+    let mut ok := true
+    for mv in mvs[2:] do
+      match ← Kanon.Proof.findHyp (← instantiateMVars (← inferType mv)) with
+      | some h => unless ← isDefEq mv h do ok := false
+      | none => ok := false
+    if ok then
+      let pf ← instantiateMVars (mkAppN c mvs)
+      let (_, g') ← (← (← getMainGoal).assert `hlf (← inferType pf) pf).intro1P
+      replaceMainGoal [g']
+  for a in atoms do
+    for lem in [``toNat_ofInt_fact, ``toInt_ofInt_fact] do
+      let c ← mkConstWithFreshMVarLevels lem
+      let (mvs, _, _) ← forallMetaTelescopeReducing (← inferType c)
+      unless (← isDefEq mvs[0]! a.appFn!.appArg!) && (← isDefEq mvs[1]! a.appArg!) do continue
+      let mut ok := true
+      for mv in mvs[2:] do
+        match ← Kanon.Proof.findHyp (← instantiateMVars (← inferType mv)) with
+        | some h => unless ← isDefEq mv h do ok := false
+        | none => ok := false
+      if ok then
+        let pf ← instantiateMVars (mkAppN c mvs)
+        let (_, g') ← (← (← getMainGoal).assert `hlf (← inferType pf) pf).intro1P
+        replaceMainGoal [g']
+
 open Lean Meta Elab Tactic in
 /-- Adds the facts on the values of the bit-vectors of the goal and hypotheses
 that `omega` needs: their bounds, those of their negations, and the relation
@@ -535,16 +612,16 @@ elab "kanon_clear_flags" : tactic => liftMetaTactic fun g => g.withContext do
 
 /-- `kanon_facts`, keeping the literals as values (`BitVec.ofInt n z`). -/
 macro "kanon_cmp_facts" : tactic => `(tactic| (
-  (try simp [WT_binop, WT_unop, WT_triop, Binop.WT, Unop.WT, Triop.WT, bv_zero, bv_one,
-    mk_masked, mk_bv, -bv_of_lit_bv, -bv_of_lit_bv', -to_z_mk] at *)
+  (try simp [WT_op2, WT_op1, WT_op3, Op2.WT, Op1.WT, Op3.WT, bv_zero, bv_one,
+    mk_masked, mk_bv, -BitVec.toInt_ofInt, -BitVec.toNat_ofInt] at *)
   (try kanon_split)
   (try kanon_destruct_tys)
   (try simp only [Term.ty_mk] at *)
   (try subst_vars)
   (try simp only [Ty.TBitVector.injEq, Ty.TLoc.injEq] at *)
   (try subst_vars)
-  (try simp [WT_binop, WT_unop, WT_triop, Binop.WT, Unop.WT, Triop.WT, bv_zero, bv_one,
-    mk_masked, mk_bv, -bv_of_lit_bv, -bv_of_lit_bv', -to_z_mk] at *)
+  (try simp [WT_op2, WT_op1, WT_op3, Op2.WT, Op1.WT, Op3.WT, bv_zero, bv_one,
+    mk_masked, mk_bv, -BitVec.toInt_ofInt, -BitVec.toNat_ofInt] at *)
   (try kanon_split)
   (try subst_vars)))
 
@@ -557,7 +634,8 @@ macro "kanon_cmp_sem" : tactic => `(tactic| (
   kanon_nat_widths
   kanon_lits
   simp only [denB_of_bool, Int.natCast_pos, Int.toNat_natCast, BitVec.ofInt_ofNat] at *
-  simp (disch := assumption) only [ite_eq_left, sign_bit_eq] at *
+  kanon_lit_ops
+  simp (disch := assumption) only [ite_eq_left, sign_bit_eq, sign_bit_eq'] at *
   kanon_ub_facts
   kanon_cancel_facts
   kanon_cases
@@ -565,21 +643,18 @@ macro "kanon_cmp_sem" : tactic => `(tactic| (
   all_goals (try simp only [Option.some.injEq, forall_eq, forall_eq'] at *)
   all_goals (try (simp [ckOp] at h; done))
   all_goals (try (repeat' split at h))
-  all_goals (try simp only [sub_overflows_mk (hn := by assumption),
-    add_overflows_mk (hn := by assumption), mul_overflows_mk (hn := by assumption),
-    is_int_min_mk' (hn := by assumption), is_min_of_mk (hn := by assumption),
-    is_max_of_mk (hn := by assumption)] at *)))
+))
 
 /-- Reduces the goals left by `kanon_cmp_sem` to facts on the integer values of
 the atoms. -/
 macro "kanon_cmp_pre" : tactic => `(tactic| (
   (try simp (disch := assumption) only [negOp_some, eq_intMin_iff] at *)
-  all_goals simp_all [BitVec.slt_eq_decide, BitVec.ult_eq_decide, BitVec.sle_eq_decide,
+  all_goals simp_all [iv, BitVec.slt_eq_decide, BitVec.ult_eq_decide, BitVec.sle_eq_decide,
     BitVec.ule_eq_decide, ← BitVec.toNat_inj, binB_ite_l, binB_ite_r, -BitVec.toInt_ofInt,
     -BitVec.toNat_ofInt, -BitVec.toNat_neg, -BitVec.toNat_add, -BitVec.toNat_sub,
     -BitVec.toNat_mul, -BitVec.toInt_add, -BitVec.toInt_sub, -BitVec.toInt_mul,
     -BitVec.toNat_udiv, -BitVec.toNat_umod, -BitVec.toInt_srem, -BitVec.toNat_intMin,
-    divisible, const_keeps_in_range_mk]
+    divisible]
   all_goals (try simp only [Int.natCast_dvd_natCast, Nat.dvd_iff_mod_eq_zero] at *)
   all_goals (try simp only [Int.dvd_iff_tmod_eq_zero] at *)
   all_goals (try simp (disch := assumption) only [BitVec.toNat_intMin_of_pos,
@@ -593,6 +668,7 @@ macro "kanon_cmp_pre" : tactic => `(tactic| (
   all_goals kanon_split
   all_goals kanon_clear_flags
   all_goals kanon_mul_facts
+  all_goals kanon_lit_facts
   all_goals kanon_cmp_bounds
   all_goals (try push_cast at *)))
 

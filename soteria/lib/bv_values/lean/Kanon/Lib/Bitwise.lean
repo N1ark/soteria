@@ -4,7 +4,7 @@ import Kanon.Lib.Tactic
 # Bitwise operations and shifts
 
 The bitwise helpers of the rules, on values of known width (`ones_nat`,
-`is_ones_mk`, `bits_in_mk`, `disjoint_mk`), and the `BitVec` facts behind the
+`is_ones_ofInt`, `bits_in_ofInt`, `disjoint_ofInt`), and the `BitVec` facts behind the
 rules on masks, shifts and concatenations.
 -/
 
@@ -28,30 +28,60 @@ that are known. -/
 
 /-! ## Helpers -/
 
-@[simp] theorem ones_w (n : Int) : (ones n).w = n.toNat := rfl
+theorem ones_nat (n : Nat) : ones (n : Int) = 2 ^ n - 1 := by
+  simp only [ones, z_lsl, Int.toNat_natCast, Int.one_mul]
 
-@[simp] theorem ones_nat (n : Nat) : ones n = ⟨n, BitVec.allOnes n⟩ := by
-  have : BitVec.ofInt n 0 = 0#n := by simp
-  simp only [ones, lit_not, of_z_nat, bv_equal_mk, this]
-  exact BitVec.not_zero
+theorem ones_nonneg (n : Nat) : 0 ≤ ones (n : Int) := by
+  have : (0 : Int) < 2 ^ n := by exact_mod_cast Nat.two_pow_pos n
+  rw [ones_nat]; omega
 
-theorem is_ones_mk {n : Nat} (hn : 0 < n) (x : BitVec n) :
-    is_ones ⟨n, x⟩ = decide (x = BitVec.allOnes n) := by
-  have e : (BitVec.allOnes n).toInt = -1 := by simp [BitVec.toInt_allOnes, hn]
-  simp only [is_ones, to_z_mk, ite_true, ← e, BitVec.toInt_inj]
+theorem ones_lt (n : Nat) : ones (n : Int) < 2 ^ n := by
+  rw [ones_nat]; omega
 
-attribute [kanon_close_simp] is_ones_mk
+theorem ofInt_ones (n : Nat) : BitVec.ofInt n (ones (n : Int)) = BitVec.allOnes n := by
+  have e : ((2 ^ n - 1 : Nat) : Int) = 2 ^ n - 1 := by
+    rw [Int.natCast_sub (Nat.one_le_two_pow)]; push_cast; rfl
+  rw [← BitVec.toNat_inj, BitVec.toNat_allOnes, BitVec.toNat_ofInt,
+    Int.emod_eq_of_lt (ones_nonneg n) (by exact_mod_cast ones_lt n), ones_nat, ← e,
+    Int.toNat_natCast]
 
-@[simp] theorem bits_in_mk {n : Nat} (x y : BitVec n) :
-    bits_in ⟨n, x⟩ ⟨n, y⟩ = decide (x &&& y = x) := by
-  simp only [bits_in, lit_and_mk, to_z_mk, Bool.false_eq_true, ite_false, Int.natCast_inj,
-    BitVec.toNat_inj]
+theorem is_ones_ofInt {n : Nat} (hn : 0 < n) {z : Int} (h0 : 0 ≤ z) (h1 : z < 2 ^ n) :
+    is_ones n z = decide (BitVec.ofInt n z = BitVec.allOnes n) := by
+  rw [is_ones, ones_nat, decide_eq_decide, ← BitVec.toNat_inj, BitVec.toNat_allOnes,
+    BitVec.toNat_ofInt, Int.emod_eq_of_lt h0 (by exact_mod_cast h1)]
+  obtain ⟨p, rfl⟩ := Int.eq_ofNat_of_zero_le h0
+  simp only [Int.toNat_natCast]
+  have : ((2 ^ n - 1 : Nat) : Int) = 2 ^ n - 1 := by
+    rw [Int.natCast_sub (Nat.one_le_two_pow)]; push_cast; rfl
+  omega
 
-@[simp] theorem disjoint_mk {n : Nat} (x y : BitVec n) :
-    disjoint ⟨n, x⟩ ⟨n, y⟩ = decide (x &&& y = 0) := by
-  simp only [disjoint, lit_and_mk, to_z_mk, Bool.false_eq_true, ite_false, Int.natCast_eq_zero,
-    ← BitVec.toNat_inj]
-  rfl
+attribute [kanon_close_simp] is_ones_ofInt
+
+theorem bits_in_ofInt {n : Nat} {a b : Int} (hb0 : 0 ≤ b) (hb1 : b < 2 ^ n) (ha0 : 0 ≤ a)
+    (ha1 : a < 2 ^ n) :
+    bits_in a b = decide (BitVec.ofInt n a &&& BitVec.ofInt n b = BitVec.ofInt n a) := by
+  obtain ⟨p, rfl⟩ := Int.eq_ofNat_of_zero_le ha0
+  obtain ⟨q, rfl⟩ := Int.eq_ofNat_of_zero_le hb0
+  have hp : p < 2 ^ n := by exact_mod_cast ha1
+  have hq : q < 2 ^ n := by exact_mod_cast hb1
+  rw [bits_in, decide_eq_decide, ← BitVec.toNat_inj, BitVec.toNat_and, BitVec.ofInt_natCast,
+    BitVec.ofInt_natCast, BitVec.toNat_ofNat, BitVec.toNat_ofNat, Nat.mod_eq_of_lt hp,
+    Nat.mod_eq_of_lt hq]
+  show ((p &&& q : Nat) : Int) = p ↔ _
+  omega
+
+theorem disjoint_ofInt {n : Nat} {a b : Int} (hb0 : 0 ≤ b) (hb1 : b < 2 ^ n) (ha0 : 0 ≤ a)
+    (ha1 : a < 2 ^ n) :
+    disjoint a b = decide (BitVec.ofInt n a &&& BitVec.ofInt n b = 0) := by
+  obtain ⟨p, rfl⟩ := Int.eq_ofNat_of_zero_le ha0
+  obtain ⟨q, rfl⟩ := Int.eq_ofNat_of_zero_le hb0
+  have hp : p < 2 ^ n := by exact_mod_cast ha1
+  have hq : q < 2 ^ n := by exact_mod_cast hb1
+  rw [disjoint, decide_eq_decide, ← BitVec.toNat_inj, BitVec.toNat_and, BitVec.ofInt_natCast,
+    BitVec.ofInt_natCast, BitVec.toNat_ofNat, BitVec.toNat_ofNat, Nat.mod_eq_of_lt hp,
+    Nat.mod_eq_of_lt hq]
+  show ((p &&& q : Nat) : Int) = 0 ↔ _
+  simp
 
 /-! ## Masks -/
 

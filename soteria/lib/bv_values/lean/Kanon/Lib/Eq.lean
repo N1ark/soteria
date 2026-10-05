@@ -29,22 +29,46 @@ theorem natCast_toNat_ofInt {w : Nat} (z : Int) :
     max (z % 2 ^ w) 0 = ((BitVec.ofInt w z).toNat : Int) := by
   rw [BitVec.toNat_ofInt]; push_cast; omega
 
+theorem ofInt_toNat_cast {n : Nat} {z : Int} (h0 : 0 ≤ z) (h1 : z < 2 ^ n) :
+    ((BitVec.ofInt n z).toNat : Int) = z := by
+  rw [toNat_ofInt_of_lt h0 h1]; omega
+
 open Lean Meta Elab Tactic in
-/-- Generalizes the values `BitVec.ofInt n z` of the literals (`z` a variable) to
-opaque bit-vectors. -/
-partial def genLits (g : MVarId) : MetaM MVarId := g.withContext do
+/-- Generalizes the values `BitVec.ofInt n z` of the literals (`z` a variable) to opaque
+bit-vectors `k`. When `z` is in range, `k.toNat = z` replaces `z`. -/
+partial def genLits : TacticM Unit := withMainContext do
   let isLitVal (e : Expr) : Bool :=
     e.isAppOfArity ``BitVec.ofInt 2 && e.appArg!.isFVar && !e.hasLooseBVars
-  let hyps := (← getLCtx).foldl (init := #[]) fun acc d =>
+  let g ← getMainGoal
+  let ctxExprs := (← getLCtx).foldl (init := #[]) fun acc d =>
+    if d.isImplementationDetail then acc else acc.push d.type
+  let mut cands : Array Expr := #[]
+  for e in #[← instantiateMVars (← g.getType)] ++ (← ctxExprs.mapM instantiateMVars) do
+    let some a := e.find? isLitVal | continue
+    unless cands.contains a do cands := cands.push a
+  let tryRel (a : Expr) : TacticM Bool := do
+    let c ← mkConstWithFreshMVarLevels ``ofInt_toNat_cast
+    let (mvs, _, _) ← forallMetaTelescopeReducing (← inferType c)
+    unless (← isDefEq mvs[0]! a.appFn!.appArg!) && (← isDefEq mvs[1]! a.appArg!) do return false
+    for mv in mvs[2:] do
+      let some h ← Kanon.Proof.findHyp (← instantiateMVars (← inferType mv)) | return false
+      unless ← isDefEq mv h do return false
+    let pf ← instantiateMVars (mkAppN c mvs)
+    let (_, g) ← (← (← getMainGoal).assert `hlit (← inferType pf) pf).intro1P
+    replaceMainGoal [g]
+    return true
+  let mut chosen : Option Expr := none
+  for a in cands do
+    if ← tryRel a then chosen := some a; break
+  let hasRel := chosen.isSome
+  let some a := chosen <|> cands[0]? | return
+  let g ← getMainGoal
+  let hyps := (← g.withContext getLCtx).foldl (init := #[]) fun acc d =>
     if d.isImplementationDetail then acc else acc.push d
-  let mut cand : Option Expr := (← instantiateMVars (← g.getType)).find? isLitVal
-  for d in hyps do
-    if cand.isNone then cand := (← instantiateMVars d.type).find? isLitVal
-  match cand with
-  | none => return g
-  | some a =>
-    let (_, _, g) ← g.generalizeHyp #[{ expr := a, xName? := `k }] (hyps.map (·.fvarId))
-    genLits g
+  let (_, _, g) ← g.withContext <| g.generalizeHyp #[{ expr := a, xName? := `k }] (hyps.map (·.fvarId))
+  replaceMainGoal [g]
+  if hasRel then evalTactic (← `(tactic| subst $(mkIdent `hlit)))
+  genLits
 
 open Lean Meta Elab Tactic in
 /-- Replaces `(↑n : Int).toNat` by `n` everywhere, instances included. -/
@@ -97,7 +121,7 @@ elab "kanon_decide_small" : tactic => do
   evalTactic (← `(tactic| decide))
 
 open Lean Meta Elab Tactic in
-elab "kanon_gen_lits" : tactic => liftMetaTactic fun g => return [← genLits g]
+elab "kanon_gen_lits" : tactic => genLits
 
 
 /-! ## Facts on values, as the value goals state them -/
@@ -291,6 +315,10 @@ theorem umod_add_self {d v : BitVec w} (h : d.uaddOverflow v = false) : (d + v) 
   apply BitVec.eq_of_toNat_eq
   rw [BitVec.toNat_umod, BitVec.toNat_umod, toNat_add_ok h, Nat.add_mod_left]
 
+theorem umod_add_self' {d v : BitVec w} (h : v.uaddOverflow d = false) : (v + d) % d = v % d := by
+  apply BitVec.eq_of_toNat_eq
+  rw [BitVec.toNat_umod, BitVec.toNat_umod, toNat_add_ok h, Nat.add_mod_right]
+
 theorem umod_umod_of_le {v a b : BitVec w} (ha : 0 < a.toNat) (h : a.toNat ≤ b.toNat) :
     v % a % b = v % a := by
   apply BitVec.eq_of_toNat_eq
@@ -343,10 +371,10 @@ theorem mul_cancel_smul {k a b : BitVec w} (hk : k ≠ 0#w) (ha : k.smulOverflow
     intro h0; apply hk; exact BitVec.eq_of_toInt_eq (by simp [h0])
   exact Int.eq_of_mul_eq_mul_left this ‹_›
 
-theorem zshiftl_one_pred (hw : 0 < w) : zshiftl 1 ((w : Int) - 1) = 2 ^ (w - 1) := by
-  simp only [zshiftl, Int.one_mul]; congr 1; omega
+theorem zshiftl_one_pred (hw : 0 < w) : z_lsl 1 ((w : Int) - 1) = 2 ^ (w - 1) := by
+  simp only [z_lsl, Int.one_mul]; congr 1; omega
 
-theorem zshiftl_one_nat : zshiftl 1 (w : Int) = 2 ^ w := by simp [zshiftl]
+theorem zshiftl_one_nat : z_lsl 1 (w : Int) = 2 ^ w := by simp [z_lsl]
 
 theorem toInt_pos_ne_one (h0 : 0 < k.toInt) (h1 : ¬(k.toNat : Int) = 1) :
     1 < k.toInt := by
@@ -374,24 +402,24 @@ theorem smul_small (hw : (1 : Int) < w) (h : k.toNat = 0 ∨ (k.toNat : Int) = 1
   rw [smul_ok]; rcases e with e | e <;> rw [e] <;> omega
 
 theorem smul_const_pos (hw : (1 : Int) < w) (h0 : 0 < k.toInt) (h1 : ¬(k.toNat : Int) = 1) :
-    k.smulOverflow x = (x.slt (BitVec.ofInt w (tdiv (-zshiftl 1 ((w : Int) - 1)) k.toInt)) ||
-      (BitVec.ofInt w (tdiv (zshiftl 1 ((w : Int) - 1) - 1) k.toInt)).slt x) := by
+    k.smulOverflow x = (x.slt (BitVec.ofInt w (tdiv (-z_lsl 1 ((w : Int) - 1)) k.toInt)) ||
+      (BitVec.ofInt w (tdiv (z_lsl 1 ((w : Int) - 1) - 1) k.toInt)).slt x) := by
   rw [zshiftl_one_pred (by omega), smul_pos (by omega) (toInt_pos_ne_one h0 h1)]; rfl
 
 theorem smul_const_neg (hw : (1 : Int) < w) (h0 : ¬k.toNat = 0) (h1 : k.toInt ≤ 0)
     (h2 : ¬k.toInt = -1) :
-    k.smulOverflow x = (x.slt (BitVec.ofInt w (tdiv (zshiftl 1 ((w : Int) - 1) - 1) k.toInt)) ||
-      (BitVec.ofInt w (tdiv (-zshiftl 1 ((w : Int) - 1)) k.toInt)).slt x) := by
+    k.smulOverflow x = (x.slt (BitVec.ofInt w (tdiv (z_lsl 1 ((w : Int) - 1) - 1) k.toInt)) ||
+      (BitVec.ofInt w (tdiv (-z_lsl 1 ((w : Int) - 1)) k.toInt)).slt x) := by
   have : k.toInt ≠ 0 := by
     intro e; apply h0; have := BitVec.eq_of_toInt_eq (x := k) (y := 0#w) (by simp [e]); simp [this]
   rw [zshiftl_one_pred (by omega), smul_neg (by omega) (by omega)]; rfl
 
 theorem smul_const_neg_one (hw : (1 : Int) < w) (h : k.toInt = -1) :
-    k.smulOverflow x = decide (x = BitVec.ofInt w (-zshiftl 1 ((w : Int) - 1))) := by
+    k.smulOverflow x = decide (x = BitVec.ofInt w (-z_lsl 1 ((w : Int) - 1))) := by
   rw [zshiftl_one_pred (by omega), smul_neg_one (by omega) h]
 
 theorem umul_const_rule (h0 : ¬k.toNat = 0) :
-    k.umulOverflow x = (BitVec.ofInt w (tdiv (zshiftl 1 (w : Int) - 1) k.toNat)).ult x := by
+    k.umulOverflow x = (BitVec.ofInt w (tdiv (z_lsl 1 (w : Int) - 1) k.toNat)).ult x := by
   rw [zshiftl_one_nat, umul_const (by omega)]; rfl
 
 theorem umul_small' (h : k.toNat = 0 ∨ (k.toNat : Int) = 1) : x.umulOverflow k = false := by
@@ -400,26 +428,103 @@ theorem smul_small' (hw : (1 : Int) < w) (h : k.toNat = 0 ∨ (k.toNat : Int) = 
     x.smulOverflow k = false := by
   rw [(ovf_comm _ _).2.2.1, smul_small hw h]
 theorem smul_const_pos' (hw : (1 : Int) < w) (h0 : 0 < k.toInt) (h1 : ¬(k.toNat : Int) = 1) :
-    x.smulOverflow k = (x.slt (BitVec.ofInt w (tdiv (-zshiftl 1 ((w : Int) - 1)) k.toInt)) ||
-      (BitVec.ofInt w (tdiv (zshiftl 1 ((w : Int) - 1) - 1) k.toInt)).slt x) := by
+    x.smulOverflow k = (x.slt (BitVec.ofInt w (tdiv (-z_lsl 1 ((w : Int) - 1)) k.toInt)) ||
+      (BitVec.ofInt w (tdiv (z_lsl 1 ((w : Int) - 1) - 1) k.toInt)).slt x) := by
   rw [(ovf_comm _ _).2.2.1, smul_const_pos hw h0 h1]
 theorem smul_const_neg' (hw : (1 : Int) < w) (h0 : ¬k.toNat = 0) (h1 : k.toInt ≤ 0)
     (h2 : ¬k.toInt = -1) :
-    x.smulOverflow k = (x.slt (BitVec.ofInt w (tdiv (zshiftl 1 ((w : Int) - 1) - 1) k.toInt)) ||
-      (BitVec.ofInt w (tdiv (-zshiftl 1 ((w : Int) - 1)) k.toInt)).slt x) := by
+    x.smulOverflow k = (x.slt (BitVec.ofInt w (tdiv (z_lsl 1 ((w : Int) - 1) - 1) k.toInt)) ||
+      (BitVec.ofInt w (tdiv (-z_lsl 1 ((w : Int) - 1)) k.toInt)).slt x) := by
   rw [(ovf_comm _ _).2.2.1, smul_const_neg hw h0 h1 h2]
 theorem smul_const_neg_one' (hw : (1 : Int) < w) (h : k.toInt = -1) :
-    x.smulOverflow k = decide (x = BitVec.ofInt w (-zshiftl 1 ((w : Int) - 1))) := by
+    x.smulOverflow k = decide (x = BitVec.ofInt w (-z_lsl 1 ((w : Int) - 1))) := by
   rw [(ovf_comm _ _).2.2.1, smul_const_neg_one hw h]
 theorem umul_const_rule' (h0 : ¬k.toNat = 0) :
-    x.umulOverflow k = (BitVec.ofInt w (tdiv (zshiftl 1 (w : Int) - 1) k.toNat)).ult x := by
+    x.umulOverflow k = (BitVec.ofInt w (tdiv (z_lsl 1 (w : Int) - 1) k.toNat)).ult x := by
   rw [(ovf_comm _ _).2.2.2, umul_const_rule h0]
+
+theorem smul_neg_ok {a b : BitVec w} (ha : a ≠ BitVec.intMin w) (hb : b ≠ BitVec.intMin w)
+    (h : (-a).smulOverflow b = false) : (-b).smulOverflow a = false := by
+  rw [smul_ok] at h ⊢
+  rw [BitVec.toInt_neg_of_ne_intMin ha] at h
+  rw [BitVec.toInt_neg_of_ne_intMin hb]
+  rw [Int.neg_mul] at h ⊢
+  rwa [Int.mul_comm b.toInt a.toInt]
+
+theorem umul_swap_ok {w a b : BitVec n} (h1 : w.umulOverflow a = false)
+    (h2 : b.umulOverflow (w * a) = false) : w.umulOverflow (a * b) = false := by
+  rw [umul_ok] at h1 h2 ⊢
+  rw [BitVec.toNat_mul, Nat.mod_eq_of_lt h1] at h2
+  rw [BitVec.toNat_mul]
+  calc w.toNat * (a.toNat * b.toNat % 2 ^ n) ≤ w.toNat * (a.toNat * b.toNat) :=
+        Nat.mul_le_mul_left _ (Nat.mod_le _ _)
+    _ = b.toNat * (w.toNat * a.toNat) := by rw [Nat.mul_comm b.toNat, Nat.mul_assoc]
+    _ < 2 ^ n := h2
+
+theorem smul_swap_ok {w a b : BitVec n} (h0 : a.smulOverflow b = false) (h1 : w.smulOverflow a = false)
+    (h2 : b.smulOverflow (w * a) = false) : w.smulOverflow (a * b) = false := by
+  rw [smul_ok] at h2 ⊢
+  rw [toInt_mul_ok h1] at h2
+  rw [toInt_mul_ok h0]
+  have e : w.toInt * (a.toInt * b.toInt) = b.toInt * (w.toInt * a.toInt) := by
+    rw [Int.mul_comm b.toInt, Int.mul_assoc]
+  rwa [e]
+
+theorem umul_swap_ok' {w a b : BitVec n} (h1 : a.umulOverflow w = false)
+    (h2 : b.umulOverflow (a * w) = false) : w.umulOverflow (a * b) = false := by
+  rw [BitVec.mul_comm] at h2
+  exact umul_swap_ok (by rwa [umul_ok, Nat.mul_comm, ← umul_ok]) h2
+
+theorem smul_swap_ok' {w a b : BitVec n} (h0 : a.smulOverflow b = false) (h1 : a.smulOverflow w = false)
+    (h2 : b.smulOverflow (a * w) = false) : w.smulOverflow (a * b) = false := by
+  rw [BitVec.mul_comm] at h2
+  exact smul_swap_ok h0 (by rwa [smul_ok, Int.mul_comm, ← smul_ok]) h2
 
 theorem umod_umod_of_lt {v a b : BitVec w} (hb : 0 < b.toNat) (h : b.toNat < a.toNat)
     (hd : b.toNat ∣ a.toNat ∨ a.toNat ∣ b.toNat) : v % a % b = v % b := by
   rcases hd with hd | hd
   · exact umod_umod_of_dvd hd
   · have := Nat.le_of_dvd hb hd; omega
+
+theorem extract_umod_pow2_ofInt {w n : Nat} {to_ z : Int} (a : BitVec w) (hp : is_pow2 z = true)
+    (hl : log2 z < to_) (ht : to_ + 1 = n) (hw : to_ < w) :
+    a.extractLsb' 0 n % (BitVec.ofInt w z).extractLsb' 0 n =
+      (a % BitVec.ofInt w z).extractLsb' 0 n := by
+  obtain ⟨k, rfl⟩ := is_pow2_exists hp
+  simp only [log2_two_pow] at hl
+  have hb : (BitVec.ofInt w ((2 : Int) ^ k)).toNat = 2 ^ k := by
+    have e : ((2 ^ k : Nat) : Int) = 2 ^ k := by push_cast; rfl
+    rw [← e, BitVec.ofInt_natCast, BitVec.toNat_ofNat]
+    exact Nat.mod_eq_of_lt (Nat.pow_lt_pow_right (by omega) (by omega))
+  apply BitVec.eq_of_toNat_eq
+  simp only [BitVec.toNat_umod, BitVec.extractLsb'_toNat, Nat.shiftRight_eq_div_pow,
+    Nat.pow_zero, Nat.div_one, hb]
+  rw [Nat.mod_eq_of_lt (Nat.pow_lt_pow_right (by omega) (by omega) : 2 ^ k < 2 ^ n),
+    Nat.mod_mod_of_dvd _ (Nat.pow_dvd_pow 2 (by omega))]
+  have hlt : a.toNat % 2 ^ k < 2 ^ n :=
+    Nat.lt_of_lt_of_le (Nat.mod_lt _ (Nat.two_pow_pos k)) (Nat.pow_le_pow_right (by omega) (by omega))
+  exact (Nat.mod_eq_of_lt hlt).symm
+
+theorem extract_umod_pow2' {w n : Nat} {to_ : Int} (a k : BitVec w) (hp : is_pow2 (k.toNat : Int) = true)
+    (hl : log2 (k.toNat : Int) < to_) (ht : to_ + 1 = n) (hw : to_ < w) :
+    a.extractLsb' 0 n % k.extractLsb' 0 n = (a % k).extractLsb' 0 n := by
+  have := extract_umod_pow2_ofInt a hp hl ht hw
+  rwa [BitVec.ofInt_natCast, BitVec.ofNat_toNat, BitVec.setWidth_eq] at this
+
+theorem umod_umod_of_le_ofNat {n a b : Nat} {v : BitVec n} (ha : 0 < a) (ha1 : (a : Int) < 2 ^ n)
+    (hb1 : (b : Int) < 2 ^ n) (h : a ≤ b) :
+    v % BitVec.ofNat n a % BitVec.ofNat n b = v % BitVec.ofNat n a := by
+  have ha1' : a < 2 ^ n := by exact_mod_cast ha1
+  have hb1' : b < 2 ^ n := by exact_mod_cast hb1
+  apply umod_umod_of_le <;> simp [Nat.mod_eq_of_lt ha1', Nat.mod_eq_of_lt hb1', ha, h]
+
+theorem umod_umod_of_lt_ofNat {n a b : Nat} {v : BitVec n} (hb : 0 < b) (ha1 : (a : Int) < 2 ^ n)
+    (hb1 : (b : Int) < 2 ^ n) (h : b < a) (hd : b % 2 ^ n ∣ a % 2 ^ n ∨ a % 2 ^ n ∣ b % 2 ^ n) :
+    v % BitVec.ofNat n a % BitVec.ofNat n b = v % BitVec.ofNat n b := by
+  have ha1' : a < 2 ^ n := by exact_mod_cast ha1
+  have hb1' : b < 2 ^ n := by exact_mod_cast hb1
+  rw [Nat.mod_eq_of_lt ha1', Nat.mod_eq_of_lt hb1'] at hd
+  apply umod_umod_of_lt <;> simp [Nat.mod_eq_of_lt ha1', Nat.mod_eq_of_lt hb1', hb, h, hd]
 
 theorem ne_and_of_mask' {k m x : BitVec w} (h : ¬(k.toNat &&& (2 ^ w - 1 - m.toNat)) = 0) :
     ¬k = m &&& x := by
@@ -447,12 +552,12 @@ theorem toNat_eq_zero_iff {k : BitVec w} : k.toNat = 0 ↔ k = 0#w := by
 theorem natCast_toNat_eq_one (hw : 0 < w) {k : BitVec w} : ((k.toNat : Int) = 1) ↔ k = 1#w := by
   rw [← BitVec.toNat_inj]; simp [Nat.one_mod_two_pow hw]; omega
 
-theorem zland_one (n : Nat) : zland (n : Int) 1 = ((n % 2 : Nat) : Int) := by
+theorem zland_one (n : Nat) : z_land (n : Int) 1 = ((n % 2 : Nat) : Int) := by
   show Int.ofNat (n &&& 1) = _
   rw [Nat.and_one_is_mod]; rfl
 
 theorem mul_cancel_flags {k a b : BitVec w} {s1 u1 s2 u2 : Bool}
-    (h : zland (k.toNat : Int) 1 = 1 ∨
+    (h : z_land (k.toNat : Int) 1 = 1 ∨
       ¬k.toNat = 0 ∧ (s1 = true ∧ s2 = true ∨ u1 = true ∧ u2 = true))
     (h1 : (s1 = true → k.smulOverflow a = false) ∧ (u1 = true → k.umulOverflow a = false))
     (h2 : (s2 = true → k.smulOverflow b = false) ∧ (u2 = true → k.umulOverflow b = false)) :
@@ -478,9 +583,11 @@ macro "kanon_sem_b_core" : tactic => `(tactic| (
   kanon_nat_widths
   (try simp only [Int.toNat_natCast, Int.natCast_pos] at *)
   kanon_lits
+  kanon_lit_ops
   (try simp only [← BitVec.toInt_ofInt, natCast_toNat_ofInt, toNat_emod_eq,
     BitVec.ofInt_emod_two_pow] at *)
   kanon_gen_lits
+  (try simp only [BitVec.ofInt_natCast, BitVec.ofNat_toNat] at *)
   kanon_fix_widths
   (try simp only [Int.natCast_inj, Int.natCast_pos, BitVec.toNat_inj] at *)
   (try subst_vars)
@@ -489,9 +596,6 @@ macro "kanon_sem_b_core" : tactic => `(tactic| (
   all_goals (try simp_all [unchecked, checked_signed, checked_unsigned, checked_meet])
   all_goals (try (repeat' split at h))
   all_goals (try simp_all [ssubOverflow_zero_left])
-  all_goals (try simp only [fold_checked_mk (by assumption), add_overflows_mk (hn := by assumption),
-    sub_overflows_mk (hn := by assumption), mul_overflows_mk (hn := by assumption),
-    is_int_min_mk (hn := by assumption)] at *)
   all_goals (try (repeat' apply And.intro))))
 
 macro "kanon_sem_b" : tactic => `(tactic| (
@@ -499,17 +603,36 @@ macro "kanon_sem_b" : tactic => `(tactic| (
   all_goals (first
     | (kanon_decide_small; done)
     | (simp_all [one_uadd_one, one_sadd_one]; done)
-    | (simp_all [sadd_pos, sadd_nonpos, uadd_not, usub_self, ssub_self, uadd_zero, sadd_zero,
+    | (simp_all [iv, sadd_pos, sadd_nonpos, uadd_not, usub_self, ssub_self, uadd_zero, sadd_zero,
         umul_udiv, one_uadd, one_sadd]; done)
-    | (simp_all [sadd_pos', sadd_nonpos', uadd_not', uadd_zero', sadd_zero', umul_udiv', one_uadd',
+    | (simp_all [iv, sadd_pos', sadd_nonpos', uadd_not', uadd_zero', sadd_zero', umul_udiv', one_uadd',
         one_sadd']; done)
-    | (simp_all [umul_small, smul_small, smul_const_pos, smul_const_neg, smul_const_neg_one,
+    | (simp_all [iv, umul_small, smul_small, smul_const_pos, smul_const_neg, smul_const_neg_one,
         umul_const_rule]; done)
-    | (simp_all [umul_small', smul_small', smul_const_pos', smul_const_neg', smul_const_neg_one',
+    | (simp_all [iv, umul_small', smul_small', smul_const_pos', smul_const_neg', smul_const_neg_one',
         umul_const_rule']; done)
-    | (simp_all [umod_add_self]; done)
-    | (simp_all [umod_umod_of_le, umod_umod_of_lt]; done)
+    | (simp_all [umod_add_self, umod_add_self']; done)
+    | (simp_all [umod_umod_of_le, umod_umod_of_lt, umod_umod_of_le_ofNat, umod_umod_of_lt_ofNat]; done)
     | (simp_all [ne_and_of_mask', and_not_self_toNat]; done)
+    | (subst_vars; exact extract_umod_pow2' _ _ ‹_› ‹_› ‹_› ‹_›)
+    | (simp_all [BitVec.mul_comm, smul_neg_ok]; done)
+    | (kanon_split; subst_vars; ac_rfl)
+    | (first
+         | (rw [(ovf_comm _ _).1]; assumption)
+         | (rw [(ovf_comm _ _).2.1]; assumption)
+         | (rw [(ovf_comm _ _).2.2.1]; assumption)
+         | (rw [(ovf_comm _ _).2.2.2]; assumption))
+    | (intro _
+       kanon_split
+       first
+         | (rw [(ovf_comm _ _).1]; simp_all; done)
+         | (rw [(ovf_comm _ _).2.1]; simp_all; done)
+         | (rw [(ovf_comm _ _).2.2.1]; simp_all; done)
+         | (rw [(ovf_comm _ _).2.2.2]; simp_all; done))
+    | (intro _ _
+       (try simp_all)
+       kanon_split
+       first | exact umul_swap_ok ‹_› ‹_› | exact smul_swap_ok ‹_› ‹_› ‹_› | exact umul_swap_ok' ‹_› ‹_› | exact smul_swap_ok' ‹_› ‹_› ‹_›)
     | (simp_all [append_inj]; done)
     | (simp_all [toNat_eq_zero_iff, natCast_toNat_eq_one]; done)
     | (simp only [BitVec.ult, BitVec.ule, BitVec.slt, BitVec.sle, decide_eq_true_eq,
@@ -529,9 +652,9 @@ variable {FS : FloatSem}
 /-! ## Significant bits -/
 
 /-- The operands of a predicate on bit-vectors, of a natural width. -/
-theorem WT_pred_nat {op : Binop} {a b : Term} {t : Ty}
+theorem WT_pred_nat {op : Op2} {a b : Term} {t : Ty}
     (hop : ∀ a b t, op.WT a b t ↔ (∃ n : Int, 0 < n ∧ a = .TBitVector n) ∧ b = a ∧ t = .TBool)
-    (w : (Term.mk (.Binop op a b) t).WT) :
+    (w : (Term.mk (.Op2 op a b) t).WT) :
     ∃ n : Nat, 0 < n ∧ a.WT ∧ b.WT ∧ a.ty = .TBitVector (n : Int) ∧
       b.ty = .TBitVector (n : Int) := by
   obtain ⟨wa, wb, hb, m, hm, ha⟩ := WT_pred hop w
@@ -542,14 +665,14 @@ theorem WT_pred_nat {op : Binop} {a b : Term} {t : Ty}
 @[kanon_close_lemma] theorem Refines.mulOvf_msb {s : Bool} {v1 v2 : Term} {t : Ty}
     (h : s = true ∧ msb_of v1 + msb_of v2 < size v1 - 2 ∨
       s = false ∧ msb_of v1 + msb_of v2 < size v1 - 1) :
-    Refines FS (.mk (.Binop (.MulOvf s) v1 v2) t) v_false := by
+    Refines FS (.mk (.Op2 (.MulOvf s) v1 v2) t) v_false := by
   replace h : if s then msb_of v1 + msb_of v2 < size v1 - 2
       else msb_of v1 + msb_of v2 < size v1 - 1 := by
     cases s <;> simpa using h
   refine Refines.denB (fun w => ?_) (fun w => ?_) (fun w ρ b e => ?_)
-  · exact (WT_binop.1 w).1.2.2
-  · simp [((WT_binop.1 w).1.2.2).symm]
-  · obtain ⟨n, hn, w1, w2, h1, h2⟩ := WT_pred_nat (fun _ _ _ => by simp [Binop.WT]) w
+  · exact (WT_op2.1 w).1.2.2
+  · simp [((WT_op2.1 w).1.2.2).symm]
+  · obtain ⟨n, hn, w1, w2, h1, h2⟩ := WT_pred_nat (fun _ _ _ => by simp [Op2.WT]) w
     simp only [denB, h1, Int.natCast_pos, hn, ite_true, Int.toNat_natCast] at e
     cases e1 : den FS ρ n v1 <;> cases e2 : den FS ρ n v2 <;> rw [e1, e2] at e <;>
       simp only [binB_some, binB_none_l, binB_none_r, reduceCtorEq, Option.some.injEq] at e
@@ -631,11 +754,11 @@ theorem nat_and_mask_eq_zero_iff {z N K : Nat} (hz : z < 2^(N+K)) :
 
 theorem zland_mask_eq_zero_iff {z n k : Int} (hn : 0 ≤ n) (hk : 0 ≤ k) (h0 : 0 ≤ z)
     (h1 : z < 2 ^ (n + k).toNat) :
-    zland z (zshiftl (zshiftl 1 k - 1) n) = 0 ↔ z < 2 ^ n.toNat := by
+    z_land z (z_lsl (z_lsl 1 k - 1) n) = 0 ↔ z < 2 ^ n.toNat := by
   obtain ⟨Z, rfl⟩ := Int.eq_ofNat_of_zero_le h0
-  have hm : zshiftl (zshiftl 1 k - 1) n = (((2 ^ k.toNat - 1) * 2 ^ n.toNat : Nat) : Int) := by
+  have hm : z_lsl (z_lsl 1 k - 1) n = (((2 ^ k.toNat - 1) * 2 ^ n.toNat : Nat) : Int) := by
     have := Nat.one_le_two_pow (n := k.toNat)
-    simp only [zshiftl, Int.one_mul]
+    simp only [z_lsl, Int.one_mul]
     rw [Int.natCast_mul, Int.natCast_sub this]
     simp
   rw [hm]
@@ -647,10 +770,33 @@ theorem zland_mask_eq_zero_iff {z n k : Int} (hn : 0 ≤ n) (hk : 0 ≤ k) (h0 :
   constructor <;> intro h <;> exact_mod_cast h
 
 theorem zext_mask {w : Nat} {b : Int} (hb : 0 ≤ b) {k : BitVec ((w : Int) + b).toNat} :
-    zland (k.toNat : Int) (zshiftl (zshiftl 1 b - 1) w) = 0 ↔ k.toNat < 2 ^ w := by
+    z_land (k.toNat : Int) (z_lsl (z_lsl 1 b - 1) w) = 0 ↔ k.toNat < 2 ^ w := by
   have := zland_mask_eq_zero_iff (z := (k.toNat : Int)) (n := (w : Int)) (k := b) (by omega) hb
     (by omega) (by have := k.isLt; exact_mod_cast this)
   rw [this]; simp only [Int.toNat_natCast]; exact_mod_cast Iff.rfl
+
+theorem land_lit_not_self {n : Nat} {a b : Nat} (ha : (a : Int) < 2 ^ n) (hb : b < 2 ^ n) :
+    z_land ((a &&& b : Nat) : Int) (lit_not (.TBitVector (n : Int)) (a : Int)) = 0 := by
+  have ha' : a < 2 ^ n := by exact_mod_cast ha
+  obtain ⟨c, hc⟩ := Int.eq_ofNat_of_zero_le (lit_not_nonneg (w := (n : Int)) (a : Int))
+  have hcn : c = (~~~BitVec.ofNat n a).toNat := by
+    have := congrArg BitVec.toNat (ofInt_lit_not (n := n) (a : Int))
+    rw [toNat_ofInt_of_lt (lit_not_nonneg _) (by simpa using lit_not_lt (w := (n : Int)) (a : Int)),
+      hc, BitVec.ofInt_natCast] at this
+    simpa using this
+  have hz : ((BitVec.ofNat n a &&& BitVec.ofNat n b) &&& ~~~BitVec.ofNat n a) = 0#n := by
+    ext i hi; simp [hi]; intro h _; exact h
+  have := congrArg BitVec.toNat hz
+  rw [hc]
+  simp only [BitVec.toNat_and, BitVec.toNat_ofNat, Nat.zero_mod, Nat.mod_eq_of_lt ha',
+    Nat.mod_eq_of_lt hb] at this
+  rw [hcn]
+  simp only [z_land, Int.ofNat_eq_natCast, Int.natCast_eq_zero]
+  exact this
+
+theorem land_lit_not_self' {n : Nat} {a b : Nat} (ha : (a : Int) < 2 ^ n) (hb : b < 2 ^ n) :
+    z_land ((b &&& a : Nat) : Int) (lit_not (.TBitVector (n : Int)) (a : Int)) = 0 := by
+  rw [Nat.and_comm]; exact land_lit_not_self ha hb
 
 theorem setWidth_eq_iff {w m : Nat} (h : w ≤ m) {v : BitVec w} {k : BitVec m} :
     v.setWidth m = k ↔ k.toNat < 2 ^ w ∧ v = k.setWidth w := by
@@ -684,13 +830,13 @@ theorem extract_low_inj {n m : Nat} {x y : BitVec n} (hx : x.toNat < 2 ^ m) (hy 
 @[kanon_close_lemma] theorem Refines.eq_low {a b : Term} {M n : Int} {t : Ty}
     (hn : a.ty = .TBitVector n) (hM0 : 0 ≤ M) (ha : msb_of a ≤ M) (hb : msb_of b ≤ M)
     (hM : M < size a - 1) :
-    Refines FS (.mk (.Binop .Eq a b) t)
-      (.mk (.Binop .Eq (.mk (.Unop (.BvExtract 0 M) a) (.TBitVector (M - 0 + 1)))
-        (.mk (.Unop (.BvExtract 0 M) b) (.TBitVector (M - 0 + 1)))) .TBool) := by
+    Refines FS (.mk (.Op2 .Eq a b) t)
+      (.mk (.Op2 .Eq (.mk (.Op1 (.BvExtract 0 M) a) (.TBitVector (M - 0 + 1)))
+        (.mk (.Op1 (.BvExtract 0 M) b) (.TBitVector (M - 0 + 1)))) .TBool) := by
   simp only [size_eq, hn, size_of_ty_bitVector] at hM
   refine Refines.denB (fun w => (WT_eq.1 w).2.1) (fun w => ?_) (fun w ρ c e => ?_)
   · obtain ⟨hab, ht, wa, wb⟩ := WT_eq.1 w
-    simp [WT_eq, WT_unop, Unop.WT, wa, wb, ← hab, hn, ht]; omega
+    simp [WT_eq, WT_op1, Op1.WT, wa, wb, ← hab, hn, ht]; omega
   · obtain ⟨hab, -, wa, wb⟩ := WT_eq.1 w
     obtain ⟨N, rfl⟩ := Int.eq_ofNat_of_zero_le (show 0 ≤ n by omega)
     have hb' : b.ty = .TBitVector (N : Int) := by rw [← hab, hn]
@@ -711,49 +857,41 @@ theorem extract_low_inj {n m : Nat} {x y : BitVec n} (hx : x.toNat < 2 ^ m) (hy 
 
 /-- The remainder by a power of two keeps the low bits. -/
 @[kanon_close_lemma] theorem Refines.rem_pow2 {v : Term} {r : Int} {T t : Ty}
-    (hp : is_pow2 (to_z false (bv_of_lit (.mk (.BitVec r) T))) = true)
-    (h1 : to_z false (bv_of_lit (.mk (.BitVec r) T)) > 1) :
-    Refines FS (.mk (.Binop (.Rem false) v (.mk (.BitVec r) T)) t)
-      (.mk (.Unop (.BvExtend false (size v - log2 (to_z false (bv_of_lit (.mk (.BitVec r) T)))))
-        (.mk (.Unop (.BvExtract 0 (log2 (to_z false (bv_of_lit (.mk (.BitVec r) T))) - 1)) v)
-          (.TBitVector (log2 (to_z false (bv_of_lit (.mk (.BitVec r) T))) - 1 - 0 + 1))))
-        (.TBitVector (size (.mk (.Unop (.BvExtract 0 (log2 (to_z false (bv_of_lit (.mk (.BitVec r) T))) - 1)) v)
-          (.TBitVector (log2 (to_z false (bv_of_lit (.mk (.BitVec r) T))) - 1 - 0 + 1))) +
-          (size v - log2 (to_z false (bv_of_lit (.mk (.BitVec r) T))))))) := by
-  generalize hz : to_z false (bv_of_lit (.mk (.BitVec r) T)) = z at *
+    (hp : is_pow2 r = true) (h1 : r > 1) :
+    Refines FS (.mk (.Op2 (.Rem false) v (.mk (.BitVec r) T)) t)
+      (.mk (.Op1 (.BvExtend false (size v - log2 r))
+        (.mk (.Op1 (.BvExtract 0 (log2 r - 1)) v) (.TBitVector (log2 r - 1 - 0 + 1))))
+        (.TBitVector (size (.mk (.Op1 (.BvExtract 0 (log2 r - 1)) v)
+          (.TBitVector (log2 r - 1 - 0 + 1))) + (size v - log2 r)))) := by
   obtain ⟨hz2, hk0⟩ := is_pow2_eq hp
-  generalize hk : log2 z = k at *
-  have key : (Term.mk (.Binop (.Rem false) v (.mk (.BitVec r) T)) t).WT →
+  generalize hk : log2 r = k at *
+  have key : (Term.mk (.Op2 (.Rem false) v (.mk (.BitVec r) T)) t).WT →
       ∃ n : Nat, 0 < n ∧ v.WT ∧ v.ty = .TBitVector n ∧ T = .TBitVector n ∧ t = .TBitVector n ∧
-        z = r ∧ 0 ≤ r ∧ r < 2 ^ n ∧ 1 ≤ k ∧ k < n := by
+        0 ≤ r ∧ r < 2 ^ n ∧ 1 ≤ k ∧ k < n := by
     intro w
-    obtain ⟨w1, wv, wl⟩ := WT_binop.1 w
-    simp only [Binop.WT, Ty.sort_eq, Term.ty_mk] at w1
+    obtain ⟨w1, wv, wl⟩ := WT_op2.1 w
+    simp only [Op2.WT, Term.ty_mk] at w1
     obtain ⟨⟨m, hm, hv⟩, hT, ht⟩ := w1
     obtain ⟨n, rfl⟩ := Int.eq_ofNat_of_zero_le (Int.le_of_lt hm)
     have hT' : T = .TBitVector (n : Int) := by rw [hT, hv]
-    rw [hT'] at wl hz; rw [hv] at ht
+    rw [hT'] at wl; rw [hv] at ht
     obtain ⟨-, r0, r1⟩ := WT_bitVec_bv.1 wl
     simp only [Int.toNat_natCast] at r1
-    simp only [bv_of_lit_bv, to_z_mk, Bool.false_eq_true, ite_false,
-      toNat_ofInt_of_lt r0 r1] at hz
-    have hzr : z = r := by omega
-    subst hzr
     have hkn : 2 ^ k.toNat < 2 ^ n := by
       have : ((2 ^ k.toNat : Nat) : Int) < ((2 ^ n : Nat) : Int) := by push_cast; omega
       exact_mod_cast this
     rw [Nat.pow_lt_pow_iff_right (by omega)] at hkn
     have : k.toNat ≠ 0 := by intro h0; rw [h0] at hz2; omega
-    exact ⟨n, by omega, wv, hv, hT', ht, rfl, r0, r1, by omega, by omega⟩
+    exact ⟨n, by omega, wv, hv, hT', ht, r0, r1, by omega, by omega⟩
   refine Refines.den (fun w => ?_) (fun w => ?_) (fun n w ht ρ x e => ?_)
   · obtain ⟨n, -, -, -, -, ht, -⟩ := key w; exact ⟨n, ht⟩
-  · obtain ⟨n, hn, wv, hv, -, ht, -, -, -, hk1, hkn⟩ := key w
-    simp only [WT_unop, Unop.WT, Ty.sort_eq, Term.ty_mk, size_eq, size_of_ty_bitVector, hv, ht,
+  · obtain ⟨n, hn, wv, hv, -, ht, -, -, hk1, hkn⟩ := key w
+    simp only [WT_op1, Op1.WT, Term.ty_mk, size_eq, size_of_ty_bitVector, hv, ht,
       wv, Ty.TBitVector.injEq]
     exact ⟨⟨⟨_, by omega, rfl, by omega, rfl⟩, ⟨_, rfl, Int.le_refl _, by omega, by omega, trivial⟩,
       trivial⟩, by omega⟩
-  · obtain ⟨N, hn, wv, hv, hT, ht', hzr, r0, r1, hk1, hkn⟩ := key w
-    subst hzr hT
+  · obtain ⟨N, hn, wv, hv, hT, ht', r0, r1, hk1, hkn⟩ := key w
+    subst hT
     rw [ht'] at ht; simp only [Term.ty_mk, Ty.TBitVector.injEq, Int.natCast_inj] at ht
     obtain rfl : n = N := ht.symm
     simp only [den, hv, Term.ty_mk, Int.toNat_natCast, Bool.false_eq_true, ite_false] at e ⊢
@@ -763,7 +901,7 @@ theorem extract_low_inj {n m : Nat} {x y : BitVec n} (hx : x.toNat < 2 ^ m) (hy 
     simp only [Option.map_some, Option.some.injEq, Int.toNat_zero]
     have ek : (k - 1 - 0 + 1).toNat = k.toNat := by omega
     rw [ek]
-    have hr : (BitVec.ofInt n z).toNat = 2 ^ k.toNat := by
+    have hr : (BitVec.ofInt n r).toNat = 2 ^ k.toNat := by
       rw [toNat_ofInt_of_lt r0 r1, hz2, show ((2 : Int) ^ k.toNat) = ((2 ^ k.toNat : Nat) : Int) by
         push_cast; rfl, Int.toNat_natCast]
     have hkn' : 2 ^ k.toNat ≤ 2 ^ n := Nat.pow_le_pow_right (by omega) (by omega)
@@ -773,35 +911,32 @@ theorem extract_low_inj {n m : Nat} {x y : BitVec n} (hx : x.toNat < 2 ^ m) (hy 
 
 /-! ## Constants times a value -/
 
-/-- The integer that a bit-vector stands for, in a signedness. -/
-abbrev iv (s : Bool) {w : Nat} (x : BitVec w) : Int := to_z s ⟨w, x⟩
-
 theorem iv_inj {s : Bool} {w : Nat} {a b : BitVec w} : iv s a = iv s b ↔ a = b := by
-  cases s <;> simp [iv, to_z_mk, BitVec.toInt_inj, Int.natCast_inj, BitVec.toNat_inj]
+  cases s <;> simp [iv, BitVec.toInt_inj, Int.natCast_inj, BitVec.toNat_inj]
 
 theorem iv_mul {s : Bool} {w : Nat} {a b : BitVec w}
     (h : if s then a.smulOverflow b = false else a.umulOverflow b = false) :
     iv s (a * b) = iv s a * iv s b := by
-  cases s <;> simp only [iv, to_z_mk, ite_true, ite_false, Bool.false_eq_true] at h ⊢
+  cases s <;> simp only [iv, ite_true, ite_false, Bool.false_eq_true] at h ⊢
   · rw [toNat_mul_ok h]; push_cast; rfl
   · exact toInt_mul_ok h
 
 theorem iv_range {s : Bool} {w : Nat} (x : BitVec w) :
     if s then -2 ^ (w - 1) ≤ iv s x ∧ iv s x < 2 ^ (w - 1) else 0 ≤ iv s x ∧ iv s x < 2 ^ w := by
-  cases s <;> simp only [iv, to_z_mk, ite_true, ite_false, Bool.false_eq_true]
+  cases s <;> simp only [iv, ite_true, ite_false, Bool.false_eq_true]
   · have := x.isLt; exact ⟨by omega, by exact_mod_cast this⟩
   · exact toInt_bounds x
 
 theorem iv_ofInt {s : Bool} {w : Nat} (hw : 0 < w) {q : Int}
     (h : if s then -2 ^ (w - 1) ≤ q ∧ q < 2 ^ (w - 1) else 0 ≤ q ∧ q < 2 ^ w) :
     iv s (BitVec.ofInt w q) = q := by
-  cases s <;> simp only [iv, to_z_mk, ite_true, ite_false, Bool.false_eq_true] at h ⊢
+  cases s <;> simp only [iv, ite_true, ite_false, Bool.false_eq_true] at h ⊢
   · rw [toNat_ofInt_of_lt h.1 h.2]; omega
   · exact BitVec.toInt_ofInt_eq_self hw h.1 h.2
 
 theorem denB_eq_lit {ρ x} {W : Nat} {z : Int} {X : BitVec W} (hW : 0 < W) (hx : x.ty = .TBitVector W)
     (ex : den FS ρ W x = some X) :
-    denB FS ρ (.mk (.Binop .Eq x (.mk (.BitVec z) (.TBitVector W))) .TBool) =
+    denB FS ρ (.mk (.Op2 .Eq x (.mk (.BitVec z) (.TBitVector W))) .TBool) =
       some (decide (X = BitVec.ofInt W z)) := by
   simp [denB, den, hx, hW, ex]
 
@@ -843,20 +978,20 @@ theorem Refines.eq_mul_const {n m : Int} {Tn Tm T t : Ty} {ck : Checked} {x r : 
     (hck : is_checked ck = true)
     (hsyn : ∀ W : Nat, 0 < W → x.ty = .TBitVector W → x.WT → size x = W → r.WT ∧ r.ty = .TBool)
     (hsem : ∀ (W : Nat) (N M X : BitVec W) ρ, 0 < W → x.ty = .TBitVector W → size x = W →
-      to_z (!ck.unsigned) (bv_of_lit (.mk (.BitVec n) Tn)) = iv (!ck.unsigned) N →
-      to_z (!ck.unsigned) (bv_of_lit (.mk (.BitVec m) Tm)) = iv (!ck.unsigned) M →
+      bv_to_z (!ck.unsigned) W n = iv (!ck.unsigned) N →
+      bv_to_z (!ck.unsigned) W m = iv (!ck.unsigned) M →
       den FS ρ W x = some X →
       denB FS ρ r = some (decide (iv (!ck.unsigned) N = iv (!ck.unsigned) M * iv (!ck.unsigned) X))) :
     Refines FS
-      (.mk (.Binop .Eq (.mk (.BitVec n) Tn) (.mk (.Binop (.Mul ck) (.mk (.BitVec m) Tm) x) T)) t) r := by
-  have key : (Term.mk (.Binop .Eq (.mk (.BitVec n) Tn)
-      (.mk (.Binop (.Mul ck) (.mk (.BitVec m) Tm) x) T)) t).WT →
+      (.mk (.Op2 .Eq (.mk (.BitVec n) Tn) (.mk (.Op2 (.Mul ck) (.mk (.BitVec m) Tm) x) T)) t) r := by
+  have key : (Term.mk (.Op2 .Eq (.mk (.BitVec n) Tn)
+      (.mk (.Op2 (.Mul ck) (.mk (.BitVec m) Tm) x) T)) t).WT →
       ∃ W : Nat, 0 < W ∧ x.ty = .TBitVector W ∧ x.WT ∧ Tn = .TBitVector W ∧ Tm = .TBitVector W ∧
         T = .TBitVector W ∧ t = .TBool := by
     intro w
     obtain ⟨h1, ht, -, wm⟩ := WT_eq.1 w
-    obtain ⟨w2, -, wx⟩ := WT_binop.1 wm
-    simp only [Binop.WT, Ty.sort_eq, Term.ty_mk] at w2 h1
+    obtain ⟨w2, -, wx⟩ := WT_op2.1 wm
+    simp only [Op2.WT, Term.ty_mk] at w2 h1
     obtain ⟨⟨W, hW, hm⟩, hx, hT⟩ := w2
     obtain ⟨W, rfl⟩ := Int.eq_ofNat_of_zero_le (Int.le_of_lt hW)
     exact ⟨W, by omega, by rw [hx, hm], wx, by rw [h1, hT, hm], hm, by rw [hT, hm], ht⟩
@@ -874,8 +1009,11 @@ theorem Refines.eq_mul_const {n m : Int} {Tn Tm T t : Ty} {ck : Checked} {x r : 
     rename_i hov
     simp only [binB_some, Option.some.injEq] at e
     subst e
-    rw [hsem W (BitVec.ofInt W n) (BitVec.ofInt W m) X ρ hW hx (by simp [hx]) (by simp [iv])
-      (by simp [iv]) ex]
+    obtain ⟨-, n0, n1⟩ := WT_bitVec_bv.1 (WT_eq.1 w).2.2.1
+    obtain ⟨-, m0, m1⟩ := WT_bitVec_bv.1 (WT_op2.1 (WT_eq.1 w).2.2.2).2.1
+    simp only [Int.toNat_natCast] at n1 m1
+    rw [hsem W (BitVec.ofInt W n) (BitVec.ofInt W m) X ρ hW hx (by simp [hx])
+      (bv_to_z_ofInt hW _ n0 n1) (bv_to_z_ofInt hW _ m0 m1) ex]
     have hs : if !ck.unsigned then (BitVec.ofInt W m).smulOverflow X = false
         else (BitVec.ofInt W m).umulOverflow X = false := by
       obtain ⟨cs, cu⟩ := ck
@@ -896,7 +1034,7 @@ macro "kanon_rule_b" : tactic => `(tactic| (kanon_rule_core; kanon_halves_b))
 
 /-- `kanon_rule_b`, with the (integer) widths of the body normalized first. -/
 macro "kanon_rule_b_arith" : tactic => `(tactic| (
-  kanon_rule_lift
+  kanon_rule_lift_side
   all_goals (try simp +arith only [])
   kanon_rule_apply
   kanon_halves_b))

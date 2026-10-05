@@ -97,8 +97,21 @@ theorem div_div_ok {w : Nat} {a b x : BitVec w} (ha : a.toNat ≠ 0)
     apply BitVec.eq_of_toNat_eq
     rw [smtUDiv_toNat hb, smtUDiv_toNat ha, smtUDiv_toNat hab, e, Nat.div_div_eq_div_mul]
 
+theorem mul_div_ok' {w : Nat} {n d x : BitVec w} (hd0 : d.toNat ≠ 0) (hd : d.toNat ∣ n.toNat)
+    (h : x.umulOverflow n = false) :
+    x.umulOverflow (n.smtUDiv d) = false ∧ x * n.smtUDiv d = (x * n).smtUDiv d := by
+  rw [(ovf_comm _ _).2.2.2] at h
+  have := mul_div_ok hd0 hd h
+  rwa [BitVec.mul_comm n x] at this
+
+theorem div_mul_ok' {w : Nat} {n d x : BitVec w} (hn0 : n.toNat ≠ 0) (hd : n.toNat ∣ d.toNat)
+    (h : x.umulOverflow n = false) : x.smtUDiv (d.smtUDiv n) = (x * n).smtUDiv d := by
+  rw [(ovf_comm _ _).2.2.2] at h
+  rw [BitVec.mul_comm x n]
+  exact div_mul_ok hn0 hd h
+
 attribute [kanon_close_lemma] BitVec.mul_add umul_add_ok factor_ok factor_ok' mul_div_ok
-  div_mul_ok div_div_ok
+  div_mul_ok div_div_ok mul_div_ok' div_mul_ok'
 
 /-- Division of a zero-extended value by a constant that fits in the value. -/
 theorem zext_div_ok {m n : Nat} (hmn : m ≤ n) (x : BitVec m) {z : Int} (h0 : 0 ≤ z)
@@ -121,18 +134,24 @@ theorem zext_div_ok {m n : Nat} (hmn : m ≤ n) (x : BitVec m) {z : Int} (h0 : 0
   refine Sem.Refines.trans Refines.add_no_wrap ?_
   split
   · exact Sem.Refines.refl
-  · exact Refines.comm (by simp [Binop.Comm]) (fun _ => rfl)
+  · exact Refines.comm (by simp [Op2.Comm]) (fun _ => rfl)
 
 @[kanon_arm] theorem bv_div.r_zext.main.proof : bv_div.r_zext.main.Stmt := by
   kanon_rule_sem
   all_goals kanon_split
   all_goals subst_vars
-  all_goals
-    rw [msb_of_lit, size_of_ty_bitVector] at *
-    simp (disch := assumption) only [emod_two_pow_of_lt, Int.max_eq_left] at *
-    refine (zext_div_ok (by omega) _ ‹_› ?_ ‹_›).symm
-    split at *
-    · exact .inl ⟨‹_›, lt_two_pow_log2 ‹_› ‹_›⟩
-    · exact .inr (by omega)
+  rename_i FS O hO by_ z n ρ w1 hby kind x hs hn_ hz0 hzn hn hn0 hmsb hz1
+  simp only [msb_of_lit, size_of_ty_bitVector] at *
+  by_cases hp : 0 < z
+  · have hlt : z < 2 ^ (kind : Int).toNat := lt_two_pow_log2 hp (by simpa [hp] using hmsb)
+    simp only [Int.toNat_natCast] at hlt
+    rw [Int.emod_eq_of_lt hz0 (by exact_mod_cast hlt)]
+    exact (zext_div_ok (m := kind) (n := n) (by omega) x hz0 (.inl ⟨hp, hlt⟩) hzn).symm
+  · have hz : z = 0 := by omega
+    subst hz
+    have hWn : kind = n := by simp only [hp, ite_false] at hmsb; omega
+    subst hWn
+    rw [Int.zero_emod]
+    simp only [BitVec.setWidth_eq]
 
 end Kanon

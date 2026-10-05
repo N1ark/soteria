@@ -15,10 +15,7 @@ compared to `v`. -/
     T = .TBitVector (size_of_ty T) ↔ ∃ m, T = .TBitVector m :=
   ⟨fun h => ⟨_, h⟩, fun ⟨m, h⟩ => by subst h; rfl⟩
 
-@[simp] theorem of_bool_eq (b : Bool) : of_bool b = .mk (.Bool b) .TBool := by
-  cases b <;> rfl
-
-attribute [simp] WT_bool
+attribute [simp] of_bool_eq WT_bool
 
 /-- The existentials of the typing of the resizing nodes, at known widths. -/
 @[simp] theorem exists_pos_eq {a : Int} {p : Int → Prop} :
@@ -29,12 +26,6 @@ attribute [simp] WT_bool
     (∃ n, 0 < n ∧ ∃ m, 0 < m ∧ a = n ∧ b = m ∧ p n m) ↔ 0 < a ∧ 0 < b ∧ p a b :=
   ⟨fun ⟨_, h1, _, h2, h3, h4, h5⟩ => by subst h3 h4; exact ⟨h1, h2, h5⟩,
     fun ⟨h1, h2, h3⟩ => ⟨_, h1, _, h2, rfl, rfl, h3⟩⟩
-
-/-- A literal in range, read as an unsigned integer. -/
-theorem to_z_bv_of_lit {z : Int} {T : Ty} (w : (Term.mk (.BitVec z) T).WT) :
-    to_z false (bv_of_lit (.mk (.BitVec z) T)) = z := by
-  obtain ⟨k, hk, hT, h0, h1⟩ := WT_bitVec.1 w
-  rcases hT with rfl | rfl <;> simp [bv_of_lit, to_z, size_of_ty, toNat_ofInt_of_lt h0 h1] <;> omega
 
 /-! ## Powers of two and lowest set bits of literals -/
 
@@ -76,9 +67,9 @@ theorem lsb_dvd {n : Int} (h0 : 0 ≤ n) {j : Int} (hj : j < lsb n) (hj0 : 0 ≤
   have : lsb ((k + 1 : Nat) : Int) = t := by
     have hne : ((k + 1 : Nat) : Int) ≠ 0 := by omega
     simp only [lsb, hne, decide_false, Bool.false_eq_true, ↓reduceIte]
-    show log2 (zland (Int.ofNat (k + 1)) (Int.negSucc k)) = t
+    show log2 (z_land (Int.ofNat (k + 1)) (Int.negSucc k)) = t
     simp only [Nat.add_sub_cancel] at ht
-    simp only [zland, log2, Int.ofNat_eq_natCast, Int.toNat_natCast, ht, Nat.log2_two_pow]
+    simp only [z_land, log2, Int.ofNat_eq_natCast, Int.toNat_natCast, ht, Nat.log2_two_pow]
   rw [this] at hj
   exact Nat.dvd_trans (Nat.pow_dvd_pow 2 (by omega)) hd
 
@@ -141,55 +132,56 @@ section
 variable {FS : FloatSem}
 
 /-- A comparison of float literals. -/
-theorem Refines.fcmp_lits {op : Binop} (hop : op = .FEq ∨ op = .FLt ∨ op = .FLeq)
+theorem Refines.fcmp_lits {op : Op2} (hop : op = .FEq ∨ op = .FLt ∨ op = .FLeq)
     {f1 f2 : Float} {T1 T2 T : Ty} {b : Bool}
-    (hsem : f2.prec = f1.prec → evBinop FS op (some f1.sem) (some f2.sem) = some (.bool b)) :
-    Refines FS (.mk (.Binop op (.mk (.Float f1) T1) (.mk (.Float f2) T2)) T) (of_bool b) := by
+    (hsem : f2.prec = f1.prec → evOp2 FS op (some f1.sem) (some f2.sem) = some (.bool b)) :
+    Refines FS (.mk (.Op2 op (.mk (.Float f1) T1) (.mk (.Float f2) T2)) T) (.mk (.Bool b) .TBool) := by
+  rw [← of_bool_eq]
   refine Sem.Refines.intro_eval (fun w => ⟨by simp, by simp [((WT_fcmp hop).1 w).2.2.1]⟩)
     (fun ρ v w w' e => ?_)
   obtain ⟨_, h2, _, w1, w2⟩ := (WT_fcmp hop).1 w
   rw [(WT_float.1 w1).1, (WT_float.1 w2).1] at h2
   rw [← eval] at e ⊢
-  rw [eval_binop w, eval_float w1, eval_float w2, hsem (by simpa using h2)] at e
+  rw [eval_op2 w, eval_float w1, eval_float w2, hsem (by simpa using h2)] at e
   rw [eval_of_bool]; exact e
 
 /-- A unary operation on a float literal, of the precision of the literal. -/
-theorem Refines.funop_lit {op : Unop} (hop : op = .FAbs ∨ op = .FNeg ∨ op = .FSqrt ∨ ∃ rm, op = .FRound rm)
+theorem Refines.funop_lit {op : Op1} (hop : op = .FAbs ∨ op = .FNeg ∨ op = .FSqrt ∨ ∃ rm, op = .FRound rm)
     {f g : Float} {T : Ty}
-    (hg : f.WF → g.prec = f.prec ∧ g.WF ∧ evUnop FS op (some f.sem) = some g.sem) :
-    Refines FS (.mk (.Unop op (.mk (.Float f) T)) T) (.mk (.Float g) T) :=
-  Refines.lit_of_unop (fun w => by
+    (hg : f.WF → g.prec = f.prec ∧ g.WF ∧ evOp1 FS op (some f.sem) = some g.sem) :
+    Refines FS (.mk (.Op1 op (.mk (.Float f) T)) T) (.mk (.Float g) (.TFloat g.prec)) :=
+  Refines.lit_of_unop_prec (fun w => by
       obtain ⟨_, -, w1⟩ := (WT_funop hop).1 w
       have hf := Float.WF_of_WT w1
       exact ⟨by rw [(WT_float.1 w1).1, (hg hf).1], (hg hf).2.1⟩)
     (fun hf => (hg hf).2.2)
 
 /-- A unary operation on floats that only reads the bits of its operand. -/
-theorem Refines.funop_bits {op : Unop} (hop : op = .FAbs ∨ op = .FNeg)
-    {F : ∀ {p}, FBits p → FBits p} (hF : ∀ p (x : FBits p), evUnop FS op (some (.float p x)) = some (.float p (F x)))
+theorem Refines.funop_bits {op : Op1} (hop : op = .FAbs ∨ op = .FNeg)
+    {F : ∀ {p}, FBits p → FBits p} (hF : ∀ p (x : FBits p), evOp1 FS op (some (.float p x)) = some (.float p (F x)))
     {f : Float} {T : Ty} :
-    Refines FS (.mk (.Unop op (.mk (.Float f) T)) T) (.mk (.Float ⟨f.prec, (F f.val).toNat⟩) T) :=
+    Refines FS (.mk (.Op1 op (.mk (.Float f) T)) T) (.mk (.Float ⟨f.prec, (F f.val).toNat⟩) (.TFloat f.prec)) :=
   Refines.funop_lit (by rcases hop with h | h <;> simp [h]) fun _ =>
     ⟨rfl, BitVec.isLt _, by simp [Float.sem, hF, Float.val_ofNat_toNat]⟩
 
 /-- An idempotent operation on floats. -/
-theorem Refines.funop_idem {op : Unop}
-    (hidem : ∀ v, evUnop FS op (evUnop FS op v) = evUnop FS op v) {a : Term} {T : Ty} :
-    Refines FS (.mk (.Unop op (.mk (.Unop op a) T)) T) (.mk (.Unop op a) T) := by
-  refine Sem.Refines.intro_eval (fun w => ⟨(WT_unop.1 w).2, rfl⟩) (fun ρ v w w' e => ?_)
+theorem Refines.funop_idem {op : Op1}
+    (hidem : ∀ v, evOp1 FS op (evOp1 FS op v) = evOp1 FS op v) {a : Term} {T : Ty} :
+    Refines FS (.mk (.Op1 op (.mk (.Op1 op a) T)) T) (.mk (.Op1 op a) T) := by
+  refine Sem.Refines.intro_eval (fun w => ⟨(WT_op1.1 w).2, rfl⟩) (fun ρ v w w' e => ?_)
   rw [← eval] at e ⊢
-  rw [eval_unop w, eval_unop w'] at e; rw [eval_unop w', ← e, hidem]
+  rw [eval_op1 w, eval_op1 w'] at e; rw [eval_op1 w', ← e, hidem]
 
 /-- An involutive operation on floats. -/
-theorem Refines.funop_invol {op : Unop} (hop : op = .FAbs ∨ op = .FNeg ∨ op = .FSqrt ∨ ∃ rm, op = .FRound rm)
-    (hinv : ∀ v r, evUnop FS op (evUnop FS op v) = some r → v = some r) {a : Term} {T T' : Ty} :
-    Refines FS (.mk (.Unop op (.mk (.Unop op a) T)) T') a := by
+theorem Refines.funop_invol {op : Op1} (hop : op = .FAbs ∨ op = .FNeg ∨ op = .FSqrt ∨ ∃ rm, op = .FRound rm)
+    (hinv : ∀ v r, evOp1 FS op (evOp1 FS op v) = some r → v = some r) {a : Term} {T T' : Ty} :
+    Refines FS (.mk (.Op1 op (.mk (.Op1 op a) T)) T') a := by
   refine Sem.Refines.intro_eval (fun w => ?_) (fun ρ v w w' e => ?_)
   · have ⟨_, hT, w1⟩ := (WT_funop hop).1 w
     have ⟨_, hT', w2⟩ := (WT_funop hop).1 w1
     exact ⟨w2, by simp_all⟩
   · rw [← eval] at e ⊢
-    rw [eval_unop w, eval_unop (WT_unop.1 w).2] at e; exact hinv _ _ e
+    rw [eval_op1 w, eval_op1 (WT_op1.1 w).2] at e; exact hinv _ _ e
 
 /-- `fp.eq` against a float literal, given how the general case is decided. -/
 theorem Refines.feq_lit {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {f : Float} {T : Ty}
@@ -201,9 +193,9 @@ theorem Refines.feq_lit {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {f : Float} 
       ∃ y, eval FS ρ v2 = some (.float f.prec y) ∧ v = .bool (f.val.eq y) := by
     intro ρ v e
     have w := eval_WT e
-    have ⟨_, w1, _⟩ := WT_binop.1 w
-    rw [float_eq.spec, eval_binop w, eval_float w1] at e
-    simp only [evBinop, fBin_eq_some, Float.sem] at e
+    have ⟨_, w1, _⟩ := WT_op2.1 w
+    rw [float_eq.spec, eval_op2 w, eval_float w1] at e
+    simp only [evOp2, fBin_eq_some, Float.sem] at e
     obtain ⟨p, x, y, h1, h2, h3⟩ := e
     simp at h1; obtain ⟨rfl, h1⟩ := h1; subst h1
     simp at h3
@@ -220,18 +212,18 @@ theorem Refines.feq_lit {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {f : Float} 
       refine Sem.Refines.trans ?_ (hO.float_is_floatclass .Zero v2)
       refine Sem.Refines.intro_eval (fun w => ?_) (fun ρ v w w' e => ?_)
       · obtain ⟨hp, h2, _, w1, w2⟩ := (WT_fcmp (Or.inl rfl)).1 w
-        refine ⟨WT_unop.2 ⟨by simpa [Unop.WT, h2] using hp, w2⟩, rfl⟩
+        refine ⟨WT_op1.2 ⟨by simpa [Op1.WT, h2] using hp, w2⟩, rfl⟩
       · obtain ⟨y, hy, rfl⟩ := ev1 ρ v e
         rw [← eval]
-        rw [float_is_floatclass.spec, eval_unop w', hy]
-        simp [evUnop, FBits.isClass, FBits.eq_of_isZero_left y hz]
+        rw [float_is_floatclass.spec, eval_op1 w', hy]
+        simp [evOp1, FBits.isClass, FBits.eq_of_isZero_left y hz]
     · rename_i hz
       refine Sem.Refines.trans ?_ hE
       refine Sem.Refines.intro_eval (fun w => ?_) (fun ρ v w w' e => ?_)
       · obtain ⟨hp, h2, _, w1, w2⟩ := (WT_fcmp (Or.inl rfl)).1 w
         exact ⟨WT_sem_eq.2 ⟨h2.symm, w1, w2⟩, rfl⟩
       · obtain ⟨y, hy, rfl⟩ := ev1 ρ v e
-        have ⟨_, w1, _⟩ := WT_binop.1 w'
+        have ⟨_, w1, _⟩ := WT_op2.1 w'
         rw [← eval]
         rw [sem_eq.spec, eval_eq_of w' (eval_float w1) hy]
         simp only [f_is_nan, f_is_zero, Bool.not_eq_true] at hn hz
@@ -252,26 +244,26 @@ macro "kanon_float" : tactic => `(tactic| (
     | exact Refines.funop_lit (by simp) (hO.orc.sqrt _)
     | exact Refines.funop_lit (by simp) (hO.orc.round _ _)
     | exact Refines.test_of_unop (fun w => ((WT_ftest (by simp)).1 w).2.1)
-        (by simp [evUnop, Float.sem, f_is_class, f_is_negative, f_is_positive])
+        (by simp [evOp1, Float.sem, f_is_class, f_is_negative, f_is_positive])
     | exact Refines.fcmp_lits (by simp) fun hp => by
-        simp [evBinop, fBin, Float.sem, f_eq, f_lt, f_le, Float.cmp, hp]))
+        simp [evOp2, fBin, Float.sem, f_eq, f_lt, f_le, Float.cmp, hp]))
 
 /-- Proves the alternative on a pointer literal of `ptr_loc` (resp. `ptr_ofs`),
 whose spec is `spec`. -/
 macro "kanon_ptr " spec:ident : tactic => `(tactic| (
   intro FS O hO l o T
   refine Sem.Refines.intro_eval (fun w => ?_) (fun ρ v w w' e => ?_)
-  · obtain ⟨n, hn, hT, hl, ho, wl, wo⟩ := WT_ptr.1 (WT_unop.1 w).2
+  · obtain ⟨n, hn, hT, hl, ho, wl, wo⟩ := WT_ptr.1 (WT_op1.1 w).2
     subst hT
     simp [$spec:ident, hl, ho, wl, wo, size_of_ty]
   · rw [← eval] at e ⊢
-    rw [$spec:ident, eval_unop w] at e
-    cases hp : eval FS ρ (Term.mk (Kind.Ptr l o) T) with
+    rw [$spec:ident, eval_op1 w] at e
+    cases hp : eval FS ρ (Term.mk (Kind.Op2 Op2.Ptr l o) T) with
     | none => simp [hp] at e
     | some pv =>
-      obtain ⟨n, x, y, h1, h2, hv⟩ := (eval_ptr_eq_some (WT_unop.1 w).2).1 hp
+      obtain ⟨n, x, y, h1, h2, hv⟩ := (eval_ptr_eq_some (WT_op1.1 w).2).1 hp
       subst hv
-      rw [hp] at e; simp [evUnop] at e; subst e; first | exact h1 | exact h2))
+      rw [hp] at e; simp [evOp1] at e; subst e; first | exact h1 | exact h2))
 
 attribute [kanon_tactic "kanon_ptr ptr_loc.spec"] ptr_loc.spec
 attribute [kanon_tactic "kanon_ptr ptr_ofs.spec"] ptr_ofs.spec

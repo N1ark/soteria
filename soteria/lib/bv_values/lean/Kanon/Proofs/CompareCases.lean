@@ -1,4 +1,5 @@
 import Kanon.Lib.Compare
+import Kanon.Lib.Rule
 
 /-! Comparisons (`bv_lt`, `bv_leq`), proved per alternative. -/
 
@@ -10,10 +11,10 @@ open Classical Lib
   kanon_cmp_using [smtUDiv_ule_of_umulOverflow]
 
 /-- `ite g p p` is `p`. -/
-theorem refines_ite_same {FS g p} : Refines FS (.mk (.Triop .Ite g p p) .TBool) p := by
+theorem refines_ite_same {FS g p} : Refines FS (.mk (.Op3 .Ite g p p) .TBool) p := by
   refine Refines.denB (fun _ => rfl) (fun w => ?_) (fun w ρ b h => ?_)
-  · obtain ⟨⟨-, -, e⟩, -, wp, -⟩ := WT_triop.1 w
-    simp at e; exact ⟨wp, e.symm⟩
+  · obtain ⟨⟨-, -, e⟩, -, wp, -⟩ := WT_op3.1 w
+    exact ⟨wp, e.symm⟩
   · simp only [denB] at h
     split at h <;> simp_all
 
@@ -22,7 +23,7 @@ theorem refines_ite_same {FS g p} : Refines FS (.mk (.Triop .Ite g p p) .TBool) 
   simp only
   split
   · rename_i he
-    simp only [equal, decide_eq_true_eq] at he
+    simp only [decide_eq_true_eq] at he
     refine Sem.Refines.trans ?_ (Sem.Refines.trans (Refines.ite (g := g) Sem.Refines.refl
       (hO.bv_lt_zero l) (he ▸ hO.bv_lt_zero r) (fun _ => rfl)) refines_ite_same)
     simp only [kanon_spec]

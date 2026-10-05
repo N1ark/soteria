@@ -72,7 +72,7 @@ macro_rules
       apply Sem.Refines.of_WT
       intro w
       dsimp only at w
-      (try simp only [WT_unop, WT_binop, WT_triop] at w)
+      (try simp only [WT_op1, WT_op2, WT_op3] at w)
       (try kanon_split)
       kanon_ty_refines
       (try simp only [ty, size, Term.ty_mk, *] at ⊢)))

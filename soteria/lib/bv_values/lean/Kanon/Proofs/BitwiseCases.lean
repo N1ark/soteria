@@ -13,7 +13,7 @@ open Classical Lib
   simp only [kanon_spec, ty]
   repeat' split
   all_goals simp only [decide_eq_true_eq] at *
-  all_goals kanon_lift_body
+  all_goals kanon_lift_body_side
   all_goals simp only [kanon_spec]
   all_goals apply Refines.den
   -- the guard on the shift amount is only needed for the values, and it
@@ -23,8 +23,10 @@ open Classical Lib
     | (intro n w ht ρ x h
        kanon_facts
        kanon_lits
+       kanon_lit_ops
        kanon_cases
        all_goals (try simp_all)
+       all_goals kanon_zlits
        all_goals
          rw [or_shl_append _ _ (by omega)] at h
          subst h)

@@ -204,8 +204,7 @@ or HOST prims.
 ## 6. Lean decision
 All view fns are `[@no_lean]`; `[@total]` is added on the per-node ones (`operands`, `rebuild`, `encode_head`, `cost`). The types of
 `view_host.ml` are term-free (`t`/`ty` only as parameters of `smt_op`), so Lean has nothing to model for them (K6 open: confirm that Kanon does not emit
-Lean for `[@ocaml]`-abstract types used only by `[@no_lean]` items; if it does, add `R.Abstract` entries). The Lean project stays on the old pinned Kanon
-and a frozen copy of the old rules until S6; proofs do not cover the migrated rules.
+Lean for `[@ocaml]`-abstract types used only by `[@no_lean]` items; if it does, add `R.Abstract` entries).
 
 ## 8. Rust: the equivalents of the Value_ext hooks
 There is no `Ext` any more (the `Value_ext` extension of the old stack, deleted in S7). Its members map to `extend fn` cases of the Rust language module (`rust.kn`, over the shared modules by relative `use`):

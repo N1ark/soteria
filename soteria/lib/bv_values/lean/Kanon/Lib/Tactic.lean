@@ -2,6 +2,7 @@ import Kanon.Lib.Meta
 import Kanon.Lifts
 import Kanon.Lib.Lit
 import Kanon.Lib.Ovf
+import Kanon.Lib.LitOps
 import Kanon.Lib.Float
 
 /-!
@@ -55,14 +56,60 @@ theorem ssubOverflow_zero_left {n : Nat} (hn : 0 < n) (x : BitVec n) :
   rw [WT_bitVec]
   constructor
   · rintro ⟨k, hk, h, h1, h2⟩
-    rcases h with h | h <;> simp at h
+    simp at h
     subst h; simp; omega
   · rintro ⟨h0, h1, h2⟩
-    exact ⟨m.toNat, by omega, .inl (by simp; omega), h1, h2⟩
+    exact ⟨m.toNat, by omega, by simp; omega, h1, h2⟩
+
+@[simp] theorem WT_locLit_loc {z m : Int} :
+    (Term.mk (.LocLit z) (.TLoc m)).WT ↔ 0 < m ∧ 0 ≤ z ∧ z < 2 ^ m.toNat := by
+  rw [WT_locLit]
+  constructor
+  · rintro ⟨k, hk, h, h1, h2⟩
+    simp at h
+    subst h; simp; omega
+  · rintro ⟨h0, h1, h2⟩
+    exact ⟨m.toNat, by omega, by simp; omega, h1, h2⟩
+
+set_option hygiene false in
+/-- Closes a goal `Nonzero v` left by the lifting (`kanon_lift_body_side`, which provides the
+hypothesis `kw` that the spec is well-typed): `v` is the divisor of the spec or a literal
+that is not zero. -/
+macro "kanon_nonzero" : tactic => `(tactic| first
+  | assumption
+  | exact Kanon.Lib.nonzero_zext_masked kw ‹_› ‹_›
+  | exact Kanon.Lib.nonzero_extract_pow2 ‹_› ‹_› (by omega)
+  | exact Kanon.Lib.nonzero_div_mul kw ‹_› ‹_› ‹_›
+  | exact Kanon.Lib.nonzero_div_mul' kw ‹_› ‹_› ‹_›
+  | exact Kanon.Lib.nonzero_div_div kw ‹_› ‹_› ‹_›
+  | (have w1 := kw
+     simp only [sem, Term.WT, Op2.WT] at w1
+     kanon_split
+     refine Kanon.Lib.nonzero_bitVec (by first | assumption | omega) ?_
+     simp only [Term.WT]
+     exact ⟨_, ‹_›, ‹_›, ‹_›, ‹_›⟩))
+
+/-- `kanon_rule_lift` (Kanon's), with `kanon_lift_body_side`. -/
+macro "kanon_rule_lift_side" : tactic => `(tactic| (
+  intro _
+  intros
+  (try kanon_guards)
+  (try kanon_split)
+  (try subst_vars)
+  (try simp only [kanon_spec, kanon_body])
+  (repeat' split)
+  all_goals (try kanon_lift_body_side)
+  all_goals (try simp only [kanon_spec, kanon_body])
+  all_goals (try first
+    | exact Kanon.Sem.Refines.refl
+    | (kanon_comm; done)
+    | kanon_rule_close
+    | kanon_close_lemmas)
+  all_goals (try kanon_nonzero)))
 
 /-- The typing lemmas of the nodes. -/
 macro "kanon_wt_simp_bv" : tactic => `(tactic|
-  simp [WT_binop, WT_unop, WT_triop, Binop.WT, Unop.WT, Triop.WT, bv_zero, bv_one,
+  simp [WT_op2, WT_op1, WT_op3, Op2.WT, Op1.WT, Op3.WT, bv_zero, bv_one,
     mk_masked, mk_bv] at *)
 
 /-- Normalizes the typing facts of the hypotheses: splits them, and substitutes
@@ -118,7 +165,14 @@ macro "kanon_wt_bv" : tactic => `(tactic| (
   intro w
   kanon_facts
   kanon_zlits
-  (try simp_all [WT_bitVec, WT_mk_masked, emod_two_pow_nonneg, emod_two_pow_lt])
+  (try simp_all [WT_bitVec, WT_mk_masked, emod_two_pow_nonneg, emod_two_pow_lt,
+    lit_add_nonneg, lit_add_lt, lit_sub_nonneg, lit_sub_lt, lit_mul_nonneg, lit_mul_lt,
+    lit_neg_nonneg, lit_neg_lt, lit_not_nonneg, lit_not_lt, lit_and_nonneg, lit_and_lt,
+    lit_or_nonneg, lit_or_lt, lit_xor_nonneg, lit_xor_lt, lit_shl_nonneg, lit_shl_lt,
+    lit_lshr_nonneg, lit_lshr_lt, lit_ashr_nonneg, lit_ashr_lt, lit_udiv_nonneg, lit_udiv_lt,
+    lit_sdiv_nonneg, lit_sdiv_lt, lit_urem_nonneg, lit_urem_lt, lit_srem_nonneg, lit_srem_lt,
+    lit_smod_nonneg, lit_smod_lt, lit_extract_nonneg, lit_extract_lt, lit_sext_nonneg,
+    lit_sext_lt, lit_zext_nonneg, lit_zext_lt, lit_concat_nonneg, lit_concat_lt, lit_concat_nonneg', lit_concat_lt'])
   all_goals grind [size_of_ty, WT_bitVec]))
 
 /-! ## The lemmas of Kanon's rule tactics (`KanonCore.Proof`)
@@ -127,17 +181,26 @@ The literals and the arithmetic on them (`kanon_lits`), the checked flags and
 the types in the guards (`kanon_guards`), and the bodies of the rules
 (`kanon_body`). -/
 
-attribute [kanon_lits] den denB den_lit ty_lit bv_of_lit_bv bv_of_lit_bv' of_z_nat lit_add_mk
-  lit_sub_mk lit_mul_mk lit_neg_mk lit_udiv_mk lit_sdiv_mk lit_and_mk lit_or_mk lit_xor_mk
-  lit_not_mk lit_shl_mk lit_lshr_mk lit_ashr_mk lit_urem_mk lit_srem_mk lit_smod_mk
-  lit_extract_mk lit_zext_mk lit_sext_mk lit_concat_mk bv_equal_mk at_mk at_mk'
-  BitVec.setWidth_eq at_of_z_self width_mk Term.ty_mk to_z_mk bv_zero bv_one mk_masked mk_bv
+attribute [kanon_lits] den denB BitVec.setWidth_eq Term.ty_mk bv_zero bv_one mk_masked mk_bv
   v_true v_false of_bool size_of_ty_bitVector Int.toNat_natCast Int.reduceToNat
 
 attribute [kanon_guards] unchecked checked_both checked_signed checked_unsigned checked_meet
-  checked_has checked_of_signed is_checked equal ty_eq Term.ty_mk is_bv_iff
+  checked_has checked_of_signed is_checked ty_eq Term.ty_mk is_bv_iff
 
 attribute [kanon_body] ty_eq mk_commut_binop signed_to_unsigned_cmp
+
+set_option hygiene false in
+/-- The operations and helpers on literals in range, as the operations on the
+values of bit-vectors (`Lib/LitOps.lean`, `Lib/Ovf.lean`, ...). -/
+macro "kanon_lit_ops" : tactic => `(tactic| (try simp (disch := first | assumption | simp only [Kanon.size_of_ty] | exact Kanon.Lib.lit_lshr_nonneg _ _ | exact Kanon.Lib.ones_nonneg _ | exact Kanon.Lib.ones_lt _ | (refine lt_of_lt_of_eq (Kanon.Lib.lit_lshr_lt _ _) ?_; rw [Int.toNat_natCast]) | exact Kanon.Lib.lit_shl_nonneg _ _ | (refine lt_of_lt_of_eq (Kanon.Lib.lit_shl_lt _ _) ?_; rw [Int.toNat_natCast])) only [
+  Kanon.Lib.ofInt_lit_add, Kanon.Lib.ofInt_lit_sub, Kanon.Lib.ofInt_lit_mul, Kanon.Lib.ofInt_lit_neg, Kanon.Lib.ofInt_lit_not, Kanon.Lib.ofInt_lit_and,
+  Kanon.Lib.ofInt_lit_or, Kanon.Lib.ofInt_lit_xor, Kanon.Lib.ofInt_lit_shl, Kanon.Lib.ofInt_lit_lshr, Kanon.Lib.ofInt_lit_ashr, Kanon.Lib.ofInt_lit_udiv,
+  Kanon.Lib.ofInt_lit_urem, Kanon.Lib.ofInt_lit_sdiv, Kanon.Lib.ofInt_lit_srem, Kanon.Lib.ofInt_lit_smod, Kanon.Lib.ofInt_lit_extract, Kanon.Lib.ofInt_lit_extract_zero, Kanon.Lib.ofInt_emod_two_pow_toNat,
+  Kanon.Lib.ofInt_lit_concat, Kanon.Lib.ofInt_lit_concat', Kanon.Lib.ofInt_lit_zext, Kanon.Lib.ofInt_lit_zext', Kanon.Lib.ofInt_lit_sext', Kanon.Lib.ofInt_lit_sext, Kanon.Lib.overflows_add_ofInt, Kanon.Lib.overflows_sub_ofInt,
+  Kanon.Lib.overflows_mul_ofInt, Kanon.Lib.add_overflows_ofInt, Kanon.Lib.sub_overflows_ofInt,
+  Kanon.Lib.mul_overflows_ofInt, Kanon.Lib.fold_checked_ofInt, Kanon.Lib.is_int_min_ofInt, Kanon.Lib.udivides_ofInt, Kanon.Lib.bv_to_z_ofInt,
+  Kanon.Lib.is_min_of_ofInt, Kanon.Lib.is_max_of_ofInt, Kanon.Lib.const_keeps_in_range_ofInt, Kanon.Lib.is_ones_ofInt, Kanon.Lib.bits_in_ofInt,
+  Kanon.Lib.disjoint_ofInt, Kanon.Lib.ofInt_ones, Kanon.BitVec.ofInt_emod_two_pow] at *))
 
 /-- The value half of `Refines.den`, reduced to the facts on the values of the
 atoms. -/
@@ -146,20 +209,21 @@ macro "kanon_sem_core_bv" : tactic => `(tactic| (
     | (intro n w ht ρ x h
        have w' := w
        kanon_facts
+       kanon_nat_widths
        kanon_lits
+       kanon_lit_ops
        kanon_cases)
     | (intro w ρ x h
        have w' := w
        kanon_facts
+       kanon_nat_widths
        kanon_lits
+       kanon_lit_ops
        kanon_cases
        all_goals kanon_bool_vars)
   all_goals (try simp_all [unchecked, checked_signed, checked_unsigned, checked_meet])
   all_goals (try (repeat' split at h))
   all_goals (try simp_all [ssubOverflow_zero_left])
-  all_goals (try simp only [fold_checked_mk (by assumption), add_overflows_mk (hn := by assumption),
-    sub_overflows_mk (hn := by assumption), mul_overflows_mk (hn := by assumption),
-    is_int_min_mk (hn := by assumption)] at *)
   all_goals (try (repeat' apply And.intro))))
 
 /-- The value half of `Refines.den`: splits by the atoms, and closes what
@@ -174,6 +238,7 @@ macro "kanon_sem_bv" : tactic => `(tactic| (
     | (simp_all [kanon_close_simp]; done)
     | (grind [BitVec.neg_eq_not_add]; done)
     | (kanon_ovf; done)
+    | (simp_all [BitVec.add_assoc, BitVec.add_comm, BitVec.add_left_comm]; done)
     | ((try kanon_split); subst_vars; kanon_bits; done)
     | skip)))
 
@@ -192,6 +257,7 @@ macro_rules | `(tactic| kanon_rule_close) => `(tactic| first
   | exact Refines.eq_ite_l
   | exact Refines.eq_ite_r
   | exact Refines.eq_lits
+  | exact Refines.eq_locLits
   | exact Refines.eq_floats
   | exact Refines.eq_ptrs)
 
@@ -206,7 +272,7 @@ macro "kanon_rule_apply" : tactic => `(tactic|
 /-- `kanon_rule_lift`, then the reduction of the refinement to its typing and
 value halves, on the structural values of the terms. -/
 macro "kanon_rule_core" : tactic => `(tactic| (
-  kanon_rule_lift
+  kanon_rule_lift_side
   kanon_rule_apply))
 
 /-- Proves the statement of an alternative of a `[@cases]` rule, as far as it

@@ -62,4 +62,45 @@ partial def natWidths (g : MVarId) : MetaM MVarId := g.withContext do
 open Lean Meta Elab Tactic in
 elab "kanon_nat_widths" : tactic => liftMetaTactic fun g => return [← natWidths g]
 
+open Lean Meta Elab Tactic in
+/-- `Kanon.Proof.liftGoal`, which leaves the goals that are not refinements (the
+`Nonzero v'` of the lifting lemmas of the rule functions with an operand at a subsort)
+instead of failing on them. -/
+partial def liftGoalSide : TacticM (List MVarId) := do
+  let g ← getMainGoal
+  let ty ← whnfR (← instantiateMVars (← g.getType))
+  unless ty.isAppOfArity ``Kanon.Sem.Refines 3 do return [g]
+  match ← Kanon.Proof.liftLemma? (ty.getArg! 2) with
+  | some l =>
+    evalTactic (← `(tactic| apply $(mkCIdent l) (by assumption)))
+    let mut out := []
+    for g' in ← getGoals do
+      unless ← g'.isAssigned do
+        setGoals [g']
+        out := out ++ (← liftGoalSide)
+    return out
+  | none =>
+    evalTactic (← `(tactic| exact Kanon.Sem.Refines.refl))
+    return []
+
+open Lean Meta Elab Tactic in
+/-- `kanon_lift_body` (Kanon's), with the goals of the subsorts left after the others. They
+only hold of well-typed terms, so when there are any, the lifting is done under the
+hypothesis `kw` that the spec is well-typed. -/
+elab "kanon_lift_body_side" : tactic => do
+  let s ← saveState
+  evalTactic (← `(tactic| apply Kanon.Sem.Refines.of_lift))
+  let hl :: rest ← getGoals | throwError "kanon_lift_body_side: no goal"
+  setGoals [hl]
+  let out ← liftGoalSide
+  if out.isEmpty then setGoals rest
+  else
+    s.restore
+    evalTactic (← `(tactic| refine Kanon.Sem.Refines.of_WT (fun $(mkIdent `kw) => ?_)))
+    evalTactic (← `(tactic| apply Kanon.Sem.Refines.of_lift))
+    let hl :: rest ← getGoals | throwError "kanon_lift_body_side: no goal"
+    setGoals [hl]
+    let out ← liftGoalSide
+    setGoals (rest ++ out)
+
 end Kanon.Lib

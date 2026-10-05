@@ -36,12 +36,7 @@ namespace Kanon
 
 open Classical BoolMod
 
-/-! ## Sorts and values -/
-
-/-- The sort of a type. Types are matched exactly: although SMT-LIB encodes
-locations as bit-vectors, Soteria's typed layer keeps them apart, and so may the
-simplifications. -/
-def Ty.sort (t : Ty) : Ty := t
+/-! ## Types and values -/
 
 /-- Types that have values: bit-vectors have a positive width. -/
 def Ty.WF : Ty → Prop
@@ -55,7 +50,6 @@ inductive Val where
   | ptr (n : Nat) (l o : BitVec n)
   | float (p : Fp) (x : FBits p)
   | seq (vs : List Val)
-  | ext (e : Nat)
 
 mutual
 def Val.hasSort : Val → Ty → Prop
@@ -65,7 +59,6 @@ def Val.hasSort : Val → Ty → Prop
   | .ptr n _ _, .TPointer m => (n : Int) = m ∧ 0 < n
   | .float p _, .TFloat q => p = q
   | .seq vs, .TSeq t => Val.hasSortList vs t
-  | .ext _, .TExtension _ => True
   | _, _ => False
 
 def Val.hasSortList : List Val → Ty → Prop
@@ -73,11 +66,10 @@ def Val.hasSortList : List Val → Ty → Prop
   | v :: vs, t => v.hasSort t ∧ Val.hasSortList vs t
 end
 
-def Val.hasTy (v : Val) (t : Ty) : Prop := v.hasSort t.sort
+def Val.hasTy (v : Val) (t : Ty) : Prop := v.hasSort t
 
 structure Env where
   var : Int → Option Val
-  ext : Ext → Ty → Option Val
 
 /-- Floating-point operations, abstractly, as functions on bit patterns (so
 NaN payloads are whatever the implementation produces). -/
@@ -98,8 +90,9 @@ structure FloatSem where
 
 /-! ## Well-typed terms -/
 
-/-! The typing of the operators, `Unop.WT`, `Binop.WT` and `Triop.WT`, is
-generated from `lang.knl` in `Typing.lean`. -/
+/-! The typing of the operators, `Op1.WT`, `Op2.WT`, `Op3.WT` and `OpN.WT` (over
+the type of all the operands of an n-ary operator), is generated from the
+declarations of the nodes in `Typing.lean`. -/
 
 mutual
 /-- Syntactic well-typedness. -/
@@ -107,25 +100,20 @@ def Term.WT : Term → Prop
   | .mk (.Var _) _ => True
   | .mk (.Bool _) t => t = .TBool
   | .mk (.Float f) t => t = .TFloat f.prec ∧ f.bits < 2 ^ f.prec.size
-  | .mk (.BitVec z) t =>
-      ∃ n : Nat, 0 < n ∧ (t = .TBitVector n ∨ t = .TLoc n) ∧ 0 ≤ z ∧ z < 2 ^ n
-  | .mk (.Ptr l o) t =>
-      ∃ n : Int, 0 < n ∧ t = .TPointer n ∧ l.ty.sort = .TLoc n ∧
-        o.ty.sort = .TBitVector n ∧ l.WT ∧ o.WT
+  | .mk (.BitVec z) t => ∃ n : Nat, 0 < n ∧ t = .TBitVector n ∧ 0 ≤ z ∧ z < 2 ^ n
+  | .mk (.LocLit z) t => ∃ n : Nat, 0 < n ∧ t = .TLoc n ∧ 0 ≤ z ∧ z < 2 ^ n
   | .mk (.Seq l) t => ∃ e, t = .TSeq e ∧ Term.WTList e l
-  | .mk (.Unop op a) t => op.WT a.ty.sort t.sort ∧ a.WT
-  | .mk (.Binop op a b) t => op.WT a.ty.sort b.ty.sort t.sort ∧ a.WT ∧ b.WT
-  | .mk (.Triop op a b c) t =>
-      op.WT a.ty.sort b.ty.sort c.ty.sort t.sort ∧ a.WT ∧ b.WT ∧ c.WT
-  | .mk (.Nop _ l) t => t = .TBool ∧ ∃ e, Term.WTList e l
+  | .mk (.Op1 op a) t => op.WT a.ty t ∧ a.WT
+  | .mk (.Op2 op a b) t => op.WT a.ty b.ty t ∧ a.WT ∧ b.WT
+  | .mk (.Op3 op a b c) t => op.WT a.ty b.ty c.ty t ∧ a.WT ∧ b.WT ∧ c.WT
+  | .mk (.OpN op l) t => ∃ e, op.WT e t ∧ Term.WTList e l
   | .mk (.Exists bs body) t =>
       t = .TBool ∧ (bs.map Prod.fst).Nodup ∧ (∀ b ∈ bs, b.2.WF) ∧ body.ty = .TBool ∧ body.WT
-  | .mk (.Extension _) _ => True
 
 /-- All the terms are well-typed, of the sort of [e]. -/
 def Term.WTList (e : Ty) : List Term → Prop
   | [] => True
-  | x :: xs => x.ty.sort = e.sort ∧ x.WT ∧ Term.WTList e xs
+  | x :: xs => x.ty = e ∧ x.WT ∧ Term.WTList e xs
 end
 
 /-! ## Evaluation -/
@@ -157,7 +145,7 @@ def checkedOp (c : Checked) (sovf uovf : ∀ {n : Nat}, BitVec n → BitVec n �
     if (c.signed && sovf x y) || (c.unsigned && uovf x y) then none
     else some (.bv _ (f x y)))
 
-def evUnop (FS : FloatSem) : Unop → Option Val → Option Val
+def evOp1 (FS : FloatSem) : Op1 → Option Val → Option Val
   | .Not, a => pnot Val.bool a
   | .GetPtrLoc, some (.ptr n l _) => some (.bv n l)
   | .GetPtrOfs, some (.ptr n _ o) => some (.bv n o)
@@ -182,7 +170,11 @@ def evUnop (FS : FloatSem) : Unop → Option Val → Option Val
   | .FIsPos, some (.float _ x) => some (.bool x.isPos)
   | _, _ => none
 
-def evBinop (FS : FloatSem) : Binop → Option Val → Option Val → Option Val
+def evPtr : Option Val → Option Val → Option Val
+  | some (.bv n l), some (.bv m o) => if h : m = n then some (.ptr n l (h ▸ o)) else none
+  | _, _ => none
+
+def evOp2 (FS : FloatSem) : Op2 → Option Val → Option Val → Option Val
   | .And, a, b => pand Val.bool a b
   | .Or, a, b => por Val.bool a b
   | .Eq, a, b => peq Val.bool a b
@@ -219,6 +211,7 @@ def evBinop (FS : FloatSem) : Binop → Option Val → Option Val → Option Val
   | .Shl, a, b => bvBin (fun x y => some (.bv _ (x <<< y))) a b
   | .LShr, a, b => bvBin (fun x y => some (.bv _ (x >>> y))) a b
   | .AShr, a, b => bvBin (fun x y => some (.bv _ (x.sshiftRight' y))) a b
+  | .Ptr, a, b => evPtr a b
 
 def evFma (FS : FloatSem) : Option Val → Option Val → Option Val → Option Val
   | some (.float p x), some (.float q y), some (.float r z) =>
@@ -227,10 +220,17 @@ def evFma (FS : FloatSem) : Option Val → Option Val → Option Val → Option 
       else none
   | _, _, _ => none
 
+def evOp3 (FS : FloatSem) : Op3 → Option Val → Option Val → Option Val → Option Val
+  | .Ite, g, a, b => pite Val.bool g a b
+  | .Fma, a, b, c => evFma FS a b c
+
+def evOpN : OpN → Option (List Val) → Option Val
+  | .Distinct, vs => pdistinct Val.bool vs
+
 /-- The environments that differ from [ρ] only on the variables bound by
 [bs], which they give values of the right types. -/
 def Env.Extends (ρ' ρ : Env) (bs : List (Int × Ty)) : Prop :=
-  ρ'.ext = ρ.ext ∧ (∀ v, (∀ b ∈ bs, b.1 ≠ v) → ρ'.var v = ρ.var v) ∧
+  (∀ v, (∀ b ∈ bs, b.1 ≠ v) → ρ'.var v = ρ.var v) ∧
     ∀ b ∈ bs, ∃ x, ρ'.var b.1 = some x ∧ x.hasTy b.2
 
 mutual
@@ -243,24 +243,16 @@ def ev (FS : FloatSem) : Env → Term → Option Val
   | _, .mk (.Bool b) _ => some (.bool b)
   | _, .mk (.Float f) _ => some f.sem
   | _, .mk (.BitVec z) t => some (.bv t.width (BitVec.ofInt _ z))
-  | ρ, .mk (.Ptr l o) _ =>
-      match ev FS ρ l, ev FS ρ o with
-      | some (.bv n x), some (.bv m y) => if h : m = n then some (.ptr n x (h ▸ y)) else none
-      | _, _ => none
+  | _, .mk (.LocLit z) t => some (.bv t.width (BitVec.ofInt _ z))
   | ρ, .mk (.Seq l) _ => (evList FS ρ l).map .seq
-  | ρ, .mk (.Unop op a) _ => evUnop FS op (ev FS ρ a)
-  | ρ, .mk (.Binop op a b) _ => evBinop FS op (ev FS ρ a) (ev FS ρ b)
-  | ρ, .mk (.Triop .Ite g a b) _ => pite Val.bool (ev FS ρ g) (ev FS ρ a) (ev FS ρ b)
-  | ρ, .mk (.Triop .Fma a b c) _ => evFma FS (ev FS ρ a) (ev FS ρ b) (ev FS ρ c)
-  | ρ, .mk (.Nop .Distinct l) _ => pdistinct Val.bool (evList FS ρ l)
+  | ρ, .mk (.Op1 op a) _ => evOp1 FS op (ev FS ρ a)
+  | ρ, .mk (.Op2 op a b) _ => evOp2 FS op (ev FS ρ a) (ev FS ρ b)
+  | ρ, .mk (.Op3 op a b c) _ => evOp3 FS op (ev FS ρ a) (ev FS ρ b) (ev FS ρ c)
+  | ρ, .mk (.OpN op l) _ => evOpN op (evList FS ρ l)
   | ρ, .mk (.Exists bs body) _ =>
       if ∀ ρ', ρ'.Extends ρ bs → ∃ b, ev FS ρ' body = some (.bool b) then
         some (.bool (decide (∃ ρ', ρ'.Extends ρ bs ∧ ev FS ρ' body = some (.bool true))))
       else none
-  | ρ, .mk (.Extension e) t =>
-      match ρ.ext e t with
-      | some x => if x.hasTy t then some x else none
-      | none => none
 
 def evList (FS : FloatSem) : Env → List Term → Option (List Val)
   | _, [] => some []
@@ -294,6 +286,14 @@ abbrev Refines (FS : FloatSem) : Term → Term → Prop := (sem FS).Refines
 
 instance {FS : FloatSem} : Refinement (Refines FS) := Sem.refinement
 
+/-- A term is not zero: whenever it has a bit-vector value, it is not zero, whatever the semantics of floats `FS`. This is
+the meaning of the subsort `TNonzero` (`[@lean "Nonzero"]`), which the statements
+of the rules assume of the divisor of `Div` and `Rem`. -/
+def Nonzero (t : Term) : Prop := ∀ FS ρ n (x : BitVec n), eval FS ρ t = some (.bv n x) → x ≠ 0
+
+/-- A term is zero: whenever it has a bit-vector value, it is zero (`TZero`), whatever `FS`. -/
+def Zero (t : Term) : Prop := ∀ FS ρ n (x : BitVec n), eval FS ρ t = some (.bv n x) → x = 0
+
 /-! ## Assumptions on the oracles -/
 
 def Float.WF (f : Float) : Prop := f.bits < 2 ^ f.prec.size
@@ -306,30 +306,30 @@ and that Floatml computes, on literals, the same values (bit patterns) as the
 float operations (of the same precision). -/
 structure Oracle.Compat (orc : Oracle) (FS : FloatSem) : Prop where
   sort_by_tag : ∀ l, (orc.sort_by_tag l).Perm l
-  bin : ∀ (op : Binop) (lit : Float → Float → Float),
+  bin : ∀ (op : Op2) (lit : Float → Float → Float),
     (op, lit) ∈ [(.FAdd, orc.f_add), (.FSub, orc.f_sub), (.FMul, orc.f_mul),
       (.FDiv, orc.f_div), (.FRem, orc.f_rem), (.FMin, orc.f_min), (.FMax, orc.f_max)] →
     ∀ f1 f2, f1.WF → f2.WF → f1.prec = f2.prec →
       (lit f1 f2).prec = f1.prec ∧ (lit f1 f2).WF ∧
-        evBinop FS op (some f1.sem) (some f2.sem) = some (lit f1 f2).sem
+        evOp2 FS op (some f1.sem) (some f2.sem) = some (lit f1 f2).sem
   fma : ∀ f1 f2 f3, f1.WF → f2.WF → f3.WF → f1.prec = f2.prec → f1.prec = f3.prec →
     (orc.f_fma f1 f2 f3).prec = f1.prec ∧ (orc.f_fma f1 f2 f3).WF ∧
       evFma FS (some f1.sem) (some f2.sem) (some f3.sem) = some (orc.f_fma f1 f2 f3).sem
   sqrt : ∀ f, f.WF → (orc.f_sqrt f).prec = f.prec ∧ (orc.f_sqrt f).WF ∧
-    evUnop FS .FSqrt (some f.sem) = some (orc.f_sqrt f).sem
+    evOp1 FS .FSqrt (some f.sem) = some (orc.f_sqrt f).sem
   round : ∀ rm f, f.WF → (orc.f_round rm f).prec = f.prec ∧ (orc.f_round rm f).WF ∧
-    evUnop FS (.FRound rm) (some f.sem) = some (orc.f_round rm f).sem
+    evOp1 FS (.FRound rm) (some f.sem) = some (orc.f_round rm f).sem
   convert : ∀ rm p f, f.WF → (orc.f_convert rm p f).prec = p ∧ (orc.f_convert rm p f).WF ∧
-    evUnop FS (.FloatOfFloat rm p) (some f.sem) = some (orc.f_convert rm p f).sem
+    evOp1 FS (.FloatOfFloat rm p) (some f.sem) = some (orc.f_convert rm p f).sem
   to_int : ∀ rm s n f z, f.WF → 0 < n → orc.f_to_int rm s n f = some z →
-    evUnop FS (.BvOfFloat rm s n) (some f.sem) = some (.bv n.toNat (BitVec.ofInt _ z))
+    evOp1 FS (.BvOfFloat rm s n) (some f.sem) = some (.bv n.toNat (BitVec.ofInt _ z))
   of_int : ∀ rm s p n z f, 0 < n → 0 ≤ z → z < 2 ^ n.toNat → orc.f_of_int rm s p n z = some f →
     f.prec = p ∧ f.WF ∧
-      evUnop FS (.FloatOfBv rm s p) (some (.bv n.toNat (BitVec.ofInt _ z))) = some f.sem
+      evOp1 FS (.FloatOfBv rm s p) (some (.bv n.toNat (BitVec.ofInt _ z))) = some f.sem
   /-- C's [fmod] agrees with its emulation from the IEEE remainder. -/
   fmod : ∀ f1 f2 ρ, f1.WF → f2.WF → f1.prec = f2.prec →
     (orc.f_fmod f1 f2).prec = f1.prec ∧ (orc.f_fmod f1 f2).WF ∧
-      eval FS ρ (raw_fmod_of_rem (.mk (.Binop .FRem f1.term f2.term) (.TFloat f1.prec))
+      eval FS ρ (raw_fmod_of_rem (.mk (.Op2 .FRem f1.term f2.term) (.TFloat f1.prec))
         f1.term f2.term) = some (orc.f_fmod f1 f2).sem
 
 end Kanon

@@ -17,7 +17,7 @@ open Classical
 
 /-! ## Integers, as Zarith's `Z` (two's complement bit operations) -/
 
-def zland : Int → Int → Int
+def z_land : Int → Int → Int
   | .ofNat m, .ofNat n => .ofNat (m &&& n)
   | .ofNat m, .negSucc n => .ofNat (Nat.bitwise (fun a b => a && !b) m n)
   | .negSucc m, .ofNat n => .ofNat (Nat.bitwise (fun a b => !a && b) m n)
@@ -38,7 +38,7 @@ def zlxor : Int → Int → Int
 def zlognot (a : Int) : Int := -a - 1
 
 /-- `Z.shift_left` (which raises on a negative shift). -/
-def zshiftl (a b : Int) : Int := a * 2 ^ b.toNat
+def z_lsl (a b : Int) : Int := a * 2 ^ b.toNat
 
 /-- `Z.shift_right`, rounding towards minus infinity. -/
 def zasr (a b : Int) : Int := a / 2 ^ b.toNat
@@ -65,12 +65,11 @@ mutual
 /-- The free variables of a term (see `iter_vars`). -/
 def Term.freeVars : Term → List Int
   | .mk (.Var v) _ => [v]
-  | .mk (.Ptr a b) _ => a.freeVars ++ b.freeVars
   | .mk (.Seq l) _ => Term.freeVarsList l
-  | .mk (.Unop _ a) _ => a.freeVars
-  | .mk (.Binop _ a b) _ => a.freeVars ++ b.freeVars
-  | .mk (.Triop _ a b c) _ => a.freeVars ++ b.freeVars ++ c.freeVars
-  | .mk (.Nop _ l) _ => Term.freeVarsList l
+  | .mk (.Op1 _ a) _ => a.freeVars
+  | .mk (.Op2 _ a b) _ => a.freeVars ++ b.freeVars
+  | .mk (.Op3 _ a b c) _ => a.freeVars ++ b.freeVars ++ c.freeVars
+  | .mk (.OpN _ l) _ => Term.freeVarsList l
   | .mk (.Exists bs body) _ =>
       body.freeVars.filter (fun v => !(bs.any (fun b => b.1 == v)))
   | .mk _ _ => []
@@ -106,47 +105,85 @@ def bv_one (n : Int) : Term := .mk (.BitVec 1) (.TBitVector n)
 def v_true : Term := .mk (.Bool true) .TBool
 def v_false : Term := .mk (.Bool false) .TBool
 
-/-! ## Bit-vector values -/
+/-! ## Bit-vector literals
 
-/-- A bit-vector value, of width `w`. -/
-structure BvVal where
-  w : Nat
-  x : BitVec w
-deriving DecidableEq
+A bit-vector literal is an integer; the operations on literals take the sorts of
+their operands, the first of which gives the width of the result, and reduce
+the result modulo `2 ^ width`. -/
 
-def bv_of_lit : Term → BvVal
-  | .mk (.BitVec z) t => ⟨(size_of_ty t).toNat, BitVec.ofInt _ z⟩
-  | _ => ⟨0, 0⟩
+def masked (w z : Int) : Int := z % 2 ^ w.toNat
 
-def lit (l : BvVal) : Term := .mk (.BitVec l.x.toNat) (.TBitVector l.w)
-def width (l : BvVal) : Int := l.w
-def to_z (signed : Bool) (l : BvVal) : Int := if signed then l.x.toInt else l.x.toNat
-def of_z (n z : Int) : BvVal := ⟨n.toNat, BitVec.ofInt _ z⟩
+/-- `z` read as a signed integer of `w` bits. -/
+def sext_of (w z : Int) : Int := signed_extract z 0 w
 
-/-! The operations are at the width of their first operand (the other one is
-truncated or extended to it, which is what the OCaml masking does). -/
+def shift_amount (w b : Int) : Option Int :=
+  if masked w b < w then some (masked w b) else none
 
-def lit_add (a b : BvVal) : BvVal := ⟨a.w, a.x + b.x.setWidth a.w⟩
-def lit_sub (a b : BvVal) : BvVal := ⟨a.w, a.x - b.x.setWidth a.w⟩
-def lit_mul (a b : BvVal) : BvVal := ⟨a.w, a.x * b.x.setWidth a.w⟩
-def lit_neg (a : BvVal) : BvVal := ⟨a.w, -a.x⟩
-def lit_udiv (a b : BvVal) : BvVal := ⟨a.w, a.x.smtUDiv (b.x.setWidth a.w)⟩
-def lit_sdiv (a b : BvVal) : BvVal := ⟨a.w, a.x.smtSDiv (b.x.setWidth a.w)⟩
-def lit_and (a b : BvVal) : BvVal := ⟨a.w, a.x &&& b.x.setWidth a.w⟩
-def lit_or (a b : BvVal) : BvVal := ⟨a.w, a.x ||| b.x.setWidth a.w⟩
-def lit_xor (a b : BvVal) : BvVal := ⟨a.w, a.x ^^^ b.x.setWidth a.w⟩
-def lit_not (a : BvVal) : BvVal := ⟨a.w, ~~~a.x⟩
-def lit_shl (a b : BvVal) : BvVal := ⟨a.w, a.x <<< b.x.setWidth a.w⟩
-def lit_lshr (a b : BvVal) : BvVal := ⟨a.w, a.x >>> b.x.setWidth a.w⟩
-def lit_ashr (a b : BvVal) : BvVal := ⟨a.w, a.x.sshiftRight' (b.x.setWidth a.w)⟩
-def lit_urem (a b : BvVal) : BvVal := ⟨a.w, a.x.umod (b.x.setWidth a.w)⟩
-def lit_srem (a b : BvVal) : BvVal := ⟨a.w, a.x.srem (b.x.setWidth a.w)⟩
-def lit_smod (a b : BvVal) : BvVal := ⟨a.w, a.x.smod (b.x.setWidth a.w)⟩
-def lit_extract (from_ to_ : Int) (l : BvVal) : BvVal :=
-  ⟨(to_ - from_ + 1).toNat, l.x.extractLsb' from_.toNat _⟩
-def lit_zext (k : Int) (l : BvVal) : BvVal := ⟨l.w + k.toNat, l.x.setWidth _⟩
-def lit_sext (k : Int) (l : BvVal) : BvVal := ⟨l.w + k.toNat, l.x.signExtend _⟩
-def lit_concat (l r : BvVal) : BvVal := ⟨l.w + r.w, l.x ++ r.x⟩
+def lit_add (s1 _ : Ty) (a b : Int) : Int := masked (size_of_ty s1) (a + b)
+def lit_sub (s1 _ : Ty) (a b : Int) : Int := masked (size_of_ty s1) (a - b)
+def lit_mul (s1 _ : Ty) (a b : Int) : Int := masked (size_of_ty s1) (a * b)
+def lit_neg (s1 : Ty) (a : Int) : Int := masked (size_of_ty s1) (-a)
+def lit_and (s1 _ : Ty) (a b : Int) : Int := masked (size_of_ty s1) (z_land a b)
+def lit_or (s1 _ : Ty) (a b : Int) : Int := masked (size_of_ty s1) (zlor a b)
+def lit_xor (s1 _ : Ty) (a b : Int) : Int := masked (size_of_ty s1) (zlxor a b)
+def lit_not (s1 : Ty) (a : Int) : Int := masked (size_of_ty s1) (zlognot a)
+
+def lit_shl (s1 _ : Ty) (a b : Int) : Int :=
+  match shift_amount (size_of_ty s1) b with
+  | some s => masked (size_of_ty s1) (z_lsl a s)
+  | none => masked (size_of_ty s1) 0
+
+def lit_lshr (s1 _ : Ty) (a b : Int) : Int :=
+  match shift_amount (size_of_ty s1) b with
+  | some s => masked (size_of_ty s1) (zasr a s)
+  | none => masked (size_of_ty s1) 0
+
+def lit_ashr (s1 _ : Ty) (a b : Int) : Int :=
+  let n := sext_of (size_of_ty s1) a
+  match shift_amount (size_of_ty s1) b with
+  | some s => masked (size_of_ty s1) (zasr n s)
+  | none => masked (size_of_ty s1) (if n < 0 then -1 else 0)
+
+def lit_smod (s1 _ : Ty) (a b : Int) : Int :=
+  let w := size_of_ty s1
+  let n := sext_of w a
+  let d := sext_of w b
+  if d = 0 then a
+  else
+    let r := trem n d
+    if r = 0 ∨ r.sign = d.sign then masked w r else masked w (r + d)
+
+def lit_extract (from_ to_ : Int) (_ : Ty) (a : Int) : Int :=
+  masked (to_ - from_ + 1) (zasr a from_)
+
+def lit_concat (_ s2 : Ty) (a b : Int) : Int := zlor (z_lsl a (size_of_ty s2)) b
+
+def lit_udiv (s1 _ : Ty) (a b : Int) : Int :=
+  let w := size_of_ty s1
+  let d := masked w b
+  if d = 0 then masked w (-1) else masked w (tdiv a d)
+
+def lit_sdiv (s1 _ : Ty) (a b : Int) : Int :=
+  let w := size_of_ty s1
+  let n := sext_of w a
+  let d := sext_of w b
+  if d = 0 then masked w (if n < 0 then 1 else -1) else masked w (tdiv n d)
+
+def lit_urem (s1 _ : Ty) (a b : Int) : Int :=
+  let w := size_of_ty s1
+  let d := masked w b
+  if d = 0 then a else masked w (trem a d)
+
+def lit_srem (s1 _ : Ty) (a b : Int) : Int :=
+  let w := size_of_ty s1
+  let n := sext_of w a
+  let d := sext_of w b
+  if d = 0 then a else masked w (trem n d)
+
+def lit_zext (_ : Int) (_ : Ty) (a : Int) : Int := a
+
+def lit_sext (k : Int) (s1 : Ty) (a : Int) : Int :=
+  masked (size_of_ty s1 + k) (sext_of (size_of_ty s1) a)
 
 /-! ## Floats, as Floatml's `AnyFloat` -/
 

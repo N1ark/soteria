@@ -8,7 +8,7 @@ import Kanon.Lib.Tactic
 Kanon's library proves the rules of the bool module once (`Kanon.BoolMod`), for
 any language that gives the terms of its nodes, its booleans and its primitives,
 with their laws: here `boolLang`. The only law that is more than the typing and
-evaluation of the nodes is that of `sure_neq`, which the other modules extend.
+evaluation of the nodes is that of `Bool.sure_neq`, which the other modules extend.
 The arms that they add to the rule functions of the bool module are proved
 here and in `Proofs/BoolCases.lean`.
 -/
@@ -20,21 +20,21 @@ open Classical
 /-! ## Bounds -/
 
 @[simp] theorem upper_bound_lt {s a z T T'} :
-    upper_bound (.mk (.Op2 (.Lt s) a (.mk (.BitVec z) T)) T') =
-      bv_to_z s (size a) z - 1 := by
-  simp [upper_bound, firstSome]
+    Bitvec.upper_bound (.mk (.Op2 (.Lt s) a (.mk (.BitVec z) T)) T') =
+      Bitvec.to_z s (Bitvec.size a) z - 1 := by
+  simp [Bitvec.upper_bound, firstSome]
 @[simp] theorem upper_bound_leq {s a z T T'} :
-    upper_bound (.mk (.Op2 (.Leq s) a (.mk (.BitVec z) T)) T') =
-      bv_to_z s (size a) z := by
-  simp [upper_bound, firstSome]
+    Bitvec.upper_bound (.mk (.Op2 (.Leq s) a (.mk (.BitVec z) T)) T') =
+      Bitvec.to_z s (Bitvec.size a) z := by
+  simp [Bitvec.upper_bound, firstSome]
 @[simp] theorem lower_bound_lt {s a z T T'} :
-    lower_bound (.mk (.Op2 (.Lt s) (.mk (.BitVec z) T) a) T') =
-      bv_to_z s (size a) z + 1 := by
-  simp [lower_bound, firstSome]
+    Bitvec.lower_bound (.mk (.Op2 (.Lt s) (.mk (.BitVec z) T) a) T') =
+      Bitvec.to_z s (Bitvec.size a) z + 1 := by
+  simp [Bitvec.lower_bound, firstSome]
 @[simp] theorem lower_bound_leq {s a z T T'} :
-    lower_bound (.mk (.Op2 (.Leq s) (.mk (.BitVec z) T) a) T') =
-      bv_to_z s (size a) z := by
-  simp [lower_bound, firstSome]
+    Bitvec.lower_bound (.mk (.Op2 (.Leq s) (.mk (.BitVec z) T) a) T') =
+      Bitvec.to_z s (Bitvec.size a) z := by
+  simp [Bitvec.lower_bound, firstSome]
 
 /-- Closes the comparisons of bit-vectors, as integers. -/
 macro "kanon_int_cmp" : tactic => `(tactic| (
@@ -87,21 +87,21 @@ theorem concat_ne_extract' {w p q n : Nat} {x : BitVec w} {a : BitVec p} {b : Bi
     (hj : j = i + p) : ¬ (b ++ a).setWidth n = x.extractLsb' i n :=
   fun e => h ((concat_eq_extract hn hj).1 e).2 ((concat_eq_extract hn hj).1 e).1
 
-/-! ## `sure_neq` -/
+/-! ## `Bool.sure_neq` -/
 
 theorem getD_firstSome_orElse {α} {o : Option α} {l : List (Option α)} {d : α} :
     (firstSome (o :: l)).getD d = match o with | some x => x | none => (firstSome l).getD d := by
   cases o <;> simp [firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse]
 
-theorem sure_neq_cases {a b : Term} (h : sure_neq a b = true) :
+theorem sure_neq_cases {a b : Term} (h : Bool.sure_neq a b = true) :
     a.ty ≠ b.ty ∨
     (∃ za zb Ta Tb, a = .mk (.BitVec za) Ta ∧ b = .mk (.BitVec zb) Tb ∧ za ≠ zb) ∨
     (∃ za zb Ta Tb, a = .mk (.LocLit za) Ta ∧ b = .mk (.LocLit zb) Tb ∧ za ≠ zb) ∨
     (∃ fa fb Ta Tb, a = .mk (.Float fa) Ta ∧ b = .mk (.Float fb) Tb ∧ fa ≠ fb) ∨
     (∃ ba bb Ta Tb, a = .mk (.Bool ba) Ta ∧ b = .mk (.Bool bb) Tb ∧ ba ≠ bb) ∨
     (∃ la oa lb ob Ta Tb, a = .mk (.Op2 .Ptr la oa) Ta ∧ b = .mk (.Op2 .Ptr lb ob) Tb ∧
-      (sure_neq la lb = true ∨ sure_neq oa ob = true)) := by
-  unfold sure_neq at h
+      (Bool.sure_neq la lb = true ∨ Bool.sure_neq oa ob = true)) := by
+  unfold Bool.sure_neq at h
   simp only [getD_firstSome_orElse, Bool.or_eq_true, Bool.not_eq_true', ty_eq] at h
   rcases h with h | h
   · left; exact of_decide_eq_false h
@@ -116,7 +116,7 @@ theorem sure_neq_cases {a b : Term} (h : sure_neq a b = true) :
          | exact ⟨_, _, ⟨rfl, rfl, rfl⟩, _, _, ⟨rfl, rfl, rfl⟩, by simpa using h⟩)
 
 theorem sure_neq_sound_aux {FS : FloatSem} (k : Nat) : ∀ {a b : Term} {ρ : Env} {u : Val},
-    sizeOf a < k → sure_neq a b = true →
+    sizeOf a < k → Bool.sure_neq a b = true →
     a.ty = b.ty → eval FS ρ a = some u → eval FS ρ b = some u → False := by
   induction k with
   | zero => intros; omega
@@ -179,7 +179,7 @@ theorem sure_neq_sound_aux {FS : FloatSem} (k : Nat) : ∀ {a b : Term} {ρ : En
       · exact ih (by simp at hk; omega) hp (hla'.trans hlb'.symm) hla hlb
       · exact ih (by simp at hk; omega) hp (hoa'.trans hob'.symm) hoa hob
 
-theorem sure_neq_sound {FS : FloatSem} {a b : Term} {ρ : Env} {u : Val} (h : sure_neq a b = true)
+theorem sure_neq_sound {FS : FloatSem} {a b : Term} {ρ : Env} {u : Val} (h : Bool.sure_neq a b = true)
     (ht : a.ty = b.ty) (ea : eval FS ρ a = some u) (eb : eval FS ρ b = some u) : False :=
   sure_neq_sound_aux (sizeOf a + 1) (Nat.lt_succ_self _) h ht ea eb
 
@@ -438,7 +438,7 @@ noncomputable def boolLang (FS : FloatSem) : BoolMod.Lang (sem FS) where
   iteK g a b := .Op3 .Ite g a b
   distinctK l := .OpN .Distinct l
   vbool := .bool
-  sure_neq := sure_neq
+  sure_neq := Bool.sure_neq
   ty_mk _ _ := rfl
   WT_lit _ _ := by simp [Term.WT]
   WT_not _ _ := by simp [Term.WT, Op1.WT, and_assoc]

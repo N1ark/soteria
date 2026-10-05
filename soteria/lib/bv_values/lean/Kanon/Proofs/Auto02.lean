@@ -19,24 +19,22 @@ namespace Kanon
 
 open Classical Kanon
 
-@[kanon_arm] theorem b_or.r_complementary.lt_lt.proof : b_or.r_complementary.lt_lt.Stmt := kanon_proof% b_or.r_complementary.lt_lt
+@[kanon_arm] theorem Bool.or_.r_complementary.lt_lt.proof : Bool.or_.r_complementary.lt_lt.Stmt := kanon_proof% Bool.or_.r_complementary.lt_lt
 
-@[kanon_arm] theorem b_or.r_complementary.lt_leq.proof : b_or.r_complementary.lt_leq.Stmt := kanon_proof% b_or.r_complementary.lt_leq
+@[kanon_arm] theorem Bool.or_.r_complementary.lt_leq.proof : Bool.or_.r_complementary.lt_leq.Stmt := kanon_proof% Bool.or_.r_complementary.lt_leq
 
-@[kanon_arm] theorem b_or.r_complementary.leq_lt.proof : b_or.r_complementary.leq_lt.Stmt := kanon_proof% b_or.r_complementary.leq_lt
+@[kanon_arm] theorem Bool.or_.r_complementary.leq_lt.proof : Bool.or_.r_complementary.leq_lt.Stmt := kanon_proof% Bool.or_.r_complementary.leq_lt
 
-@[kanon_arm] theorem b_or.r_complementary.leq_leq.proof : b_or.r_complementary.leq_leq.Stmt := kanon_proof% b_or.r_complementary.leq_leq
+@[kanon_arm] theorem Bool.or_.r_complementary.leq_leq.proof : Bool.or_.r_complementary.leq_leq.Stmt := kanon_proof% Bool.or_.r_complementary.leq_leq
 
-@[kanon_arm] theorem b_or.r_upper_eq.lt.proof : b_or.r_upper_eq.lt.Stmt := kanon_proof% b_or.r_upper_eq.lt
+@[kanon_arm] theorem Bool.or_.r_upper_eq.lt.proof : Bool.or_.r_upper_eq.lt.Stmt := kanon_proof% Bool.or_.r_upper_eq.lt
 
-@[kanon_arm] theorem b_or.r_upper_eq.leq.proof : b_or.r_upper_eq.leq.Stmt := kanon_proof% b_or.r_upper_eq.leq
+@[kanon_arm] theorem Bool.or_.r_upper_eq.leq.proof : Bool.or_.r_upper_eq.leq.Stmt := kanon_proof% Bool.or_.r_upper_eq.leq
 
-@[kanon_arm] theorem b_or.r_lower_eq.lt.proof : b_or.r_lower_eq.lt.Stmt := kanon_proof% b_or.r_lower_eq.lt
+@[kanon_arm] theorem Bool.or_.r_lower_eq.lt.proof : Bool.or_.r_lower_eq.lt.Stmt := kanon_proof% Bool.or_.r_lower_eq.lt
 
-@[kanon_arm] theorem b_or.r_lower_eq.leq.proof : b_or.r_lower_eq.leq.Stmt := kanon_proof% b_or.r_lower_eq.leq
+@[kanon_arm] theorem Bool.or_.r_lower_eq.leq.proof : Bool.or_.r_lower_eq.leq.Stmt := kanon_proof% Bool.or_.r_lower_eq.leq
 
-@[kanon_arm] theorem b_or.r_upper_bounds.lt_lt.proof : b_or.r_upper_bounds.lt_lt.Stmt := kanon_proof% b_or.r_upper_bounds.lt_lt
+@[kanon_arm] theorem Bool.or_.r_upper_bounds.lt_lt.proof : Bool.or_.r_upper_bounds.lt_lt.Stmt := kanon_proof% Bool.or_.r_upper_bounds.lt_lt
 
-@[kanon_arm] theorem b_or.r_upper_bounds.lt_leq.proof : b_or.r_upper_bounds.lt_leq.Stmt := kanon_proof% b_or.r_upper_bounds.lt_leq
-
-end Kanon
+@[kanon_arm] theorem Bool.or_.r_upper_bounds.lt_leq.proof : Bool.or_.r_upper_bounds.lt_leq.Stmt := kanon_proof% Bool.or_.r_upper_bounds.lt_leq

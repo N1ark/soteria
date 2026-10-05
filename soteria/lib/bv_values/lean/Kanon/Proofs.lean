@@ -39,5 +39,3 @@ import Kanon.Proofs.Auto31
 import Kanon.Proofs.Auto32
 import Kanon.Proofs.Auto33
 import Kanon.Proofs.Auto34
-import Kanon.Proofs.Auto35
-import Kanon.Proofs.Auto36

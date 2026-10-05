@@ -128,15 +128,15 @@ theorem zext_div_ok {m n : Nat} (hmn : m ≤ n) (x : BitVec m) {z : Int} (h0 : 0
       Nat.mod_eq_of_lt (by have := Nat.div_le_self x.toNat z.toNat; omega)]
   · simp
 
-@[kanon_arm] theorem bv_add.r_default.main.proof : bv_add.r_default.main.Stmt := by
+@[kanon_arm] theorem Bitvec.add.r_default.main.proof : Bitvec.add.r_default.main.Stmt := by
   intro FS O hO checked v1 v2
-  simp only [bv_add.spec, mk_commut_binop]
+  simp only [Bitvec.add.spec, mk_commut_binop]
   refine Sem.Refines.trans Refines.add_no_wrap ?_
   split
   · exact Sem.Refines.refl
   · exact Refines.comm (by simp [Op2.Comm]) (fun _ => rfl)
 
-@[kanon_arm] theorem bv_div.r_zext.main.proof : bv_div.r_zext.main.Stmt := by
+@[kanon_arm] theorem Bitvec.div.r_zext.main.proof : Bitvec.div.r_zext.main.Stmt := by
   kanon_rule_sem
   all_goals kanon_split
   all_goals subst_vars

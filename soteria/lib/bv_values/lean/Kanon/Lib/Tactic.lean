@@ -154,7 +154,7 @@ macro "kanon_zlits" : tactic => `(tactic| (
   (repeat' rw [emod_two_pow_of_lt (by assumption) (by assumption)] at *)
   (repeat' rw [Int.max_eq_left (by assumption)] at *)))
 
-/-- Writes a power of two of the guards (`is_pow2 z`) as `2 ^ k`. -/
+/-- Writes a power of two of the guards (`Bitvec.is_pow2 z`) as `2 ^ k`. -/
 macro "kanon_pow2" : tactic => `(tactic| (
   obtain ⟨_, h⟩ := is_pow2_exists ‹_›
   subst h
@@ -182,12 +182,12 @@ the types in the guards (`kanon_guards`), and the bodies of the rules
 (`kanon_body`). -/
 
 attribute [kanon_lits] den denB BitVec.setWidth_eq Term.ty_mk bv_zero bv_one mk_masked mk_bv
-  v_true v_false of_bool size_of_ty_bitVector Int.toNat_natCast Int.reduceToNat
+  v_true v_false Bool.of_bool size_of_ty_bitVector Int.toNat_natCast Int.reduceToNat
 
-attribute [kanon_guards] unchecked checked_both checked_signed checked_unsigned checked_meet
-  checked_has checked_of_signed is_checked ty_eq Term.ty_mk is_bv_iff
+attribute [kanon_guards] Bitvec.unchecked Bitvec.checked_both Bitvec.checked_signed Bitvec.checked_unsigned Bitvec.checked_meet
+  Bitvec.checked_has Bitvec.checked_of_signed Bitvec.is_checked ty_eq Term.ty_mk is_bv_iff
 
-attribute [kanon_body] ty_eq mk_commut_binop signed_to_unsigned_cmp
+attribute [kanon_body] ty_eq mk_commut_binop Bitvec.signed_to_unsigned_cmp
 
 set_option hygiene false in
 /-- The operations and helpers on literals in range, as the operations on the
@@ -221,7 +221,7 @@ macro "kanon_sem_core_bv" : tactic => `(tactic| (
        kanon_lit_ops
        kanon_cases
        all_goals kanon_bool_vars)
-  all_goals (try simp_all [unchecked, checked_signed, checked_unsigned, checked_meet])
+  all_goals (try simp_all [Bitvec.unchecked, Bitvec.checked_signed, Bitvec.checked_unsigned, Bitvec.checked_meet])
   all_goals (try (repeat' split at h))
   all_goals (try simp_all [ssubOverflow_zero_left])
   all_goals (try (repeat' apply And.intro))))

@@ -3,7 +3,7 @@ import Kanon.Lib.Msb
 /-!
 # Comparisons
 
-Tactics and lemmas for the alternatives of `bv_lt` and `bv_leq`. `kanon_cmp`
+Tactics and lemmas for the alternatives of `Bitvec.lt` and `Bitvec.leq`. `kanon_cmp`
 lifts the body (splitting all its conditionals), reduces the value half of the
 refinement to the values of the atoms (`kanon_cmp_sem`, keeping the literals as
 `BitVec` values), and closes the goals with `omega`, on the integer values
@@ -12,8 +12,8 @@ refinement to the values of the atoms (`kanon_cmp_sem`, keeping the literals as
 differences and negations, the relation of signed and unsigned values, the
 cancellation of common factors and the quotients by constants.
 
-Three helpers of the rules have their own lemmas: `unsigned_ub`
-(`den_le_unsigned_ub`), `cancellable` (`cancellable_den`) and `lt_zero_aux`
+Three helpers of the rules have their own lemmas: `Bitvec.unsigned_ub`
+(`den_le_unsigned_ub`), `Bitvec.cancellable` (`cancellable_den`) and `lt_zero_aux`
 (`refines_lt_zero_aux`).
 -/
 
@@ -39,29 +39,29 @@ variable {n : Nat} (hn : 0 < n) {x y : Int} (hx0 : 0 ≤ x) (hx1 : x < 2 ^ n)
 include hn hx0 hx1
 
 theorem is_min_of_ofInt (s : Bool) :
-    is_min_of s n x =
+    Bitvec.is_min_of s n x =
       decide (if s then (BitVec.ofInt n x).toInt = -2 ^ (n - 1) else (BitVec.ofInt n x).toNat = 0) := by
   cases s
-  · simp only [is_min_of, min_for_false, bv_to_z_ofInt hn _ hx0 hx1, iv, Bool.false_eq_true,
+  · simp only [Bitvec.is_min_of, min_for_false, bv_to_z_ofInt hn _ hx0 hx1, iv, Bool.false_eq_true,
       if_false, decide_eq_decide]
     omega
-  · simp [is_min_of, min_for_true hn, bv_to_z_ofInt hn _ hx0 hx1, iv]
+  · simp [Bitvec.is_min_of, min_for_true hn, bv_to_z_ofInt hn _ hx0 hx1, iv]
 
 theorem is_max_of_ofInt (s : Bool) :
-    is_max_of s n x =
+    Bitvec.is_max_of s n x =
       decide (if s then (BitVec.ofInt n x).toInt = 2 ^ (n - 1) - 1
         else ((BitVec.ofInt n x).toNat : Int) = 2 ^ n - 1) := by
-  cases s <;> simp [is_max_of, max_for_true hn, bv_to_z_ofInt hn _ hx0 hx1, iv]
+  cases s <;> simp [Bitvec.is_max_of, max_for_true hn, bv_to_z_ofInt hn _ hx0 hx1, iv]
 
 include hn in
 theorem const_keeps_in_range_ofInt (s : Bool) {y : Int} (hy0 : 0 ≤ y) (hy1 : y < 2 ^ n) :
-    const_keeps_in_range s n x y =
+    Bitvec.const_keeps_in_range s n x y =
       decide ((0 ≤ iv s (BitVec.ofInt n x) ∧ 0 ≤ iv s (BitVec.ofInt n x) - iv s (BitVec.ofInt n y) ∧
           iv s (BitVec.ofInt n x) - iv s (BitVec.ofInt n y) ≤ iv s (BitVec.ofInt n x)) ∨
         (iv s (BitVec.ofInt n x) ≤ 0 ∧
           iv s (BitVec.ofInt n x) ≤ iv s (BitVec.ofInt n x) - iv s (BitVec.ofInt n y) ∧
           iv s (BitVec.ofInt n x) - iv s (BitVec.ofInt n y) ≤ 0)) := by
-  unfold const_keeps_in_range zmin zmax
+  unfold Bitvec.const_keeps_in_range Bitvec.zmin Bitvec.zmax
   rw [bv_to_z_ofInt hn _ hx0 hx1, bv_to_z_ofInt hn _ hy0 hy1]
   generalize iv s (BitVec.ofInt n x) = a
   generalize iv s (BitVec.ofInt n y) = b
@@ -87,21 +87,21 @@ theorem eq_intMin_iff {n : Nat} (hn : 0 < n) (x : BitVec n) :
     x = BitVec.intMin n ↔ x.toInt = -2 ^ (n - 1) := by
   rw [← BitVec.toInt_inj, BitVec.toInt_intMin_of_pos hn]
 
-/-! ## The helpers on terms: `unsigned_ub`, `cancellable` -/
+/-! ## The helpers on terms: `Bitvec.unsigned_ub`, `Bitvec.cancellable` -/
 
-/-- The values of a bit-vector term are below `2 ^ (msb_of v + 1)`. -/
+/-- The values of a bit-vector term are below `2 ^ (Bitvec.msb_of v + 1)`. -/
 theorem msb_of_bound {FS : FloatSem} {ρ : Env} {v : Term} {n : Nat} {x : BitVec n}
     (w : v.WT) (ht : v.ty = .TBitVector n) (h : den FS ρ n v = some x) :
-    (x.toNat : Int) < 2 ^ (msb_of v + 1).toNat := by
+    (x.toNat : Int) < 2 ^ (Bitvec.msb_of v + 1).toNat := by
   exact_mod_cast den_msb w ht h
 
 theorem den_le_unsigned_ub {FS : FloatSem} {ρ : Env} {k : Kind} {n : Nat}
     (w : (Term.mk k (.TBitVector n)).WT) :
     ∀ x, den FS ρ n (Term.mk k (.TBitVector n)) = some x →
-      (x.toNat : Int) ≤ unsigned_ub (Term.mk k (.TBitVector n)) := by
+      (x.toNat : Int) ≤ Bitvec.unsigned_ub (Term.mk k (.TBitVector n)) := by
   intro x h
   have := msb_of_bound w rfl h
-  simp only [unsigned_ub, z_lsl, Int.one_mul]; omega
+  simp only [Bitvec.unsigned_ub, z_lsl, Int.one_mul]; omega
 
 open Lean in
 /-- The float semantics and the environment of the context. -/
@@ -112,12 +112,12 @@ def findSemantics (lctx : LocalContext) : Option (Expr × Expr) := do
 
 open Lean Meta Elab Tactic in
 /-- Adds `den_le_unsigned_ub` for the well-typed terms of the context, when the
-goal or a hypothesis mentions `unsigned_ub`. -/
+goal or a hypothesis mentions `Bitvec.unsigned_ub`. -/
 elab "kanon_ub_facts" : tactic => liftMetaTactic fun g => g.withContext do
-  let mut used := (← instantiateMVars (← g.getType)).find? (·.isConstOf ``unsigned_ub) |>.isSome
+  let mut used := (← instantiateMVars (← g.getType)).find? (·.isConstOf ``Bitvec.unsigned_ub) |>.isSome
   for d in (← getLCtx) do
     if !d.isImplementationDetail &&
-        ((← instantiateMVars d.type).find? (·.isConstOf ``unsigned_ub)).isSome then used := true
+        ((← instantiateMVars d.type).find? (·.isConstOf ``Bitvec.unsigned_ub)).isSome then used := true
   unless used do return [g]
   let lctx ← getLCtx
   let some (fs, ρ) := findSemantics lctx | return [g]
@@ -135,7 +135,7 @@ elab "kanon_ub_facts" : tactic => liftMetaTactic fun g => g.withContext do
 
 /-- The cancellable factors are positive (as signed integers when `s`). -/
 theorem cancellable_den {FS : FloatSem} {ρ : Env} {s : Bool} {k : Kind} {n : Nat}
-    (w : (Term.mk k (.TBitVector n)).WT) (h : cancellable s (Term.mk k (.TBitVector n)) = true) :
+    (w : (Term.mk k (.TBitVector n)).WT) (h : Bitvec.cancellable s (Term.mk k (.TBitVector n)) = true) :
     ∀ A, den FS ρ n (Term.mk k (.TBitVector n)) = some A →
       if s then 0 < A.toInt else 0 < A.toNat := by
   intro A hA
@@ -144,16 +144,16 @@ theorem cancellable_den {FS : FloatSem} {ρ : Env} {s : Bool} {k : Kind} {n : Na
     obtain ⟨hn, h0, h1⟩ := WT_bitVec_bv.1 w
     simp only [den, Option.some.injEq] at hA; subst hA
     cases s
-    · unfold cancellable sure_neq at h
-      simp [firstSome, ty, size, bv_zero, HOrElse.hOrElse, OrElse.orElse, Option.orElse] at h
+    · unfold Bitvec.cancellable Bool.sure_neq at h
+      simp [firstSome, ty, Bitvec.size, bv_zero, HOrElse.hOrElse, OrElse.orElse, Option.orElse] at h
       simp only [Bool.false_eq_true, ite_false]
       rw [toNat_ofInt_of_lt h0 (by simpa using h1)]; omega
-    · simp [cancellable, firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse] at h
+    · simp [Bitvec.cancellable, firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse] at h
       rw [bv_to_z_true (by omega)] at h
       simpa using h
   all_goals cases s
-  all_goals (unfold cancellable at h; try unfold sure_neq at h)
-  all_goals simp [firstSome, ty, size, bv_zero, HOrElse.hOrElse, OrElse.orElse, Option.orElse] at h
+  all_goals (unfold Bitvec.cancellable at h; try unfold Bool.sure_neq at h)
+  all_goals simp [firstSome, ty, Bitvec.size, bv_zero, HOrElse.hOrElse, OrElse.orElse, Option.orElse] at h
 
 open Lean Meta Elab Tactic in
 /-- Adds `cancellable_den` for the cancellable terms of the context. -/
@@ -165,7 +165,7 @@ elab "kanon_cancel_facts" : tactic => liftMetaTactic fun g => g.withContext do
     if d.isImplementationDetail then continue
     let ty ← instantiateMVars d.type
     let some (_, lhs, _) := ty.eq? | continue
-    unless lhs.isAppOfArity ``Kanon.cancellable 2 do continue
+    unless lhs.isAppOfArity ``Kanon.Bitvec.cancellable 2 do continue
     let a := lhs.appArg!
     let some wt := lctx.findDecl? fun d' =>
         if d'.type.isAppOfArity ``Kanon.Term.WT 1 && d'.type.appArg! == a then some d'.toExpr
@@ -182,8 +182,8 @@ elab "kanon_cancel_facts" : tactic => liftMetaTactic fun g => g.withContext do
 /-- An addition that cannot wrap around, by the bounds on its operands, may be
 checked unsigned. -/
 theorem Refines.add_no_wrap {FS : FloatSem} {c : Checked} {a b : Term} {t : Ty} :
-    Refines FS (.mk (.Op2 (.Add c) a b) t) (.mk (.Op2 (.Add (no_wrap c a b)) a b) t) := by
-  unfold no_wrap
+    Refines FS (.mk (.Op2 (.Add c) a b) t) (.mk (.Op2 (.Add (Bitvec.no_wrap c a b)) a b) t) := by
+  unfold Bitvec.no_wrap
   split
   · rename_i h
     simp only [Bool.and_eq_true, decide_eq_true_eq] at h
@@ -680,7 +680,7 @@ macro "kanon_cmp_omega" : tactic => `(tactic| (
   all_goals kanon_gen_values
   all_goals omega))
 
-/-- Proves the statement of an alternative of `bv_lt` or `bv_leq`, as far as
+/-- Proves the statement of an alternative of `Bitvec.lt` or `Bitvec.leq`, as far as
 it can. -/
 macro "kanon_cmp" : tactic => `(tactic| (
   kanon_rule_core
@@ -700,6 +700,6 @@ macro_rules
            all_goals (try (simp_all [$ls,*]; done))
            all_goals (try (kanon_cmp_omega; done)))))
 
-attribute [kanon_tactic "kanon_cmp"] bv_lt.spec bv_leq.spec
+attribute [kanon_tactic "kanon_cmp"] Bitvec.lt.spec Bitvec.leq.spec
 
 end Kanon.Lib

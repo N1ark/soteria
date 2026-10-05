@@ -6,7 +6,7 @@ namespace Kanon
 
 open Classical Lib
 
-@[kanon_arm] theorem bv_or.r_extend_shl.main.proof : bv_or.r_extend_shl.main.Stmt := by
+@[kanon_arm] theorem Bitvec.or_.r_extend_shl.main.proof : Bitvec.or_.r_extend_shl.main.Stmt := by
   intro FS O hO nx base t5 w8 tail t11 z T t13 hg
   simp only [Bool.and_eq_true, decide_eq_true_eq] at hg
   obtain ⟨hs, hnx⟩ := hg

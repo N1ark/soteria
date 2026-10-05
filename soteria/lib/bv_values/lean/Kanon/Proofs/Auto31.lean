@@ -19,24 +19,32 @@ namespace Kanon
 
 open Classical Kanon
 
-@[kanon_arm] theorem bv_add_overflows.r_of_bool.swap.proof : bv_add_overflows.r_of_bool.swap.Stmt := kanon_proof% bv_add_overflows.r_of_bool.swap
+@[kanon_arm] theorem Float.is_negative.r_default.main.proof : Float.is_negative.r_default.main.Stmt := by
+  first | (kanon_float; done) | kanon_auto
 
-@[kanon_arm] theorem bv_add_overflows.r_default.main.proof : bv_add_overflows.r_default.main.Stmt := kanon_proof% bv_add_overflows.r_default.main
+@[kanon_arm] theorem Float.is_positive.r_lit.main.proof : Float.is_positive.r_lit.main.Stmt := by
+  first | (kanon_float; done) | kanon_auto
 
-@[kanon_arm] theorem bv_mul_overflows.r_lits.main.proof : bv_mul_overflows.r_lits.main.Stmt := kanon_proof% bv_mul_overflows.r_lits.main
+@[kanon_arm] theorem Float.is_positive.r_default.main.proof : Float.is_positive.r_default.main.Stmt := by
+  first | (kanon_float; done) | kanon_auto
 
-@[kanon_arm] theorem bv_mul_overflows.r_size1.main.proof : bv_mul_overflows.r_size1.main.Stmt := kanon_proof% bv_mul_overflows.r_size1.main
+@[kanon_arm] theorem Float.cast.r_default.main.proof : Float.cast.r_default.main.Stmt := by
+  first | (kanon_float; done) | kanon_auto
 
-@[kanon_arm] theorem bv_mul_overflows.r_msb.main.proof : bv_mul_overflows.r_msb.main.Stmt := kanon_proof% bv_mul_overflows.r_msb.main
+@[kanon_arm] theorem Float.eq.r_lits.main.proof : Float.eq.r_lits.main.Stmt := by
+  first | (kanon_float; done) | kanon_auto
 
-@[kanon_arm] theorem bv_mul_overflows.r_const.main.proof : bv_mul_overflows.r_const.main.Stmt := kanon_proof% bv_mul_overflows.r_const.main
+@[kanon_arm] theorem Float.lt.r_lits.main.proof : Float.lt.r_lits.main.Stmt := by
+  first | (kanon_float; done) | kanon_auto
 
-@[kanon_arm] theorem bv_mul_overflows.r_const.swap.proof : bv_mul_overflows.r_const.swap.Stmt := kanon_proof% bv_mul_overflows.r_const.swap
+@[kanon_arm] theorem Float.lt.r_default.main.proof : Float.lt.r_default.main.Stmt := by
+  first | (kanon_float; done) | kanon_auto
 
-@[kanon_arm] theorem bv_mul_overflows.r_div.main.proof : bv_mul_overflows.r_div.main.Stmt := kanon_proof% bv_mul_overflows.r_div.main
+@[kanon_arm] theorem Float.leq.r_lits.main.proof : Float.leq.r_lits.main.Stmt := by
+  first | (kanon_float; done) | kanon_auto
 
-@[kanon_arm] theorem bv_mul_overflows.r_default.main.proof : bv_mul_overflows.r_default.main.Stmt := kanon_proof% bv_mul_overflows.r_default.main
+@[kanon_arm] theorem Float.leq.r_default.main.proof : Float.leq.r_default.main.Stmt := by
+  first | (kanon_float; done) | kanon_auto
 
-@[kanon_arm] theorem bv_neg_overflows.r_main.main.proof : bv_neg_overflows.r_main.main.Stmt := kanon_proof% bv_neg_overflows.r_main.main
-
-end Kanon
+@[kanon_arm] theorem Float.add.r_lits.main.proof : Float.add.r_lits.main.Stmt := by
+  first | (kanon_float; done) | kanon_auto

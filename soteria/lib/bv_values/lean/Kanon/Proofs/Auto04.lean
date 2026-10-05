@@ -19,24 +19,32 @@ namespace Kanon
 
 open Classical Kanon
 
-@[kanon_arm] theorem sem_eq.r_bvs.bitVec_bitVec.proof : sem_eq.r_bvs.bitVec_bitVec.Stmt := kanon_proof% sem_eq.r_bvs.bitVec_bitVec
+@[kanon_arm] theorem Bool.eq.r_bvs.bitVec_bitVec.proof : Bool.eq.r_bvs.bitVec_bitVec.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem sem_eq.r_bvs.locLit_locLit.proof : sem_eq.r_bvs.locLit_locLit.Stmt := kanon_proof% sem_eq.r_bvs.locLit_locLit
+@[kanon_arm] theorem Bool.eq.r_bvs.locLit_locLit.proof : Bool.eq.r_bvs.locLit_locLit.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem sem_eq.r_neg.main.proof : sem_eq.r_neg.main.Stmt := kanon_proof% sem_eq.r_neg.main
+@[kanon_arm] theorem Bool.eq.r_neg.main.proof : Bool.eq.r_neg.main.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem sem_eq.r_not.main.proof : sem_eq.r_not.main.Stmt := kanon_proof% sem_eq.r_not.main
+@[kanon_arm] theorem Bool.eq.r_not.main.proof : Bool.eq.r_not.main.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem sem_eq.r_add_const.main.proof : sem_eq.r_add_const.main.Stmt := kanon_proof% sem_eq.r_add_const.main
+@[kanon_arm] theorem Bool.eq.r_add_const.main.proof : Bool.eq.r_add_const.main.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem sem_eq.r_sub_const1.main.proof : sem_eq.r_sub_const1.main.Stmt := kanon_proof% sem_eq.r_sub_const1.main
+@[kanon_arm] theorem Bool.eq.r_sub_const1.main.proof : Bool.eq.r_sub_const1.main.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem sem_eq.r_sub_const2.main.proof : sem_eq.r_sub_const2.main.Stmt := kanon_proof% sem_eq.r_sub_const2.main
+@[kanon_arm] theorem Bool.eq.r_sub_const2.main.proof : Bool.eq.r_sub_const2.main.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem sem_eq.r_self_add.main.proof : sem_eq.r_self_add.main.Stmt := kanon_proof% sem_eq.r_self_add.main
+@[kanon_arm] theorem Bool.eq.r_self_add.main.proof : Bool.eq.r_self_add.main.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem sem_eq.r_add_add.main.proof : sem_eq.r_add_add.main.Stmt := kanon_proof% sem_eq.r_add_add.main
+@[kanon_arm] theorem Bool.eq.r_add_add.main.proof : Bool.eq.r_add_add.main.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem sem_eq.r_or_zero.main.proof : sem_eq.r_or_zero.main.Stmt := kanon_proof% sem_eq.r_or_zero.main
-
-end Kanon
+@[kanon_arm] theorem Bool.eq.r_or_zero.main.proof : Bool.eq.r_or_zero.main.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto

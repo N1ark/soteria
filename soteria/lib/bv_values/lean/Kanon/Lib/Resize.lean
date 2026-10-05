@@ -9,7 +9,7 @@ namespace Kanon.Lib
 
 open Classical
 
-/-- The type of a literal whose width is its own size, as in `bv_zero (size v)`
+/-- The type of a literal whose width is its own size, as in `bv_zero (Bitvec.size v)`
 compared to `v`. -/
 @[simp] theorem eq_bitVector_size_self {T : Ty} :
     T = .TBitVector (size_of_ty T) ↔ ∃ m, T = .TBitVector m :=
@@ -57,16 +57,16 @@ theorem lowbit_spec : ∀ m : Nat, 0 < m →
 termination_by m => m
 
 /-- The bits of a literal below its lowest set bit are zero. -/
-theorem lsb_dvd {n : Int} (h0 : 0 ≤ n) {j : Int} (hj : j < lsb n) (hj0 : 0 ≤ j) :
+theorem lsb_dvd {n : Int} (h0 : 0 ≤ n) {j : Int} (hj : j < Bitvec.lsb n) (hj0 : 0 ≤ j) :
     2 ^ (j.toNat + 1) ∣ n.toNat := by
   obtain ⟨m, rfl⟩ := Int.eq_ofNat_of_zero_le h0
   simp only [Int.toNat_natCast]
   rcases m with _ | k
   · exact Nat.dvd_zero _
   obtain ⟨t, ht, hd⟩ := lowbit_spec (k + 1) (by omega)
-  have : lsb ((k + 1 : Nat) : Int) = t := by
+  have : Bitvec.lsb ((k + 1 : Nat) : Int) = t := by
     have hne : ((k + 1 : Nat) : Int) ≠ 0 := by omega
-    simp only [lsb, hne, decide_false, Bool.false_eq_true, ↓reduceIte]
+    simp only [Bitvec.lsb, hne, decide_false, Bool.false_eq_true, ↓reduceIte]
     show log2 (z_land (Int.ofNat (k + 1)) (Int.negSucc k)) = t
     simp only [Nat.add_sub_cancel] at ht
     simp only [z_land, log2, Int.ofNat_eq_natCast, Int.toNat_natCast, ht, Nat.log2_two_pow]
@@ -89,7 +89,7 @@ theorem getLsbD_add_of_dvd {w : Nat} (a b : BitVec w) {q : Nat} (h : 2 ^ q ∣ a
 
 /-- Adding a constant whose lowest set bit is above the extracted bits. -/
 theorem extractLsb'_add_lsb {w n : Nat} {i j z : Int} (x : BitVec w) (h0 : 0 ≤ z)
-    (h1 : z < 2 ^ w) (hi : 0 ≤ i) (hij : i ≤ j) (hj : j < lsb z) (hn : j - i + 1 = n) :
+    (h1 : z < 2 ^ w) (hi : 0 ≤ i) (hij : i ≤ j) (hj : j < Bitvec.lsb z) (hn : j - i + 1 = n) :
     (BitVec.ofInt w z + x).extractLsb' i.toNat n = x.extractLsb' i.toNat n := by
   have hd := lsb_dvd h0 hj (by omega)
   ext t ht
@@ -185,16 +185,16 @@ theorem Refines.funop_invol {op : Op1} (hop : op = .FAbs ∨ op = .FNeg ∨ op =
 
 /-- `fp.eq` against a float literal, given how the general case is decided. -/
 theorem Refines.feq_lit {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {f : Float} {T : Ty}
-    {v2 E : Term} (hE : Refines FS (sem_eq.spec (.mk (.Float f) T) v2) E) :
-    Refines FS (float_eq.spec (.mk (.Float f) T) v2)
+    {v2 E : Term} (hE : Refines FS (Bool.eq.spec (.mk (.Float f) T) v2) E) :
+    Refines FS (Float.eq.spec (.mk (.Float f) T) v2)
       (if f_is_nan f then v_false
        else if f_is_zero f then O.float_is_floatclass .Zero v2 else E) := by
-  have ev1 : ∀ ρ v, eval FS ρ (float_eq.spec (.mk (.Float f) T) v2) = some v →
+  have ev1 : ∀ ρ v, eval FS ρ (Float.eq.spec (.mk (.Float f) T) v2) = some v →
       ∃ y, eval FS ρ v2 = some (.float f.prec y) ∧ v = .bool (f.val.eq y) := by
     intro ρ v e
     have w := eval_WT e
     have ⟨_, w1, _⟩ := WT_op2.1 w
-    rw [float_eq.spec, eval_op2 w, eval_float w1] at e
+    rw [Float.eq.spec, eval_op2 w, eval_float w1] at e
     simp only [evOp2, fBin_eq_some, Float.sem] at e
     obtain ⟨p, x, y, h1, h2, h3⟩ := e
     simp at h1; obtain ⟨rfl, h1⟩ := h1; subst h1
@@ -202,7 +202,7 @@ theorem Refines.feq_lit {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {f : Float} 
     exact ⟨y, h2, h3.symm⟩
   split
   · rename_i hn
-    refine Sem.Refines.intro_eval (fun w => ⟨by simp, by simp [float_eq.spec]⟩)
+    refine Sem.Refines.intro_eval (fun w => ⟨by simp, by simp [Float.eq.spec]⟩)
       (fun ρ v w w' e => ?_)
     obtain ⟨y, _, rfl⟩ := ev1 ρ v e
     simp [FBits.eq_of_isNaN_left y (by simpa [f_is_nan] using hn)]
@@ -215,7 +215,7 @@ theorem Refines.feq_lit {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {f : Float} 
         refine ⟨WT_op1.2 ⟨by simpa [Op1.WT, h2] using hp, w2⟩, rfl⟩
       · obtain ⟨y, hy, rfl⟩ := ev1 ρ v e
         rw [← eval]
-        rw [float_is_floatclass.spec, eval_op1 w', hy]
+        rw [Float.is_floatclass.spec, eval_op1 w', hy]
         simp [evOp1, FBits.isClass, FBits.eq_of_isZero_left y hz]
     · rename_i hz
       refine Sem.Refines.trans ?_ hE
@@ -225,7 +225,7 @@ theorem Refines.feq_lit {FS : FloatSem} {O : Ops} (hO : O.Sound FS) {f : Float} 
       · obtain ⟨y, hy, rfl⟩ := ev1 ρ v e
         have ⟨_, w1, _⟩ := WT_op2.1 w'
         rw [← eval]
-        rw [sem_eq.spec, eval_eq_of w' (eval_float w1) hy]
+        rw [Bool.eq.spec, eval_eq_of w' (eval_float w1) hy]
         simp only [f_is_nan, f_is_zero, Bool.not_eq_true] at hn hz
         simp [Float.sem, FBits.eq_of_ne_left y hn hz]
 
@@ -248,7 +248,7 @@ macro "kanon_float" : tactic => `(tactic| (
     | exact Refines.fcmp_lits (by simp) fun hp => by
         simp [evOp2, fBin, Float.sem, f_eq, f_lt, f_le, Float.cmp, hp]))
 
-/-- Proves the alternative on a pointer literal of `ptr_loc` (resp. `ptr_ofs`),
+/-- Proves the alternative on a pointer literal of `Ptr.loc` (resp. `Ptr.ofs`),
 whose spec is `spec`. -/
 macro "kanon_ptr " spec:ident : tactic => `(tactic| (
   intro FS O hO l o T
@@ -265,13 +265,13 @@ macro "kanon_ptr " spec:ident : tactic => `(tactic| (
       subst hv
       rw [hp] at e; simp [evOp1] at e; subst e; first | exact h1 | exact h2))
 
-attribute [kanon_tactic "kanon_ptr ptr_loc.spec"] ptr_loc.spec
-attribute [kanon_tactic "kanon_ptr ptr_ofs.spec"] ptr_ofs.spec
+attribute [kanon_tactic "kanon_ptr Ptr.loc.spec"] Ptr.loc.spec
+attribute [kanon_tactic "kanon_ptr Ptr.ofs.spec"] Ptr.ofs.spec
 
-attribute [kanon_tactic "kanon_float"] float_is_floatclass.spec float_is_negative.spec
-  float_is_positive.spec float_cast.spec float_eq.spec float_lt.spec float_leq.spec
-  float_add.spec float_sub.spec float_div.spec float_mul.spec float_rem.spec float_abs.spec
-  float_neg.spec float_fma.spec float_fmod_of_rem.spec float_fmod.spec float_min.spec
-  float_max.spec float_sqrt.spec float_round.spec
+attribute [kanon_tactic "kanon_float"] Float.is_floatclass.spec Float.is_negative.spec
+  Float.is_positive.spec Float.cast.spec Float.eq.spec Float.lt.spec Float.leq.spec
+  Float.add.spec Float.sub.spec Float.div.spec Float.mul.spec Float.rem.spec Float.abs.spec
+  Float.neg.spec Float.fma.spec Float.fmod_of_rem.spec Float.fmod.spec Float.min.spec
+  Float.max.spec Float.sqrt.spec Float.round.spec
 
 end Kanon.Lib

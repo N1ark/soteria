@@ -19,24 +19,22 @@ namespace Kanon
 
 open Classical Kanon
 
-@[kanon_arm] theorem bv_add.r_not_one.main.proof : bv_add.r_not_one.main.Stmt := kanon_proof% bv_add.r_not_one.main
+@[kanon_arm] theorem Bitvec.add.r_add_const.main.proof : Bitvec.add.r_add_const.main.Stmt := kanon_proof% Bitvec.add.r_add_const.main
 
-@[kanon_arm] theorem bv_add.r_add_const.main.proof : bv_add.r_add_const.main.Stmt := kanon_proof% bv_add.r_add_const.main
+@[kanon_arm] theorem Bitvec.add.r_sub_const_r.main.proof : Bitvec.add.r_sub_const_r.main.Stmt := kanon_proof% Bitvec.add.r_sub_const_r.main
 
-@[kanon_arm] theorem bv_add.r_add_const.swap2.proof : bv_add.r_add_const.swap2.Stmt := kanon_proof% bv_add.r_add_const.swap2
+@[kanon_arm] theorem Bitvec.add.r_sub_const_l.main.proof : Bitvec.add.r_sub_const_l.main.Stmt := kanon_proof% Bitvec.add.r_sub_const_l.main
 
-@[kanon_arm] theorem bv_add.r_add_const.swap1_swap2.proof : bv_add.r_add_const.swap1_swap2.Stmt := kanon_proof% bv_add.r_add_const.swap1_swap2
+@[kanon_arm] theorem Bitvec.add.r_sub_cancel.main.proof : Bitvec.add.r_sub_cancel.main.Stmt := kanon_proof% Bitvec.add.r_sub_cancel.main
 
-@[kanon_arm] theorem bv_add.r_sub_const_r.main.proof : bv_add.r_sub_const_r.main.Stmt := kanon_proof% bv_add.r_sub_const_r.main
+@[kanon_arm] theorem Bitvec.add.r_add_sub.main.proof : Bitvec.add.r_add_sub.main.Stmt := kanon_proof% Bitvec.add.r_add_sub.main
 
-@[kanon_arm] theorem bv_add.r_sub_const_r.swap.proof : bv_add.r_sub_const_r.swap.Stmt := kanon_proof% bv_add.r_sub_const_r.swap
+@[kanon_arm] theorem Bitvec.add.r_factor.main.proof : Bitvec.add.r_factor.main.Stmt := kanon_proof% Bitvec.add.r_factor.main
 
-@[kanon_arm] theorem bv_add.r_sub_const_l.main.proof : bv_add.r_sub_const_l.main.Stmt := kanon_proof% bv_add.r_sub_const_l.main
+@[kanon_arm] theorem Bitvec.add.r_factor_const.main.proof : Bitvec.add.r_factor_const.main.Stmt := kanon_proof% Bitvec.add.r_factor_const.main
 
-@[kanon_arm] theorem bv_add.r_sub_const_l.swap.proof : bv_add.r_sub_const_l.swap.Stmt := kanon_proof% bv_add.r_sub_const_l.swap
+@[kanon_arm] theorem Bitvec.add.r_ite.main.proof : Bitvec.add.r_ite.main.Stmt := kanon_proof% Bitvec.add.r_ite.main
 
-@[kanon_arm] theorem bv_add.r_sub_cancel.main.proof : bv_add.r_sub_cancel.main.Stmt := kanon_proof% bv_add.r_sub_cancel.main
+@[kanon_arm] theorem Bitvec.sub.r_lits.main.proof : Bitvec.sub.r_lits.main.Stmt := kanon_proof% Bitvec.sub.r_lits.main
 
-@[kanon_arm] theorem bv_add.r_add_sub.main.proof : bv_add.r_add_sub.main.Stmt := kanon_proof% bv_add.r_add_sub.main
-
-end Kanon
+@[kanon_arm] theorem Bitvec.sub.r_zero_r.main.proof : Bitvec.sub.r_zero_r.main.Stmt := kanon_proof% Bitvec.sub.r_zero_r.main

@@ -1,7 +1,7 @@
 import Kanon.Lib.Float
 import Kanon.Lib.Tactic
 
-/-! The values of a bit-vector term are below `2 ^ (msb_of v + 1)`. -/
+/-! The values of a bit-vector term are below `2 ^ (Bitvec.msb_of v + 1)`. -/
 
 namespace Kanon.Lib
 
@@ -31,18 +31,18 @@ theorem lt_pow_of_lt {m : Nat} {z K : Int} (hz : 1 < z) (hm : (m : Int) < z)
 
 /-- [msb_of] bounds the value of a bit-vector. -/
 theorem den_msb_aux {ρ} (s : Nat) : ∀ v : Term, sizeOf v < s → v.WT → ∀ {n : Nat},
-    v.ty = .TBitVector n → ∀ (x : BitVec n), den FS ρ n v = some x → ∀ k : Int, msb_of v ≤ k →
+    v.ty = .TBitVector n → ∀ (x : BitVec n), den FS ρ n v = some x → ∀ k : Int, Bitvec.msb_of v ≤ k →
     x.toNat < 2 ^ (k + 1).toNat := by
   induction s with
   | zero => intro v h; omega
   | succ s ih =>
     intro v hs w n hT x e k hk
-    have dflt : size v - 1 ≤ k → x.toNat < 2 ^ (k + 1).toNat := by
+    have dflt : Bitvec.size v - 1 ≤ k → x.toNat < 2 ^ (k + 1).toNat := by
       intro h
       simp only [size_eq, hT, size_of_ty_bitVector] at h
       exact Nat.lt_of_lt_of_le x.isLt
         (Nat.pow_le_pow_right (by omega) (by omega))
-    rw [msb_of.eq_def] at hk
+    rw [Bitvec.msb_of.eq_def] at hk
     rcases v with ⟨kd, T⟩
     simp only [Term.ty_mk] at hT; subst hT
     have dflt' : (n : Int) - 1 ≤ k → x.toNat < 2 ^ (k + 1).toNat := fun h =>
@@ -63,7 +63,7 @@ theorem den_msb_aux {ρ} (s : Nat) : ∀ v : Term, sizeOf v < s → v.WT → ∀
     case Op2 op a b =>
       cases op
       case BitAnd =>
-        simp [firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse, zmin] at hk
+        simp [firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse, Bitvec.zmin] at hk
         have ⟨w1, wa, wb⟩ := WT_op2.1 w
         simp only [Op2.WT] at w1
         obtain ⟨⟨_, _, ha⟩, hb, ht⟩ := w1
@@ -163,7 +163,7 @@ theorem den_msb_aux {ρ} (s : Nat) : ∀ v : Term, sizeOf v < s → v.WT → ∀
     case Op3 op g l r =>
       cases op
       case Ite =>
-        simp [firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse, zmax] at hk
+        simp [firstSome, HOrElse.hOrElse, OrElse.orElse, Option.orElse, Bitvec.zmax] at hk
         obtain ⟨_, h1, h2, wg, wl, wr⟩ := WT_ite.1 w
         simp only [den] at e
         split at hk <;>
@@ -196,7 +196,7 @@ theorem den_msb_aux {ρ} (s : Nat) : ∀ v : Term, sizeOf v < s → v.WT → ∀
       exact dflt hk
 
 theorem den_msb {ρ v n x} (w : v.WT) (hT : v.ty = .TBitVector (n : Int))
-    (e : den FS ρ n v = some x) : x.toNat < 2 ^ (msb_of v + 1).toNat :=
+    (e : den FS ρ n v = some x) : x.toNat < 2 ^ (Bitvec.msb_of v + 1).toNat :=
   den_msb_aux _ v (Nat.lt_succ_self _) w hT x e _ (Int.le_refl _)
 
 end Kanon.Lib

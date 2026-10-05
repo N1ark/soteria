@@ -15,33 +15,33 @@ open Classical Kanon
 /-- The rule functions, oracles and helpers of the bool module in the model, for the proofs
 of its arms by Kanon's library (`Kanon.BoolMod`). -/
 def Ops.bool (FS : FloatSem) (O : Ops) : BoolMod.Ops (boolLang FS) where
-  b_and := O.b_and
-  b_or := O.b_or
-  b_not := O.b_not
-  b_ite := O.b_ite
-  sem_eq := O.sem_eq
+  b_and := O.bool_and_
+  b_or := O.bool_or_
+  b_not := O.bool_not_
+  b_ite := O.bool_ite
+  sem_eq := O.bool_eq
   tag_le := O.orc.tag_le
   sort_by_tag := O.orc.sort_by_tag
-  at_most_one := at_most_one
-  distinct_check_one := distinct_check_one
-  distinct_check := distinct_check
+  at_most_one := Bool.at_most_one
+  distinct_check_one := Bool.distinct_check_one
+  distinct_check := Bool.distinct_check
 
 theorem Ops.Sound.bool {FS : FloatSem} {O : Ops} (hO : O.Sound FS) : (O.bool FS).Sound where
-  b_and := hO.b_and
-  b_or := hO.b_or
-  b_not := hO.b_not
-  b_ite := hO.b_ite
-  sem_eq := hO.sem_eq
+  b_and := hO.bool_and_
+  b_or := hO.bool_or_
+  b_not := hO.bool_not_
+  b_ite := hO.bool_ite
+  sem_eq := hO.bool_eq
   sort_by_tag := hO.orc.sort_by_tag
   at_most_one _ _ _ := rfl
   distinct_check_one_nil _ := by
-    dsimp only [Ops.bool]; rw [distinct_check_one]; rfl
+    dsimp only [Ops.bool]; rw [Bool.distinct_check_one]; rfl
   distinct_check_one_cons _ _ _ := by
-    dsimp only [Ops.bool]; rw [distinct_check_one]; rfl
+    dsimp only [Ops.bool]; rw [Bool.distinct_check_one]; rfl
   distinct_check_nil := by
-    dsimp only [Ops.bool]; rw [distinct_check]; rfl
+    dsimp only [Ops.bool]; rw [Bool.distinct_check]; rfl
   distinct_check_cons _ _ := by
-    dsimp only [Ops.bool]; rw [distinct_check]; split <;> simp_all [firstSome]
+    dsimp only [Ops.bool]; rw [Bool.distinct_check]; split <;> simp_all [firstSome]
 
 @[kanon_comm_lemma] theorem Op2.And.comm.ok : Op2.And.comm.Stmt :=
   fun FS _ _ _ => BoolMod.Lang.refines_and_comm (L := (boolLang FS))
@@ -68,140 +68,140 @@ theorem Ops.Sound.bool {FS : FloatSem} {O : Ops} (hO : O.Sound FS) : (O.bool FS)
 
 @[kanon_comm_lemma] theorem Op2.FEq.comm.ok : Op2.FEq.comm.Stmt := kanon_proof% Op2.FEq.comm
 
-theorem b_and.r_same.main.ok : b_and.r_same.main.Stmt :=
-  fun FS O hO => BoolMod.b_and.r_same.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.and_.r_same.main.ok : Bool.and_.r_same.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.and_.r_same.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_and.r_same.proof : b_and.r_same.Stmt := by
+theorem Bool.and_.r_same.proof : Bool.and_.r_same.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [b_and.r_same] at h
+  simp only [Bool.and_.r_same] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_and.r_same.main.ok FS O hO)
+  · kanon_arm h (Bool.and_.r_same.main.ok FS O hO)
 
-theorem b_and.r_false_.main.ok : b_and.r_false_.main.Stmt :=
-  fun FS O hO => BoolMod.b_and.r_false_.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.and_.r_false_.main.ok : Bool.and_.r_false_.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.and_.r_false_.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_and.r_false_.swap.ok : b_and.r_false_.swap.Stmt :=
-  fun FS O hO => BoolMod.b_and.r_false_.swap (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.and_.r_false_.swap.ok : Bool.and_.r_false_.swap.Stmt :=
+  fun FS O hO => BoolMod.Bool.and_.r_false_.swap (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_and.r_false_.proof : b_and.r_false_.Stmt := by
+theorem Bool.and_.r_false_.proof : Bool.and_.r_false_.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [b_and.r_false_] at h
+  simp only [Bool.and_.r_false_] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_and.r_false_.main.ok FS O hO)
-  · kanon_arm h (b_and.r_false_.swap.ok FS O hO)
+  · kanon_arm h (Bool.and_.r_false_.main.ok FS O hO)
+  · kanon_arm h (Bool.and_.r_false_.swap.ok FS O hO)
 
-theorem b_and.r_true_.main.ok : b_and.r_true_.main.Stmt :=
-  fun FS O hO => BoolMod.b_and.r_true_.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.and_.r_true_.main.ok : Bool.and_.r_true_.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.and_.r_true_.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_and.r_true_.swap.ok : b_and.r_true_.swap.Stmt :=
-  fun FS O hO => BoolMod.b_and.r_true_.swap (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.and_.r_true_.swap.ok : Bool.and_.r_true_.swap.Stmt :=
+  fun FS O hO => BoolMod.Bool.and_.r_true_.swap (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_and.r_true_.proof : b_and.r_true_.Stmt := by
+theorem Bool.and_.r_true_.proof : Bool.and_.r_true_.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [b_and.r_true_] at h
+  simp only [Bool.and_.r_true_] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_and.r_true_.main.ok FS O hO)
-  · kanon_arm h (b_and.r_true_.swap.ok FS O hO)
+  · kanon_arm h (Bool.and_.r_true_.main.ok FS O hO)
+  · kanon_arm h (Bool.and_.r_true_.swap.ok FS O hO)
 
-theorem b_and.r_not.main.ok : b_and.r_not.main.Stmt :=
-  fun FS O hO => BoolMod.b_and.r_not.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.and_.r_not.main.ok : Bool.and_.r_not.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.and_.r_not.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_and.r_not.swap.ok : b_and.r_not.swap.Stmt :=
-  fun FS O hO => BoolMod.b_and.r_not.swap (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.and_.r_not.swap.ok : Bool.and_.r_not.swap.Stmt :=
+  fun FS O hO => BoolMod.Bool.and_.r_not.swap (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_and.r_not.proof : b_and.r_not.Stmt := by
+theorem Bool.and_.r_not.proof : Bool.and_.r_not.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [b_and.r_not] at h
+  simp only [Bool.and_.r_not] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_and.r_not.main.ok FS O hO)
-  · kanon_arm h (b_and.r_not.swap.ok FS O hO)
+  · kanon_arm h (Bool.and_.r_not.main.ok FS O hO)
+  · kanon_arm h (Bool.and_.r_not.swap.ok FS O hO)
 
-theorem b_and.r_and_.main.ok : b_and.r_and_.main.Stmt :=
-  fun FS O hO => BoolMod.b_and.r_and_.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.and_.r_and_.main.ok : Bool.and_.r_and_.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.and_.r_and_.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_and.r_and_.swap1.ok : b_and.r_and_.swap1.Stmt :=
-  fun FS O hO => BoolMod.b_and.r_and_.swap1 (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.and_.r_and_.swap1.ok : Bool.and_.r_and_.swap1.Stmt :=
+  fun FS O hO => BoolMod.Bool.and_.r_and_.swap1 (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_and.r_and_.swap2.ok : b_and.r_and_.swap2.Stmt :=
-  fun FS O hO => BoolMod.b_and.r_and_.swap2 (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.and_.r_and_.swap2.ok : Bool.and_.r_and_.swap2.Stmt :=
+  fun FS O hO => BoolMod.Bool.and_.r_and_.swap2 (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_and.r_and_.swap1_swap2.ok : b_and.r_and_.swap1_swap2.Stmt :=
-  fun FS O hO => BoolMod.b_and.r_and_.swap1_swap2 (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.and_.r_and_.swap1_swap2.ok : Bool.and_.r_and_.swap1_swap2.Stmt :=
+  fun FS O hO => BoolMod.Bool.and_.r_and_.swap1_swap2 (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_and.r_and_.proof : b_and.r_and_.Stmt := by
+theorem Bool.and_.r_and_.proof : Bool.and_.r_and_.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [b_and.r_and_] at h
+  simp only [Bool.and_.r_and_] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_and.r_and_.main.ok FS O hO)
-  · kanon_arm h (b_and.r_and_.swap1.ok FS O hO)
-  · kanon_arm h (b_and.r_and_.swap2.ok FS O hO)
-  · kanon_arm h (b_and.r_and_.swap1_swap2.ok FS O hO)
+  · kanon_arm h (Bool.and_.r_and_.main.ok FS O hO)
+  · kanon_arm h (Bool.and_.r_and_.swap1.ok FS O hO)
+  · kanon_arm h (Bool.and_.r_and_.swap2.ok FS O hO)
+  · kanon_arm h (Bool.and_.r_and_.swap1_swap2.ok FS O hO)
 
-theorem b_and.r_or_.main.ok : b_and.r_or_.main.Stmt :=
-  fun FS O hO => BoolMod.b_and.r_or_.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.and_.r_or_.main.ok : Bool.and_.r_or_.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.and_.r_or_.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_and.r_or_.swap1.ok : b_and.r_or_.swap1.Stmt :=
-  fun FS O hO => BoolMod.b_and.r_or_.swap1 (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.and_.r_or_.swap1.ok : Bool.and_.r_or_.swap1.Stmt :=
+  fun FS O hO => BoolMod.Bool.and_.r_or_.swap1 (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_and.r_or_.swap2.ok : b_and.r_or_.swap2.Stmt :=
-  fun FS O hO => BoolMod.b_and.r_or_.swap2 (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.and_.r_or_.swap2.ok : Bool.and_.r_or_.swap2.Stmt :=
+  fun FS O hO => BoolMod.Bool.and_.r_or_.swap2 (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_and.r_or_.swap1_swap2.ok : b_and.r_or_.swap1_swap2.Stmt :=
-  fun FS O hO => BoolMod.b_and.r_or_.swap1_swap2 (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.and_.r_or_.swap1_swap2.ok : Bool.and_.r_or_.swap1_swap2.Stmt :=
+  fun FS O hO => BoolMod.Bool.and_.r_or_.swap1_swap2 (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_and.r_or_.proof : b_and.r_or_.Stmt := by
+theorem Bool.and_.r_or_.proof : Bool.and_.r_or_.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [b_and.r_or_] at h
+  simp only [Bool.and_.r_or_] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_and.r_or_.main.ok FS O hO)
-  · kanon_arm h (b_and.r_or_.swap1.ok FS O hO)
-  · kanon_arm h (b_and.r_or_.swap2.ok FS O hO)
-  · kanon_arm h (b_and.r_or_.swap1_swap2.ok FS O hO)
+  · kanon_arm h (Bool.and_.r_or_.main.ok FS O hO)
+  · kanon_arm h (Bool.and_.r_or_.swap1.ok FS O hO)
+  · kanon_arm h (Bool.and_.r_or_.swap2.ok FS O hO)
+  · kanon_arm h (Bool.and_.r_or_.swap1_swap2.ok FS O hO)
 
-theorem b_and.r_eq_neq.main.ok : b_and.r_eq_neq.main.Stmt :=
-  fun FS O hO => BoolMod.b_and.r_eq_neq.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.and_.r_eq_neq.main.ok : Bool.and_.r_eq_neq.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.and_.r_eq_neq.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_and.r_eq_neq.swap2.ok : b_and.r_eq_neq.swap2.Stmt :=
-  fun FS O hO => BoolMod.b_and.r_eq_neq.swap2 (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.and_.r_eq_neq.swap2.ok : Bool.and_.r_eq_neq.swap2.Stmt :=
+  fun FS O hO => BoolMod.Bool.and_.r_eq_neq.swap2 (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_and.r_eq_neq.swap1.ok : b_and.r_eq_neq.swap1.Stmt :=
-  fun FS O hO => BoolMod.b_and.r_eq_neq.swap1 (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.and_.r_eq_neq.swap1.ok : Bool.and_.r_eq_neq.swap1.Stmt :=
+  fun FS O hO => BoolMod.Bool.and_.r_eq_neq.swap1 (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_and.r_eq_neq.swap1_swap2.ok : b_and.r_eq_neq.swap1_swap2.Stmt :=
-  fun FS O hO => BoolMod.b_and.r_eq_neq.swap1_swap2 (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.and_.r_eq_neq.swap1_swap2.ok : Bool.and_.r_eq_neq.swap1_swap2.Stmt :=
+  fun FS O hO => BoolMod.Bool.and_.r_eq_neq.swap1_swap2 (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_and.r_eq_neq.proof : b_and.r_eq_neq.Stmt := by
+theorem Bool.and_.r_eq_neq.proof : Bool.and_.r_eq_neq.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [b_and.r_eq_neq] at h
+  simp only [Bool.and_.r_eq_neq] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_and.r_eq_neq.main.ok FS O hO)
-  · kanon_arm h (b_and.r_eq_neq.swap2.ok FS O hO)
-  · kanon_arm h (b_and.r_eq_neq.swap1.ok FS O hO)
-  · kanon_arm h (b_and.r_eq_neq.swap1_swap2.ok FS O hO)
+  · kanon_arm h (Bool.and_.r_eq_neq.main.ok FS O hO)
+  · kanon_arm h (Bool.and_.r_eq_neq.swap2.ok FS O hO)
+  · kanon_arm h (Bool.and_.r_eq_neq.swap1.ok FS O hO)
+  · kanon_arm h (Bool.and_.r_eq_neq.swap1_swap2.ok FS O hO)
 
-theorem b_and.r_eq_extracts.main.ok : b_and.r_eq_extracts.main.Stmt := kanon_proof% b_and.r_eq_extracts.main
+theorem Bool.and_.r_eq_extracts.main.ok : Bool.and_.r_eq_extracts.main.Stmt := kanon_proof% Bool.and_.r_eq_extracts.main
 
-theorem b_and.r_eq_extracts.swap2.ok : b_and.r_eq_extracts.swap2.Stmt := by
+theorem Bool.and_.r_eq_extracts.swap2.ok : Bool.and_.r_eq_extracts.swap2.Stmt := by
   intro FS O hO w__2 t__3 s1 e1 x t__9 t__10 s2 e2 kanon__19 t__20 w__13 t__14 t__21 hg
   have : Refines FS (Term.mk (Kind.Op2 Op2.Eq (Term.mk (Kind.Op1 (Op1.BvExtract s2 e2) kanon__19) t__20) (Term.mk (Kind.BitVec w__13) t__14)) t__21)
     (Term.mk (Kind.Op2 Op2.Eq (Term.mk (Kind.BitVec w__13) t__14) (Term.mk (Kind.Op1 (Op1.BvExtract s2 e2) kanon__19) t__20)) t__21) :=
     Op2.Eq.comm.ok FS ..
   refine Refinement.trans ?_
-    (b_and.r_eq_extracts.main.ok FS O hO w__2 t__3 s1 e1 x t__9 t__10 w__13 t__14 s2 e2 kanon__19 t__20 t__21 hg)
-  simp only [b_and.spec]
+    (Bool.and_.r_eq_extracts.main.ok FS O hO w__2 t__3 s1 e1 x t__9 t__10 w__13 t__14 s2 e2 kanon__19 t__20 t__21 hg)
+  simp only [Bool.and_.spec]
   kanon_congr
 
-theorem b_and.r_eq_extracts.swap1.ok : b_and.r_eq_extracts.swap1.Stmt := by
+theorem Bool.and_.r_eq_extracts.swap1.ok : Bool.and_.r_eq_extracts.swap1.Stmt := by
   intro FS O hO s1 e1 x t__9 w__2 t__3 t__10 w__13 t__14 s2 e2 kanon__19 t__20 t__21 hg
   have : Refines FS (Term.mk (Kind.Op2 Op2.Eq (Term.mk (Kind.Op1 (Op1.BvExtract s1 e1) x) t__9) (Term.mk (Kind.BitVec w__2) t__3)) t__10)
     (Term.mk (Kind.Op2 Op2.Eq (Term.mk (Kind.BitVec w__2) t__3) (Term.mk (Kind.Op1 (Op1.BvExtract s1 e1) x) t__9)) t__10) :=
     Op2.Eq.comm.ok FS ..
   refine Refinement.trans ?_
-    (b_and.r_eq_extracts.main.ok FS O hO w__2 t__3 s1 e1 x t__9 t__10 w__13 t__14 s2 e2 kanon__19 t__20 t__21 hg)
-  simp only [b_and.spec]
+    (Bool.and_.r_eq_extracts.main.ok FS O hO w__2 t__3 s1 e1 x t__9 t__10 w__13 t__14 s2 e2 kanon__19 t__20 t__21 hg)
+  simp only [Bool.and_.spec]
   kanon_congr
 
-theorem b_and.r_eq_extracts.swap1_swap2.ok : b_and.r_eq_extracts.swap1_swap2.Stmt := by
+theorem Bool.and_.r_eq_extracts.swap1_swap2.ok : Bool.and_.r_eq_extracts.swap1_swap2.Stmt := by
   intro FS O hO s1 e1 x t__9 w__2 t__3 t__10 s2 e2 kanon__19 t__20 w__13 t__14 t__21 hg
   have : Refines FS (Term.mk (Kind.Op2 Op2.Eq (Term.mk (Kind.Op1 (Op1.BvExtract s1 e1) x) t__9) (Term.mk (Kind.BitVec w__2) t__3)) t__10)
     (Term.mk (Kind.Op2 Op2.Eq (Term.mk (Kind.BitVec w__2) t__3) (Term.mk (Kind.Op1 (Op1.BvExtract s1 e1) x) t__9)) t__10) :=
@@ -210,942 +210,942 @@ theorem b_and.r_eq_extracts.swap1_swap2.ok : b_and.r_eq_extracts.swap1_swap2.Stm
     (Term.mk (Kind.Op2 Op2.Eq (Term.mk (Kind.BitVec w__13) t__14) (Term.mk (Kind.Op1 (Op1.BvExtract s2 e2) kanon__19) t__20)) t__21) :=
     Op2.Eq.comm.ok FS ..
   refine Refinement.trans ?_
-    (b_and.r_eq_extracts.main.ok FS O hO w__2 t__3 s1 e1 x t__9 t__10 w__13 t__14 s2 e2 kanon__19 t__20 t__21 hg)
-  simp only [b_and.spec]
+    (Bool.and_.r_eq_extracts.main.ok FS O hO w__2 t__3 s1 e1 x t__9 t__10 w__13 t__14 s2 e2 kanon__19 t__20 t__21 hg)
+  simp only [Bool.and_.spec]
   kanon_congr
 
-theorem b_and.r_eq_extracts.proof : b_and.r_eq_extracts.Stmt := by
+theorem Bool.and_.r_eq_extracts.proof : Bool.and_.r_eq_extracts.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [b_and.r_eq_extracts] at h
+  simp only [Bool.and_.r_eq_extracts] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_and.r_eq_extracts.main.ok FS O hO)
-  · kanon_arm h (b_and.r_eq_extracts.swap2.ok FS O hO)
-  · kanon_arm h (b_and.r_eq_extracts.swap1.ok FS O hO)
-  · kanon_arm h (b_and.r_eq_extracts.swap1_swap2.ok FS O hO)
+  · kanon_arm h (Bool.and_.r_eq_extracts.main.ok FS O hO)
+  · kanon_arm h (Bool.and_.r_eq_extracts.swap2.ok FS O hO)
+  · kanon_arm h (Bool.and_.r_eq_extracts.swap1.ok FS O hO)
+  · kanon_arm h (Bool.and_.r_eq_extracts.swap1_swap2.ok FS O hO)
 
-theorem b_and.r_upper_bounds.lt_lt.ok : b_and.r_upper_bounds.lt_lt.Stmt := kanon_proof% b_and.r_upper_bounds.lt_lt
+theorem Bool.and_.r_upper_bounds.lt_lt.ok : Bool.and_.r_upper_bounds.lt_lt.Stmt := kanon_proof% Bool.and_.r_upper_bounds.lt_lt
 
-theorem b_and.r_upper_bounds.lt_leq.ok : b_and.r_upper_bounds.lt_leq.Stmt := kanon_proof% b_and.r_upper_bounds.lt_leq
+theorem Bool.and_.r_upper_bounds.lt_leq.ok : Bool.and_.r_upper_bounds.lt_leq.Stmt := kanon_proof% Bool.and_.r_upper_bounds.lt_leq
 
-theorem b_and.r_upper_bounds.leq_lt.ok : b_and.r_upper_bounds.leq_lt.Stmt := kanon_proof% b_and.r_upper_bounds.leq_lt
+theorem Bool.and_.r_upper_bounds.leq_lt.ok : Bool.and_.r_upper_bounds.leq_lt.Stmt := kanon_proof% Bool.and_.r_upper_bounds.leq_lt
 
-theorem b_and.r_upper_bounds.leq_leq.ok : b_and.r_upper_bounds.leq_leq.Stmt := kanon_proof% b_and.r_upper_bounds.leq_leq
+theorem Bool.and_.r_upper_bounds.leq_leq.ok : Bool.and_.r_upper_bounds.leq_leq.Stmt := kanon_proof% Bool.and_.r_upper_bounds.leq_leq
 
-theorem b_and.r_upper_bounds.proof : b_and.r_upper_bounds.Stmt := by
+theorem Bool.and_.r_upper_bounds.proof : Bool.and_.r_upper_bounds.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [b_and.r_upper_bounds] at h
+  simp only [Bool.and_.r_upper_bounds] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_and.r_upper_bounds.lt_lt.ok FS O hO)
-  · kanon_arm h (b_and.r_upper_bounds.lt_leq.ok FS O hO)
-  · kanon_arm h (b_and.r_upper_bounds.leq_lt.ok FS O hO)
-  · kanon_arm h (b_and.r_upper_bounds.leq_leq.ok FS O hO)
+  · kanon_arm h (Bool.and_.r_upper_bounds.lt_lt.ok FS O hO)
+  · kanon_arm h (Bool.and_.r_upper_bounds.lt_leq.ok FS O hO)
+  · kanon_arm h (Bool.and_.r_upper_bounds.leq_lt.ok FS O hO)
+  · kanon_arm h (Bool.and_.r_upper_bounds.leq_leq.ok FS O hO)
 
-theorem b_and.r_lower_bounds.lt_lt.ok : b_and.r_lower_bounds.lt_lt.Stmt := kanon_proof% b_and.r_lower_bounds.lt_lt
+theorem Bool.and_.r_lower_bounds.lt_lt.ok : Bool.and_.r_lower_bounds.lt_lt.Stmt := kanon_proof% Bool.and_.r_lower_bounds.lt_lt
 
-theorem b_and.r_lower_bounds.lt_leq.ok : b_and.r_lower_bounds.lt_leq.Stmt := kanon_proof% b_and.r_lower_bounds.lt_leq
+theorem Bool.and_.r_lower_bounds.lt_leq.ok : Bool.and_.r_lower_bounds.lt_leq.Stmt := kanon_proof% Bool.and_.r_lower_bounds.lt_leq
 
-theorem b_and.r_lower_bounds.leq_lt.ok : b_and.r_lower_bounds.leq_lt.Stmt := kanon_proof% b_and.r_lower_bounds.leq_lt
+theorem Bool.and_.r_lower_bounds.leq_lt.ok : Bool.and_.r_lower_bounds.leq_lt.Stmt := kanon_proof% Bool.and_.r_lower_bounds.leq_lt
 
-theorem b_and.r_lower_bounds.leq_leq.ok : b_and.r_lower_bounds.leq_leq.Stmt := kanon_proof% b_and.r_lower_bounds.leq_leq
+theorem Bool.and_.r_lower_bounds.leq_leq.ok : Bool.and_.r_lower_bounds.leq_leq.Stmt := kanon_proof% Bool.and_.r_lower_bounds.leq_leq
 
-theorem b_and.r_lower_bounds.proof : b_and.r_lower_bounds.Stmt := by
+theorem Bool.and_.r_lower_bounds.proof : Bool.and_.r_lower_bounds.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [b_and.r_lower_bounds] at h
+  simp only [Bool.and_.r_lower_bounds] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_and.r_lower_bounds.lt_lt.ok FS O hO)
-  · kanon_arm h (b_and.r_lower_bounds.lt_leq.ok FS O hO)
-  · kanon_arm h (b_and.r_lower_bounds.leq_lt.ok FS O hO)
-  · kanon_arm h (b_and.r_lower_bounds.leq_leq.ok FS O hO)
+  · kanon_arm h (Bool.and_.r_lower_bounds.lt_lt.ok FS O hO)
+  · kanon_arm h (Bool.and_.r_lower_bounds.lt_leq.ok FS O hO)
+  · kanon_arm h (Bool.and_.r_lower_bounds.leq_lt.ok FS O hO)
+  · kanon_arm h (Bool.and_.r_lower_bounds.leq_leq.ok FS O hO)
 
-theorem b_and.r_default.main.ok : b_and.r_default.main.Stmt :=
-  fun FS O hO => BoolMod.b_and.r_default.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.and_.r_default.main.ok : Bool.and_.r_default.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.and_.r_default.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_and.r_default.proof : b_and.r_default.Stmt := by
+theorem Bool.and_.r_default.proof : Bool.and_.r_default.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [b_and.r_default] at h
+  simp only [Bool.and_.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_and.r_default.main.ok FS O hO)
+  · kanon_arm h (Bool.and_.r_default.main.ok FS O hO)
 
-theorem b_or.r_same.main.ok : b_or.r_same.main.Stmt :=
-  fun FS O hO => BoolMod.b_or.r_same.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.or_.r_same.main.ok : Bool.or_.r_same.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.or_.r_same.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_or.r_same.proof : b_or.r_same.Stmt := by
+theorem Bool.or_.r_same.proof : Bool.or_.r_same.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [b_or.r_same] at h
+  simp only [Bool.or_.r_same] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_or.r_same.main.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_same.main.ok FS O hO)
 
-theorem b_or.r_true_.main.ok : b_or.r_true_.main.Stmt :=
-  fun FS O hO => BoolMod.b_or.r_true_.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.or_.r_true_.main.ok : Bool.or_.r_true_.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.or_.r_true_.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_or.r_true_.swap.ok : b_or.r_true_.swap.Stmt :=
-  fun FS O hO => BoolMod.b_or.r_true_.swap (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.or_.r_true_.swap.ok : Bool.or_.r_true_.swap.Stmt :=
+  fun FS O hO => BoolMod.Bool.or_.r_true_.swap (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_or.r_true_.proof : b_or.r_true_.Stmt := by
+theorem Bool.or_.r_true_.proof : Bool.or_.r_true_.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [b_or.r_true_] at h
+  simp only [Bool.or_.r_true_] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_or.r_true_.main.ok FS O hO)
-  · kanon_arm h (b_or.r_true_.swap.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_true_.main.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_true_.swap.ok FS O hO)
 
-theorem b_or.r_false_.main.ok : b_or.r_false_.main.Stmt :=
-  fun FS O hO => BoolMod.b_or.r_false_.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.or_.r_false_.main.ok : Bool.or_.r_false_.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.or_.r_false_.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_or.r_false_.swap.ok : b_or.r_false_.swap.Stmt :=
-  fun FS O hO => BoolMod.b_or.r_false_.swap (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.or_.r_false_.swap.ok : Bool.or_.r_false_.swap.Stmt :=
+  fun FS O hO => BoolMod.Bool.or_.r_false_.swap (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_or.r_false_.proof : b_or.r_false_.Stmt := by
+theorem Bool.or_.r_false_.proof : Bool.or_.r_false_.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [b_or.r_false_] at h
+  simp only [Bool.or_.r_false_] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_or.r_false_.main.ok FS O hO)
-  · kanon_arm h (b_or.r_false_.swap.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_false_.main.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_false_.swap.ok FS O hO)
 
-theorem b_or.r_not.main.ok : b_or.r_not.main.Stmt :=
-  fun FS O hO => BoolMod.b_or.r_not.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.or_.r_not.main.ok : Bool.or_.r_not.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.or_.r_not.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_or.r_not.swap.ok : b_or.r_not.swap.Stmt :=
-  fun FS O hO => BoolMod.b_or.r_not.swap (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.or_.r_not.swap.ok : Bool.or_.r_not.swap.Stmt :=
+  fun FS O hO => BoolMod.Bool.or_.r_not.swap (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_or.r_not.proof : b_or.r_not.Stmt := by
+theorem Bool.or_.r_not.proof : Bool.or_.r_not.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [b_or.r_not] at h
+  simp only [Bool.or_.r_not] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_or.r_not.main.ok FS O hO)
-  · kanon_arm h (b_or.r_not.swap.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_not.main.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_not.swap.ok FS O hO)
 
-theorem b_or.r_or_.main.ok : b_or.r_or_.main.Stmt :=
-  fun FS O hO => BoolMod.b_or.r_or_.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.or_.r_or_.main.ok : Bool.or_.r_or_.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.or_.r_or_.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_or.r_or_.swap1.ok : b_or.r_or_.swap1.Stmt :=
-  fun FS O hO => BoolMod.b_or.r_or_.swap1 (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.or_.r_or_.swap1.ok : Bool.or_.r_or_.swap1.Stmt :=
+  fun FS O hO => BoolMod.Bool.or_.r_or_.swap1 (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_or.r_or_.swap2.ok : b_or.r_or_.swap2.Stmt :=
-  fun FS O hO => BoolMod.b_or.r_or_.swap2 (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.or_.r_or_.swap2.ok : Bool.or_.r_or_.swap2.Stmt :=
+  fun FS O hO => BoolMod.Bool.or_.r_or_.swap2 (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_or.r_or_.swap1_swap2.ok : b_or.r_or_.swap1_swap2.Stmt :=
-  fun FS O hO => BoolMod.b_or.r_or_.swap1_swap2 (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.or_.r_or_.swap1_swap2.ok : Bool.or_.r_or_.swap1_swap2.Stmt :=
+  fun FS O hO => BoolMod.Bool.or_.r_or_.swap1_swap2 (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_or.r_or_.proof : b_or.r_or_.Stmt := by
+theorem Bool.or_.r_or_.proof : Bool.or_.r_or_.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [b_or.r_or_] at h
+  simp only [Bool.or_.r_or_] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_or.r_or_.main.ok FS O hO)
-  · kanon_arm h (b_or.r_or_.swap1.ok FS O hO)
-  · kanon_arm h (b_or.r_or_.swap2.ok FS O hO)
-  · kanon_arm h (b_or.r_or_.swap1_swap2.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_or_.main.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_or_.swap1.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_or_.swap2.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_or_.swap1_swap2.ok FS O hO)
 
-theorem b_or.r_and_.main.ok : b_or.r_and_.main.Stmt :=
-  fun FS O hO => BoolMod.b_or.r_and_.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.or_.r_and_.main.ok : Bool.or_.r_and_.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.or_.r_and_.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_or.r_and_.swap1.ok : b_or.r_and_.swap1.Stmt :=
-  fun FS O hO => BoolMod.b_or.r_and_.swap1 (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.or_.r_and_.swap1.ok : Bool.or_.r_and_.swap1.Stmt :=
+  fun FS O hO => BoolMod.Bool.or_.r_and_.swap1 (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_or.r_and_.swap2.ok : b_or.r_and_.swap2.Stmt :=
-  fun FS O hO => BoolMod.b_or.r_and_.swap2 (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.or_.r_and_.swap2.ok : Bool.or_.r_and_.swap2.Stmt :=
+  fun FS O hO => BoolMod.Bool.or_.r_and_.swap2 (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_or.r_and_.swap1_swap2.ok : b_or.r_and_.swap1_swap2.Stmt :=
-  fun FS O hO => BoolMod.b_or.r_and_.swap1_swap2 (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.or_.r_and_.swap1_swap2.ok : Bool.or_.r_and_.swap1_swap2.Stmt :=
+  fun FS O hO => BoolMod.Bool.or_.r_and_.swap1_swap2 (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_or.r_and_.proof : b_or.r_and_.Stmt := by
+theorem Bool.or_.r_and_.proof : Bool.or_.r_and_.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [b_or.r_and_] at h
+  simp only [Bool.or_.r_and_] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_or.r_and_.main.ok FS O hO)
-  · kanon_arm h (b_or.r_and_.swap1.ok FS O hO)
-  · kanon_arm h (b_or.r_and_.swap2.ok FS O hO)
-  · kanon_arm h (b_or.r_and_.swap1_swap2.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_and_.main.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_and_.swap1.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_and_.swap2.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_and_.swap1_swap2.ok FS O hO)
 
-theorem b_or.r_lt_lt.main.ok : b_or.r_lt_lt.main.Stmt := kanon_proof% b_or.r_lt_lt.main
+theorem Bool.or_.r_lt_lt.main.ok : Bool.or_.r_lt_lt.main.Stmt := kanon_proof% Bool.or_.r_lt_lt.main
 
-theorem b_or.r_lt_lt.proof : b_or.r_lt_lt.Stmt := by
+theorem Bool.or_.r_lt_lt.proof : Bool.or_.r_lt_lt.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [b_or.r_lt_lt] at h
+  simp only [Bool.or_.r_lt_lt] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_or.r_lt_lt.main.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_lt_lt.main.ok FS O hO)
 
-theorem b_or.r_lt_leq.main.ok : b_or.r_lt_leq.main.Stmt := kanon_proof% b_or.r_lt_leq.main
+theorem Bool.or_.r_lt_leq.main.ok : Bool.or_.r_lt_leq.main.Stmt := kanon_proof% Bool.or_.r_lt_leq.main
 
-theorem b_or.r_lt_leq.swap.ok : b_or.r_lt_leq.swap.Stmt := by
+theorem Bool.or_.r_lt_leq.swap.ok : Bool.or_.r_lt_leq.swap.Stmt := by
   intro FS O hO kanon__6 kanon__8 kanon__9 t__10 s a b t__5 hg
   refine Refinement.trans ?_
-    (b_or.r_lt_leq.main.ok FS O hO s a b t__5 kanon__6 kanon__8 kanon__9 t__10 hg)
-  simp only [b_or.spec]
+    (Bool.or_.r_lt_leq.main.ok FS O hO s a b t__5 kanon__6 kanon__8 kanon__9 t__10 hg)
+  simp only [Bool.or_.spec]
   refine Refinement.trans (Op2.Or.comm.ok FS ..) ?_
   kanon_congr
 
-theorem b_or.r_lt_leq.proof : b_or.r_lt_leq.Stmt := by
+theorem Bool.or_.r_lt_leq.proof : Bool.or_.r_lt_leq.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [b_or.r_lt_leq] at h
+  simp only [Bool.or_.r_lt_leq] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_or.r_lt_leq.main.ok FS O hO)
-  · kanon_arm h (b_or.r_lt_leq.swap.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_lt_leq.main.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_lt_leq.swap.ok FS O hO)
 
-theorem b_or.r_complementary.lt_lt.ok : b_or.r_complementary.lt_lt.Stmt := kanon_proof% b_or.r_complementary.lt_lt
+theorem Bool.or_.r_complementary.lt_lt.ok : Bool.or_.r_complementary.lt_lt.Stmt := kanon_proof% Bool.or_.r_complementary.lt_lt
 
-theorem b_or.r_complementary.lt_leq.ok : b_or.r_complementary.lt_leq.Stmt := kanon_proof% b_or.r_complementary.lt_leq
+theorem Bool.or_.r_complementary.lt_leq.ok : Bool.or_.r_complementary.lt_leq.Stmt := kanon_proof% Bool.or_.r_complementary.lt_leq
 
-theorem b_or.r_complementary.leq_lt.ok : b_or.r_complementary.leq_lt.Stmt := kanon_proof% b_or.r_complementary.leq_lt
+theorem Bool.or_.r_complementary.leq_lt.ok : Bool.or_.r_complementary.leq_lt.Stmt := kanon_proof% Bool.or_.r_complementary.leq_lt
 
-theorem b_or.r_complementary.leq_leq.ok : b_or.r_complementary.leq_leq.Stmt := kanon_proof% b_or.r_complementary.leq_leq
+theorem Bool.or_.r_complementary.leq_leq.ok : Bool.or_.r_complementary.leq_leq.Stmt := kanon_proof% Bool.or_.r_complementary.leq_leq
 
-theorem b_or.r_complementary.lt_lt_swap.ok : b_or.r_complementary.lt_lt_swap.Stmt := by
+theorem Bool.or_.r_complementary.lt_lt_swap.ok : Bool.or_.r_complementary.lt_lt_swap.Stmt := by
   intro FS O hO kanon__15 w__17 t__18 kanon__19 t__20 s a w__4 t__5 t__6 hg
   refine Refinement.trans ?_
-    (b_or.r_complementary.lt_lt.ok FS O hO s a w__4 t__5 t__6 kanon__15 w__17 t__18 kanon__19 t__20 hg)
-  simp only [b_or.spec]
+    (Bool.or_.r_complementary.lt_lt.ok FS O hO s a w__4 t__5 t__6 kanon__15 w__17 t__18 kanon__19 t__20 hg)
+  simp only [Bool.or_.spec]
   refine Refinement.trans (Op2.Or.comm.ok FS ..) ?_
   kanon_congr
 
-theorem b_or.r_complementary.leq_lt_swap.ok : b_or.r_complementary.leq_lt_swap.Stmt := by
+theorem Bool.or_.r_complementary.leq_lt_swap.ok : Bool.or_.r_complementary.leq_lt_swap.Stmt := by
   intro FS O hO kanon__15 w__17 t__18 kanon__19 t__20 s a w__10 t__11 t__12 hg
   refine Refinement.trans ?_
-    (b_or.r_complementary.leq_lt.ok FS O hO s a w__10 t__11 t__12 kanon__15 w__17 t__18 kanon__19 t__20 hg)
-  simp only [b_or.spec]
+    (Bool.or_.r_complementary.leq_lt.ok FS O hO s a w__10 t__11 t__12 kanon__15 w__17 t__18 kanon__19 t__20 hg)
+  simp only [Bool.or_.spec]
   refine Refinement.trans (Op2.Or.comm.ok FS ..) ?_
   kanon_congr
 
-theorem b_or.r_complementary.lt_leq_swap.ok : b_or.r_complementary.lt_leq_swap.Stmt := by
+theorem Bool.or_.r_complementary.lt_leq_swap.ok : Bool.or_.r_complementary.lt_leq_swap.Stmt := by
   intro FS O hO kanon__21 w__23 t__24 kanon__25 t__26 s a w__4 t__5 t__6 hg
   refine Refinement.trans ?_
-    (b_or.r_complementary.lt_leq.ok FS O hO s a w__4 t__5 t__6 kanon__21 w__23 t__24 kanon__25 t__26 hg)
-  simp only [b_or.spec]
+    (Bool.or_.r_complementary.lt_leq.ok FS O hO s a w__4 t__5 t__6 kanon__21 w__23 t__24 kanon__25 t__26 hg)
+  simp only [Bool.or_.spec]
   refine Refinement.trans (Op2.Or.comm.ok FS ..) ?_
   kanon_congr
 
-theorem b_or.r_complementary.leq_leq_swap.ok : b_or.r_complementary.leq_leq_swap.Stmt := by
+theorem Bool.or_.r_complementary.leq_leq_swap.ok : Bool.or_.r_complementary.leq_leq_swap.Stmt := by
   intro FS O hO kanon__21 w__23 t__24 kanon__25 t__26 s a w__10 t__11 t__12 hg
   refine Refinement.trans ?_
-    (b_or.r_complementary.leq_leq.ok FS O hO s a w__10 t__11 t__12 kanon__21 w__23 t__24 kanon__25 t__26 hg)
-  simp only [b_or.spec]
+    (Bool.or_.r_complementary.leq_leq.ok FS O hO s a w__10 t__11 t__12 kanon__21 w__23 t__24 kanon__25 t__26 hg)
+  simp only [Bool.or_.spec]
   refine Refinement.trans (Op2.Or.comm.ok FS ..) ?_
   kanon_congr
 
-theorem b_or.r_complementary.proof : b_or.r_complementary.Stmt := by
+theorem Bool.or_.r_complementary.proof : Bool.or_.r_complementary.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [b_or.r_complementary] at h
+  simp only [Bool.or_.r_complementary] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_or.r_complementary.lt_lt.ok FS O hO)
-  · kanon_arm h (b_or.r_complementary.lt_leq.ok FS O hO)
-  · kanon_arm h (b_or.r_complementary.leq_lt.ok FS O hO)
-  · kanon_arm h (b_or.r_complementary.leq_leq.ok FS O hO)
-  · kanon_arm h (b_or.r_complementary.lt_lt_swap.ok FS O hO)
-  · kanon_arm h (b_or.r_complementary.leq_lt_swap.ok FS O hO)
-  · kanon_arm h (b_or.r_complementary.lt_leq_swap.ok FS O hO)
-  · kanon_arm h (b_or.r_complementary.leq_leq_swap.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_complementary.lt_lt.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_complementary.lt_leq.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_complementary.leq_lt.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_complementary.leq_leq.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_complementary.lt_lt_swap.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_complementary.leq_lt_swap.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_complementary.lt_leq_swap.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_complementary.leq_leq_swap.ok FS O hO)
 
-theorem b_or.r_upper_eq.lt.ok : b_or.r_upper_eq.lt.Stmt := kanon_proof% b_or.r_upper_eq.lt
+theorem Bool.or_.r_upper_eq.lt.ok : Bool.or_.r_upper_eq.lt.Stmt := kanon_proof% Bool.or_.r_upper_eq.lt
 
-theorem b_or.r_upper_eq.lt_swap1.ok : b_or.r_upper_eq.lt_swap1.Stmt := by
+theorem Bool.or_.r_upper_eq.lt_swap1.ok : Bool.or_.r_upper_eq.lt_swap1.Stmt := by
   intro FS O hO s a w__4 t__5 t__6 k t__18 kanon__16 t__19 hg
   have : Refines FS (Term.mk (Kind.Op2 Op2.Eq (Term.mk (Kind.BitVec k) t__18) kanon__16) t__19)
     (Term.mk (Kind.Op2 Op2.Eq kanon__16 (Term.mk (Kind.BitVec k) t__18)) t__19) :=
     Op2.Eq.comm.ok FS ..
   refine Refinement.trans ?_
-    (b_or.r_upper_eq.lt.ok FS O hO s a w__4 t__5 t__6 kanon__16 k t__18 t__19 hg)
-  simp only [b_or.spec]
+    (Bool.or_.r_upper_eq.lt.ok FS O hO s a w__4 t__5 t__6 kanon__16 k t__18 t__19 hg)
+  simp only [Bool.or_.spec]
   kanon_congr
 
-theorem b_or.r_upper_eq.leq.ok : b_or.r_upper_eq.leq.Stmt := kanon_proof% b_or.r_upper_eq.leq
+theorem Bool.or_.r_upper_eq.leq.ok : Bool.or_.r_upper_eq.leq.Stmt := kanon_proof% Bool.or_.r_upper_eq.leq
 
-theorem b_or.r_upper_eq.leq_swap1.ok : b_or.r_upper_eq.leq_swap1.Stmt := by
+theorem Bool.or_.r_upper_eq.leq_swap1.ok : Bool.or_.r_upper_eq.leq_swap1.Stmt := by
   intro FS O hO s a w__10 t__11 t__12 k t__18 kanon__16 t__19 hg
   have : Refines FS (Term.mk (Kind.Op2 Op2.Eq (Term.mk (Kind.BitVec k) t__18) kanon__16) t__19)
     (Term.mk (Kind.Op2 Op2.Eq kanon__16 (Term.mk (Kind.BitVec k) t__18)) t__19) :=
     Op2.Eq.comm.ok FS ..
   refine Refinement.trans ?_
-    (b_or.r_upper_eq.leq.ok FS O hO s a w__10 t__11 t__12 kanon__16 k t__18 t__19 hg)
-  simp only [b_or.spec]
+    (Bool.or_.r_upper_eq.leq.ok FS O hO s a w__10 t__11 t__12 kanon__16 k t__18 t__19 hg)
+  simp only [Bool.or_.spec]
   kanon_congr
 
-theorem b_or.r_upper_eq.lt_swap2.ok : b_or.r_upper_eq.lt_swap2.Stmt := by
+theorem Bool.or_.r_upper_eq.lt_swap2.ok : Bool.or_.r_upper_eq.lt_swap2.Stmt := by
   intro FS O hO kanon__16 k t__18 t__19 s a w__4 t__5 t__6 hg
   refine Refinement.trans ?_
-    (b_or.r_upper_eq.lt.ok FS O hO s a w__4 t__5 t__6 kanon__16 k t__18 t__19 hg)
-  simp only [b_or.spec]
+    (Bool.or_.r_upper_eq.lt.ok FS O hO s a w__4 t__5 t__6 kanon__16 k t__18 t__19 hg)
+  simp only [Bool.or_.spec]
   refine Refinement.trans (Op2.Or.comm.ok FS ..) ?_
   kanon_congr
 
-theorem b_or.r_upper_eq.leq_swap2.ok : b_or.r_upper_eq.leq_swap2.Stmt := by
+theorem Bool.or_.r_upper_eq.leq_swap2.ok : Bool.or_.r_upper_eq.leq_swap2.Stmt := by
   intro FS O hO kanon__16 k t__18 t__19 s a w__10 t__11 t__12 hg
   refine Refinement.trans ?_
-    (b_or.r_upper_eq.leq.ok FS O hO s a w__10 t__11 t__12 kanon__16 k t__18 t__19 hg)
-  simp only [b_or.spec]
+    (Bool.or_.r_upper_eq.leq.ok FS O hO s a w__10 t__11 t__12 kanon__16 k t__18 t__19 hg)
+  simp only [Bool.or_.spec]
   refine Refinement.trans (Op2.Or.comm.ok FS ..) ?_
   kanon_congr
 
-theorem b_or.r_upper_eq.lt_swap1_swap2.ok : b_or.r_upper_eq.lt_swap1_swap2.Stmt := by
+theorem Bool.or_.r_upper_eq.lt_swap1_swap2.ok : Bool.or_.r_upper_eq.lt_swap1_swap2.Stmt := by
   intro FS O hO k t__18 kanon__16 t__19 s a w__4 t__5 t__6 hg
   have : Refines FS (Term.mk (Kind.Op2 Op2.Eq (Term.mk (Kind.BitVec k) t__18) kanon__16) t__19)
     (Term.mk (Kind.Op2 Op2.Eq kanon__16 (Term.mk (Kind.BitVec k) t__18)) t__19) :=
     Op2.Eq.comm.ok FS ..
   refine Refinement.trans ?_
-    (b_or.r_upper_eq.lt.ok FS O hO s a w__4 t__5 t__6 kanon__16 k t__18 t__19 hg)
-  simp only [b_or.spec]
+    (Bool.or_.r_upper_eq.lt.ok FS O hO s a w__4 t__5 t__6 kanon__16 k t__18 t__19 hg)
+  simp only [Bool.or_.spec]
   refine Refinement.trans (Op2.Or.comm.ok FS ..) ?_
   kanon_congr
 
-theorem b_or.r_upper_eq.leq_swap1_swap2.ok : b_or.r_upper_eq.leq_swap1_swap2.Stmt := by
+theorem Bool.or_.r_upper_eq.leq_swap1_swap2.ok : Bool.or_.r_upper_eq.leq_swap1_swap2.Stmt := by
   intro FS O hO k t__18 kanon__16 t__19 s a w__10 t__11 t__12 hg
   have : Refines FS (Term.mk (Kind.Op2 Op2.Eq (Term.mk (Kind.BitVec k) t__18) kanon__16) t__19)
     (Term.mk (Kind.Op2 Op2.Eq kanon__16 (Term.mk (Kind.BitVec k) t__18)) t__19) :=
     Op2.Eq.comm.ok FS ..
   refine Refinement.trans ?_
-    (b_or.r_upper_eq.leq.ok FS O hO s a w__10 t__11 t__12 kanon__16 k t__18 t__19 hg)
-  simp only [b_or.spec]
+    (Bool.or_.r_upper_eq.leq.ok FS O hO s a w__10 t__11 t__12 kanon__16 k t__18 t__19 hg)
+  simp only [Bool.or_.spec]
   refine Refinement.trans (Op2.Or.comm.ok FS ..) ?_
   kanon_congr
 
-theorem b_or.r_upper_eq.proof : b_or.r_upper_eq.Stmt := by
+theorem Bool.or_.r_upper_eq.proof : Bool.or_.r_upper_eq.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [b_or.r_upper_eq] at h
+  simp only [Bool.or_.r_upper_eq] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_or.r_upper_eq.lt.ok FS O hO)
-  · kanon_arm h (b_or.r_upper_eq.lt_swap1.ok FS O hO)
-  · kanon_arm h (b_or.r_upper_eq.leq.ok FS O hO)
-  · kanon_arm h (b_or.r_upper_eq.leq_swap1.ok FS O hO)
-  · kanon_arm h (b_or.r_upper_eq.lt_swap2.ok FS O hO)
-  · kanon_arm h (b_or.r_upper_eq.leq_swap2.ok FS O hO)
-  · kanon_arm h (b_or.r_upper_eq.lt_swap1_swap2.ok FS O hO)
-  · kanon_arm h (b_or.r_upper_eq.leq_swap1_swap2.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_upper_eq.lt.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_upper_eq.lt_swap1.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_upper_eq.leq.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_upper_eq.leq_swap1.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_upper_eq.lt_swap2.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_upper_eq.leq_swap2.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_upper_eq.lt_swap1_swap2.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_upper_eq.leq_swap1_swap2.ok FS O hO)
 
-theorem b_or.r_lower_eq.lt.ok : b_or.r_lower_eq.lt.Stmt := kanon_proof% b_or.r_lower_eq.lt
+theorem Bool.or_.r_lower_eq.lt.ok : Bool.or_.r_lower_eq.lt.Stmt := kanon_proof% Bool.or_.r_lower_eq.lt
 
-theorem b_or.r_lower_eq.lt_swap1.ok : b_or.r_lower_eq.lt_swap1.Stmt := by
+theorem Bool.or_.r_lower_eq.lt_swap1.ok : Bool.or_.r_lower_eq.lt_swap1.Stmt := by
   intro FS O hO s w__3 t__4 a t__6 k t__18 kanon__16 t__19 hg
   have : Refines FS (Term.mk (Kind.Op2 Op2.Eq (Term.mk (Kind.BitVec k) t__18) kanon__16) t__19)
     (Term.mk (Kind.Op2 Op2.Eq kanon__16 (Term.mk (Kind.BitVec k) t__18)) t__19) :=
     Op2.Eq.comm.ok FS ..
   refine Refinement.trans ?_
-    (b_or.r_lower_eq.lt.ok FS O hO s w__3 t__4 a t__6 kanon__16 k t__18 t__19 hg)
-  simp only [b_or.spec]
+    (Bool.or_.r_lower_eq.lt.ok FS O hO s w__3 t__4 a t__6 kanon__16 k t__18 t__19 hg)
+  simp only [Bool.or_.spec]
   kanon_congr
 
-theorem b_or.r_lower_eq.leq.ok : b_or.r_lower_eq.leq.Stmt := kanon_proof% b_or.r_lower_eq.leq
+theorem Bool.or_.r_lower_eq.leq.ok : Bool.or_.r_lower_eq.leq.Stmt := kanon_proof% Bool.or_.r_lower_eq.leq
 
-theorem b_or.r_lower_eq.leq_swap1.ok : b_or.r_lower_eq.leq_swap1.Stmt := by
+theorem Bool.or_.r_lower_eq.leq_swap1.ok : Bool.or_.r_lower_eq.leq_swap1.Stmt := by
   intro FS O hO s w__9 t__10 a t__12 k t__18 kanon__16 t__19 hg
   have : Refines FS (Term.mk (Kind.Op2 Op2.Eq (Term.mk (Kind.BitVec k) t__18) kanon__16) t__19)
     (Term.mk (Kind.Op2 Op2.Eq kanon__16 (Term.mk (Kind.BitVec k) t__18)) t__19) :=
     Op2.Eq.comm.ok FS ..
   refine Refinement.trans ?_
-    (b_or.r_lower_eq.leq.ok FS O hO s w__9 t__10 a t__12 kanon__16 k t__18 t__19 hg)
-  simp only [b_or.spec]
+    (Bool.or_.r_lower_eq.leq.ok FS O hO s w__9 t__10 a t__12 kanon__16 k t__18 t__19 hg)
+  simp only [Bool.or_.spec]
   kanon_congr
 
-theorem b_or.r_lower_eq.lt_swap2.ok : b_or.r_lower_eq.lt_swap2.Stmt := by
+theorem Bool.or_.r_lower_eq.lt_swap2.ok : Bool.or_.r_lower_eq.lt_swap2.Stmt := by
   intro FS O hO kanon__16 k t__18 t__19 s w__3 t__4 a t__6 hg
   refine Refinement.trans ?_
-    (b_or.r_lower_eq.lt.ok FS O hO s w__3 t__4 a t__6 kanon__16 k t__18 t__19 hg)
-  simp only [b_or.spec]
+    (Bool.or_.r_lower_eq.lt.ok FS O hO s w__3 t__4 a t__6 kanon__16 k t__18 t__19 hg)
+  simp only [Bool.or_.spec]
   refine Refinement.trans (Op2.Or.comm.ok FS ..) ?_
   kanon_congr
 
-theorem b_or.r_lower_eq.leq_swap2.ok : b_or.r_lower_eq.leq_swap2.Stmt := by
+theorem Bool.or_.r_lower_eq.leq_swap2.ok : Bool.or_.r_lower_eq.leq_swap2.Stmt := by
   intro FS O hO kanon__16 k t__18 t__19 s w__9 t__10 a t__12 hg
   refine Refinement.trans ?_
-    (b_or.r_lower_eq.leq.ok FS O hO s w__9 t__10 a t__12 kanon__16 k t__18 t__19 hg)
-  simp only [b_or.spec]
+    (Bool.or_.r_lower_eq.leq.ok FS O hO s w__9 t__10 a t__12 kanon__16 k t__18 t__19 hg)
+  simp only [Bool.or_.spec]
   refine Refinement.trans (Op2.Or.comm.ok FS ..) ?_
   kanon_congr
 
-theorem b_or.r_lower_eq.lt_swap1_swap2.ok : b_or.r_lower_eq.lt_swap1_swap2.Stmt := by
+theorem Bool.or_.r_lower_eq.lt_swap1_swap2.ok : Bool.or_.r_lower_eq.lt_swap1_swap2.Stmt := by
   intro FS O hO k t__18 kanon__16 t__19 s w__3 t__4 a t__6 hg
   have : Refines FS (Term.mk (Kind.Op2 Op2.Eq (Term.mk (Kind.BitVec k) t__18) kanon__16) t__19)
     (Term.mk (Kind.Op2 Op2.Eq kanon__16 (Term.mk (Kind.BitVec k) t__18)) t__19) :=
     Op2.Eq.comm.ok FS ..
   refine Refinement.trans ?_
-    (b_or.r_lower_eq.lt.ok FS O hO s w__3 t__4 a t__6 kanon__16 k t__18 t__19 hg)
-  simp only [b_or.spec]
+    (Bool.or_.r_lower_eq.lt.ok FS O hO s w__3 t__4 a t__6 kanon__16 k t__18 t__19 hg)
+  simp only [Bool.or_.spec]
   refine Refinement.trans (Op2.Or.comm.ok FS ..) ?_
   kanon_congr
 
-theorem b_or.r_lower_eq.leq_swap1_swap2.ok : b_or.r_lower_eq.leq_swap1_swap2.Stmt := by
+theorem Bool.or_.r_lower_eq.leq_swap1_swap2.ok : Bool.or_.r_lower_eq.leq_swap1_swap2.Stmt := by
   intro FS O hO k t__18 kanon__16 t__19 s w__9 t__10 a t__12 hg
   have : Refines FS (Term.mk (Kind.Op2 Op2.Eq (Term.mk (Kind.BitVec k) t__18) kanon__16) t__19)
     (Term.mk (Kind.Op2 Op2.Eq kanon__16 (Term.mk (Kind.BitVec k) t__18)) t__19) :=
     Op2.Eq.comm.ok FS ..
   refine Refinement.trans ?_
-    (b_or.r_lower_eq.leq.ok FS O hO s w__9 t__10 a t__12 kanon__16 k t__18 t__19 hg)
-  simp only [b_or.spec]
+    (Bool.or_.r_lower_eq.leq.ok FS O hO s w__9 t__10 a t__12 kanon__16 k t__18 t__19 hg)
+  simp only [Bool.or_.spec]
   refine Refinement.trans (Op2.Or.comm.ok FS ..) ?_
   kanon_congr
 
-theorem b_or.r_lower_eq.proof : b_or.r_lower_eq.Stmt := by
+theorem Bool.or_.r_lower_eq.proof : Bool.or_.r_lower_eq.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [b_or.r_lower_eq] at h
+  simp only [Bool.or_.r_lower_eq] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_or.r_lower_eq.lt.ok FS O hO)
-  · kanon_arm h (b_or.r_lower_eq.lt_swap1.ok FS O hO)
-  · kanon_arm h (b_or.r_lower_eq.leq.ok FS O hO)
-  · kanon_arm h (b_or.r_lower_eq.leq_swap1.ok FS O hO)
-  · kanon_arm h (b_or.r_lower_eq.lt_swap2.ok FS O hO)
-  · kanon_arm h (b_or.r_lower_eq.leq_swap2.ok FS O hO)
-  · kanon_arm h (b_or.r_lower_eq.lt_swap1_swap2.ok FS O hO)
-  · kanon_arm h (b_or.r_lower_eq.leq_swap1_swap2.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_lower_eq.lt.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_lower_eq.lt_swap1.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_lower_eq.leq.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_lower_eq.leq_swap1.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_lower_eq.lt_swap2.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_lower_eq.leq_swap2.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_lower_eq.lt_swap1_swap2.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_lower_eq.leq_swap1_swap2.ok FS O hO)
 
-theorem b_or.r_upper_bounds.lt_lt.ok : b_or.r_upper_bounds.lt_lt.Stmt := kanon_proof% b_or.r_upper_bounds.lt_lt
+theorem Bool.or_.r_upper_bounds.lt_lt.ok : Bool.or_.r_upper_bounds.lt_lt.Stmt := kanon_proof% Bool.or_.r_upper_bounds.lt_lt
 
-theorem b_or.r_upper_bounds.lt_leq.ok : b_or.r_upper_bounds.lt_leq.Stmt := kanon_proof% b_or.r_upper_bounds.lt_leq
+theorem Bool.or_.r_upper_bounds.lt_leq.ok : Bool.or_.r_upper_bounds.lt_leq.Stmt := kanon_proof% Bool.or_.r_upper_bounds.lt_leq
 
-theorem b_or.r_upper_bounds.leq_lt.ok : b_or.r_upper_bounds.leq_lt.Stmt := kanon_proof% b_or.r_upper_bounds.leq_lt
+theorem Bool.or_.r_upper_bounds.leq_lt.ok : Bool.or_.r_upper_bounds.leq_lt.Stmt := kanon_proof% Bool.or_.r_upper_bounds.leq_lt
 
-theorem b_or.r_upper_bounds.leq_leq.ok : b_or.r_upper_bounds.leq_leq.Stmt := kanon_proof% b_or.r_upper_bounds.leq_leq
+theorem Bool.or_.r_upper_bounds.leq_leq.ok : Bool.or_.r_upper_bounds.leq_leq.Stmt := kanon_proof% Bool.or_.r_upper_bounds.leq_leq
 
-theorem b_or.r_upper_bounds.proof : b_or.r_upper_bounds.Stmt := by
+theorem Bool.or_.r_upper_bounds.proof : Bool.or_.r_upper_bounds.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [b_or.r_upper_bounds] at h
+  simp only [Bool.or_.r_upper_bounds] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_or.r_upper_bounds.lt_lt.ok FS O hO)
-  · kanon_arm h (b_or.r_upper_bounds.lt_leq.ok FS O hO)
-  · kanon_arm h (b_or.r_upper_bounds.leq_lt.ok FS O hO)
-  · kanon_arm h (b_or.r_upper_bounds.leq_leq.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_upper_bounds.lt_lt.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_upper_bounds.lt_leq.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_upper_bounds.leq_lt.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_upper_bounds.leq_leq.ok FS O hO)
 
-theorem b_or.r_lower_bounds.lt_lt.ok : b_or.r_lower_bounds.lt_lt.Stmt := kanon_proof% b_or.r_lower_bounds.lt_lt
+theorem Bool.or_.r_lower_bounds.lt_lt.ok : Bool.or_.r_lower_bounds.lt_lt.Stmt := kanon_proof% Bool.or_.r_lower_bounds.lt_lt
 
-theorem b_or.r_lower_bounds.lt_leq.ok : b_or.r_lower_bounds.lt_leq.Stmt := kanon_proof% b_or.r_lower_bounds.lt_leq
+theorem Bool.or_.r_lower_bounds.lt_leq.ok : Bool.or_.r_lower_bounds.lt_leq.Stmt := kanon_proof% Bool.or_.r_lower_bounds.lt_leq
 
-theorem b_or.r_lower_bounds.leq_lt.ok : b_or.r_lower_bounds.leq_lt.Stmt := kanon_proof% b_or.r_lower_bounds.leq_lt
+theorem Bool.or_.r_lower_bounds.leq_lt.ok : Bool.or_.r_lower_bounds.leq_lt.Stmt := kanon_proof% Bool.or_.r_lower_bounds.leq_lt
 
-theorem b_or.r_lower_bounds.leq_leq.ok : b_or.r_lower_bounds.leq_leq.Stmt := kanon_proof% b_or.r_lower_bounds.leq_leq
+theorem Bool.or_.r_lower_bounds.leq_leq.ok : Bool.or_.r_lower_bounds.leq_leq.Stmt := kanon_proof% Bool.or_.r_lower_bounds.leq_leq
 
-theorem b_or.r_lower_bounds.proof : b_or.r_lower_bounds.Stmt := by
+theorem Bool.or_.r_lower_bounds.proof : Bool.or_.r_lower_bounds.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [b_or.r_lower_bounds] at h
+  simp only [Bool.or_.r_lower_bounds] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_or.r_lower_bounds.lt_lt.ok FS O hO)
-  · kanon_arm h (b_or.r_lower_bounds.lt_leq.ok FS O hO)
-  · kanon_arm h (b_or.r_lower_bounds.leq_lt.ok FS O hO)
-  · kanon_arm h (b_or.r_lower_bounds.leq_leq.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_lower_bounds.lt_lt.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_lower_bounds.lt_leq.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_lower_bounds.leq_lt.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_lower_bounds.leq_leq.ok FS O hO)
 
-theorem b_or.r_default.main.ok : b_or.r_default.main.Stmt :=
-  fun FS O hO => BoolMod.b_or.r_default.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.or_.r_default.main.ok : Bool.or_.r_default.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.or_.r_default.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_or.r_default.proof : b_or.r_default.Stmt := by
+theorem Bool.or_.r_default.proof : Bool.or_.r_default.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [b_or.r_default] at h
+  simp only [Bool.or_.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_or.r_default.main.ok FS O hO)
+  · kanon_arm h (Bool.or_.r_default.main.ok FS O hO)
 
-theorem b_not.r_true_.main.ok : b_not.r_true_.main.Stmt :=
-  fun FS O hO => BoolMod.b_not.r_true_.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.not_.r_true_.main.ok : Bool.not_.r_true_.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.not_.r_true_.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_not.r_true_.proof : b_not.r_true_.Stmt := by
+theorem Bool.not_.r_true_.proof : Bool.not_.r_true_.Stmt := by
   intro FS O hO sv res h
-  simp only [b_not.r_true_] at h
+  simp only [Bool.not_.r_true_] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_not.r_true_.main.ok FS O hO)
+  · kanon_arm h (Bool.not_.r_true_.main.ok FS O hO)
 
-theorem b_not.r_false_.main.ok : b_not.r_false_.main.Stmt :=
-  fun FS O hO => BoolMod.b_not.r_false_.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.not_.r_false_.main.ok : Bool.not_.r_false_.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.not_.r_false_.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_not.r_false_.proof : b_not.r_false_.Stmt := by
+theorem Bool.not_.r_false_.proof : Bool.not_.r_false_.Stmt := by
   intro FS O hO sv res h
-  simp only [b_not.r_false_] at h
+  simp only [Bool.not_.r_false_] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_not.r_false_.main.ok FS O hO)
+  · kanon_arm h (Bool.not_.r_false_.main.ok FS O hO)
 
-theorem b_not.r_not.main.ok : b_not.r_not.main.Stmt :=
-  fun FS O hO => BoolMod.b_not.r_not.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.not_.r_not.main.ok : Bool.not_.r_not.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.not_.r_not.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_not.r_not.proof : b_not.r_not.Stmt := by
+theorem Bool.not_.r_not.proof : Bool.not_.r_not.Stmt := by
   intro FS O hO sv res h
-  simp only [b_not.r_not] at h
+  simp only [Bool.not_.r_not] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_not.r_not.main.ok FS O hO)
+  · kanon_arm h (Bool.not_.r_not.main.ok FS O hO)
 
-theorem b_not.r_or_.main.ok : b_not.r_or_.main.Stmt :=
-  fun FS O hO => BoolMod.b_not.r_or_.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.not_.r_or_.main.ok : Bool.not_.r_or_.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.not_.r_or_.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_not.r_or_.proof : b_not.r_or_.Stmt := by
+theorem Bool.not_.r_or_.proof : Bool.not_.r_or_.Stmt := by
   intro FS O hO sv res h
-  simp only [b_not.r_or_] at h
+  simp only [Bool.not_.r_or_] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_not.r_or_.main.ok FS O hO)
+  · kanon_arm h (Bool.not_.r_or_.main.ok FS O hO)
 
-theorem b_not.r_and_.main.ok : b_not.r_and_.main.Stmt :=
-  fun FS O hO => BoolMod.b_not.r_and_.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.not_.r_and_.main.ok : Bool.not_.r_and_.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.not_.r_and_.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_not.r_and_.proof : b_not.r_and_.Stmt := by
+theorem Bool.not_.r_and_.proof : Bool.not_.r_and_.Stmt := by
   intro FS O hO sv res h
-  simp only [b_not.r_and_] at h
+  simp only [Bool.not_.r_and_] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_not.r_and_.main.ok FS O hO)
+  · kanon_arm h (Bool.not_.r_and_.main.ok FS O hO)
 
-theorem b_not.r_ite.main.ok : b_not.r_ite.main.Stmt :=
-  fun FS O hO => BoolMod.b_not.r_ite.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.not_.r_ite.main.ok : Bool.not_.r_ite.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.not_.r_ite.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_not.r_ite.proof : b_not.r_ite.Stmt := by
+theorem Bool.not_.r_ite.proof : Bool.not_.r_ite.Stmt := by
   intro FS O hO sv res h
-  simp only [b_not.r_ite] at h
+  simp only [Bool.not_.r_ite] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_not.r_ite.main.ok FS O hO)
+  · kanon_arm h (Bool.not_.r_ite.main.ok FS O hO)
 
-theorem b_not.r_distinct.main.ok : b_not.r_distinct.main.Stmt :=
-  fun FS O hO => BoolMod.b_not.r_distinct.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.not_.r_distinct.main.ok : Bool.not_.r_distinct.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.not_.r_distinct.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_not.r_distinct.proof : b_not.r_distinct.Stmt := by
+theorem Bool.not_.r_distinct.proof : Bool.not_.r_distinct.Stmt := by
   intro FS O hO sv res h
-  simp only [b_not.r_distinct] at h
+  simp only [Bool.not_.r_distinct] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_not.r_distinct.main.ok FS O hO)
+  · kanon_arm h (Bool.not_.r_distinct.main.ok FS O hO)
 
-theorem b_not.r_lt.main.ok : b_not.r_lt.main.Stmt := kanon_proof% b_not.r_lt.main
+theorem Bool.not_.r_lt.main.ok : Bool.not_.r_lt.main.Stmt := kanon_proof% Bool.not_.r_lt.main
 
-theorem b_not.r_lt.proof : b_not.r_lt.Stmt := by
+theorem Bool.not_.r_lt.proof : Bool.not_.r_lt.Stmt := by
   intro FS O hO sv res h
-  simp only [b_not.r_lt] at h
+  simp only [Bool.not_.r_lt] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_not.r_lt.main.ok FS O hO)
+  · kanon_arm h (Bool.not_.r_lt.main.ok FS O hO)
 
-theorem b_not.r_leq.main.ok : b_not.r_leq.main.Stmt := kanon_proof% b_not.r_leq.main
+theorem Bool.not_.r_leq.main.ok : Bool.not_.r_leq.main.Stmt := kanon_proof% Bool.not_.r_leq.main
 
-theorem b_not.r_leq.proof : b_not.r_leq.Stmt := by
+theorem Bool.not_.r_leq.proof : Bool.not_.r_leq.Stmt := by
   intro FS O hO sv res h
-  simp only [b_not.r_leq] at h
+  simp only [Bool.not_.r_leq] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_not.r_leq.main.ok FS O hO)
+  · kanon_arm h (Bool.not_.r_leq.main.ok FS O hO)
 
-theorem b_not.r_eq_bit.main.ok : b_not.r_eq_bit.main.Stmt := kanon_proof% b_not.r_eq_bit.main
+theorem Bool.not_.r_eq_bit.main.ok : Bool.not_.r_eq_bit.main.Stmt := kanon_proof% Bool.not_.r_eq_bit.main
 
-theorem b_not.r_eq_bit.swap.ok : b_not.r_eq_bit.swap.Stmt := by
+theorem Bool.not_.r_eq_bit.swap.ok : Bool.not_.r_eq_bit.swap.Stmt := by
   intro FS O hO v bv t__3 t__6 hg
   have : Refines FS (Term.mk (Kind.Op2 Op2.Eq v (Term.mk (Kind.BitVec bv) t__3)) t__6)
     (Term.mk (Kind.Op2 Op2.Eq (Term.mk (Kind.BitVec bv) t__3) v) t__6) :=
     Op2.Eq.comm.ok FS ..
   refine Refinement.trans ?_
-    (b_not.r_eq_bit.main.ok FS O hO bv t__3 v t__6 hg)
-  simp only [b_not.spec]
+    (Bool.not_.r_eq_bit.main.ok FS O hO bv t__3 v t__6 hg)
+  simp only [Bool.not_.spec]
   kanon_congr
 
-theorem b_not.r_eq_bit.proof : b_not.r_eq_bit.Stmt := by
+theorem Bool.not_.r_eq_bit.proof : Bool.not_.r_eq_bit.Stmt := by
   intro FS O hO sv res h
-  simp only [b_not.r_eq_bit] at h
+  simp only [Bool.not_.r_eq_bit] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_not.r_eq_bit.main.ok FS O hO)
-  · kanon_arm h (b_not.r_eq_bit.swap.ok FS O hO)
+  · kanon_arm h (Bool.not_.r_eq_bit.main.ok FS O hO)
+  · kanon_arm h (Bool.not_.r_eq_bit.swap.ok FS O hO)
 
-theorem b_not.r_default.main.ok : b_not.r_default.main.Stmt :=
-  fun FS O hO => BoolMod.b_not.r_default.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.not_.r_default.main.ok : Bool.not_.r_default.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.not_.r_default.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_not.r_default.proof : b_not.r_default.Stmt := by
+theorem Bool.not_.r_default.proof : Bool.not_.r_default.Stmt := by
   intro FS O hO sv res h
-  simp only [b_not.r_default] at h
+  simp only [Bool.not_.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_not.r_default.main.ok FS O hO)
+  · kanon_arm h (Bool.not_.r_default.main.ok FS O hO)
 
-theorem b_ite.r_true_.main.ok : b_ite.r_true_.main.Stmt :=
-  fun FS O hO => BoolMod.b_ite.r_true_.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.ite.r_true_.main.ok : Bool.ite.r_true_.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.ite.r_true_.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_ite.r_true_.proof : b_ite.r_true_.Stmt := by
+theorem Bool.ite.r_true_.proof : Bool.ite.r_true_.Stmt := by
   intro FS O hO guard if_ else_ res h
-  simp only [b_ite.r_true_] at h
+  simp only [Bool.ite.r_true_] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_ite.r_true_.main.ok FS O hO)
+  · kanon_arm h (Bool.ite.r_true_.main.ok FS O hO)
 
-theorem b_ite.r_false_.main.ok : b_ite.r_false_.main.Stmt :=
-  fun FS O hO => BoolMod.b_ite.r_false_.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.ite.r_false_.main.ok : Bool.ite.r_false_.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.ite.r_false_.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_ite.r_false_.proof : b_ite.r_false_.Stmt := by
+theorem Bool.ite.r_false_.proof : Bool.ite.r_false_.Stmt := by
   intro FS O hO guard if_ else_ res h
-  simp only [b_ite.r_false_] at h
+  simp only [Bool.ite.r_false_] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_ite.r_false_.main.ok FS O hO)
+  · kanon_arm h (Bool.ite.r_false_.main.ok FS O hO)
 
-theorem b_ite.r_bool.main.ok : b_ite.r_bool.main.Stmt :=
-  fun FS O hO => BoolMod.b_ite.r_bool.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.ite.r_bool.main.ok : Bool.ite.r_bool.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.ite.r_bool.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_ite.r_bool.proof : b_ite.r_bool.Stmt := by
+theorem Bool.ite.r_bool.proof : Bool.ite.r_bool.Stmt := by
   intro FS O hO guard if_ else_ res h
-  simp only [b_ite.r_bool] at h
+  simp only [Bool.ite.r_bool] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_ite.r_bool.main.ok FS O hO)
+  · kanon_arm h (Bool.ite.r_bool.main.ok FS O hO)
 
-theorem b_ite.r_not_bool.main.ok : b_ite.r_not_bool.main.Stmt :=
-  fun FS O hO => BoolMod.b_ite.r_not_bool.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.ite.r_not_bool.main.ok : Bool.ite.r_not_bool.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.ite.r_not_bool.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_ite.r_not_bool.proof : b_ite.r_not_bool.Stmt := by
+theorem Bool.ite.r_not_bool.proof : Bool.ite.r_not_bool.Stmt := by
   intro FS O hO guard if_ else_ res h
-  simp only [b_ite.r_not_bool] at h
+  simp only [Bool.ite.r_not_bool] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_ite.r_not_bool.main.ok FS O hO)
+  · kanon_arm h (Bool.ite.r_not_bool.main.ok FS O hO)
 
-theorem b_ite.r_false_then.main.ok : b_ite.r_false_then.main.Stmt :=
-  fun FS O hO => BoolMod.b_ite.r_false_then.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.ite.r_false_then.main.ok : Bool.ite.r_false_then.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.ite.r_false_then.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_ite.r_false_then.proof : b_ite.r_false_then.Stmt := by
+theorem Bool.ite.r_false_then.proof : Bool.ite.r_false_then.Stmt := by
   intro FS O hO guard if_ else_ res h
-  simp only [b_ite.r_false_then] at h
+  simp only [Bool.ite.r_false_then] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_ite.r_false_then.main.ok FS O hO)
+  · kanon_arm h (Bool.ite.r_false_then.main.ok FS O hO)
 
-theorem b_ite.r_true_then.main.ok : b_ite.r_true_then.main.Stmt :=
-  fun FS O hO => BoolMod.b_ite.r_true_then.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.ite.r_true_then.main.ok : Bool.ite.r_true_then.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.ite.r_true_then.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_ite.r_true_then.proof : b_ite.r_true_then.Stmt := by
+theorem Bool.ite.r_true_then.proof : Bool.ite.r_true_then.Stmt := by
   intro FS O hO guard if_ else_ res h
-  simp only [b_ite.r_true_then] at h
+  simp only [Bool.ite.r_true_then] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_ite.r_true_then.main.ok FS O hO)
+  · kanon_arm h (Bool.ite.r_true_then.main.ok FS O hO)
 
-theorem b_ite.r_false_else.main.ok : b_ite.r_false_else.main.Stmt :=
-  fun FS O hO => BoolMod.b_ite.r_false_else.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.ite.r_false_else.main.ok : Bool.ite.r_false_else.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.ite.r_false_else.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_ite.r_false_else.proof : b_ite.r_false_else.Stmt := by
+theorem Bool.ite.r_false_else.proof : Bool.ite.r_false_else.Stmt := by
   intro FS O hO guard if_ else_ res h
-  simp only [b_ite.r_false_else] at h
+  simp only [Bool.ite.r_false_else] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_ite.r_false_else.main.ok FS O hO)
+  · kanon_arm h (Bool.ite.r_false_else.main.ok FS O hO)
 
-theorem b_ite.r_true_else.main.ok : b_ite.r_true_else.main.Stmt :=
-  fun FS O hO => BoolMod.b_ite.r_true_else.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.ite.r_true_else.main.ok : Bool.ite.r_true_else.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.ite.r_true_else.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_ite.r_true_else.proof : b_ite.r_true_else.Stmt := by
+theorem Bool.ite.r_true_else.proof : Bool.ite.r_true_else.Stmt := by
   intro FS O hO guard if_ else_ res h
-  simp only [b_ite.r_true_else] at h
+  simp only [Bool.ite.r_true_else] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_ite.r_true_else.main.ok FS O hO)
+  · kanon_arm h (Bool.ite.r_true_else.main.ok FS O hO)
 
-theorem b_ite.r_not_guard.main.ok : b_ite.r_not_guard.main.Stmt :=
-  fun FS O hO => BoolMod.b_ite.r_not_guard.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.ite.r_not_guard.main.ok : Bool.ite.r_not_guard.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.ite.r_not_guard.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_ite.r_not_guard.proof : b_ite.r_not_guard.Stmt := by
+theorem Bool.ite.r_not_guard.proof : Bool.ite.r_not_guard.Stmt := by
   intro FS O hO guard if_ else_ res h
-  simp only [b_ite.r_not_guard] at h
+  simp only [Bool.ite.r_not_guard] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_ite.r_not_guard.main.ok FS O hO)
+  · kanon_arm h (Bool.ite.r_not_guard.main.ok FS O hO)
 
-theorem b_ite.r_guard_then.main.ok : b_ite.r_guard_then.main.Stmt :=
-  fun FS O hO => BoolMod.b_ite.r_guard_then.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.ite.r_guard_then.main.ok : Bool.ite.r_guard_then.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.ite.r_guard_then.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_ite.r_guard_then.proof : b_ite.r_guard_then.Stmt := by
+theorem Bool.ite.r_guard_then.proof : Bool.ite.r_guard_then.Stmt := by
   intro FS O hO guard if_ else_ res h
-  simp only [b_ite.r_guard_then] at h
+  simp only [Bool.ite.r_guard_then] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_ite.r_guard_then.main.ok FS O hO)
+  · kanon_arm h (Bool.ite.r_guard_then.main.ok FS O hO)
 
-theorem b_ite.r_guard_else.main.ok : b_ite.r_guard_else.main.Stmt :=
-  fun FS O hO => BoolMod.b_ite.r_guard_else.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.ite.r_guard_else.main.ok : Bool.ite.r_guard_else.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.ite.r_guard_else.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_ite.r_guard_else.proof : b_ite.r_guard_else.Stmt := by
+theorem Bool.ite.r_guard_else.proof : Bool.ite.r_guard_else.Stmt := by
   intro FS O hO guard if_ else_ res h
-  simp only [b_ite.r_guard_else] at h
+  simp only [Bool.ite.r_guard_else] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_ite.r_guard_else.main.ok FS O hO)
+  · kanon_arm h (Bool.ite.r_guard_else.main.ok FS O hO)
 
-theorem b_ite.r_ite_then.main.ok : b_ite.r_ite_then.main.Stmt :=
-  fun FS O hO => BoolMod.b_ite.r_ite_then.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.ite.r_ite_then.main.ok : Bool.ite.r_ite_then.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.ite.r_ite_then.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_ite.r_ite_then.proof : b_ite.r_ite_then.Stmt := by
+theorem Bool.ite.r_ite_then.proof : Bool.ite.r_ite_then.Stmt := by
   intro FS O hO guard if_ else_ res h
-  simp only [b_ite.r_ite_then] at h
+  simp only [Bool.ite.r_ite_then] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_ite.r_ite_then.main.ok FS O hO)
+  · kanon_arm h (Bool.ite.r_ite_then.main.ok FS O hO)
 
-theorem b_ite.r_ite_else.main.ok : b_ite.r_ite_else.main.Stmt :=
-  fun FS O hO => BoolMod.b_ite.r_ite_else.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.ite.r_ite_else.main.ok : Bool.ite.r_ite_else.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.ite.r_ite_else.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_ite.r_ite_else.proof : b_ite.r_ite_else.Stmt := by
+theorem Bool.ite.r_ite_else.proof : Bool.ite.r_ite_else.Stmt := by
   intro FS O hO guard if_ else_ res h
-  simp only [b_ite.r_ite_else] at h
+  simp only [Bool.ite.r_ite_else] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_ite.r_ite_else.main.ok FS O hO)
+  · kanon_arm h (Bool.ite.r_ite_else.main.ok FS O hO)
 
-theorem b_ite.r_and_ite_then.main.ok : b_ite.r_and_ite_then.main.Stmt :=
-  fun FS O hO => BoolMod.b_ite.r_and_ite_then.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.ite.r_and_ite_then.main.ok : Bool.ite.r_and_ite_then.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.ite.r_and_ite_then.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_ite.r_and_ite_then.swap.ok : b_ite.r_and_ite_then.swap.Stmt :=
-  fun FS O hO => BoolMod.b_ite.r_and_ite_then.swap (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.ite.r_and_ite_then.swap.ok : Bool.ite.r_and_ite_then.swap.Stmt :=
+  fun FS O hO => BoolMod.Bool.ite.r_and_ite_then.swap (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_ite.r_and_ite_then.proof : b_ite.r_and_ite_then.Stmt := by
+theorem Bool.ite.r_and_ite_then.proof : Bool.ite.r_and_ite_then.Stmt := by
   intro FS O hO guard if_ else_ res h
-  simp only [b_ite.r_and_ite_then] at h
+  simp only [Bool.ite.r_and_ite_then] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_ite.r_and_ite_then.main.ok FS O hO)
-  · kanon_arm h (b_ite.r_and_ite_then.swap.ok FS O hO)
+  · kanon_arm h (Bool.ite.r_and_ite_then.main.ok FS O hO)
+  · kanon_arm h (Bool.ite.r_and_ite_then.swap.ok FS O hO)
 
-theorem b_ite.r_or_ite_else.main.ok : b_ite.r_or_ite_else.main.Stmt :=
-  fun FS O hO => BoolMod.b_ite.r_or_ite_else.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.ite.r_or_ite_else.main.ok : Bool.ite.r_or_ite_else.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.ite.r_or_ite_else.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_ite.r_or_ite_else.swap.ok : b_ite.r_or_ite_else.swap.Stmt :=
-  fun FS O hO => BoolMod.b_ite.r_or_ite_else.swap (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.ite.r_or_ite_else.swap.ok : Bool.ite.r_or_ite_else.swap.Stmt :=
+  fun FS O hO => BoolMod.Bool.ite.r_or_ite_else.swap (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_ite.r_or_ite_else.proof : b_ite.r_or_ite_else.Stmt := by
+theorem Bool.ite.r_or_ite_else.proof : Bool.ite.r_or_ite_else.Stmt := by
   intro FS O hO guard if_ else_ res h
-  simp only [b_ite.r_or_ite_else] at h
+  simp only [Bool.ite.r_or_ite_else] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_ite.r_or_ite_else.main.ok FS O hO)
-  · kanon_arm h (b_ite.r_or_ite_else.swap.ok FS O hO)
+  · kanon_arm h (Bool.ite.r_or_ite_else.main.ok FS O hO)
+  · kanon_arm h (Bool.ite.r_or_ite_else.swap.ok FS O hO)
 
-theorem b_ite.r_same.main.ok : b_ite.r_same.main.Stmt :=
-  fun FS O hO => BoolMod.b_ite.r_same.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.ite.r_same.main.ok : Bool.ite.r_same.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.ite.r_same.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_ite.r_same.proof : b_ite.r_same.Stmt := by
+theorem Bool.ite.r_same.proof : Bool.ite.r_same.Stmt := by
   intro FS O hO guard if_ else_ res h
-  simp only [b_ite.r_same] at h
+  simp only [Bool.ite.r_same] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_ite.r_same.main.ok FS O hO)
+  · kanon_arm h (Bool.ite.r_same.main.ok FS O hO)
 
-theorem b_ite.r_bv_of_bool.main.ok : b_ite.r_bv_of_bool.main.Stmt := kanon_proof% b_ite.r_bv_of_bool.main
+theorem Bool.ite.r_bv_of_bool.main.ok : Bool.ite.r_bv_of_bool.main.Stmt := kanon_proof% Bool.ite.r_bv_of_bool.main
 
-theorem b_ite.r_bv_of_bool.proof : b_ite.r_bv_of_bool.Stmt := by
+theorem Bool.ite.r_bv_of_bool.proof : Bool.ite.r_bv_of_bool.Stmt := by
   intro FS O hO guard if_ else_ res h
-  simp only [b_ite.r_bv_of_bool] at h
+  simp only [Bool.ite.r_bv_of_bool] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_ite.r_bv_of_bool.main.ok FS O hO)
+  · kanon_arm h (Bool.ite.r_bv_of_bool.main.ok FS O hO)
 
-theorem b_ite.r_default.main.ok : b_ite.r_default.main.Stmt :=
-  fun FS O hO => BoolMod.b_ite.r_default.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.ite.r_default.main.ok : Bool.ite.r_default.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.ite.r_default.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_ite.r_default.proof : b_ite.r_default.Stmt := by
+theorem Bool.ite.r_default.proof : Bool.ite.r_default.Stmt := by
   intro FS O hO guard if_ else_ res h
-  simp only [b_ite.r_default] at h
+  simp only [Bool.ite.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_ite.r_default.main.ok FS O hO)
+  · kanon_arm h (Bool.ite.r_default.main.ok FS O hO)
 
-theorem sem_eq.r_same.main.ok : sem_eq.r_same.main.Stmt :=
-  fun FS O hO => BoolMod.sem_eq.r_same.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.eq.r_same.main.ok : Bool.eq.r_same.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.eq.r_same.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem sem_eq.r_same.proof : sem_eq.r_same.Stmt := by
+theorem Bool.eq.r_same.proof : Bool.eq.r_same.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_same] at h
+  simp only [Bool.eq.r_same] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (sem_eq.r_same.main.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_same.main.ok FS O hO)
 
-theorem sem_eq.r_bools.main.ok : sem_eq.r_bools.main.Stmt :=
-  fun FS O hO => BoolMod.sem_eq.r_bools.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.eq.r_bools.main.ok : Bool.eq.r_bools.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.eq.r_bools.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem sem_eq.r_bools.proof : sem_eq.r_bools.Stmt := by
+theorem Bool.eq.r_bools.proof : Bool.eq.r_bools.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_bools] at h
+  simp only [Bool.eq.r_bools] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (sem_eq.r_bools.main.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_bools.main.ok FS O hO)
 
-theorem sem_eq.r_ite_ite.main.ok : sem_eq.r_ite_ite.main.Stmt :=
-  fun FS O hO => BoolMod.sem_eq.r_ite_ite.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.eq.r_ite_ite.main.ok : Bool.eq.r_ite_ite.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.eq.r_ite_ite.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem sem_eq.r_ite_ite.proof : sem_eq.r_ite_ite.Stmt := by
+theorem Bool.eq.r_ite_ite.proof : Bool.eq.r_ite_ite.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_ite_ite] at h
+  simp only [Bool.eq.r_ite_ite] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (sem_eq.r_ite_ite.main.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_ite_ite.main.ok FS O hO)
 
-theorem sem_eq.r_false_.main.ok : sem_eq.r_false_.main.Stmt :=
-  fun FS O hO => BoolMod.sem_eq.r_false_.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.eq.r_false_.main.ok : Bool.eq.r_false_.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.eq.r_false_.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem sem_eq.r_false_.swap.ok : sem_eq.r_false_.swap.Stmt :=
-  fun FS O hO => BoolMod.sem_eq.r_false_.swap (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.eq.r_false_.swap.ok : Bool.eq.r_false_.swap.Stmt :=
+  fun FS O hO => BoolMod.Bool.eq.r_false_.swap (boolLang FS) (O.bool FS) hO.bool
 
-theorem sem_eq.r_false_.proof : sem_eq.r_false_.Stmt := by
+theorem Bool.eq.r_false_.proof : Bool.eq.r_false_.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_false_] at h
+  simp only [Bool.eq.r_false_] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (sem_eq.r_false_.main.ok FS O hO)
-  · kanon_arm h (sem_eq.r_false_.swap.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_false_.main.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_false_.swap.ok FS O hO)
 
-theorem sem_eq.r_true_.main.ok : sem_eq.r_true_.main.Stmt :=
-  fun FS O hO => BoolMod.sem_eq.r_true_.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.eq.r_true_.main.ok : Bool.eq.r_true_.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.eq.r_true_.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem sem_eq.r_true_.swap.ok : sem_eq.r_true_.swap.Stmt :=
-  fun FS O hO => BoolMod.sem_eq.r_true_.swap (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.eq.r_true_.swap.ok : Bool.eq.r_true_.swap.Stmt :=
+  fun FS O hO => BoolMod.Bool.eq.r_true_.swap (boolLang FS) (O.bool FS) hO.bool
 
-theorem sem_eq.r_true_.proof : sem_eq.r_true_.Stmt := by
+theorem Bool.eq.r_true_.proof : Bool.eq.r_true_.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_true_] at h
+  simp only [Bool.eq.r_true_] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (sem_eq.r_true_.main.ok FS O hO)
-  · kanon_arm h (sem_eq.r_true_.swap.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_true_.main.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_true_.swap.ok FS O hO)
 
-theorem sem_eq.r_nots.main.ok : sem_eq.r_nots.main.Stmt :=
-  fun FS O hO => BoolMod.sem_eq.r_nots.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.eq.r_nots.main.ok : Bool.eq.r_nots.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.eq.r_nots.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem sem_eq.r_nots.proof : sem_eq.r_nots.Stmt := by
+theorem Bool.eq.r_nots.proof : Bool.eq.r_nots.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_nots] at h
+  simp only [Bool.eq.r_nots] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (sem_eq.r_nots.main.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_nots.main.ok FS O hO)
 
-theorem sem_eq.r_bvs.bitVec_bitVec.ok : sem_eq.r_bvs.bitVec_bitVec.Stmt := kanon_proof% sem_eq.r_bvs.bitVec_bitVec
+theorem Bool.eq.r_bvs.bitVec_bitVec.ok : Bool.eq.r_bvs.bitVec_bitVec.Stmt := kanon_proof% Bool.eq.r_bvs.bitVec_bitVec
 
-theorem sem_eq.r_bvs.locLit_locLit.ok : sem_eq.r_bvs.locLit_locLit.Stmt := kanon_proof% sem_eq.r_bvs.locLit_locLit
+theorem Bool.eq.r_bvs.locLit_locLit.ok : Bool.eq.r_bvs.locLit_locLit.Stmt := kanon_proof% Bool.eq.r_bvs.locLit_locLit
 
-theorem sem_eq.r_bvs.proof : sem_eq.r_bvs.Stmt := by
+theorem Bool.eq.r_bvs.proof : Bool.eq.r_bvs.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_bvs] at h
+  simp only [Bool.eq.r_bvs] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (sem_eq.r_bvs.bitVec_bitVec.ok FS O hO)
-  · kanon_arm h (sem_eq.r_bvs.locLit_locLit.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_bvs.bitVec_bitVec.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_bvs.locLit_locLit.ok FS O hO)
 
-theorem sem_eq.r_neg.main.ok : sem_eq.r_neg.main.Stmt := kanon_proof% sem_eq.r_neg.main
+theorem Bool.eq.r_neg.main.ok : Bool.eq.r_neg.main.Stmt := kanon_proof% Bool.eq.r_neg.main
 
-theorem sem_eq.r_neg.swap.ok : sem_eq.r_neg.swap.Stmt := by
+theorem Bool.eq.r_neg.swap.ok : Bool.eq.r_neg.swap.Stmt := by
   intro FS O hO w__4 x t__7 w__1 t__2
   refine Refinement.trans ?_
-    (sem_eq.r_neg.main.ok FS O hO w__1 t__2 w__4 x t__7)
-  simp only [sem_eq.spec]
+    (Bool.eq.r_neg.main.ok FS O hO w__1 t__2 w__4 x t__7)
+  simp only [Bool.eq.spec]
   refine Refinement.trans (Op2.Eq.comm.ok FS ..) ?_
   kanon_congr
 
-theorem sem_eq.r_neg.proof : sem_eq.r_neg.Stmt := by
+theorem Bool.eq.r_neg.proof : Bool.eq.r_neg.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_neg] at h
+  simp only [Bool.eq.r_neg] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (sem_eq.r_neg.main.ok FS O hO)
-  · kanon_arm h (sem_eq.r_neg.swap.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_neg.main.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_neg.swap.ok FS O hO)
 
-theorem sem_eq.r_not.main.ok : sem_eq.r_not.main.Stmt := kanon_proof% sem_eq.r_not.main
+theorem Bool.eq.r_not.main.ok : Bool.eq.r_not.main.Stmt := kanon_proof% Bool.eq.r_not.main
 
-theorem sem_eq.r_not.swap.ok : sem_eq.r_not.swap.Stmt := by
+theorem Bool.eq.r_not.swap.ok : Bool.eq.r_not.swap.Stmt := by
   intro FS O hO x t__6 w__1 t__2
-  refine Refinement.trans ?_ (sem_eq.r_not.main.ok FS O hO w__1 t__2 x t__6)
-  simp only [sem_eq.spec]
+  refine Refinement.trans ?_ (Bool.eq.r_not.main.ok FS O hO w__1 t__2 x t__6)
+  simp only [Bool.eq.spec]
   refine Refinement.trans (Op2.Eq.comm.ok FS ..) ?_
   kanon_congr
 
-theorem sem_eq.r_not.proof : sem_eq.r_not.Stmt := by
+theorem Bool.eq.r_not.proof : Bool.eq.r_not.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_not] at h
+  simp only [Bool.eq.r_not] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (sem_eq.r_not.main.ok FS O hO)
-  · kanon_arm h (sem_eq.r_not.swap.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_not.main.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_not.swap.ok FS O hO)
 
-theorem sem_eq.r_add_const.main.ok : sem_eq.r_add_const.main.Stmt := kanon_proof% sem_eq.r_add_const.main
+theorem Bool.eq.r_add_const.main.ok : Bool.eq.r_add_const.main.Stmt := kanon_proof% Bool.eq.r_add_const.main
 
-theorem sem_eq.r_add_const.swap1.ok : sem_eq.r_add_const.swap1.Stmt := by
+theorem Bool.eq.r_add_const.swap1.ok : Bool.eq.r_add_const.swap1.Stmt := by
   intro FS O hO w__1 t__2 w__4 r w__6 t__7 t__10
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Add w__4) r (Term.mk (Kind.BitVec w__6) t__7)) t__10)
     (Term.mk (Kind.Op2 (Op2.Add w__4) (Term.mk (Kind.BitVec w__6) t__7) r) t__10) :=
     Op2.Add.comm.ok FS ..
   refine Refinement.trans ?_
-    (sem_eq.r_add_const.main.ok FS O hO w__1 t__2 w__4 w__6 t__7 r t__10)
-  simp only [sem_eq.spec]
+    (Bool.eq.r_add_const.main.ok FS O hO w__1 t__2 w__4 w__6 t__7 r t__10)
+  simp only [Bool.eq.spec]
   kanon_congr
 
-theorem sem_eq.r_add_const.swap2.ok : sem_eq.r_add_const.swap2.Stmt := by
+theorem Bool.eq.r_add_const.swap2.ok : Bool.eq.r_add_const.swap2.Stmt := by
   intro FS O hO w__4 w__6 t__7 r t__10 w__1 t__2
   refine Refinement.trans ?_
-    (sem_eq.r_add_const.main.ok FS O hO w__1 t__2 w__4 w__6 t__7 r t__10)
-  simp only [sem_eq.spec]
+    (Bool.eq.r_add_const.main.ok FS O hO w__1 t__2 w__4 w__6 t__7 r t__10)
+  simp only [Bool.eq.spec]
   refine Refinement.trans (Op2.Eq.comm.ok FS ..) ?_
   kanon_congr
 
-theorem sem_eq.r_add_const.swap1_swap2.ok : sem_eq.r_add_const.swap1_swap2.Stmt := by
+theorem Bool.eq.r_add_const.swap1_swap2.ok : Bool.eq.r_add_const.swap1_swap2.Stmt := by
   intro FS O hO w__4 r w__6 t__7 t__10 w__1 t__2
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Add w__4) r (Term.mk (Kind.BitVec w__6) t__7)) t__10)
     (Term.mk (Kind.Op2 (Op2.Add w__4) (Term.mk (Kind.BitVec w__6) t__7) r) t__10) :=
     Op2.Add.comm.ok FS ..
   refine Refinement.trans ?_
-    (sem_eq.r_add_const.main.ok FS O hO w__1 t__2 w__4 w__6 t__7 r t__10)
-  simp only [sem_eq.spec]
+    (Bool.eq.r_add_const.main.ok FS O hO w__1 t__2 w__4 w__6 t__7 r t__10)
+  simp only [Bool.eq.spec]
   refine Refinement.trans (Op2.Eq.comm.ok FS ..) ?_
   kanon_congr
 
-theorem sem_eq.r_add_const.proof : sem_eq.r_add_const.Stmt := by
+theorem Bool.eq.r_add_const.proof : Bool.eq.r_add_const.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_add_const] at h
+  simp only [Bool.eq.r_add_const] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (sem_eq.r_add_const.main.ok FS O hO)
-  · kanon_arm h (sem_eq.r_add_const.swap1.ok FS O hO)
-  · kanon_arm h (sem_eq.r_add_const.swap2.ok FS O hO)
-  · kanon_arm h (sem_eq.r_add_const.swap1_swap2.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_add_const.main.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_add_const.swap1.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_add_const.swap2.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_add_const.swap1_swap2.ok FS O hO)
 
-theorem sem_eq.r_sub_const1.main.ok : sem_eq.r_sub_const1.main.Stmt := kanon_proof% sem_eq.r_sub_const1.main
+theorem Bool.eq.r_sub_const1.main.ok : Bool.eq.r_sub_const1.main.Stmt := kanon_proof% Bool.eq.r_sub_const1.main
 
-theorem sem_eq.r_sub_const1.swap.ok : sem_eq.r_sub_const1.swap.Stmt := by
+theorem Bool.eq.r_sub_const1.swap.ok : Bool.eq.r_sub_const1.swap.Stmt := by
   intro FS O hO w__4 l w__7 t__8 t__10 w__1 t__2
   refine Refinement.trans ?_
-    (sem_eq.r_sub_const1.main.ok FS O hO w__1 t__2 w__4 l w__7 t__8 t__10)
-  simp only [sem_eq.spec]
+    (Bool.eq.r_sub_const1.main.ok FS O hO w__1 t__2 w__4 l w__7 t__8 t__10)
+  simp only [Bool.eq.spec]
   refine Refinement.trans (Op2.Eq.comm.ok FS ..) ?_
   kanon_congr
 
-theorem sem_eq.r_sub_const1.proof : sem_eq.r_sub_const1.Stmt := by
+theorem Bool.eq.r_sub_const1.proof : Bool.eq.r_sub_const1.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_sub_const1] at h
+  simp only [Bool.eq.r_sub_const1] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (sem_eq.r_sub_const1.main.ok FS O hO)
-  · kanon_arm h (sem_eq.r_sub_const1.swap.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_sub_const1.main.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_sub_const1.swap.ok FS O hO)
 
-theorem sem_eq.r_sub_const2.main.ok : sem_eq.r_sub_const2.main.Stmt := kanon_proof% sem_eq.r_sub_const2.main
+theorem Bool.eq.r_sub_const2.main.ok : Bool.eq.r_sub_const2.main.Stmt := kanon_proof% Bool.eq.r_sub_const2.main
 
-theorem sem_eq.r_sub_const2.swap.ok : sem_eq.r_sub_const2.swap.Stmt := by
+theorem Bool.eq.r_sub_const2.swap.ok : Bool.eq.r_sub_const2.swap.Stmt := by
   intro FS O hO w__4 w__6 t__7 r t__10 w__1 t__2
   refine Refinement.trans ?_
-    (sem_eq.r_sub_const2.main.ok FS O hO w__1 t__2 w__4 w__6 t__7 r t__10)
-  simp only [sem_eq.spec]
+    (Bool.eq.r_sub_const2.main.ok FS O hO w__1 t__2 w__4 w__6 t__7 r t__10)
+  simp only [Bool.eq.spec]
   refine Refinement.trans (Op2.Eq.comm.ok FS ..) ?_
   kanon_congr
 
-theorem sem_eq.r_sub_const2.proof : sem_eq.r_sub_const2.Stmt := by
+theorem Bool.eq.r_sub_const2.proof : Bool.eq.r_sub_const2.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_sub_const2] at h
+  simp only [Bool.eq.r_sub_const2] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (sem_eq.r_sub_const2.main.ok FS O hO)
-  · kanon_arm h (sem_eq.r_sub_const2.swap.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_sub_const2.main.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_sub_const2.swap.ok FS O hO)
 
-theorem sem_eq.r_self_add.main.ok : sem_eq.r_self_add.main.Stmt := kanon_proof% sem_eq.r_self_add.main
+theorem Bool.eq.r_self_add.main.ok : Bool.eq.r_self_add.main.Stmt := kanon_proof% Bool.eq.r_self_add.main
 
-theorem sem_eq.r_self_add.swap1.ok : sem_eq.r_self_add.swap1.Stmt := by
+theorem Bool.eq.r_self_add.swap1.ok : Bool.eq.r_self_add.swap1.Stmt := by
   intro FS O hO v1 w__2 bv t__6 kanon__4 t__7 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Add w__2) (Term.mk (Kind.BitVec bv) t__6) kanon__4) t__7)
     (Term.mk (Kind.Op2 (Op2.Add w__2) kanon__4 (Term.mk (Kind.BitVec bv) t__6)) t__7) :=
     Op2.Add.comm.ok FS ..
   refine Refinement.trans ?_
-    (sem_eq.r_self_add.main.ok FS O hO v1 w__2 kanon__4 bv t__6 t__7 hg)
-  simp only [sem_eq.spec]
+    (Bool.eq.r_self_add.main.ok FS O hO v1 w__2 kanon__4 bv t__6 t__7 hg)
+  simp only [Bool.eq.spec]
   kanon_congr
 
-theorem sem_eq.r_self_add.swap2.ok : sem_eq.r_self_add.swap2.Stmt := by
+theorem Bool.eq.r_self_add.swap2.ok : Bool.eq.r_self_add.swap2.Stmt := by
   intro FS O hO v2 w__2 kanon__4 bv t__6 t__7 hg
   refine Refinement.trans ?_
-    (sem_eq.r_self_add.main.ok FS O hO v2 w__2 kanon__4 bv t__6 t__7 hg)
-  simp only [sem_eq.spec]
+    (Bool.eq.r_self_add.main.ok FS O hO v2 w__2 kanon__4 bv t__6 t__7 hg)
+  simp only [Bool.eq.spec]
   refine Refinement.trans (Op2.Eq.comm.ok FS ..) ?_
   kanon_congr
 
-theorem sem_eq.r_self_add.swap1_swap2.ok : sem_eq.r_self_add.swap1_swap2.Stmt := by
+theorem Bool.eq.r_self_add.swap1_swap2.ok : Bool.eq.r_self_add.swap1_swap2.Stmt := by
   intro FS O hO v2 w__2 bv t__6 kanon__4 t__7 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Add w__2) (Term.mk (Kind.BitVec bv) t__6) kanon__4) t__7)
     (Term.mk (Kind.Op2 (Op2.Add w__2) kanon__4 (Term.mk (Kind.BitVec bv) t__6)) t__7) :=
     Op2.Add.comm.ok FS ..
   refine Refinement.trans ?_
-    (sem_eq.r_self_add.main.ok FS O hO v2 w__2 kanon__4 bv t__6 t__7 hg)
-  simp only [sem_eq.spec]
+    (Bool.eq.r_self_add.main.ok FS O hO v2 w__2 kanon__4 bv t__6 t__7 hg)
+  simp only [Bool.eq.spec]
   refine Refinement.trans (Op2.Eq.comm.ok FS ..) ?_
   kanon_congr
 
-theorem sem_eq.r_self_add.proof : sem_eq.r_self_add.Stmt := by
+theorem Bool.eq.r_self_add.proof : Bool.eq.r_self_add.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_self_add] at h
+  simp only [Bool.eq.r_self_add] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (sem_eq.r_self_add.main.ok FS O hO)
-  · kanon_arm h (sem_eq.r_self_add.swap1.ok FS O hO)
-  · kanon_arm h (sem_eq.r_self_add.swap2.ok FS O hO)
-  · kanon_arm h (sem_eq.r_self_add.swap1_swap2.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_self_add.main.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_self_add.swap1.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_self_add.swap2.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_self_add.swap1_swap2.ok FS O hO)
 
-theorem sem_eq.r_add_add.main.ok : sem_eq.r_add_add.main.Stmt := kanon_proof% sem_eq.r_add_add.main
+theorem Bool.eq.r_add_add.main.ok : Bool.eq.r_add_add.main.Stmt := kanon_proof% Bool.eq.r_add_add.main
 
-theorem sem_eq.r_add_add.swap2.ok : sem_eq.r_add_add.swap2.Stmt := by
+theorem Bool.eq.r_add_add.swap2.ok : Bool.eq.r_add_add.swap2.Stmt := by
   intro FS O hO w__1 bv_l t__4 y t__7 w__9 x bv_r t__12 t__15
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Add w__9) x (Term.mk (Kind.BitVec bv_r) t__12)) t__15)
     (Term.mk (Kind.Op2 (Op2.Add w__9) (Term.mk (Kind.BitVec bv_r) t__12) x) t__15) :=
     Op2.Add.comm.ok FS ..
   refine Refinement.trans ?_
-    (sem_eq.r_add_add.main.ok FS O hO w__1 bv_l t__4 y t__7 w__9 bv_r t__12 x t__15)
-  simp only [sem_eq.spec]
+    (Bool.eq.r_add_add.main.ok FS O hO w__1 bv_l t__4 y t__7 w__9 bv_r t__12 x t__15)
+  simp only [Bool.eq.spec]
   kanon_congr
 
-theorem sem_eq.r_add_add.swap1.ok : sem_eq.r_add_add.swap1.Stmt := by
+theorem Bool.eq.r_add_add.swap1.ok : Bool.eq.r_add_add.swap1.Stmt := by
   intro FS O hO w__1 y bv_l t__4 t__7 w__9 bv_r t__12 x t__15
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Add w__1) y (Term.mk (Kind.BitVec bv_l) t__4)) t__7)
     (Term.mk (Kind.Op2 (Op2.Add w__1) (Term.mk (Kind.BitVec bv_l) t__4) y) t__7) :=
     Op2.Add.comm.ok FS ..
   refine Refinement.trans ?_
-    (sem_eq.r_add_add.main.ok FS O hO w__1 bv_l t__4 y t__7 w__9 bv_r t__12 x t__15)
-  simp only [sem_eq.spec]
+    (Bool.eq.r_add_add.main.ok FS O hO w__1 bv_l t__4 y t__7 w__9 bv_r t__12 x t__15)
+  simp only [Bool.eq.spec]
   kanon_congr
 
-theorem sem_eq.r_add_add.swap1_swap2.ok : sem_eq.r_add_add.swap1_swap2.Stmt := by
+theorem Bool.eq.r_add_add.swap1_swap2.ok : Bool.eq.r_add_add.swap1_swap2.Stmt := by
   intro FS O hO w__1 y bv_l t__4 t__7 w__9 x bv_r t__12 t__15
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Add w__1) y (Term.mk (Kind.BitVec bv_l) t__4)) t__7)
     (Term.mk (Kind.Op2 (Op2.Add w__1) (Term.mk (Kind.BitVec bv_l) t__4) y) t__7) :=
@@ -1154,82 +1154,82 @@ theorem sem_eq.r_add_add.swap1_swap2.ok : sem_eq.r_add_add.swap1_swap2.Stmt := b
     (Term.mk (Kind.Op2 (Op2.Add w__9) (Term.mk (Kind.BitVec bv_r) t__12) x) t__15) :=
     Op2.Add.comm.ok FS ..
   refine Refinement.trans ?_
-    (sem_eq.r_add_add.main.ok FS O hO w__1 bv_l t__4 y t__7 w__9 bv_r t__12 x t__15)
-  simp only [sem_eq.spec]
+    (Bool.eq.r_add_add.main.ok FS O hO w__1 bv_l t__4 y t__7 w__9 bv_r t__12 x t__15)
+  simp only [Bool.eq.spec]
   kanon_congr
 
-theorem sem_eq.r_add_add.proof : sem_eq.r_add_add.Stmt := by
+theorem Bool.eq.r_add_add.proof : Bool.eq.r_add_add.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_add_add] at h
+  simp only [Bool.eq.r_add_add] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (sem_eq.r_add_add.main.ok FS O hO)
-  · kanon_arm h (sem_eq.r_add_add.swap2.ok FS O hO)
-  · kanon_arm h (sem_eq.r_add_add.swap1.ok FS O hO)
-  · kanon_arm h (sem_eq.r_add_add.swap1_swap2.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_add_add.main.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_add_add.swap2.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_add_add.swap1.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_add_add.swap1_swap2.ok FS O hO)
 
-theorem sem_eq.r_mul_const.main.ok : sem_eq.r_mul_const.main.Stmt := kanon_proof% sem_eq.r_mul_const.main
+theorem Bool.eq.r_mul_const.main.ok : Bool.eq.r_mul_const.main.Stmt := kanon_proof% Bool.eq.r_mul_const.main
 
-theorem sem_eq.r_mul_const.swap1.ok : sem_eq.r_mul_const.swap1.Stmt := by
+theorem Bool.eq.r_mul_const.swap1.ok : Bool.eq.r_mul_const.swap1.Stmt := by
   intro FS O hO n t__2 ck x m t__6 t__8 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Mul ck) x (Term.mk (Kind.BitVec m) t__6)) t__8)
     (Term.mk (Kind.Op2 (Op2.Mul ck) (Term.mk (Kind.BitVec m) t__6) x) t__8) :=
     Op2.Mul.comm.ok FS ..
   refine Refinement.trans ?_
-    (sem_eq.r_mul_const.main.ok FS O hO n t__2 ck m t__6 x t__8 hg)
-  simp only [sem_eq.spec]
+    (Bool.eq.r_mul_const.main.ok FS O hO n t__2 ck m t__6 x t__8 hg)
+  simp only [Bool.eq.spec]
   kanon_congr
 
-theorem sem_eq.r_mul_const.swap2.ok : sem_eq.r_mul_const.swap2.Stmt := by
+theorem Bool.eq.r_mul_const.swap2.ok : Bool.eq.r_mul_const.swap2.Stmt := by
   intro FS O hO ck m t__6 x t__8 n t__2 hg
   refine Refinement.trans ?_
-    (sem_eq.r_mul_const.main.ok FS O hO n t__2 ck m t__6 x t__8 hg)
-  simp only [sem_eq.spec]
+    (Bool.eq.r_mul_const.main.ok FS O hO n t__2 ck m t__6 x t__8 hg)
+  simp only [Bool.eq.spec]
   refine Refinement.trans (Op2.Eq.comm.ok FS ..) ?_
   kanon_congr
 
-theorem sem_eq.r_mul_const.swap1_swap2.ok : sem_eq.r_mul_const.swap1_swap2.Stmt := by
+theorem Bool.eq.r_mul_const.swap1_swap2.ok : Bool.eq.r_mul_const.swap1_swap2.Stmt := by
   intro FS O hO ck x m t__6 t__8 n t__2 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Mul ck) x (Term.mk (Kind.BitVec m) t__6)) t__8)
     (Term.mk (Kind.Op2 (Op2.Mul ck) (Term.mk (Kind.BitVec m) t__6) x) t__8) :=
     Op2.Mul.comm.ok FS ..
   refine Refinement.trans ?_
-    (sem_eq.r_mul_const.main.ok FS O hO n t__2 ck m t__6 x t__8 hg)
-  simp only [sem_eq.spec]
+    (Bool.eq.r_mul_const.main.ok FS O hO n t__2 ck m t__6 x t__8 hg)
+  simp only [Bool.eq.spec]
   refine Refinement.trans (Op2.Eq.comm.ok FS ..) ?_
   kanon_congr
 
-theorem sem_eq.r_mul_const.proof : sem_eq.r_mul_const.Stmt := by
+theorem Bool.eq.r_mul_const.proof : Bool.eq.r_mul_const.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_mul_const] at h
+  simp only [Bool.eq.r_mul_const] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (sem_eq.r_mul_const.main.ok FS O hO)
-  · kanon_arm h (sem_eq.r_mul_const.swap1.ok FS O hO)
-  · kanon_arm h (sem_eq.r_mul_const.swap2.ok FS O hO)
-  · kanon_arm h (sem_eq.r_mul_const.swap1_swap2.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_mul_const.main.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_mul_const.swap1.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_mul_const.swap2.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_mul_const.swap1_swap2.ok FS O hO)
 
-theorem sem_eq.r_mul_cancel.main.ok : sem_eq.r_mul_cancel.main.Stmt := kanon_proof% sem_eq.r_mul_cancel.main
+theorem Bool.eq.r_mul_cancel.main.ok : Bool.eq.r_mul_cancel.main.Stmt := kanon_proof% Bool.eq.r_mul_cancel.main
 
-theorem sem_eq.r_mul_cancel.swap2.ok : sem_eq.r_mul_cancel.swap2.Stmt := by
+theorem Bool.eq.r_mul_cancel.swap2.ok : Bool.eq.r_mul_cancel.swap2.Stmt := by
   intro FS O hO ck1 a t__4 b t__6 ck2 d a2 t__11 t__13 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Mul ck2) d (Term.mk (Kind.BitVec a2) t__11)) t__13)
     (Term.mk (Kind.Op2 (Op2.Mul ck2) (Term.mk (Kind.BitVec a2) t__11) d) t__13) :=
     Op2.Mul.comm.ok FS ..
   refine Refinement.trans ?_
-    (sem_eq.r_mul_cancel.main.ok FS O hO ck1 a t__4 b t__6 ck2 a2 t__11 d t__13 hg)
-  simp only [sem_eq.spec]
+    (Bool.eq.r_mul_cancel.main.ok FS O hO ck1 a t__4 b t__6 ck2 a2 t__11 d t__13 hg)
+  simp only [Bool.eq.spec]
   kanon_congr
 
-theorem sem_eq.r_mul_cancel.swap1.ok : sem_eq.r_mul_cancel.swap1.Stmt := by
+theorem Bool.eq.r_mul_cancel.swap1.ok : Bool.eq.r_mul_cancel.swap1.Stmt := by
   intro FS O hO ck1 b a t__4 t__6 ck2 a2 t__11 d t__13 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Mul ck1) b (Term.mk (Kind.BitVec a) t__4)) t__6)
     (Term.mk (Kind.Op2 (Op2.Mul ck1) (Term.mk (Kind.BitVec a) t__4) b) t__6) :=
     Op2.Mul.comm.ok FS ..
   refine Refinement.trans ?_
-    (sem_eq.r_mul_cancel.main.ok FS O hO ck1 a t__4 b t__6 ck2 a2 t__11 d t__13 hg)
-  simp only [sem_eq.spec]
+    (Bool.eq.r_mul_cancel.main.ok FS O hO ck1 a t__4 b t__6 ck2 a2 t__11 d t__13 hg)
+  simp only [Bool.eq.spec]
   kanon_congr
 
-theorem sem_eq.r_mul_cancel.swap1_swap2.ok : sem_eq.r_mul_cancel.swap1_swap2.Stmt := by
+theorem Bool.eq.r_mul_cancel.swap1_swap2.ok : Bool.eq.r_mul_cancel.swap1_swap2.Stmt := by
   intro FS O hO ck1 b a t__4 t__6 ck2 d a2 t__11 t__13 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Mul ck1) b (Term.mk (Kind.BitVec a) t__4)) t__6)
     (Term.mk (Kind.Op2 (Op2.Mul ck1) (Term.mk (Kind.BitVec a) t__4) b) t__6) :=
@@ -1238,529 +1238,577 @@ theorem sem_eq.r_mul_cancel.swap1_swap2.ok : sem_eq.r_mul_cancel.swap1_swap2.Stm
     (Term.mk (Kind.Op2 (Op2.Mul ck2) (Term.mk (Kind.BitVec a2) t__11) d) t__13) :=
     Op2.Mul.comm.ok FS ..
   refine Refinement.trans ?_
-    (sem_eq.r_mul_cancel.main.ok FS O hO ck1 a t__4 b t__6 ck2 a2 t__11 d t__13 hg)
-  simp only [sem_eq.spec]
+    (Bool.eq.r_mul_cancel.main.ok FS O hO ck1 a t__4 b t__6 ck2 a2 t__11 d t__13 hg)
+  simp only [Bool.eq.spec]
   kanon_congr
 
-theorem sem_eq.r_mul_cancel.proof : sem_eq.r_mul_cancel.Stmt := by
+theorem Bool.eq.r_mul_cancel.proof : Bool.eq.r_mul_cancel.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_mul_cancel] at h
+  simp only [Bool.eq.r_mul_cancel] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (sem_eq.r_mul_cancel.main.ok FS O hO)
-  · kanon_arm h (sem_eq.r_mul_cancel.swap2.ok FS O hO)
-  · kanon_arm h (sem_eq.r_mul_cancel.swap1.ok FS O hO)
-  · kanon_arm h (sem_eq.r_mul_cancel.swap1_swap2.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_mul_cancel.main.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_mul_cancel.swap2.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_mul_cancel.swap1.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_mul_cancel.swap1_swap2.ok FS O hO)
 
-theorem sem_eq.r_or_zero.main.ok : sem_eq.r_or_zero.main.Stmt := kanon_proof% sem_eq.r_or_zero.main
+theorem Bool.eq.r_or_zero.main.ok : Bool.eq.r_or_zero.main.Stmt := kanon_proof% Bool.eq.r_or_zero.main
 
-theorem sem_eq.r_or_zero.swap.ok : sem_eq.r_or_zero.swap.Stmt := kanon_proof% sem_eq.r_or_zero.swap
+theorem Bool.eq.r_or_zero.swap.ok : Bool.eq.r_or_zero.swap.Stmt := by
+  intro FS O hO l r t__6 kanon__1 t__2 hg
+  refine Refinement.trans ?_
+    (Bool.eq.r_or_zero.main.ok FS O hO kanon__1 t__2 l r t__6 hg)
+  simp only [Bool.eq.spec]
+  refine Refinement.trans (Op2.Eq.comm.ok FS ..) ?_
+  kanon_congr
 
-theorem sem_eq.r_or_zero.proof : sem_eq.r_or_zero.Stmt := by
+theorem Bool.eq.r_or_zero.proof : Bool.eq.r_or_zero.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_or_zero] at h
+  simp only [Bool.eq.r_or_zero] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (sem_eq.r_or_zero.main.ok FS O hO)
-  · kanon_arm h (sem_eq.r_or_zero.swap.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_or_zero.main.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_or_zero.swap.ok FS O hO)
 
-theorem sem_eq.r_and_mask.main.ok : sem_eq.r_and_mask.main.Stmt := kanon_proof% sem_eq.r_and_mask.main
+theorem Bool.eq.r_and_mask.main.ok : Bool.eq.r_and_mask.main.Stmt := kanon_proof% Bool.eq.r_and_mask.main
 
-theorem sem_eq.r_and_mask.swap1.ok : sem_eq.r_and_mask.swap1.Stmt := by
-  intro FS O hO n t__2 w__6 mask t__5 t__7 hg
-  have : Refines FS (Term.mk (Kind.Op2 Op2.BitAnd w__6 (Term.mk (Kind.BitVec mask) t__5)) t__7)
-    (Term.mk (Kind.Op2 Op2.BitAnd (Term.mk (Kind.BitVec mask) t__5) w__6) t__7) :=
+theorem Bool.eq.r_and_mask.swap1.ok : Bool.eq.r_and_mask.swap1.Stmt := by
+  intro FS O hO n t__2 w__7 mask t__6 t__8 hg
+  have : Refines FS (Term.mk (Kind.Op2 Op2.BitAnd w__7 (Term.mk (Kind.BitVec mask) t__6)) t__8)
+    (Term.mk (Kind.Op2 Op2.BitAnd (Term.mk (Kind.BitVec mask) t__6) w__7) t__8) :=
     Op2.BitAnd.comm.ok FS ..
   refine Refinement.trans ?_
-    (sem_eq.r_and_mask.main.ok FS O hO n t__2 mask t__5 w__6 t__7 hg)
-  simp only [sem_eq.spec]
+    (Bool.eq.r_and_mask.main.ok FS O hO n t__2 mask t__6 w__7 t__8 hg)
+  simp only [Bool.eq.spec]
   kanon_congr
 
-theorem sem_eq.r_and_mask.swap2.ok : sem_eq.r_and_mask.swap2.Stmt := kanon_proof% sem_eq.r_and_mask.swap2
+theorem Bool.eq.r_and_mask.swap2.ok : Bool.eq.r_and_mask.swap2.Stmt := by
+  intro FS O hO mask t__6 w__7 t__8 n t__2 hg
+  refine Refinement.trans ?_
+    (Bool.eq.r_and_mask.main.ok FS O hO n t__2 mask t__6 w__7 t__8 hg)
+  simp only [Bool.eq.spec]
+  refine Refinement.trans (Op2.Eq.comm.ok FS ..) ?_
+  kanon_congr
 
-theorem sem_eq.r_and_mask.swap1_swap2.ok : sem_eq.r_and_mask.swap1_swap2.Stmt := kanon_proof% sem_eq.r_and_mask.swap1_swap2
+theorem Bool.eq.r_and_mask.swap1_swap2.ok : Bool.eq.r_and_mask.swap1_swap2.Stmt := by
+  intro FS O hO w__7 mask t__6 t__8 n t__2 hg
+  have : Refines FS (Term.mk (Kind.Op2 Op2.BitAnd w__7 (Term.mk (Kind.BitVec mask) t__6)) t__8)
+    (Term.mk (Kind.Op2 Op2.BitAnd (Term.mk (Kind.BitVec mask) t__6) w__7) t__8) :=
+    Op2.BitAnd.comm.ok FS ..
+  refine Refinement.trans ?_
+    (Bool.eq.r_and_mask.main.ok FS O hO n t__2 mask t__6 w__7 t__8 hg)
+  simp only [Bool.eq.spec]
+  refine Refinement.trans (Op2.Eq.comm.ok FS ..) ?_
+  kanon_congr
 
-theorem sem_eq.r_and_mask.proof : sem_eq.r_and_mask.Stmt := by
+theorem Bool.eq.r_and_mask.proof : Bool.eq.r_and_mask.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_and_mask] at h
+  simp only [Bool.eq.r_and_mask] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (sem_eq.r_and_mask.main.ok FS O hO)
-  · kanon_arm h (sem_eq.r_and_mask.swap1.ok FS O hO)
-  · kanon_arm h (sem_eq.r_and_mask.swap2.ok FS O hO)
-  · kanon_arm h (sem_eq.r_and_mask.swap1_swap2.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_and_mask.main.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_and_mask.swap1.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_and_mask.swap2.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_and_mask.swap1_swap2.ok FS O hO)
 
-theorem sem_eq.r_concat_const.main.ok : sem_eq.r_concat_const.main.Stmt := kanon_proof% sem_eq.r_concat_const.main
+theorem Bool.eq.r_concat_const.main.ok : Bool.eq.r_concat_const.main.Stmt := kanon_proof% Bool.eq.r_concat_const.main
 
-theorem sem_eq.r_concat_const.swap.ok : sem_eq.r_concat_const.swap.Stmt := by
+theorem Bool.eq.r_concat_const.swap.ok : Bool.eq.r_concat_const.swap.Stmt := by
   intro FS O hO l r t__7 w__1 t__2
   refine Refinement.trans ?_
-    (sem_eq.r_concat_const.main.ok FS O hO w__1 t__2 l r t__7)
-  simp only [sem_eq.spec]
+    (Bool.eq.r_concat_const.main.ok FS O hO w__1 t__2 l r t__7)
+  simp only [Bool.eq.spec]
   refine Refinement.trans (Op2.Eq.comm.ok FS ..) ?_
   kanon_congr
 
-theorem sem_eq.r_concat_const.proof : sem_eq.r_concat_const.Stmt := by
+theorem Bool.eq.r_concat_const.proof : Bool.eq.r_concat_const.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_concat_const] at h
+  simp only [Bool.eq.r_concat_const] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (sem_eq.r_concat_const.main.ok FS O hO)
-  · kanon_arm h (sem_eq.r_concat_const.swap.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_concat_const.main.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_concat_const.swap.ok FS O hO)
 
-theorem sem_eq.r_zext_const.main.ok : sem_eq.r_zext_const.main.Stmt := kanon_proof% sem_eq.r_zext_const.main
+theorem Bool.eq.r_zext_const.main.ok : Bool.eq.r_zext_const.main.Stmt := kanon_proof% Bool.eq.r_zext_const.main
 
-theorem sem_eq.r_zext_const.swap.ok : sem_eq.r_zext_const.swap.Stmt := by
+theorem Bool.eq.r_zext_const.swap.ok : Bool.eq.r_zext_const.swap.Stmt := by
   intro FS O hO z t__7 «by» bv t__5
   refine Refinement.trans ?_
-    (sem_eq.r_zext_const.main.ok FS O hO «by» bv t__5 z t__7)
-  simp only [sem_eq.spec]
+    (Bool.eq.r_zext_const.main.ok FS O hO «by» bv t__5 z t__7)
+  simp only [Bool.eq.spec]
   refine Refinement.trans (Op2.Eq.comm.ok FS ..) ?_
   kanon_congr
 
-theorem sem_eq.r_zext_const.proof : sem_eq.r_zext_const.Stmt := by
+theorem Bool.eq.r_zext_const.proof : Bool.eq.r_zext_const.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_zext_const] at h
+  simp only [Bool.eq.r_zext_const] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (sem_eq.r_zext_const.main.ok FS O hO)
-  · kanon_arm h (sem_eq.r_zext_const.swap.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_zext_const.main.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_zext_const.swap.ok FS O hO)
 
-theorem sem_eq.r_ite_concat.main.ok : sem_eq.r_ite_concat.main.Stmt := kanon_proof% sem_eq.r_ite_concat.main
+theorem Bool.eq.r_ite_concat.main.ok : Bool.eq.r_ite_concat.main.Stmt := kanon_proof% Bool.eq.r_ite_concat.main
 
-theorem sem_eq.r_ite_concat.swap.ok : sem_eq.r_ite_concat.swap.Stmt := by
+theorem Bool.eq.r_ite_concat.swap.ok : Bool.eq.r_ite_concat.swap.Stmt := by
   intro FS O hO l r t__13 b w__3 t__4 w__6 t__7 t__9
   refine Refinement.trans ?_
-    (sem_eq.r_ite_concat.main.ok FS O hO b w__3 t__4 w__6 t__7 t__9 l r t__13)
-  simp only [sem_eq.spec]
+    (Bool.eq.r_ite_concat.main.ok FS O hO b w__3 t__4 w__6 t__7 t__9 l r t__13)
+  simp only [Bool.eq.spec]
   refine Refinement.trans (Op2.Eq.comm.ok FS ..) ?_
   kanon_congr
 
-theorem sem_eq.r_ite_concat.proof : sem_eq.r_ite_concat.Stmt := by
+theorem Bool.eq.r_ite_concat.proof : Bool.eq.r_ite_concat.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_ite_concat] at h
+  simp only [Bool.eq.r_ite_concat] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (sem_eq.r_ite_concat.main.ok FS O hO)
-  · kanon_arm h (sem_eq.r_ite_concat.swap.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_ite_concat.main.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_ite_concat.swap.ok FS O hO)
 
-theorem sem_eq.r_concat_concat.main.ok : sem_eq.r_concat_concat.main.Stmt := kanon_proof% sem_eq.r_concat_concat.main
+theorem Bool.eq.r_concat_concat.main.ok : Bool.eq.r_concat_concat.main.Stmt := kanon_proof% Bool.eq.r_concat_concat.main
 
-theorem sem_eq.r_concat_concat.proof : sem_eq.r_concat_concat.Stmt := by
+theorem Bool.eq.r_concat_concat.proof : Bool.eq.r_concat_concat.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_concat_concat] at h
+  simp only [Bool.eq.r_concat_concat] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (sem_eq.r_concat_concat.main.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_concat_concat.main.ok FS O hO)
 
-theorem sem_eq.r_ite_const.bitVec.ok : sem_eq.r_ite_const.bitVec.Stmt := kanon_proof% sem_eq.r_ite_const.bitVec
+theorem Bool.eq.r_ite_const.bitVec.ok : Bool.eq.r_ite_const.bitVec.Stmt := kanon_proof% Bool.eq.r_ite_const.bitVec
 
-theorem sem_eq.r_ite_const.locLit.ok : sem_eq.r_ite_const.locLit.Stmt := kanon_proof% sem_eq.r_ite_const.locLit
+theorem Bool.eq.r_ite_const.locLit.ok : Bool.eq.r_ite_const.locLit.Stmt := kanon_proof% Bool.eq.r_ite_const.locLit
 
-theorem sem_eq.r_ite_const.bitVec_swap.ok : sem_eq.r_ite_const.bitVec_swap.Stmt := by
+theorem Bool.eq.r_ite_const.bitVec_swap.ok : Bool.eq.r_ite_const.bitVec_swap.Stmt := by
   intro FS O hO w__6 t__7 b l t t__5
   refine Refinement.trans ?_
-    (sem_eq.r_ite_const.bitVec.ok FS O hO b l t t__5 w__6 t__7)
-  simp only [sem_eq.spec]
+    (Bool.eq.r_ite_const.bitVec.ok FS O hO b l t t__5 w__6 t__7)
+  simp only [Bool.eq.spec]
   refine Refinement.trans (Op2.Eq.comm.ok FS ..) ?_
   kanon_congr
 
-theorem sem_eq.r_ite_const.locLit_swap.ok : sem_eq.r_ite_const.locLit_swap.Stmt := by
+theorem Bool.eq.r_ite_const.locLit_swap.ok : Bool.eq.r_ite_const.locLit_swap.Stmt := by
   intro FS O hO w__8 t__9 b l t t__5
   refine Refinement.trans ?_
-    (sem_eq.r_ite_const.locLit.ok FS O hO b l t t__5 w__8 t__9)
-  simp only [sem_eq.spec]
+    (Bool.eq.r_ite_const.locLit.ok FS O hO b l t t__5 w__8 t__9)
+  simp only [Bool.eq.spec]
   refine Refinement.trans (Op2.Eq.comm.ok FS ..) ?_
   kanon_congr
 
-theorem sem_eq.r_ite_const.proof : sem_eq.r_ite_const.Stmt := by
+theorem Bool.eq.r_ite_const.proof : Bool.eq.r_ite_const.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_ite_const] at h
+  simp only [Bool.eq.r_ite_const] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (sem_eq.r_ite_const.bitVec.ok FS O hO)
-  · kanon_arm h (sem_eq.r_ite_const.locLit.ok FS O hO)
-  · kanon_arm h (sem_eq.r_ite_const.bitVec_swap.ok FS O hO)
-  · kanon_arm h (sem_eq.r_ite_const.locLit_swap.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_ite_const.bitVec.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_ite_const.locLit.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_ite_const.bitVec_swap.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_ite_const.locLit_swap.ok FS O hO)
 
-theorem sem_eq.r_of_bools.main.ok : sem_eq.r_of_bools.main.Stmt := kanon_proof% sem_eq.r_of_bools.main
+theorem Bool.eq.r_of_bools.main.ok : Bool.eq.r_of_bools.main.Stmt := kanon_proof% Bool.eq.r_of_bools.main
 
-theorem sem_eq.r_of_bools.proof : sem_eq.r_of_bools.Stmt := by
+theorem Bool.eq.r_of_bools.proof : Bool.eq.r_of_bools.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_of_bools] at h
+  simp only [Bool.eq.r_of_bools] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (sem_eq.r_of_bools.main.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_of_bools.main.ok FS O hO)
 
-theorem sem_eq.r_of_bool_const.main.ok : sem_eq.r_of_bool_const.main.Stmt := kanon_proof% sem_eq.r_of_bool_const.main
+theorem Bool.eq.r_of_bool_const.main.ok : Bool.eq.r_of_bool_const.main.Stmt := kanon_proof% Bool.eq.r_of_bool_const.main
 
-theorem sem_eq.r_of_bool_const.swap.ok : sem_eq.r_of_bool_const.swap.Stmt := by
+theorem Bool.eq.r_of_bool_const.swap.ok : Bool.eq.r_of_bool_const.swap.Stmt := by
   intro FS O hO z t__6 w__1 b t__4
   refine Refinement.trans ?_
-    (sem_eq.r_of_bool_const.main.ok FS O hO w__1 b t__4 z t__6)
-  simp only [sem_eq.spec]
+    (Bool.eq.r_of_bool_const.main.ok FS O hO w__1 b t__4 z t__6)
+  simp only [Bool.eq.spec]
   refine Refinement.trans (Op2.Eq.comm.ok FS ..) ?_
   kanon_congr
 
-theorem sem_eq.r_of_bool_const.proof : sem_eq.r_of_bool_const.Stmt := by
+theorem Bool.eq.r_of_bool_const.proof : Bool.eq.r_of_bool_const.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_of_bool_const] at h
+  simp only [Bool.eq.r_of_bool_const] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (sem_eq.r_of_bool_const.main.ok FS O hO)
-  · kanon_arm h (sem_eq.r_of_bool_const.swap.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_of_bool_const.main.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_of_bool_const.swap.ok FS O hO)
 
-theorem sem_eq.r_msb.main.ok : sem_eq.r_msb.main.Stmt := kanon_proof% sem_eq.r_msb.main
+theorem Bool.eq.r_msb.main.ok : Bool.eq.r_msb.main.Stmt := kanon_proof% Bool.eq.r_msb.main
 
-theorem sem_eq.r_msb.proof : sem_eq.r_msb.Stmt := by
+theorem Bool.eq.r_msb.proof : Bool.eq.r_msb.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_msb] at h
+  simp only [Bool.eq.r_msb] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (sem_eq.r_msb.main.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_msb.main.ok FS O hO)
 
-theorem sem_eq.r_floats.main.ok : sem_eq.r_floats.main.Stmt := kanon_proof% sem_eq.r_floats.main
+theorem Bool.eq.r_floats.main.ok : Bool.eq.r_floats.main.Stmt := kanon_proof% Bool.eq.r_floats.main
 
-theorem sem_eq.r_floats.proof : sem_eq.r_floats.Stmt := by
+theorem Bool.eq.r_floats.proof : Bool.eq.r_floats.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_floats] at h
+  simp only [Bool.eq.r_floats] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (sem_eq.r_floats.main.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_floats.main.ok FS O hO)
 
-theorem sem_eq.r_ptrs.main.ok : sem_eq.r_ptrs.main.Stmt := kanon_proof% sem_eq.r_ptrs.main
+theorem Bool.eq.r_ptrs.main.ok : Bool.eq.r_ptrs.main.Stmt := kanon_proof% Bool.eq.r_ptrs.main
 
-theorem sem_eq.r_ptrs.proof : sem_eq.r_ptrs.Stmt := by
+theorem Bool.eq.r_ptrs.proof : Bool.eq.r_ptrs.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_ptrs] at h
+  simp only [Bool.eq.r_ptrs] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (sem_eq.r_ptrs.main.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_ptrs.main.ok FS O hO)
 
-theorem sem_eq.r_default.main.ok : sem_eq.r_default.main.Stmt :=
-  fun FS O hO => BoolMod.sem_eq.r_default.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.eq.r_default.main.ok : Bool.eq.r_default.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.eq.r_default.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem sem_eq.r_default.proof : sem_eq.r_default.Stmt := by
+theorem Bool.eq.r_default.proof : Bool.eq.r_default.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq.r_default] at h
+  simp only [Bool.eq.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (sem_eq.r_default.main.ok FS O hO)
+  · kanon_arm h (Bool.eq.r_default.main.ok FS O hO)
 
-theorem sem_eq_untyped.r_ill_typed.main.ok : sem_eq_untyped.r_ill_typed.main.Stmt :=
-  fun FS O hO => BoolMod.sem_eq_untyped.r_ill_typed.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.eq_untyped.r_ill_typed.main.ok : Bool.eq_untyped.r_ill_typed.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.eq_untyped.r_ill_typed.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem sem_eq_untyped.r_ill_typed.proof : sem_eq_untyped.r_ill_typed.Stmt := by
+theorem Bool.eq_untyped.r_ill_typed.proof : Bool.eq_untyped.r_ill_typed.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq_untyped.r_ill_typed] at h
+  simp only [Bool.eq_untyped.r_ill_typed] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (sem_eq_untyped.r_ill_typed.main.ok FS O hO)
+  · kanon_arm h (Bool.eq_untyped.r_ill_typed.main.ok FS O hO)
 
-theorem sem_eq_untyped.r_typed.main.ok : sem_eq_untyped.r_typed.main.Stmt :=
-  fun FS O hO => BoolMod.sem_eq_untyped.r_typed.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.eq_untyped.r_typed.main.ok : Bool.eq_untyped.r_typed.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.eq_untyped.r_typed.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem sem_eq_untyped.r_typed.proof : sem_eq_untyped.r_typed.Stmt := by
+theorem Bool.eq_untyped.r_typed.proof : Bool.eq_untyped.r_typed.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [sem_eq_untyped.r_typed] at h
+  simp only [Bool.eq_untyped.r_typed] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (sem_eq_untyped.r_typed.main.ok FS O hO)
+  · kanon_arm h (Bool.eq_untyped.r_typed.main.ok FS O hO)
 
-theorem b_distinct.r_small.main.ok : b_distinct.r_small.main.Stmt :=
-  fun FS O hO => BoolMod.b_distinct.r_small.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.distinct.r_small.main.ok : Bool.distinct.r_small.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.distinct.r_small.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_distinct.r_small.proof : b_distinct.r_small.Stmt := by
+theorem Bool.distinct.r_small.proof : Bool.distinct.r_small.Stmt := by
   intro FS O hO l res h
-  simp only [b_distinct.r_small] at h
+  simp only [Bool.distinct.r_small] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_distinct.r_small.main.ok FS O hO)
+  · kanon_arm h (Bool.distinct.r_small.main.ok FS O hO)
 
-theorem b_distinct.r_distinct.main.ok : b_distinct.r_distinct.main.Stmt :=
-  fun FS O hO => BoolMod.b_distinct.r_distinct.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.distinct.r_distinct.main.ok : Bool.distinct.r_distinct.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.distinct.r_distinct.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_distinct.r_distinct.proof : b_distinct.r_distinct.Stmt := by
+theorem Bool.distinct.r_distinct.proof : Bool.distinct.r_distinct.Stmt := by
   intro FS O hO l res h
-  simp only [b_distinct.r_distinct] at h
+  simp only [Bool.distinct.r_distinct] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_distinct.r_distinct.main.ok FS O hO)
+  · kanon_arm h (Bool.distinct.r_distinct.main.ok FS O hO)
 
-theorem b_distinct.r_not_distinct.main.ok : b_distinct.r_not_distinct.main.Stmt :=
-  fun FS O hO => BoolMod.b_distinct.r_not_distinct.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.distinct.r_not_distinct.main.ok : Bool.distinct.r_not_distinct.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.distinct.r_not_distinct.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_distinct.r_not_distinct.proof : b_distinct.r_not_distinct.Stmt := by
+theorem Bool.distinct.r_not_distinct.proof : Bool.distinct.r_not_distinct.Stmt := by
   intro FS O hO l res h
-  simp only [b_distinct.r_not_distinct] at h
+  simp only [Bool.distinct.r_not_distinct] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_distinct.r_not_distinct.main.ok FS O hO)
+  · kanon_arm h (Bool.distinct.r_not_distinct.main.ok FS O hO)
 
-theorem b_distinct.r_default.main.ok : b_distinct.r_default.main.Stmt :=
-  fun FS O hO => BoolMod.b_distinct.r_default.main (boolLang FS) (O.bool FS) hO.bool
+theorem Bool.distinct.r_default.main.ok : Bool.distinct.r_default.main.Stmt :=
+  fun FS O hO => BoolMod.Bool.distinct.r_default.main (boolLang FS) (O.bool FS) hO.bool
 
-theorem b_distinct.r_default.proof : b_distinct.r_default.Stmt := by
+theorem Bool.distinct.r_default.proof : Bool.distinct.r_default.Stmt := by
   intro FS O hO l res h
-  simp only [b_distinct.r_default] at h
+  simp only [Bool.distinct.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_distinct.r_default.main.ok FS O hO)
+  · kanon_arm h (Bool.distinct.r_default.main.ok FS O hO)
 
-theorem b_mk_exists.r_empty.main.ok : b_mk_exists.r_empty.main.Stmt := kanon_proof% b_mk_exists.r_empty.main
+theorem Exists.mk.r_empty.main.ok : Exists.mk.r_empty.main.Stmt := kanon_proof% Exists.mk.r_empty.main
 
-theorem b_mk_exists.r_empty.proof : b_mk_exists.r_empty.Stmt := by
+theorem Exists.mk.r_empty.proof : Exists.mk.r_empty.Stmt := by
   intro FS O hO binders body res h
-  simp only [b_mk_exists.r_empty] at h
+  simp only [Exists.mk.r_empty] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_mk_exists.r_empty.main.ok FS O hO)
+  · kanon_arm h (Exists.mk.r_empty.main.ok FS O hO)
 
-theorem b_mk_exists.r_default.main.ok : b_mk_exists.r_default.main.Stmt := kanon_proof% b_mk_exists.r_default.main
+theorem Exists.mk.r_default.main.ok : Exists.mk.r_default.main.Stmt := kanon_proof% Exists.mk.r_default.main
 
-theorem b_mk_exists.r_default.proof : b_mk_exists.r_default.Stmt := by
+theorem Exists.mk.r_default.proof : Exists.mk.r_default.Stmt := by
   intro FS O hO binders body res h
-  simp only [b_mk_exists.r_default] at h
+  simp only [Exists.mk.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (b_mk_exists.r_default.main.ok FS O hO)
+  · kanon_arm h (Exists.mk.r_default.main.ok FS O hO)
 
-theorem bv_of_bool.r_true_.main.ok : bv_of_bool.r_true_.main.Stmt := kanon_proof% bv_of_bool.r_true_.main
+theorem Bitvec.of_bool.r_true_.main.ok : Bitvec.of_bool.r_true_.main.Stmt := kanon_proof% Bitvec.of_bool.r_true_.main
 
-theorem bv_of_bool.r_true_.proof : bv_of_bool.r_true_.Stmt := by
+theorem Bitvec.of_bool.r_true_.proof : Bitvec.of_bool.r_true_.Stmt := by
   intro FS O hO n b res h
-  simp only [bv_of_bool.r_true_] at h
+  simp only [Bitvec.of_bool.r_true_] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_of_bool.r_true_.main.ok FS O hO)
+  · kanon_arm h (Bitvec.of_bool.r_true_.main.ok FS O hO)
 
-theorem bv_of_bool.r_false_.main.ok : bv_of_bool.r_false_.main.Stmt := kanon_proof% bv_of_bool.r_false_.main
+theorem Bitvec.of_bool.r_false_.main.ok : Bitvec.of_bool.r_false_.main.Stmt := kanon_proof% Bitvec.of_bool.r_false_.main
 
-theorem bv_of_bool.r_false_.proof : bv_of_bool.r_false_.Stmt := by
+theorem Bitvec.of_bool.r_false_.proof : Bitvec.of_bool.r_false_.Stmt := by
   intro FS O hO n b res h
-  simp only [bv_of_bool.r_false_] at h
+  simp only [Bitvec.of_bool.r_false_] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_of_bool.r_false_.main.ok FS O hO)
+  · kanon_arm h (Bitvec.of_bool.r_false_.main.ok FS O hO)
 
-theorem bv_of_bool.r_default.main.ok : bv_of_bool.r_default.main.Stmt := kanon_proof% bv_of_bool.r_default.main
+theorem Bitvec.of_bool.r_default.main.ok : Bitvec.of_bool.r_default.main.Stmt := kanon_proof% Bitvec.of_bool.r_default.main
 
-theorem bv_of_bool.r_default.proof : bv_of_bool.r_default.Stmt := by
+theorem Bitvec.of_bool.r_default.proof : Bitvec.of_bool.r_default.Stmt := by
   intro FS O hO n b res h
-  simp only [bv_of_bool.r_default] at h
+  simp only [Bitvec.of_bool.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_of_bool.r_default.main.ok FS O hO)
+  · kanon_arm h (Bitvec.of_bool.r_default.main.ok FS O hO)
 
-theorem bv_to_bool.r_lit.main.ok : bv_to_bool.r_lit.main.Stmt := kanon_proof% bv_to_bool.r_lit.main
+theorem Bitvec.to_bool.r_lit.main.ok : Bitvec.to_bool.r_lit.main.Stmt := kanon_proof% Bitvec.to_bool.r_lit.main
 
-theorem bv_to_bool.r_lit.proof : bv_to_bool.r_lit.Stmt := by
+theorem Bitvec.to_bool.r_lit.proof : Bitvec.to_bool.r_lit.Stmt := by
   intro FS O hO v res h
-  simp only [bv_to_bool.r_lit] at h
+  simp only [Bitvec.to_bool.r_lit] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_to_bool.r_lit.main.ok FS O hO)
+  · kanon_arm h (Bitvec.to_bool.r_lit.main.ok FS O hO)
 
-theorem bv_to_bool.r_of_bool.main.ok : bv_to_bool.r_of_bool.main.Stmt := kanon_proof% bv_to_bool.r_of_bool.main
+theorem Bitvec.to_bool.r_of_bool.main.ok : Bitvec.to_bool.r_of_bool.main.Stmt := kanon_proof% Bitvec.to_bool.r_of_bool.main
 
-theorem bv_to_bool.r_of_bool.proof : bv_to_bool.r_of_bool.Stmt := by
+theorem Bitvec.to_bool.r_of_bool.proof : Bitvec.to_bool.r_of_bool.Stmt := by
   intro FS O hO v res h
-  simp only [bv_to_bool.r_of_bool] at h
+  simp only [Bitvec.to_bool.r_of_bool] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_to_bool.r_of_bool.main.ok FS O hO)
+  · kanon_arm h (Bitvec.to_bool.r_of_bool.main.ok FS O hO)
 
-theorem bv_to_bool.r_default.main.ok : bv_to_bool.r_default.main.Stmt := kanon_proof% bv_to_bool.r_default.main
+theorem Bitvec.to_bool.r_default.main.ok : Bitvec.to_bool.r_default.main.Stmt := kanon_proof% Bitvec.to_bool.r_default.main
 
-theorem bv_to_bool.r_default.proof : bv_to_bool.r_default.Stmt := by
+theorem Bitvec.to_bool.r_default.proof : Bitvec.to_bool.r_default.Stmt := by
   intro FS O hO v res h
-  simp only [bv_to_bool.r_default] at h
+  simp only [Bitvec.to_bool.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_to_bool.r_default.main.ok FS O hO)
+  · kanon_arm h (Bitvec.to_bool.r_default.main.ok FS O hO)
 
-theorem bv_not_bool.r_lit.main.ok : bv_not_bool.r_lit.main.Stmt := kanon_proof% bv_not_bool.r_lit.main
+theorem Bitvec.not_bool.r_lit.main.ok : Bitvec.not_bool.r_lit.main.Stmt := kanon_proof% Bitvec.not_bool.r_lit.main
 
-theorem bv_not_bool.r_lit.proof : bv_not_bool.r_lit.Stmt := by
+theorem Bitvec.not_bool.r_lit.proof : Bitvec.not_bool.r_lit.Stmt := by
   intro FS O hO v res h
-  simp only [bv_not_bool.r_lit] at h
+  simp only [Bitvec.not_bool.r_lit] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_not_bool.r_lit.main.ok FS O hO)
+  · kanon_arm h (Bitvec.not_bool.r_lit.main.ok FS O hO)
 
-theorem bv_not_bool.r_of_bool.main.ok : bv_not_bool.r_of_bool.main.Stmt := kanon_proof% bv_not_bool.r_of_bool.main
+theorem Bitvec.not_bool.r_of_bool.main.ok : Bitvec.not_bool.r_of_bool.main.Stmt := kanon_proof% Bitvec.not_bool.r_of_bool.main
 
-theorem bv_not_bool.r_of_bool.proof : bv_not_bool.r_of_bool.Stmt := by
+theorem Bitvec.not_bool.r_of_bool.proof : Bitvec.not_bool.r_of_bool.Stmt := by
   intro FS O hO v res h
-  simp only [bv_not_bool.r_of_bool] at h
+  simp only [Bitvec.not_bool.r_of_bool] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_not_bool.r_of_bool.main.ok FS O hO)
+  · kanon_arm h (Bitvec.not_bool.r_of_bool.main.ok FS O hO)
 
-theorem bv_not_bool.r_default.main.ok : bv_not_bool.r_default.main.Stmt := kanon_proof% bv_not_bool.r_default.main
+theorem Bitvec.not_bool.r_default.main.ok : Bitvec.not_bool.r_default.main.Stmt := kanon_proof% Bitvec.not_bool.r_default.main
 
-theorem bv_not_bool.r_default.proof : bv_not_bool.r_default.Stmt := by
+theorem Bitvec.not_bool.r_default.proof : Bitvec.not_bool.r_default.Stmt := by
   intro FS O hO v res h
-  simp only [bv_not_bool.r_default] at h
+  simp only [Bitvec.not_bool.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_not_bool.r_default.main.ok FS O hO)
+  · kanon_arm h (Bitvec.not_bool.r_default.main.ok FS O hO)
 
-theorem bv_add.r_lits.main.ok : bv_add.r_lits.main.Stmt := kanon_proof% bv_add.r_lits.main
+theorem Bitvec.add.r_lits.main.ok : Bitvec.add.r_lits.main.Stmt := kanon_proof% Bitvec.add.r_lits.main
 
-theorem bv_add.r_lits.proof : bv_add.r_lits.Stmt := by
+theorem Bitvec.add.r_lits.proof : Bitvec.add.r_lits.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_add.r_lits] at h
+  simp only [Bitvec.add.r_lits] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_add.r_lits.main.ok FS O hO)
+  · kanon_arm h (Bitvec.add.r_lits.main.ok FS O hO)
 
-theorem bv_add.r_neg.main.ok : bv_add.r_neg.main.Stmt := kanon_proof% bv_add.r_neg.main
+theorem Bitvec.add.r_neg.main.ok : Bitvec.add.r_neg.main.Stmt := kanon_proof% Bitvec.add.r_neg.main
 
-theorem bv_add.r_neg.swap.ok : bv_add.r_neg.swap.Stmt := by
+theorem Bitvec.add.r_neg.swap.ok : Bitvec.add.r_neg.swap.Stmt := by
   intro FS O hO checked v2 w__2 y t__5
   refine Refinement.trans ?_
-    (bv_add.r_neg.main.ok FS O hO checked v2 w__2 y t__5)
-  simp only [bv_add.spec, ty, Term.ty_mk]
+    (Bitvec.add.r_neg.main.ok FS O hO checked v2 w__2 y t__5)
+  simp only [Bitvec.add.spec, ty, Term.ty_mk]
   refine Refinement.trans (Op2.Add.comm.ok FS ..) ?_
   kanon_congr
 
-theorem bv_add.r_neg.proof : bv_add.r_neg.Stmt := by
+theorem Bitvec.add.r_neg.proof : Bitvec.add.r_neg.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_add.r_neg] at h
+  simp only [Bitvec.add.r_neg] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_add.r_neg.main.ok FS O hO)
-  · kanon_arm h (bv_add.r_neg.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.add.r_neg.main.ok FS O hO)
+  · kanon_arm h (Bitvec.add.r_neg.swap.ok FS O hO)
 
-theorem bv_add.r_zero.main.ok : bv_add.r_zero.main.Stmt := kanon_proof% bv_add.r_zero.main
+theorem Bitvec.add.r_zero.main.ok : Bitvec.add.r_zero.main.Stmt := kanon_proof% Bitvec.add.r_zero.main
 
-theorem bv_add.r_zero.swap.ok : bv_add.r_zero.swap.Stmt := by
+theorem Bitvec.add.r_zero.swap.ok : Bitvec.add.r_zero.swap.Stmt := by
   intro FS O hO checked v2 kanon__2 t__3 hg
   refine Refinement.trans ?_
-    (bv_add.r_zero.main.ok FS O hO checked v2 kanon__2 t__3 hg)
-  simp only [bv_add.spec, ty, Term.ty_mk]
+    (Bitvec.add.r_zero.main.ok FS O hO checked v2 kanon__2 t__3 hg)
+  simp only [Bitvec.add.spec, ty, Term.ty_mk]
   refine Refinement.trans (Op2.Add.comm.ok FS ..) ?_
   kanon_congr
 
-theorem bv_add.r_zero.proof : bv_add.r_zero.Stmt := by
+theorem Bitvec.add.r_zero.proof : Bitvec.add.r_zero.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_add.r_zero] at h
+  simp only [Bitvec.add.r_zero] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_add.r_zero.main.ok FS O hO)
-  · kanon_arm h (bv_add.r_zero.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.add.r_zero.main.ok FS O hO)
+  · kanon_arm h (Bitvec.add.r_zero.swap.ok FS O hO)
 
-theorem bv_add.r_not_one.main.ok : bv_add.r_not_one.main.Stmt := kanon_proof% bv_add.r_not_one.main
+theorem Bitvec.add.r_not_one.main.ok : Bitvec.add.r_not_one.main.Stmt := kanon_proof% Bitvec.add.r_not_one.main
 
-theorem bv_add.r_not_one.swap.ok : bv_add.r_not_one.swap.Stmt := by
+theorem Bitvec.add.r_not_one.swap.ok : Bitvec.add.r_not_one.swap.Stmt := by
   intro FS O hO checked kanon__4 t__5 x t__3 hg
   refine Refinement.trans ?_
-    (bv_add.r_not_one.main.ok FS O hO checked x t__3 kanon__4 t__5 hg)
-  simp only [bv_add.spec, ty, Term.ty_mk]
+    (Bitvec.add.r_not_one.main.ok FS O hO checked x t__3 kanon__4 t__5 hg)
+  simp only [Bitvec.add.spec, ty, Term.ty_mk]
   refine Refinement.trans (Op2.Add.comm.ok FS ..) ?_
   kanon_congr
 
-theorem bv_add.r_not_one.proof : bv_add.r_not_one.Stmt := by
+theorem Bitvec.add.r_not_one.proof : Bitvec.add.r_not_one.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_add.r_not_one] at h
+  simp only [Bitvec.add.r_not_one] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_add.r_not_one.main.ok FS O hO)
-  · kanon_arm h (bv_add.r_not_one.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.add.r_not_one.main.ok FS O hO)
+  · kanon_arm h (Bitvec.add.r_not_one.swap.ok FS O hO)
 
-theorem bv_add.r_add_const.main.ok : bv_add.r_add_const.main.Stmt := kanon_proof% bv_add.r_add_const.main
+theorem Bitvec.add.r_add_const.main.ok : Bitvec.add.r_add_const.main.Stmt := kanon_proof% Bitvec.add.r_add_const.main
 
-theorem bv_add.r_add_const.swap1.ok : bv_add.r_add_const.swap1.Stmt := by
+theorem Bitvec.add.r_add_const.swap1.ok : Bitvec.add.r_add_const.swap1.Stmt := by
   intro FS O hO checked c r k1 t__4 t__6 k2 t__9
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Add c) r (Term.mk (Kind.BitVec k1) t__4)) t__6)
     (Term.mk (Kind.Op2 (Op2.Add c) (Term.mk (Kind.BitVec k1) t__4) r) t__6) :=
     Op2.Add.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_add.r_add_const.main.ok FS O hO checked c k1 t__4 r t__6 k2 t__9)
-  simp only [bv_add.spec, ty, Term.ty_mk]
+    (Bitvec.add.r_add_const.main.ok FS O hO checked c k1 t__4 r t__6 k2 t__9)
+  simp only [Bitvec.add.spec, ty, Term.ty_mk]
   kanon_congr
 
-theorem bv_add.r_add_const.swap2.ok : bv_add.r_add_const.swap2.Stmt := kanon_proof% bv_add.r_add_const.swap2
-
-theorem bv_add.r_add_const.swap1_swap2.ok : bv_add.r_add_const.swap1_swap2.Stmt := kanon_proof% bv_add.r_add_const.swap1_swap2
-
-theorem bv_add.r_add_const.proof : bv_add.r_add_const.Stmt := by
-  intro FS O hO checked v1 v2 res h
-  simp only [bv_add.r_add_const] at h
-  repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_add.r_add_const.main.ok FS O hO)
-  · kanon_arm h (bv_add.r_add_const.swap1.ok FS O hO)
-  · kanon_arm h (bv_add.r_add_const.swap2.ok FS O hO)
-  · kanon_arm h (bv_add.r_add_const.swap1_swap2.ok FS O hO)
-
-theorem bv_add.r_sub_const_r.main.ok : bv_add.r_sub_const_r.main.Stmt := kanon_proof% bv_add.r_sub_const_r.main
-
-theorem bv_add.r_sub_const_r.swap.ok : bv_add.r_sub_const_r.swap.Stmt := kanon_proof% bv_add.r_sub_const_r.swap
-
-theorem bv_add.r_sub_const_r.proof : bv_add.r_sub_const_r.Stmt := by
-  intro FS O hO checked v1 v2 res h
-  simp only [bv_add.r_sub_const_r] at h
-  repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_add.r_sub_const_r.main.ok FS O hO)
-  · kanon_arm h (bv_add.r_sub_const_r.swap.ok FS O hO)
-
-theorem bv_add.r_sub_const_l.main.ok : bv_add.r_sub_const_l.main.Stmt := kanon_proof% bv_add.r_sub_const_l.main
-
-theorem bv_add.r_sub_const_l.swap.ok : bv_add.r_sub_const_l.swap.Stmt := kanon_proof% bv_add.r_sub_const_l.swap
-
-theorem bv_add.r_sub_const_l.proof : bv_add.r_sub_const_l.Stmt := by
-  intro FS O hO checked v1 v2 res h
-  simp only [bv_add.r_sub_const_l] at h
-  repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_add.r_sub_const_l.main.ok FS O hO)
-  · kanon_arm h (bv_add.r_sub_const_l.swap.ok FS O hO)
-
-theorem bv_add.r_sub_cancel.main.ok : bv_add.r_sub_cancel.main.Stmt := kanon_proof% bv_add.r_sub_cancel.main
-
-theorem bv_add.r_sub_cancel.swap.ok : bv_add.r_sub_cancel.swap.Stmt := by
-  intro FS O hO checked v2 w__2 l kanon__5 t__6 hg
+theorem Bitvec.add.r_add_const.swap2.ok : Bitvec.add.r_add_const.swap2.Stmt := by
+  intro FS O hO checked k2 t__9 c k1 t__4 r t__6
   refine Refinement.trans ?_
-    (bv_add.r_sub_cancel.main.ok FS O hO checked v2 w__2 l kanon__5 t__6 hg)
-  simp only [bv_add.spec, ty, Term.ty_mk]
+    (Bitvec.add.r_add_const.main.ok FS O hO checked c k1 t__4 r t__6 k2 t__9)
+  simp only [Bitvec.add.spec, ty, Term.ty_mk]
   refine Refinement.trans (Op2.Add.comm.ok FS ..) ?_
   kanon_congr
 
-theorem bv_add.r_sub_cancel.proof : bv_add.r_sub_cancel.Stmt := by
+theorem Bitvec.add.r_add_const.swap1_swap2.ok : Bitvec.add.r_add_const.swap1_swap2.Stmt := by
+  intro FS O hO checked k2 t__9 c r k1 t__4 t__6
+  have : Refines FS (Term.mk (Kind.Op2 (Op2.Add c) r (Term.mk (Kind.BitVec k1) t__4)) t__6)
+    (Term.mk (Kind.Op2 (Op2.Add c) (Term.mk (Kind.BitVec k1) t__4) r) t__6) :=
+    Op2.Add.comm.ok FS ..
+  refine Refinement.trans ?_
+    (Bitvec.add.r_add_const.main.ok FS O hO checked c k1 t__4 r t__6 k2 t__9)
+  simp only [Bitvec.add.spec, ty, Term.ty_mk]
+  refine Refinement.trans (Op2.Add.comm.ok FS ..) ?_
+  kanon_congr
+
+theorem Bitvec.add.r_add_const.proof : Bitvec.add.r_add_const.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_add.r_sub_cancel] at h
+  simp only [Bitvec.add.r_add_const] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_add.r_sub_cancel.main.ok FS O hO)
-  · kanon_arm h (bv_add.r_sub_cancel.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.add.r_add_const.main.ok FS O hO)
+  · kanon_arm h (Bitvec.add.r_add_const.swap1.ok FS O hO)
+  · kanon_arm h (Bitvec.add.r_add_const.swap2.ok FS O hO)
+  · kanon_arm h (Bitvec.add.r_add_const.swap1_swap2.ok FS O hO)
 
-theorem bv_add.r_add_sub.main.ok : bv_add.r_add_sub.main.Stmt := kanon_proof% bv_add.r_add_sub.main
+theorem Bitvec.add.r_sub_const_r.main.ok : Bitvec.add.r_sub_const_r.main.Stmt := kanon_proof% Bitvec.add.r_sub_const_r.main
 
-theorem bv_add.r_add_sub.swap1.ok : bv_add.r_add_sub.swap1.Stmt := by
+theorem Bitvec.add.r_sub_const_r.swap.ok : Bitvec.add.r_sub_const_r.swap.Stmt := by
+  intro FS O hO checked k2 t__8 c l k1 t__5 t__6
+  refine Refinement.trans ?_
+    (Bitvec.add.r_sub_const_r.main.ok FS O hO checked c l k1 t__5 t__6 k2 t__8)
+  simp only [Bitvec.add.spec, ty, Term.ty_mk]
+  refine Refinement.trans (Op2.Add.comm.ok FS ..) ?_
+  kanon_congr
+
+theorem Bitvec.add.r_sub_const_r.proof : Bitvec.add.r_sub_const_r.Stmt := by
+  intro FS O hO checked v1 v2 res h
+  simp only [Bitvec.add.r_sub_const_r] at h
+  repeat' rcases orElse_some h with h | h
+  · kanon_arm h (Bitvec.add.r_sub_const_r.main.ok FS O hO)
+  · kanon_arm h (Bitvec.add.r_sub_const_r.swap.ok FS O hO)
+
+theorem Bitvec.add.r_sub_const_l.main.ok : Bitvec.add.r_sub_const_l.main.Stmt := kanon_proof% Bitvec.add.r_sub_const_l.main
+
+theorem Bitvec.add.r_sub_const_l.swap.ok : Bitvec.add.r_sub_const_l.swap.Stmt := by
+  intro FS O hO checked k2 t__8 c k1 t__4 r t__6
+  refine Refinement.trans ?_
+    (Bitvec.add.r_sub_const_l.main.ok FS O hO checked c k1 t__4 r t__6 k2 t__8)
+  simp only [Bitvec.add.spec, ty, Term.ty_mk]
+  refine Refinement.trans (Op2.Add.comm.ok FS ..) ?_
+  kanon_congr
+
+theorem Bitvec.add.r_sub_const_l.proof : Bitvec.add.r_sub_const_l.Stmt := by
+  intro FS O hO checked v1 v2 res h
+  simp only [Bitvec.add.r_sub_const_l] at h
+  repeat' rcases orElse_some h with h | h
+  · kanon_arm h (Bitvec.add.r_sub_const_l.main.ok FS O hO)
+  · kanon_arm h (Bitvec.add.r_sub_const_l.swap.ok FS O hO)
+
+theorem Bitvec.add.r_sub_cancel.main.ok : Bitvec.add.r_sub_cancel.main.Stmt := kanon_proof% Bitvec.add.r_sub_cancel.main
+
+theorem Bitvec.add.r_sub_cancel.swap.ok : Bitvec.add.r_sub_cancel.swap.Stmt := by
+  intro FS O hO checked v2 w__2 l kanon__5 t__6 hg
+  refine Refinement.trans ?_
+    (Bitvec.add.r_sub_cancel.main.ok FS O hO checked v2 w__2 l kanon__5 t__6 hg)
+  simp only [Bitvec.add.spec, ty, Term.ty_mk]
+  refine Refinement.trans (Op2.Add.comm.ok FS ..) ?_
+  kanon_congr
+
+theorem Bitvec.add.r_sub_cancel.proof : Bitvec.add.r_sub_cancel.Stmt := by
+  intro FS O hO checked v1 v2 res h
+  simp only [Bitvec.add.r_sub_cancel] at h
+  repeat' rcases orElse_some h with h | h
+  · kanon_arm h (Bitvec.add.r_sub_cancel.main.ok FS O hO)
+  · kanon_arm h (Bitvec.add.r_sub_cancel.swap.ok FS O hO)
+
+theorem Bitvec.add.r_add_sub.main.ok : Bitvec.add.r_add_sub.main.Stmt := kanon_proof% Bitvec.add.r_add_sub.main
+
+theorem Bitvec.add.r_add_sub.swap1.ok : Bitvec.add.r_add_sub.swap1.Stmt := by
   intro FS O hO checked w__1 b a t__5 w__7 c kanon__10 t__11 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Add w__1) b a) t__5)
     (Term.mk (Kind.Op2 (Op2.Add w__1) a b) t__5) :=
     Op2.Add.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_add.r_add_sub.main.ok FS O hO checked w__1 a b t__5 w__7 c kanon__10 t__11 hg)
-  simp only [bv_add.spec, ty, Term.ty_mk]
+    (Bitvec.add.r_add_sub.main.ok FS O hO checked w__1 a b t__5 w__7 c kanon__10 t__11 hg)
+  simp only [Bitvec.add.spec, ty, Term.ty_mk]
   kanon_congr
 
-theorem bv_add.r_add_sub.swap2.ok : bv_add.r_add_sub.swap2.Stmt := by
+theorem Bitvec.add.r_add_sub.swap2.ok : Bitvec.add.r_add_sub.swap2.Stmt := by
   intro FS O hO checked w__7 c kanon__10 t__11 w__1 a b t__5 hg
   refine Refinement.trans ?_
-    (bv_add.r_add_sub.main.ok FS O hO checked w__1 a b t__5 w__7 c kanon__10 t__11 hg)
-  simp only [bv_add.spec, ty, Term.ty_mk]
+    (Bitvec.add.r_add_sub.main.ok FS O hO checked w__1 a b t__5 w__7 c kanon__10 t__11 hg)
+  simp only [Bitvec.add.spec, ty, Term.ty_mk]
   refine Refinement.trans (Op2.Add.comm.ok FS ..) ?_
   kanon_congr
 
-theorem bv_add.r_add_sub.swap1_swap2.ok : bv_add.r_add_sub.swap1_swap2.Stmt := by
+theorem Bitvec.add.r_add_sub.swap1_swap2.ok : Bitvec.add.r_add_sub.swap1_swap2.Stmt := by
   intro FS O hO checked w__7 c kanon__10 t__11 w__1 b a t__5 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Add w__1) b a) t__5)
     (Term.mk (Kind.Op2 (Op2.Add w__1) a b) t__5) :=
     Op2.Add.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_add.r_add_sub.main.ok FS O hO checked w__1 a b t__5 w__7 c kanon__10 t__11 hg)
-  simp only [bv_add.spec, ty, Term.ty_mk]
+    (Bitvec.add.r_add_sub.main.ok FS O hO checked w__1 a b t__5 w__7 c kanon__10 t__11 hg)
+  simp only [Bitvec.add.spec, ty, Term.ty_mk]
   refine Refinement.trans (Op2.Add.comm.ok FS ..) ?_
   kanon_congr
 
-theorem bv_add.r_add_sub.proof : bv_add.r_add_sub.Stmt := by
+theorem Bitvec.add.r_add_sub.proof : Bitvec.add.r_add_sub.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_add.r_add_sub] at h
+  simp only [Bitvec.add.r_add_sub] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_add.r_add_sub.main.ok FS O hO)
-  · kanon_arm h (bv_add.r_add_sub.swap1.ok FS O hO)
-  · kanon_arm h (bv_add.r_add_sub.swap2.ok FS O hO)
-  · kanon_arm h (bv_add.r_add_sub.swap1_swap2.ok FS O hO)
+  · kanon_arm h (Bitvec.add.r_add_sub.main.ok FS O hO)
+  · kanon_arm h (Bitvec.add.r_add_sub.swap1.ok FS O hO)
+  · kanon_arm h (Bitvec.add.r_add_sub.swap2.ok FS O hO)
+  · kanon_arm h (Bitvec.add.r_add_sub.swap1_swap2.ok FS O hO)
 
-theorem bv_add.r_factor.main.ok : bv_add.r_factor.main.Stmt := kanon_proof% bv_add.r_factor.main
+theorem Bitvec.add.r_factor.main.ok : Bitvec.add.r_factor.main.Stmt := kanon_proof% Bitvec.add.r_factor.main
 
-theorem bv_add.r_factor.swap2.ok : bv_add.r_factor.swap2.Stmt := by
+theorem Bitvec.add.r_factor.swap2.ok : Bitvec.add.r_factor.swap2.Stmt := by
   intro FS O hO checked ck1 a b t__5 ck2 c kanon__9 t__11 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Mul ck2) c kanon__9) t__11)
     (Term.mk (Kind.Op2 (Op2.Mul ck2) kanon__9 c) t__11) :=
     Op2.Mul.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_add.r_factor.main.ok FS O hO checked ck1 a b t__5 ck2 kanon__9 c t__11 hg)
-  simp only [bv_add.spec, ty, Term.ty_mk]
+    (Bitvec.add.r_factor.main.ok FS O hO checked ck1 a b t__5 ck2 kanon__9 c t__11 hg)
+  simp only [Bitvec.add.spec, ty, Term.ty_mk]
   kanon_congr
 
-theorem bv_add.r_factor.swap1.ok : bv_add.r_factor.swap1.Stmt := by
+theorem Bitvec.add.r_factor.swap1.ok : Bitvec.add.r_factor.swap1.Stmt := by
   intro FS O hO checked ck1 b a t__5 ck2 kanon__9 c t__11 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Mul ck1) b a) t__5)
     (Term.mk (Kind.Op2 (Op2.Mul ck1) a b) t__5) :=
     Op2.Mul.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_add.r_factor.main.ok FS O hO checked ck1 a b t__5 ck2 kanon__9 c t__11 hg)
-  simp only [bv_add.spec, ty, Term.ty_mk]
+    (Bitvec.add.r_factor.main.ok FS O hO checked ck1 a b t__5 ck2 kanon__9 c t__11 hg)
+  simp only [Bitvec.add.spec, ty, Term.ty_mk]
   kanon_congr
 
-theorem bv_add.r_factor.swap1_swap2.ok : bv_add.r_factor.swap1_swap2.Stmt := by
+theorem Bitvec.add.r_factor.swap1_swap2.ok : Bitvec.add.r_factor.swap1_swap2.Stmt := by
   intro FS O hO checked ck1 b a t__5 ck2 c kanon__9 t__11 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Mul ck1) b a) t__5)
     (Term.mk (Kind.Op2 (Op2.Mul ck1) a b) t__5) :=
@@ -1769,42 +1817,42 @@ theorem bv_add.r_factor.swap1_swap2.ok : bv_add.r_factor.swap1_swap2.Stmt := by
     (Term.mk (Kind.Op2 (Op2.Mul ck2) kanon__9 c) t__11) :=
     Op2.Mul.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_add.r_factor.main.ok FS O hO checked ck1 a b t__5 ck2 kanon__9 c t__11 hg)
-  simp only [bv_add.spec, ty, Term.ty_mk]
+    (Bitvec.add.r_factor.main.ok FS O hO checked ck1 a b t__5 ck2 kanon__9 c t__11 hg)
+  simp only [Bitvec.add.spec, ty, Term.ty_mk]
   kanon_congr
 
-theorem bv_add.r_factor.proof : bv_add.r_factor.Stmt := by
+theorem Bitvec.add.r_factor.proof : Bitvec.add.r_factor.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_add.r_factor] at h
+  simp only [Bitvec.add.r_factor] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_add.r_factor.main.ok FS O hO)
-  · kanon_arm h (bv_add.r_factor.swap2.ok FS O hO)
-  · kanon_arm h (bv_add.r_factor.swap1.ok FS O hO)
-  · kanon_arm h (bv_add.r_factor.swap1_swap2.ok FS O hO)
+  · kanon_arm h (Bitvec.add.r_factor.main.ok FS O hO)
+  · kanon_arm h (Bitvec.add.r_factor.swap2.ok FS O hO)
+  · kanon_arm h (Bitvec.add.r_factor.swap1.ok FS O hO)
+  · kanon_arm h (Bitvec.add.r_factor.swap1_swap2.ok FS O hO)
 
-theorem bv_add.r_factor_const.main.ok : bv_add.r_factor_const.main.Stmt := kanon_proof% bv_add.r_factor_const.main
+theorem Bitvec.add.r_factor_const.main.ok : Bitvec.add.r_factor_const.main.Stmt := kanon_proof% Bitvec.add.r_factor_const.main
 
-theorem bv_add.r_factor_const.swap2.ok : bv_add.r_factor_const.swap2.Stmt := by
+theorem Bitvec.add.r_factor_const.swap2.ok : Bitvec.add.r_factor_const.swap2.Stmt := by
   intro FS O hO checked ck1 k1 t__4 r1 t__7 ck2 r2 k2 t__12 t__15 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Mul ck2) r2 (Term.mk (Kind.BitVec k2) t__12)) t__15)
     (Term.mk (Kind.Op2 (Op2.Mul ck2) (Term.mk (Kind.BitVec k2) t__12) r2) t__15) :=
     Op2.Mul.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_add.r_factor_const.main.ok FS O hO checked ck1 k1 t__4 r1 t__7 ck2 k2 t__12 r2 t__15 hg)
-  simp only [bv_add.spec, ty, Term.ty_mk]
+    (Bitvec.add.r_factor_const.main.ok FS O hO checked ck1 k1 t__4 r1 t__7 ck2 k2 t__12 r2 t__15 hg)
+  simp only [Bitvec.add.spec, ty, Term.ty_mk]
   kanon_congr
 
-theorem bv_add.r_factor_const.swap1.ok : bv_add.r_factor_const.swap1.Stmt := by
+theorem Bitvec.add.r_factor_const.swap1.ok : Bitvec.add.r_factor_const.swap1.Stmt := by
   intro FS O hO checked ck1 r1 k1 t__4 t__7 ck2 k2 t__12 r2 t__15 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Mul ck1) r1 (Term.mk (Kind.BitVec k1) t__4)) t__7)
     (Term.mk (Kind.Op2 (Op2.Mul ck1) (Term.mk (Kind.BitVec k1) t__4) r1) t__7) :=
     Op2.Mul.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_add.r_factor_const.main.ok FS O hO checked ck1 k1 t__4 r1 t__7 ck2 k2 t__12 r2 t__15 hg)
-  simp only [bv_add.spec, ty, Term.ty_mk]
+    (Bitvec.add.r_factor_const.main.ok FS O hO checked ck1 k1 t__4 r1 t__7 ck2 k2 t__12 r2 t__15 hg)
+  simp only [Bitvec.add.spec, ty, Term.ty_mk]
   kanon_congr
 
-theorem bv_add.r_factor_const.swap1_swap2.ok : bv_add.r_factor_const.swap1_swap2.Stmt := by
+theorem Bitvec.add.r_factor_const.swap1_swap2.ok : Bitvec.add.r_factor_const.swap1_swap2.Stmt := by
   intro FS O hO checked ck1 r1 k1 t__4 t__7 ck2 r2 k2 t__12 t__15 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Mul ck1) r1 (Term.mk (Kind.BitVec k1) t__4)) t__7)
     (Term.mk (Kind.Op2 (Op2.Mul ck1) (Term.mk (Kind.BitVec k1) t__4) r1) t__7) :=
@@ -1813,199 +1861,199 @@ theorem bv_add.r_factor_const.swap1_swap2.ok : bv_add.r_factor_const.swap1_swap2
     (Term.mk (Kind.Op2 (Op2.Mul ck2) (Term.mk (Kind.BitVec k2) t__12) r2) t__15) :=
     Op2.Mul.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_add.r_factor_const.main.ok FS O hO checked ck1 k1 t__4 r1 t__7 ck2 k2 t__12 r2 t__15 hg)
-  simp only [bv_add.spec, ty, Term.ty_mk]
+    (Bitvec.add.r_factor_const.main.ok FS O hO checked ck1 k1 t__4 r1 t__7 ck2 k2 t__12 r2 t__15 hg)
+  simp only [Bitvec.add.spec, ty, Term.ty_mk]
   kanon_congr
 
-theorem bv_add.r_factor_const.proof : bv_add.r_factor_const.Stmt := by
+theorem Bitvec.add.r_factor_const.proof : Bitvec.add.r_factor_const.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_add.r_factor_const] at h
+  simp only [Bitvec.add.r_factor_const] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_add.r_factor_const.main.ok FS O hO)
-  · kanon_arm h (bv_add.r_factor_const.swap2.ok FS O hO)
-  · kanon_arm h (bv_add.r_factor_const.swap1.ok FS O hO)
-  · kanon_arm h (bv_add.r_factor_const.swap1_swap2.ok FS O hO)
+  · kanon_arm h (Bitvec.add.r_factor_const.main.ok FS O hO)
+  · kanon_arm h (Bitvec.add.r_factor_const.swap2.ok FS O hO)
+  · kanon_arm h (Bitvec.add.r_factor_const.swap1.ok FS O hO)
+  · kanon_arm h (Bitvec.add.r_factor_const.swap1_swap2.ok FS O hO)
 
-theorem bv_add.r_ite.main.ok : bv_add.r_ite.main.Stmt := kanon_proof% bv_add.r_ite.main
+theorem Bitvec.add.r_ite.main.ok : Bitvec.add.r_ite.main.Stmt := kanon_proof% Bitvec.add.r_ite.main
 
-theorem bv_add.r_ite.swap.ok : bv_add.r_ite.swap.Stmt := by
+theorem Bitvec.add.r_ite.swap.ok : Bitvec.add.r_ite.swap.Stmt := by
   intro FS O hO checked w__6 t__7 b l r t__5
   refine Refinement.trans ?_
-    (bv_add.r_ite.main.ok FS O hO checked b l r t__5 w__6 t__7)
-  simp only [bv_add.spec, ty, Term.ty_mk]
+    (Bitvec.add.r_ite.main.ok FS O hO checked b l r t__5 w__6 t__7)
+  simp only [Bitvec.add.spec, ty, Term.ty_mk]
   refine Refinement.trans (Op2.Add.comm.ok FS ..) ?_
   kanon_congr
 
-theorem bv_add.r_ite.proof : bv_add.r_ite.Stmt := by
+theorem Bitvec.add.r_ite.proof : Bitvec.add.r_ite.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_add.r_ite] at h
+  simp only [Bitvec.add.r_ite] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_add.r_ite.main.ok FS O hO)
-  · kanon_arm h (bv_add.r_ite.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.add.r_ite.main.ok FS O hO)
+  · kanon_arm h (Bitvec.add.r_ite.swap.ok FS O hO)
 
-theorem bv_add.r_default.main.ok : bv_add.r_default.main.Stmt := kanon_proof% bv_add.r_default.main
+theorem Bitvec.add.r_default.main.ok : Bitvec.add.r_default.main.Stmt := kanon_proof% Bitvec.add.r_default.main
 
-theorem bv_add.r_default.proof : bv_add.r_default.Stmt := by
+theorem Bitvec.add.r_default.proof : Bitvec.add.r_default.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_add.r_default] at h
+  simp only [Bitvec.add.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_add.r_default.main.ok FS O hO)
+  · kanon_arm h (Bitvec.add.r_default.main.ok FS O hO)
 
-theorem bv_sub.r_lits.main.ok : bv_sub.r_lits.main.Stmt := kanon_proof% bv_sub.r_lits.main
+theorem Bitvec.sub.r_lits.main.ok : Bitvec.sub.r_lits.main.Stmt := kanon_proof% Bitvec.sub.r_lits.main
 
-theorem bv_sub.r_lits.proof : bv_sub.r_lits.Stmt := by
+theorem Bitvec.sub.r_lits.proof : Bitvec.sub.r_lits.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_sub.r_lits] at h
+  simp only [Bitvec.sub.r_lits] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_sub.r_lits.main.ok FS O hO)
+  · kanon_arm h (Bitvec.sub.r_lits.main.ok FS O hO)
 
-theorem bv_sub.r_zero_r.main.ok : bv_sub.r_zero_r.main.Stmt := kanon_proof% bv_sub.r_zero_r.main
+theorem Bitvec.sub.r_zero_r.main.ok : Bitvec.sub.r_zero_r.main.Stmt := kanon_proof% Bitvec.sub.r_zero_r.main
 
-theorem bv_sub.r_zero_r.proof : bv_sub.r_zero_r.Stmt := by
+theorem Bitvec.sub.r_zero_r.proof : Bitvec.sub.r_zero_r.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_sub.r_zero_r] at h
+  simp only [Bitvec.sub.r_zero_r] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_sub.r_zero_r.main.ok FS O hO)
+  · kanon_arm h (Bitvec.sub.r_zero_r.main.ok FS O hO)
 
-theorem bv_sub.r_zero_l.main.ok : bv_sub.r_zero_l.main.Stmt := kanon_proof% bv_sub.r_zero_l.main
+theorem Bitvec.sub.r_zero_l.main.ok : Bitvec.sub.r_zero_l.main.Stmt := kanon_proof% Bitvec.sub.r_zero_l.main
 
-theorem bv_sub.r_zero_l.proof : bv_sub.r_zero_l.Stmt := by
+theorem Bitvec.sub.r_zero_l.proof : Bitvec.sub.r_zero_l.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_sub.r_zero_l] at h
+  simp only [Bitvec.sub.r_zero_l] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_sub.r_zero_l.main.ok FS O hO)
+  · kanon_arm h (Bitvec.sub.r_zero_l.main.ok FS O hO)
 
-theorem bv_sub.r_same.main.ok : bv_sub.r_same.main.Stmt := kanon_proof% bv_sub.r_same.main
+theorem Bitvec.sub.r_same.main.ok : Bitvec.sub.r_same.main.Stmt := kanon_proof% Bitvec.sub.r_same.main
 
-theorem bv_sub.r_same.proof : bv_sub.r_same.Stmt := by
+theorem Bitvec.sub.r_same.proof : Bitvec.sub.r_same.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_sub.r_same] at h
+  simp only [Bitvec.sub.r_same] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_sub.r_same.main.ok FS O hO)
+  · kanon_arm h (Bitvec.sub.r_same.main.ok FS O hO)
 
-theorem bv_sub.r_neg_r.main.ok : bv_sub.r_neg_r.main.Stmt := kanon_proof% bv_sub.r_neg_r.main
+theorem Bitvec.sub.r_neg_r.main.ok : Bitvec.sub.r_neg_r.main.Stmt := kanon_proof% Bitvec.sub.r_neg_r.main
 
-theorem bv_sub.r_neg_r.proof : bv_sub.r_neg_r.Stmt := by
+theorem Bitvec.sub.r_neg_r.proof : Bitvec.sub.r_neg_r.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_sub.r_neg_r] at h
+  simp only [Bitvec.sub.r_neg_r] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_sub.r_neg_r.main.ok FS O hO)
+  · kanon_arm h (Bitvec.sub.r_neg_r.main.ok FS O hO)
 
-theorem bv_sub.r_sub_const_l.main.ok : bv_sub.r_sub_const_l.main.Stmt := kanon_proof% bv_sub.r_sub_const_l.main
+theorem Bitvec.sub.r_sub_const_l.main.ok : Bitvec.sub.r_sub_const_l.main.Stmt := kanon_proof% Bitvec.sub.r_sub_const_l.main
 
-theorem bv_sub.r_sub_const_l.proof : bv_sub.r_sub_const_l.Stmt := by
+theorem Bitvec.sub.r_sub_const_l.proof : Bitvec.sub.r_sub_const_l.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_sub.r_sub_const_l] at h
+  simp only [Bitvec.sub.r_sub_const_l] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_sub.r_sub_const_l.main.ok FS O hO)
+  · kanon_arm h (Bitvec.sub.r_sub_const_l.main.ok FS O hO)
 
-theorem bv_sub.r_sub_const_r.main.ok : bv_sub.r_sub_const_r.main.Stmt := kanon_proof% bv_sub.r_sub_const_r.main
+theorem Bitvec.sub.r_sub_const_r.main.ok : Bitvec.sub.r_sub_const_r.main.Stmt := kanon_proof% Bitvec.sub.r_sub_const_r.main
 
-theorem bv_sub.r_sub_const_r.proof : bv_sub.r_sub_const_r.Stmt := by
+theorem Bitvec.sub.r_sub_const_r.proof : Bitvec.sub.r_sub_const_r.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_sub.r_sub_const_r] at h
+  simp only [Bitvec.sub.r_sub_const_r] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_sub.r_sub_const_r.main.ok FS O hO)
+  · kanon_arm h (Bitvec.sub.r_sub_const_r.main.ok FS O hO)
 
-theorem bv_sub.r_const_add.main.ok : bv_sub.r_const_add.main.Stmt := kanon_proof% bv_sub.r_const_add.main
+theorem Bitvec.sub.r_const_add.main.ok : Bitvec.sub.r_const_add.main.Stmt := kanon_proof% Bitvec.sub.r_const_add.main
 
-theorem bv_sub.r_const_add.swap.ok : bv_sub.r_const_add.swap.Stmt := by
+theorem Bitvec.sub.r_const_add.swap.ok : Bitvec.sub.r_const_add.swap.Stmt := by
   intro FS O hO checked k1 t__2 c l k2 t__6 t__8
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Add c) l (Term.mk (Kind.BitVec k2) t__6)) t__8)
     (Term.mk (Kind.Op2 (Op2.Add c) (Term.mk (Kind.BitVec k2) t__6) l) t__8) :=
     Op2.Add.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_sub.r_const_add.main.ok FS O hO checked k1 t__2 c k2 t__6 l t__8)
-  simp only [bv_sub.spec, ty, Term.ty_mk]
+    (Bitvec.sub.r_const_add.main.ok FS O hO checked k1 t__2 c k2 t__6 l t__8)
+  simp only [Bitvec.sub.spec, ty, Term.ty_mk]
   kanon_congr
 
-theorem bv_sub.r_const_add.proof : bv_sub.r_const_add.Stmt := by
+theorem Bitvec.sub.r_const_add.proof : Bitvec.sub.r_const_add.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_sub.r_const_add] at h
+  simp only [Bitvec.sub.r_const_add] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_sub.r_const_add.main.ok FS O hO)
-  · kanon_arm h (bv_sub.r_const_add.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.sub.r_const_add.main.ok FS O hO)
+  · kanon_arm h (Bitvec.sub.r_const_add.swap.ok FS O hO)
 
-theorem bv_sub.r_add_const.main.ok : bv_sub.r_add_const.main.Stmt := kanon_proof% bv_sub.r_add_const.main
+theorem Bitvec.sub.r_add_const.main.ok : Bitvec.sub.r_add_const.main.Stmt := kanon_proof% Bitvec.sub.r_add_const.main
 
-theorem bv_sub.r_add_const.swap.ok : bv_sub.r_add_const.swap.Stmt := by
+theorem Bitvec.sub.r_add_const.swap.ok : Bitvec.sub.r_add_const.swap.Stmt := by
   intro FS O hO checked c l k1 t__4 t__6 k2 t__9
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Add c) l (Term.mk (Kind.BitVec k1) t__4)) t__6)
     (Term.mk (Kind.Op2 (Op2.Add c) (Term.mk (Kind.BitVec k1) t__4) l) t__6) :=
     Op2.Add.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_sub.r_add_const.main.ok FS O hO checked c k1 t__4 l t__6 k2 t__9)
-  simp only [bv_sub.spec, ty, Term.ty_mk]
+    (Bitvec.sub.r_add_const.main.ok FS O hO checked c k1 t__4 l t__6 k2 t__9)
+  simp only [Bitvec.sub.spec, ty, Term.ty_mk]
   kanon_congr
 
-theorem bv_sub.r_add_const.proof : bv_sub.r_add_const.Stmt := by
+theorem Bitvec.sub.r_add_const.proof : Bitvec.sub.r_add_const.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_sub.r_add_const] at h
+  simp only [Bitvec.sub.r_add_const] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_sub.r_add_const.main.ok FS O hO)
-  · kanon_arm h (bv_sub.r_add_const.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.sub.r_add_const.main.ok FS O hO)
+  · kanon_arm h (Bitvec.sub.r_add_const.swap.ok FS O hO)
 
-theorem bv_sub.r_add_cancel_l.main.ok : bv_sub.r_add_cancel_l.main.Stmt := kanon_proof% bv_sub.r_add_cancel_l.main
+theorem Bitvec.sub.r_add_cancel_l.main.ok : Bitvec.sub.r_add_cancel_l.main.Stmt := kanon_proof% Bitvec.sub.r_add_cancel_l.main
 
-theorem bv_sub.r_add_cancel_l.swap.ok : bv_sub.r_add_cancel_l.swap.Stmt := by
+theorem Bitvec.sub.r_add_cancel_l.swap.ok : Bitvec.sub.r_add_cancel_l.swap.Stmt := by
   intro FS O hO checked v2 w__1 r l t__5 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Add w__1) r l) t__5)
     (Term.mk (Kind.Op2 (Op2.Add w__1) l r) t__5) :=
     Op2.Add.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_sub.r_add_cancel_l.main.ok FS O hO checked v2 w__1 l r t__5 hg)
-  simp only [bv_sub.spec, ty, Term.ty_mk]
+    (Bitvec.sub.r_add_cancel_l.main.ok FS O hO checked v2 w__1 l r t__5 hg)
+  simp only [Bitvec.sub.spec, ty, Term.ty_mk]
   kanon_congr
 
-theorem bv_sub.r_add_cancel_l.proof : bv_sub.r_add_cancel_l.Stmt := by
+theorem Bitvec.sub.r_add_cancel_l.proof : Bitvec.sub.r_add_cancel_l.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_sub.r_add_cancel_l] at h
+  simp only [Bitvec.sub.r_add_cancel_l] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_sub.r_add_cancel_l.main.ok FS O hO)
-  · kanon_arm h (bv_sub.r_add_cancel_l.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.sub.r_add_cancel_l.main.ok FS O hO)
+  · kanon_arm h (Bitvec.sub.r_add_cancel_l.swap.ok FS O hO)
 
-theorem bv_sub.r_add_cancel_r.main.ok : bv_sub.r_add_cancel_r.main.Stmt := kanon_proof% bv_sub.r_add_cancel_r.main
+theorem Bitvec.sub.r_add_cancel_r.main.ok : Bitvec.sub.r_add_cancel_r.main.Stmt := kanon_proof% Bitvec.sub.r_add_cancel_r.main
 
-theorem bv_sub.r_add_cancel_r.swap.ok : bv_sub.r_add_cancel_r.swap.Stmt := by
+theorem Bitvec.sub.r_add_cancel_r.swap.ok : Bitvec.sub.r_add_cancel_r.swap.Stmt := by
   intro FS O hO checked v2 w__1 r l t__5 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Add w__1) r l) t__5)
     (Term.mk (Kind.Op2 (Op2.Add w__1) l r) t__5) :=
     Op2.Add.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_sub.r_add_cancel_r.main.ok FS O hO checked v2 w__1 l r t__5 hg)
-  simp only [bv_sub.spec, ty, Term.ty_mk]
+    (Bitvec.sub.r_add_cancel_r.main.ok FS O hO checked v2 w__1 l r t__5 hg)
+  simp only [Bitvec.sub.spec, ty, Term.ty_mk]
   kanon_congr
 
-theorem bv_sub.r_add_cancel_r.proof : bv_sub.r_add_cancel_r.Stmt := by
+theorem Bitvec.sub.r_add_cancel_r.proof : Bitvec.sub.r_add_cancel_r.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_sub.r_add_cancel_r] at h
+  simp only [Bitvec.sub.r_add_cancel_r] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_sub.r_add_cancel_r.main.ok FS O hO)
-  · kanon_arm h (bv_sub.r_add_cancel_r.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.sub.r_add_cancel_r.main.ok FS O hO)
+  · kanon_arm h (Bitvec.sub.r_add_cancel_r.swap.ok FS O hO)
 
-theorem bv_sub.r_add_add.main.ok : bv_sub.r_add_add.main.Stmt := kanon_proof% bv_sub.r_add_add.main
+theorem Bitvec.sub.r_add_add.main.ok : Bitvec.sub.r_add_add.main.Stmt := kanon_proof% Bitvec.sub.r_add_add.main
 
-theorem bv_sub.r_add_add.swap2.ok : bv_sub.r_add_add.swap2.Stmt := by
+theorem Bitvec.sub.r_add_add.swap2.ok : Bitvec.sub.r_add_add.swap2.Stmt := by
   intro FS O hO checked w__1 l r1 t__5 w__7 r2 kanon__9 t__11 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Add w__7) r2 kanon__9) t__11)
     (Term.mk (Kind.Op2 (Op2.Add w__7) kanon__9 r2) t__11) :=
     Op2.Add.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_sub.r_add_add.main.ok FS O hO checked w__1 l r1 t__5 w__7 kanon__9 r2 t__11 hg)
-  simp only [bv_sub.spec, ty, Term.ty_mk]
+    (Bitvec.sub.r_add_add.main.ok FS O hO checked w__1 l r1 t__5 w__7 kanon__9 r2 t__11 hg)
+  simp only [Bitvec.sub.spec, ty, Term.ty_mk]
   kanon_congr
 
-theorem bv_sub.r_add_add.swap1.ok : bv_sub.r_add_add.swap1.Stmt := by
+theorem Bitvec.sub.r_add_add.swap1.ok : Bitvec.sub.r_add_add.swap1.Stmt := by
   intro FS O hO checked w__1 r1 l t__5 w__7 kanon__9 r2 t__11 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Add w__1) r1 l) t__5)
     (Term.mk (Kind.Op2 (Op2.Add w__1) l r1) t__5) :=
     Op2.Add.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_sub.r_add_add.main.ok FS O hO checked w__1 l r1 t__5 w__7 kanon__9 r2 t__11 hg)
-  simp only [bv_sub.spec, ty, Term.ty_mk]
+    (Bitvec.sub.r_add_add.main.ok FS O hO checked w__1 l r1 t__5 w__7 kanon__9 r2 t__11 hg)
+  simp only [Bitvec.sub.spec, ty, Term.ty_mk]
   kanon_congr
 
-theorem bv_sub.r_add_add.swap1_swap2.ok : bv_sub.r_add_add.swap1_swap2.Stmt := by
+theorem Bitvec.sub.r_add_add.swap1_swap2.ok : Bitvec.sub.r_add_add.swap1_swap2.Stmt := by
   intro FS O hO checked w__1 r1 l t__5 w__7 r2 kanon__9 t__11 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Add w__1) r1 l) t__5)
     (Term.mk (Kind.Op2 (Op2.Add w__1) l r1) t__5) :=
@@ -2014,336 +2062,369 @@ theorem bv_sub.r_add_add.swap1_swap2.ok : bv_sub.r_add_add.swap1_swap2.Stmt := b
     (Term.mk (Kind.Op2 (Op2.Add w__7) kanon__9 r2) t__11) :=
     Op2.Add.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_sub.r_add_add.main.ok FS O hO checked w__1 l r1 t__5 w__7 kanon__9 r2 t__11 hg)
-  simp only [bv_sub.spec, ty, Term.ty_mk]
+    (Bitvec.sub.r_add_add.main.ok FS O hO checked w__1 l r1 t__5 w__7 kanon__9 r2 t__11 hg)
+  simp only [Bitvec.sub.spec, ty, Term.ty_mk]
   kanon_congr
 
-theorem bv_sub.r_add_add.proof : bv_sub.r_add_add.Stmt := by
+theorem Bitvec.sub.r_add_add.proof : Bitvec.sub.r_add_add.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_sub.r_add_add] at h
+  simp only [Bitvec.sub.r_add_add] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_sub.r_add_add.main.ok FS O hO)
-  · kanon_arm h (bv_sub.r_add_add.swap2.ok FS O hO)
-  · kanon_arm h (bv_sub.r_add_add.swap1.ok FS O hO)
-  · kanon_arm h (bv_sub.r_add_add.swap1_swap2.ok FS O hO)
+  · kanon_arm h (Bitvec.sub.r_add_add.main.ok FS O hO)
+  · kanon_arm h (Bitvec.sub.r_add_add.swap2.ok FS O hO)
+  · kanon_arm h (Bitvec.sub.r_add_add.swap1.ok FS O hO)
+  · kanon_arm h (Bitvec.sub.r_add_add.swap1_swap2.ok FS O hO)
 
-theorem bv_sub.r_sub_sub.main.ok : bv_sub.r_sub_sub.main.Stmt := kanon_proof% bv_sub.r_sub_sub.main
+theorem Bitvec.sub.r_sub_sub.main.ok : Bitvec.sub.r_sub_sub.main.Stmt := kanon_proof% Bitvec.sub.r_sub_sub.main
 
-theorem bv_sub.r_sub_sub.proof : bv_sub.r_sub_sub.Stmt := by
+theorem Bitvec.sub.r_sub_sub.proof : Bitvec.sub.r_sub_sub.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_sub.r_sub_sub] at h
+  simp only [Bitvec.sub.r_sub_sub] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_sub.r_sub_sub.main.ok FS O hO)
+  · kanon_arm h (Bitvec.sub.r_sub_sub.main.ok FS O hO)
 
-theorem bv_sub.r_ite_ite.main.ok : bv_sub.r_ite_ite.main.Stmt := kanon_proof% bv_sub.r_ite_ite.main
+theorem Bitvec.sub.r_ite_ite.main.ok : Bitvec.sub.r_ite_ite.main.Stmt := kanon_proof% Bitvec.sub.r_ite_ite.main
 
-theorem bv_sub.r_ite_ite.proof : bv_sub.r_ite_ite.Stmt := by
+theorem Bitvec.sub.r_ite_ite.proof : Bitvec.sub.r_ite_ite.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_sub.r_ite_ite] at h
+  simp only [Bitvec.sub.r_ite_ite] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_sub.r_ite_ite.main.ok FS O hO)
+  · kanon_arm h (Bitvec.sub.r_ite_ite.main.ok FS O hO)
 
-theorem bv_sub.r_ite_l.main.ok : bv_sub.r_ite_l.main.Stmt := kanon_proof% bv_sub.r_ite_l.main
+theorem Bitvec.sub.r_ite_l.main.ok : Bitvec.sub.r_ite_l.main.Stmt := kanon_proof% Bitvec.sub.r_ite_l.main
 
-theorem bv_sub.r_ite_l.proof : bv_sub.r_ite_l.Stmt := by
+theorem Bitvec.sub.r_ite_l.proof : Bitvec.sub.r_ite_l.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_sub.r_ite_l] at h
+  simp only [Bitvec.sub.r_ite_l] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_sub.r_ite_l.main.ok FS O hO)
+  · kanon_arm h (Bitvec.sub.r_ite_l.main.ok FS O hO)
 
-theorem bv_sub.r_ite_r.main.ok : bv_sub.r_ite_r.main.Stmt := kanon_proof% bv_sub.r_ite_r.main
+theorem Bitvec.sub.r_ite_r.main.ok : Bitvec.sub.r_ite_r.main.Stmt := kanon_proof% Bitvec.sub.r_ite_r.main
 
-theorem bv_sub.r_ite_r.proof : bv_sub.r_ite_r.Stmt := by
+theorem Bitvec.sub.r_ite_r.proof : Bitvec.sub.r_ite_r.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_sub.r_ite_r] at h
+  simp only [Bitvec.sub.r_ite_r] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_sub.r_ite_r.main.ok FS O hO)
+  · kanon_arm h (Bitvec.sub.r_ite_r.main.ok FS O hO)
 
-theorem bv_sub.r_of_bool_l.main.ok : bv_sub.r_of_bool_l.main.Stmt := kanon_proof% bv_sub.r_of_bool_l.main
+theorem Bitvec.sub.r_of_bool_l.main.ok : Bitvec.sub.r_of_bool_l.main.Stmt := kanon_proof% Bitvec.sub.r_of_bool_l.main
 
-theorem bv_sub.r_of_bool_l.proof : bv_sub.r_of_bool_l.Stmt := by
+theorem Bitvec.sub.r_of_bool_l.proof : Bitvec.sub.r_of_bool_l.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_sub.r_of_bool_l] at h
+  simp only [Bitvec.sub.r_of_bool_l] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_sub.r_of_bool_l.main.ok FS O hO)
+  · kanon_arm h (Bitvec.sub.r_of_bool_l.main.ok FS O hO)
 
-theorem bv_sub.r_of_bool_r.main.ok : bv_sub.r_of_bool_r.main.Stmt := kanon_proof% bv_sub.r_of_bool_r.main
+theorem Bitvec.sub.r_of_bool_r.main.ok : Bitvec.sub.r_of_bool_r.main.Stmt := kanon_proof% Bitvec.sub.r_of_bool_r.main
 
-theorem bv_sub.r_of_bool_r.proof : bv_sub.r_of_bool_r.Stmt := by
+theorem Bitvec.sub.r_of_bool_r.proof : Bitvec.sub.r_of_bool_r.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_sub.r_of_bool_r] at h
+  simp only [Bitvec.sub.r_of_bool_r] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_sub.r_of_bool_r.main.ok FS O hO)
+  · kanon_arm h (Bitvec.sub.r_of_bool_r.main.ok FS O hO)
 
-theorem bv_sub.r_default.main.ok : bv_sub.r_default.main.Stmt := kanon_proof% bv_sub.r_default.main
+theorem Bitvec.sub.r_default.main.ok : Bitvec.sub.r_default.main.Stmt := kanon_proof% Bitvec.sub.r_default.main
 
-theorem bv_sub.r_default.proof : bv_sub.r_default.Stmt := by
+theorem Bitvec.sub.r_default.proof : Bitvec.sub.r_default.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_sub.r_default] at h
+  simp only [Bitvec.sub.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_sub.r_default.main.ok FS O hO)
+  · kanon_arm h (Bitvec.sub.r_default.main.ok FS O hO)
 
-theorem bv_neg.r_lit.main.ok : bv_neg.r_lit.main.Stmt := kanon_proof% bv_neg.r_lit.main
+theorem Bitvec.neg.r_lit.main.ok : Bitvec.neg.r_lit.main.Stmt := kanon_proof% Bitvec.neg.r_lit.main
 
-theorem bv_neg.r_lit.proof : bv_neg.r_lit.Stmt := by
+theorem Bitvec.neg.r_lit.proof : Bitvec.neg.r_lit.Stmt := by
   intro FS O hO checked v res h
-  simp only [bv_neg.r_lit] at h
+  simp only [Bitvec.neg.r_lit] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_neg.r_lit.main.ok FS O hO)
+  · kanon_arm h (Bitvec.neg.r_lit.main.ok FS O hO)
 
-theorem bv_neg.r_neg.main.ok : bv_neg.r_neg.main.Stmt := kanon_proof% bv_neg.r_neg.main
+theorem Bitvec.neg.r_neg.main.ok : Bitvec.neg.r_neg.main.Stmt := kanon_proof% Bitvec.neg.r_neg.main
 
-theorem bv_neg.r_neg.proof : bv_neg.r_neg.Stmt := by
+theorem Bitvec.neg.r_neg.proof : Bitvec.neg.r_neg.Stmt := by
   intro FS O hO checked v res h
-  simp only [bv_neg.r_neg] at h
+  simp only [Bitvec.neg.r_neg] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_neg.r_neg.main.ok FS O hO)
+  · kanon_arm h (Bitvec.neg.r_neg.main.ok FS O hO)
 
-theorem bv_neg.r_ite.main.ok : bv_neg.r_ite.main.Stmt := kanon_proof% bv_neg.r_ite.main
+theorem Bitvec.neg.r_ite.main.ok : Bitvec.neg.r_ite.main.Stmt := kanon_proof% Bitvec.neg.r_ite.main
 
-theorem bv_neg.r_ite.proof : bv_neg.r_ite.Stmt := by
+theorem Bitvec.neg.r_ite.proof : Bitvec.neg.r_ite.Stmt := by
   intro FS O hO checked v res h
-  simp only [bv_neg.r_ite] at h
+  simp only [Bitvec.neg.r_ite] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_neg.r_ite.main.ok FS O hO)
+  · kanon_arm h (Bitvec.neg.r_ite.main.ok FS O hO)
 
-theorem bv_neg.r_of_bool.main.ok : bv_neg.r_of_bool.main.Stmt := kanon_proof% bv_neg.r_of_bool.main
+theorem Bitvec.neg.r_of_bool.main.ok : Bitvec.neg.r_of_bool.main.Stmt := kanon_proof% Bitvec.neg.r_of_bool.main
 
-theorem bv_neg.r_of_bool.proof : bv_neg.r_of_bool.Stmt := by
+theorem Bitvec.neg.r_of_bool.proof : Bitvec.neg.r_of_bool.Stmt := by
   intro FS O hO checked v res h
-  simp only [bv_neg.r_of_bool] at h
+  simp only [Bitvec.neg.r_of_bool] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_neg.r_of_bool.main.ok FS O hO)
+  · kanon_arm h (Bitvec.neg.r_of_bool.main.ok FS O hO)
 
-theorem bv_neg.r_default.main.ok : bv_neg.r_default.main.Stmt := kanon_proof% bv_neg.r_default.main
+theorem Bitvec.neg.r_default.main.ok : Bitvec.neg.r_default.main.Stmt := kanon_proof% Bitvec.neg.r_default.main
 
-theorem bv_neg.r_default.proof : bv_neg.r_default.Stmt := by
+theorem Bitvec.neg.r_default.proof : Bitvec.neg.r_default.Stmt := by
   intro FS O hO checked v res h
-  simp only [bv_neg.r_default] at h
+  simp only [Bitvec.neg.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_neg.r_default.main.ok FS O hO)
+  · kanon_arm h (Bitvec.neg.r_default.main.ok FS O hO)
 
-theorem bv_mod.r_lits.main.ok : bv_mod.r_lits.main.Stmt := kanon_proof% bv_mod.r_lits.main
+theorem Bitvec.mod_.r_lits.main.ok : Bitvec.mod_.r_lits.main.Stmt := kanon_proof% Bitvec.mod_.r_lits.main
 
-theorem bv_mod.r_lits.proof : bv_mod.r_lits.Stmt := by
+theorem Bitvec.mod_.r_lits.proof : Bitvec.mod_.r_lits.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_mod.r_lits] at h
+  simp only [Bitvec.mod_.r_lits] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_mod.r_lits.main.ok FS O hO)
+  · kanon_arm h (Bitvec.mod_.r_lits.main.ok FS O hO)
 
-theorem bv_mod.r_zero_r.main.ok : bv_mod.r_zero_r.main.Stmt := kanon_proof% bv_mod.r_zero_r.main
+theorem Bitvec.mod_.r_zero_r.main.ok : Bitvec.mod_.r_zero_r.main.Stmt := kanon_proof% Bitvec.mod_.r_zero_r.main
 
-theorem bv_mod.r_zero_r.proof : bv_mod.r_zero_r.Stmt := by
+theorem Bitvec.mod_.r_zero_r.proof : Bitvec.mod_.r_zero_r.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_mod.r_zero_r] at h
+  simp only [Bitvec.mod_.r_zero_r] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_mod.r_zero_r.main.ok FS O hO)
+  · kanon_arm h (Bitvec.mod_.r_zero_r.main.ok FS O hO)
 
-theorem bv_mod.r_default.main.ok : bv_mod.r_default.main.Stmt := kanon_proof% bv_mod.r_default.main
+theorem Bitvec.mod_.r_default.main.ok : Bitvec.mod_.r_default.main.Stmt := kanon_proof% Bitvec.mod_.r_default.main
 
-theorem bv_mod.r_default.proof : bv_mod.r_default.Stmt := by
+theorem Bitvec.mod_.r_default.proof : Bitvec.mod_.r_default.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_mod.r_default] at h
+  simp only [Bitvec.mod_.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_mod.r_default.main.ok FS O hO)
+  · kanon_arm h (Bitvec.mod_.r_default.main.ok FS O hO)
 
-theorem bv_rem.r_lits.main.ok : bv_rem.r_lits.main.Stmt := kanon_proof% bv_rem.r_lits.main
+theorem Bitvec.rem.r_lits.main.ok : Bitvec.rem.r_lits.main.Stmt := kanon_proof% Bitvec.rem.r_lits.main
 
-theorem bv_rem.r_lits.proof : bv_rem.r_lits.Stmt := by
+theorem Bitvec.rem.r_lits.proof : Bitvec.rem.r_lits.Stmt := by
   intro FS O hO signed v1 v2 res hs_v2 h
-  simp only [bv_rem.r_lits] at h
+  simp only [Bitvec.rem.r_lits] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_rem.r_lits.main.ok FS O hO)
+  · kanon_arm h (Bitvec.rem.r_lits.main.ok FS O hO)
 
-theorem bv_rem.r_zero_r.main.ok : bv_rem.r_zero_r.main.Stmt := kanon_proof% bv_rem.r_zero_r.main
+theorem Bitvec.rem.r_zero_r.main.ok : Bitvec.rem.r_zero_r.main.Stmt := kanon_proof% Bitvec.rem.r_zero_r.main
 
-theorem bv_rem.r_zero_r.proof : bv_rem.r_zero_r.Stmt := by
+theorem Bitvec.rem.r_zero_r.proof : Bitvec.rem.r_zero_r.Stmt := by
   intro FS O hO signed v1 v2 res hs_v2 h
-  simp only [bv_rem.r_zero_r] at h
+  simp only [Bitvec.rem.r_zero_r] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_rem.r_zero_r.main.ok FS O hO)
+  · kanon_arm h (Bitvec.rem.r_zero_r.main.ok FS O hO)
 
-theorem bv_rem.r_zero_l.main.ok : bv_rem.r_zero_l.main.Stmt := kanon_proof% bv_rem.r_zero_l.main
+theorem Bitvec.rem.r_zero_l.main.ok : Bitvec.rem.r_zero_l.main.Stmt := kanon_proof% Bitvec.rem.r_zero_l.main
 
-theorem bv_rem.r_zero_l.proof : bv_rem.r_zero_l.Stmt := by
+theorem Bitvec.rem.r_zero_l.proof : Bitvec.rem.r_zero_l.Stmt := by
   intro FS O hO signed v1 v2 res hs_v2 h
-  simp only [bv_rem.r_zero_l] at h
+  simp only [Bitvec.rem.r_zero_l] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_rem.r_zero_l.main.ok FS O hO)
+  · kanon_arm h (Bitvec.rem.r_zero_l.main.ok FS O hO)
 
-theorem bv_rem.r_one_r.main.ok : bv_rem.r_one_r.main.Stmt := kanon_proof% bv_rem.r_one_r.main
+theorem Bitvec.rem.r_one_r.main.ok : Bitvec.rem.r_one_r.main.Stmt := kanon_proof% Bitvec.rem.r_one_r.main
 
-theorem bv_rem.r_one_r.proof : bv_rem.r_one_r.Stmt := by
+theorem Bitvec.rem.r_one_r.proof : Bitvec.rem.r_one_r.Stmt := by
   intro FS O hO signed v1 v2 res hs_v2 h
-  simp only [bv_rem.r_one_r] at h
+  simp only [Bitvec.rem.r_one_r] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_rem.r_one_r.main.ok FS O hO)
+  · kanon_arm h (Bitvec.rem.r_one_r.main.ok FS O hO)
 
-theorem bv_rem.r_pow2.main.ok : bv_rem.r_pow2.main.Stmt := kanon_proof% bv_rem.r_pow2.main
+theorem Bitvec.rem.r_pow2.main.ok : Bitvec.rem.r_pow2.main.Stmt := kanon_proof% Bitvec.rem.r_pow2.main
 
-theorem bv_rem.r_pow2.proof : bv_rem.r_pow2.Stmt := by
+theorem Bitvec.rem.r_pow2.proof : Bitvec.rem.r_pow2.Stmt := by
   intro FS O hO signed v1 v2 res hs_v2 h
-  simp only [bv_rem.r_pow2] at h
+  simp only [Bitvec.rem.r_pow2] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_rem.r_pow2.main.ok FS O hO)
+  · kanon_arm h (Bitvec.rem.r_pow2.main.ok FS O hO)
 
-theorem bv_rem.r_add.main.ok : bv_rem.r_add.main.Stmt := kanon_proof% bv_rem.r_add.main
+theorem Bitvec.rem.r_add.main.ok : Bitvec.rem.r_add.main.Stmt := kanon_proof% Bitvec.rem.r_add.main
 
-theorem bv_rem.r_add.swap.ok : bv_rem.r_add.swap.Stmt := kanon_proof% bv_rem.r_add.swap
+theorem Bitvec.rem.r_add.swap.ok : Bitvec.rem.r_add.swap.Stmt := kanon_proof% Bitvec.rem.r_add.swap
 
-theorem bv_rem.r_add.proof : bv_rem.r_add.Stmt := by
+theorem Bitvec.rem.r_add.proof : Bitvec.rem.r_add.Stmt := by
   intro FS O hO signed v1 v2 res hs_v2 h
-  simp only [bv_rem.r_add] at h
+  simp only [Bitvec.rem.r_add] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_rem.r_add.main.ok FS O hO)
-  · kanon_arm h (bv_rem.r_add.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.rem.r_add.main.ok FS O hO)
+  · kanon_arm h (Bitvec.rem.r_add.swap.ok FS O hO)
 
-theorem bv_rem.r_rem_rem.main.ok : bv_rem.r_rem_rem.main.Stmt := kanon_proof% bv_rem.r_rem_rem.main
+theorem Bitvec.rem.r_rem_rem.main.ok : Bitvec.rem.r_rem_rem.main.Stmt := kanon_proof% Bitvec.rem.r_rem_rem.main
 
-theorem bv_rem.r_rem_rem.proof : bv_rem.r_rem_rem.Stmt := by
+theorem Bitvec.rem.r_rem_rem.proof : Bitvec.rem.r_rem_rem.Stmt := by
   intro FS O hO signed v1 v2 res hs_v2 h
-  simp only [bv_rem.r_rem_rem] at h
+  simp only [Bitvec.rem.r_rem_rem] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_rem.r_rem_rem.main.ok FS O hO)
+  · kanon_arm h (Bitvec.rem.r_rem_rem.main.ok FS O hO)
 
-theorem bv_rem.r_default.main.ok : bv_rem.r_default.main.Stmt := kanon_proof% bv_rem.r_default.main
+theorem Bitvec.rem.r_default.main.ok : Bitvec.rem.r_default.main.Stmt := kanon_proof% Bitvec.rem.r_default.main
 
-theorem bv_rem.r_default.proof : bv_rem.r_default.Stmt := by
+theorem Bitvec.rem.r_default.proof : Bitvec.rem.r_default.Stmt := by
   intro FS O hO signed v1 v2 res hs_v2 h
-  simp only [bv_rem.r_default] at h
+  simp only [Bitvec.rem.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_rem.r_default.main.ok FS O hO)
+  · kanon_arm h (Bitvec.rem.r_default.main.ok FS O hO)
 
-theorem bv_not.r_lit.main.ok : bv_not.r_lit.main.Stmt := kanon_proof% bv_not.r_lit.main
+theorem Bitvec.not_.r_lit.main.ok : Bitvec.not_.r_lit.main.Stmt := kanon_proof% Bitvec.not_.r_lit.main
 
-theorem bv_not.r_lit.proof : bv_not.r_lit.Stmt := by
+theorem Bitvec.not_.r_lit.proof : Bitvec.not_.r_lit.Stmt := by
   intro FS O hO v res h
-  simp only [bv_not.r_lit] at h
+  simp only [Bitvec.not_.r_lit] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_not.r_lit.main.ok FS O hO)
+  · kanon_arm h (Bitvec.not_.r_lit.main.ok FS O hO)
 
-theorem bv_not.r_ite.main.ok : bv_not.r_ite.main.Stmt := kanon_proof% bv_not.r_ite.main
+theorem Bitvec.not_.r_ite.main.ok : Bitvec.not_.r_ite.main.Stmt := kanon_proof% Bitvec.not_.r_ite.main
 
-theorem bv_not.r_ite.proof : bv_not.r_ite.Stmt := by
+theorem Bitvec.not_.r_ite.proof : Bitvec.not_.r_ite.Stmt := by
   intro FS O hO v res h
-  simp only [bv_not.r_ite] at h
+  simp only [Bitvec.not_.r_ite] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_not.r_ite.main.ok FS O hO)
+  · kanon_arm h (Bitvec.not_.r_ite.main.ok FS O hO)
 
-theorem bv_not.r_default.main.ok : bv_not.r_default.main.Stmt := kanon_proof% bv_not.r_default.main
+theorem Bitvec.not_.r_default.main.ok : Bitvec.not_.r_default.main.Stmt := kanon_proof% Bitvec.not_.r_default.main
 
-theorem bv_not.r_default.proof : bv_not.r_default.Stmt := by
+theorem Bitvec.not_.r_default.proof : Bitvec.not_.r_default.Stmt := by
   intro FS O hO v res h
-  simp only [bv_not.r_default] at h
+  simp only [Bitvec.not_.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_not.r_default.main.ok FS O hO)
+  · kanon_arm h (Bitvec.not_.r_default.main.ok FS O hO)
 
-theorem bv_and.r_lits.main.ok : bv_and.r_lits.main.Stmt := kanon_proof% bv_and.r_lits.main
+theorem Bitvec.and_.r_lits.main.ok : Bitvec.and_.r_lits.main.Stmt := kanon_proof% Bitvec.and_.r_lits.main
 
-theorem bv_and.r_lits.proof : bv_and.r_lits.Stmt := by
+theorem Bitvec.and_.r_lits.proof : Bitvec.and_.r_lits.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_and.r_lits] at h
+  simp only [Bitvec.and_.r_lits] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_and.r_lits.main.ok FS O hO)
+  · kanon_arm h (Bitvec.and_.r_lits.main.ok FS O hO)
 
-theorem bv_and.r_zero.main.ok : bv_and.r_zero.main.Stmt := kanon_proof% bv_and.r_zero.main
+theorem Bitvec.and_.r_zero.main.ok : Bitvec.and_.r_zero.main.Stmt := kanon_proof% Bitvec.and_.r_zero.main
 
-theorem bv_and.r_zero.swap.ok : bv_and.r_zero.swap.Stmt := kanon_proof% bv_and.r_zero.swap
-
-theorem bv_and.r_zero.proof : bv_and.r_zero.Stmt := by
-  intro FS O hO v1 v2 res h
-  simp only [bv_and.r_zero] at h
-  repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_and.r_zero.main.ok FS O hO)
-  · kanon_arm h (bv_and.r_zero.swap.ok FS O hO)
-
-theorem bv_and.r_ones.main.ok : bv_and.r_ones.main.Stmt := kanon_proof% bv_and.r_ones.main
-
-theorem bv_and.r_ones.swap.ok : bv_and.r_ones.swap.Stmt := kanon_proof% bv_and.r_ones.swap
-
-theorem bv_and.r_ones.proof : bv_and.r_ones.Stmt := by
-  intro FS O hO v1 v2 res h
-  simp only [bv_and.r_ones] at h
-  repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_and.r_ones.main.ok FS O hO)
-  · kanon_arm h (bv_and.r_ones.swap.ok FS O hO)
-
-theorem bv_and.r_lshr_mask.main.ok : bv_and.r_lshr_mask.main.Stmt := kanon_proof% bv_and.r_lshr_mask.main
-
-theorem bv_and.r_lshr_mask.swap.ok : bv_and.r_lshr_mask.swap.Stmt := kanon_proof% bv_and.r_lshr_mask.swap
-
-theorem bv_and.r_lshr_mask.proof : bv_and.r_lshr_mask.Stmt := by
-  intro FS O hO v1 v2 res h
-  simp only [bv_and.r_lshr_mask] at h
-  repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_and.r_lshr_mask.main.ok FS O hO)
-  · kanon_arm h (bv_and.r_lshr_mask.swap.ok FS O hO)
-
-theorem bv_and.r_ite.main.ok : bv_and.r_ite.main.Stmt := kanon_proof% bv_and.r_ite.main
-
-theorem bv_and.r_ite.swap.ok : bv_and.r_ite.swap.Stmt := by
-  intro FS O hO b l r t__8 w__1 t__2
+theorem Bitvec.and_.r_zero.swap.ok : Bitvec.and_.r_zero.swap.Stmt := by
+  intro FS O hO v2 kanon__2 t__3 hg
   refine Refinement.trans ?_
-    (bv_and.r_ite.main.ok FS O hO w__1 t__2 b l r t__8)
-  simp only [bv_and.spec, ty, Term.ty_mk]
+    (Bitvec.and_.r_zero.main.ok FS O hO v2 kanon__2 t__3 hg)
+  simp only [Bitvec.and_.spec, ty, Term.ty_mk]
   refine Refinement.trans (Op2.BitAnd.comm.ok FS ..) ?_
   kanon_congr
 
-theorem bv_and.r_ite.proof : bv_and.r_ite.Stmt := by
+theorem Bitvec.and_.r_zero.proof : Bitvec.and_.r_zero.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_and.r_ite] at h
+  simp only [Bitvec.and_.r_zero] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_and.r_ite.main.ok FS O hO)
-  · kanon_arm h (bv_and.r_ite.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.and_.r_zero.main.ok FS O hO)
+  · kanon_arm h (Bitvec.and_.r_zero.swap.ok FS O hO)
 
-theorem bv_and.r_masks.main.ok : bv_and.r_masks.main.Stmt := kanon_proof% bv_and.r_masks.main
+theorem Bitvec.and_.r_ones.main.ok : Bitvec.and_.r_ones.main.Stmt := kanon_proof% Bitvec.and_.r_ones.main
 
-theorem bv_and.r_masks.swap1.ok : bv_and.r_masks.swap1.Stmt := by
+theorem Bitvec.and_.r_ones.swap.ok : Bitvec.and_.r_ones.swap.Stmt := by
+  intro FS O hO v1 mask t__2 hg
+  refine Refinement.trans ?_
+    (Bitvec.and_.r_ones.main.ok FS O hO v1 mask t__2 hg)
+  simp only [Bitvec.and_.spec, ty, Term.ty_mk]
+  refine Refinement.trans (Op2.BitAnd.comm.ok FS ..) ?_
+  kanon_congr
+
+theorem Bitvec.and_.r_ones.proof : Bitvec.and_.r_ones.Stmt := by
+  intro FS O hO v1 v2 res h
+  simp only [Bitvec.and_.r_ones] at h
+  repeat' rcases orElse_some h with h | h
+  · kanon_arm h (Bitvec.and_.r_ones.main.ok FS O hO)
+  · kanon_arm h (Bitvec.and_.r_ones.swap.ok FS O hO)
+
+theorem Bitvec.and_.r_lshr_mask.main.ok : Bitvec.and_.r_lshr_mask.main.Stmt := kanon_proof% Bitvec.and_.r_lshr_mask.main
+
+theorem Bitvec.and_.r_lshr_mask.swap.ok : Bitvec.and_.r_lshr_mask.swap.Stmt := by
+  intro FS O hO mask t__8 w__2 shift t__4 t__5 hg
+  refine Refinement.trans ?_
+    (Bitvec.and_.r_lshr_mask.main.ok FS O hO w__2 shift t__4 t__5 mask t__8 hg)
+  simp only [Bitvec.and_.spec, ty, Term.ty_mk]
+  refine Refinement.trans (Op2.BitAnd.comm.ok FS ..) ?_
+  kanon_congr
+
+theorem Bitvec.and_.r_lshr_mask.proof : Bitvec.and_.r_lshr_mask.Stmt := by
+  intro FS O hO v1 v2 res h
+  simp only [Bitvec.and_.r_lshr_mask] at h
+  repeat' rcases orElse_some h with h | h
+  · kanon_arm h (Bitvec.and_.r_lshr_mask.main.ok FS O hO)
+  · kanon_arm h (Bitvec.and_.r_lshr_mask.swap.ok FS O hO)
+
+theorem Bitvec.and_.r_ite.main.ok : Bitvec.and_.r_ite.main.Stmt := kanon_proof% Bitvec.and_.r_ite.main
+
+theorem Bitvec.and_.r_ite.swap.ok : Bitvec.and_.r_ite.swap.Stmt := by
+  intro FS O hO b l r t__8 w__1 t__2
+  refine Refinement.trans ?_
+    (Bitvec.and_.r_ite.main.ok FS O hO w__1 t__2 b l r t__8)
+  simp only [Bitvec.and_.spec, ty, Term.ty_mk]
+  refine Refinement.trans (Op2.BitAnd.comm.ok FS ..) ?_
+  kanon_congr
+
+theorem Bitvec.and_.r_ite.proof : Bitvec.and_.r_ite.Stmt := by
+  intro FS O hO v1 v2 res h
+  simp only [Bitvec.and_.r_ite] at h
+  repeat' rcases orElse_some h with h | h
+  · kanon_arm h (Bitvec.and_.r_ite.main.ok FS O hO)
+  · kanon_arm h (Bitvec.and_.r_ite.swap.ok FS O hO)
+
+theorem Bitvec.and_.r_masks.main.ok : Bitvec.and_.r_masks.main.Stmt := kanon_proof% Bitvec.and_.r_masks.main
+
+theorem Bitvec.and_.r_masks.swap1.ok : Bitvec.and_.r_masks.swap1.Stmt := by
   intro FS O hO m1 t__2 m2 t__6 x t__7
   have : Refines FS (Term.mk (Kind.Op2 Op2.BitAnd (Term.mk (Kind.BitVec m2) t__6) x) t__7)
     (Term.mk (Kind.Op2 Op2.BitAnd x (Term.mk (Kind.BitVec m2) t__6)) t__7) :=
     Op2.BitAnd.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_and.r_masks.main.ok FS O hO m1 t__2 x m2 t__6 t__7)
-  simp only [bv_and.spec, ty, Term.ty_mk]
+    (Bitvec.and_.r_masks.main.ok FS O hO m1 t__2 x m2 t__6 t__7)
+  simp only [Bitvec.and_.spec, ty, Term.ty_mk]
   kanon_congr
 
-theorem bv_and.r_masks.swap2.ok : bv_and.r_masks.swap2.Stmt := kanon_proof% bv_and.r_masks.swap2
+theorem Bitvec.and_.r_masks.swap2.ok : Bitvec.and_.r_masks.swap2.Stmt := by
+  intro FS O hO x m2 t__6 t__7 m1 t__2
+  refine Refinement.trans ?_
+    (Bitvec.and_.r_masks.main.ok FS O hO m1 t__2 x m2 t__6 t__7)
+  simp only [Bitvec.and_.spec, ty, Term.ty_mk]
+  refine Refinement.trans (Op2.BitAnd.comm.ok FS ..) ?_
+  kanon_congr
 
-theorem bv_and.r_masks.swap1_swap2.ok : bv_and.r_masks.swap1_swap2.Stmt := kanon_proof% bv_and.r_masks.swap1_swap2
+theorem Bitvec.and_.r_masks.swap1_swap2.ok : Bitvec.and_.r_masks.swap1_swap2.Stmt := by
+  intro FS O hO m2 t__6 x t__7 m1 t__2
+  have : Refines FS (Term.mk (Kind.Op2 Op2.BitAnd (Term.mk (Kind.BitVec m2) t__6) x) t__7)
+    (Term.mk (Kind.Op2 Op2.BitAnd x (Term.mk (Kind.BitVec m2) t__6)) t__7) :=
+    Op2.BitAnd.comm.ok FS ..
+  refine Refinement.trans ?_
+    (Bitvec.and_.r_masks.main.ok FS O hO m1 t__2 x m2 t__6 t__7)
+  simp only [Bitvec.and_.spec, ty, Term.ty_mk]
+  refine Refinement.trans (Op2.BitAnd.comm.ok FS ..) ?_
+  kanon_congr
 
-theorem bv_and.r_masks.proof : bv_and.r_masks.Stmt := by
+theorem Bitvec.and_.r_masks.proof : Bitvec.and_.r_masks.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_and.r_masks] at h
+  simp only [Bitvec.and_.r_masks] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_and.r_masks.main.ok FS O hO)
-  · kanon_arm h (bv_and.r_masks.swap1.ok FS O hO)
-  · kanon_arm h (bv_and.r_masks.swap2.ok FS O hO)
-  · kanon_arm h (bv_and.r_masks.swap1_swap2.ok FS O hO)
+  · kanon_arm h (Bitvec.and_.r_masks.main.ok FS O hO)
+  · kanon_arm h (Bitvec.and_.r_masks.swap1.ok FS O hO)
+  · kanon_arm h (Bitvec.and_.r_masks.swap2.ok FS O hO)
+  · kanon_arm h (Bitvec.and_.r_masks.swap1_swap2.ok FS O hO)
 
-theorem bv_and.r_mask_or_mask.main.ok : bv_and.r_mask_or_mask.main.Stmt := kanon_proof% bv_and.r_mask_or_mask.main
+theorem Bitvec.and_.r_mask_or_mask.main.ok : Bitvec.and_.r_mask_or_mask.main.Stmt := kanon_proof% Bitvec.and_.r_mask_or_mask.main
 
-theorem bv_and.r_mask_or_mask.swap1.ok : bv_and.r_mask_or_mask.swap1.Stmt := by
+theorem Bitvec.and_.r_mask_or_mask.swap1.ok : Bitvec.and_.r_mask_or_mask.swap1.Stmt := by
   intro FS O hO w__1 t__2 w__5 t__6 x w__9 t__10 t__13 t__15
   have : Refines FS (Term.mk (Kind.Op2 Op2.BitAnd x (Term.mk (Kind.BitVec w__9) t__10)) t__13)
     (Term.mk (Kind.Op2 Op2.BitAnd (Term.mk (Kind.BitVec w__9) t__10) x) t__13) :=
     Op2.BitAnd.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_and.r_mask_or_mask.main.ok FS O hO w__1 t__2 w__5 t__6 w__9 t__10 x t__13 t__15)
-  simp only [bv_and.spec, ty, Term.ty_mk]
+    (Bitvec.and_.r_mask_or_mask.main.ok FS O hO w__1 t__2 w__5 t__6 w__9 t__10 x t__13 t__15)
+  simp only [Bitvec.and_.spec, ty, Term.ty_mk]
   kanon_congr
 
-theorem bv_and.r_mask_or_mask.swap2.ok : bv_and.r_mask_or_mask.swap2.Stmt := by
+theorem Bitvec.and_.r_mask_or_mask.swap2.ok : Bitvec.and_.r_mask_or_mask.swap2.Stmt := by
   intro FS O hO w__1 t__2 w__9 t__10 x t__13 w__5 t__6 t__15
   have : Refines FS (Term.mk (Kind.Op2 Op2.BitOr (Term.mk (Kind.Op2 Op2.BitAnd (Term.mk (Kind.BitVec w__9) t__10) x) t__13) (Term.mk (Kind.BitVec w__5) t__6)) t__15)
     (Term.mk (Kind.Op2 Op2.BitOr (Term.mk (Kind.BitVec w__5) t__6) (Term.mk (Kind.Op2 Op2.BitAnd (Term.mk (Kind.BitVec w__9) t__10) x) t__13)) t__15) :=
     Op2.BitOr.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_and.r_mask_or_mask.main.ok FS O hO w__1 t__2 w__5 t__6 w__9 t__10 x t__13 t__15)
-  simp only [bv_and.spec, ty, Term.ty_mk]
+    (Bitvec.and_.r_mask_or_mask.main.ok FS O hO w__1 t__2 w__5 t__6 w__9 t__10 x t__13 t__15)
+  simp only [Bitvec.and_.spec, ty, Term.ty_mk]
   kanon_congr
 
-theorem bv_and.r_mask_or_mask.swap1_swap2.ok : bv_and.r_mask_or_mask.swap1_swap2.Stmt := by
+theorem Bitvec.and_.r_mask_or_mask.swap1_swap2.ok : Bitvec.and_.r_mask_or_mask.swap1_swap2.Stmt := by
   intro FS O hO w__1 t__2 x w__9 t__10 t__13 w__5 t__6 t__15
   have : Refines FS (Term.mk (Kind.Op2 Op2.BitAnd x (Term.mk (Kind.BitVec w__9) t__10)) t__13)
     (Term.mk (Kind.Op2 Op2.BitAnd (Term.mk (Kind.BitVec w__9) t__10) x) t__13) :=
@@ -2352,41 +2433,41 @@ theorem bv_and.r_mask_or_mask.swap1_swap2.ok : bv_and.r_mask_or_mask.swap1_swap2
     (Term.mk (Kind.Op2 Op2.BitOr (Term.mk (Kind.BitVec w__5) t__6) (Term.mk (Kind.Op2 Op2.BitAnd (Term.mk (Kind.BitVec w__9) t__10) x) t__13)) t__15) :=
     Refinement.trans (Op2.BitOr.comm.ok FS ..) (by kanon_congr)
   refine Refinement.trans ?_
-    (bv_and.r_mask_or_mask.main.ok FS O hO w__1 t__2 w__5 t__6 w__9 t__10 x t__13 t__15)
-  simp only [bv_and.spec, ty, Term.ty_mk]
+    (Bitvec.and_.r_mask_or_mask.main.ok FS O hO w__1 t__2 w__5 t__6 w__9 t__10 x t__13 t__15)
+  simp only [Bitvec.and_.spec, ty, Term.ty_mk]
   kanon_congr
 
-theorem bv_and.r_mask_or_mask.swap3.ok : bv_and.r_mask_or_mask.swap3.Stmt := by
+theorem Bitvec.and_.r_mask_or_mask.swap3.ok : Bitvec.and_.r_mask_or_mask.swap3.Stmt := by
   intro FS O hO w__5 t__6 w__9 t__10 x t__13 t__15 w__1 t__2
   refine Refinement.trans ?_
-    (bv_and.r_mask_or_mask.main.ok FS O hO w__1 t__2 w__5 t__6 w__9 t__10 x t__13 t__15)
-  simp only [bv_and.spec, ty, Term.ty_mk]
+    (Bitvec.and_.r_mask_or_mask.main.ok FS O hO w__1 t__2 w__5 t__6 w__9 t__10 x t__13 t__15)
+  simp only [Bitvec.and_.spec, ty, Term.ty_mk]
   refine Refinement.trans (Op2.BitAnd.comm.ok FS ..) ?_
   kanon_congr
 
-theorem bv_and.r_mask_or_mask.swap1_swap3.ok : bv_and.r_mask_or_mask.swap1_swap3.Stmt := by
+theorem Bitvec.and_.r_mask_or_mask.swap1_swap3.ok : Bitvec.and_.r_mask_or_mask.swap1_swap3.Stmt := by
   intro FS O hO w__5 t__6 x w__9 t__10 t__13 t__15 w__1 t__2
   have : Refines FS (Term.mk (Kind.Op2 Op2.BitAnd x (Term.mk (Kind.BitVec w__9) t__10)) t__13)
     (Term.mk (Kind.Op2 Op2.BitAnd (Term.mk (Kind.BitVec w__9) t__10) x) t__13) :=
     Op2.BitAnd.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_and.r_mask_or_mask.main.ok FS O hO w__1 t__2 w__5 t__6 w__9 t__10 x t__13 t__15)
-  simp only [bv_and.spec, ty, Term.ty_mk]
+    (Bitvec.and_.r_mask_or_mask.main.ok FS O hO w__1 t__2 w__5 t__6 w__9 t__10 x t__13 t__15)
+  simp only [Bitvec.and_.spec, ty, Term.ty_mk]
   refine Refinement.trans (Op2.BitAnd.comm.ok FS ..) ?_
   kanon_congr
 
-theorem bv_and.r_mask_or_mask.swap2_swap3.ok : bv_and.r_mask_or_mask.swap2_swap3.Stmt := by
+theorem Bitvec.and_.r_mask_or_mask.swap2_swap3.ok : Bitvec.and_.r_mask_or_mask.swap2_swap3.Stmt := by
   intro FS O hO w__9 t__10 x t__13 w__5 t__6 t__15 w__1 t__2
   have : Refines FS (Term.mk (Kind.Op2 Op2.BitOr (Term.mk (Kind.Op2 Op2.BitAnd (Term.mk (Kind.BitVec w__9) t__10) x) t__13) (Term.mk (Kind.BitVec w__5) t__6)) t__15)
     (Term.mk (Kind.Op2 Op2.BitOr (Term.mk (Kind.BitVec w__5) t__6) (Term.mk (Kind.Op2 Op2.BitAnd (Term.mk (Kind.BitVec w__9) t__10) x) t__13)) t__15) :=
     Op2.BitOr.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_and.r_mask_or_mask.main.ok FS O hO w__1 t__2 w__5 t__6 w__9 t__10 x t__13 t__15)
-  simp only [bv_and.spec, ty, Term.ty_mk]
+    (Bitvec.and_.r_mask_or_mask.main.ok FS O hO w__1 t__2 w__5 t__6 w__9 t__10 x t__13 t__15)
+  simp only [Bitvec.and_.spec, ty, Term.ty_mk]
   refine Refinement.trans (Op2.BitAnd.comm.ok FS ..) ?_
   kanon_congr
 
-theorem bv_and.r_mask_or_mask.swap1_swap2_swap3.ok : bv_and.r_mask_or_mask.swap1_swap2_swap3.Stmt := by
+theorem Bitvec.and_.r_mask_or_mask.swap1_swap2_swap3.ok : Bitvec.and_.r_mask_or_mask.swap1_swap2_swap3.Stmt := by
   intro FS O hO x w__9 t__10 t__13 w__5 t__6 t__15 w__1 t__2
   have : Refines FS (Term.mk (Kind.Op2 Op2.BitAnd x (Term.mk (Kind.BitVec w__9) t__10)) t__13)
     (Term.mk (Kind.Op2 Op2.BitAnd (Term.mk (Kind.BitVec w__9) t__10) x) t__13) :=
@@ -2395,1305 +2476,1347 @@ theorem bv_and.r_mask_or_mask.swap1_swap2_swap3.ok : bv_and.r_mask_or_mask.swap1
     (Term.mk (Kind.Op2 Op2.BitOr (Term.mk (Kind.BitVec w__5) t__6) (Term.mk (Kind.Op2 Op2.BitAnd (Term.mk (Kind.BitVec w__9) t__10) x) t__13)) t__15) :=
     Refinement.trans (Op2.BitOr.comm.ok FS ..) (by kanon_congr)
   refine Refinement.trans ?_
-    (bv_and.r_mask_or_mask.main.ok FS O hO w__1 t__2 w__5 t__6 w__9 t__10 x t__13 t__15)
-  simp only [bv_and.spec, ty, Term.ty_mk]
+    (Bitvec.and_.r_mask_or_mask.main.ok FS O hO w__1 t__2 w__5 t__6 w__9 t__10 x t__13 t__15)
+  simp only [Bitvec.and_.spec, ty, Term.ty_mk]
   refine Refinement.trans (Op2.BitAnd.comm.ok FS ..) ?_
   kanon_congr
 
-theorem bv_and.r_mask_or_mask.proof : bv_and.r_mask_or_mask.Stmt := by
+theorem Bitvec.and_.r_mask_or_mask.proof : Bitvec.and_.r_mask_or_mask.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_and.r_mask_or_mask] at h
+  simp only [Bitvec.and_.r_mask_or_mask] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_and.r_mask_or_mask.main.ok FS O hO)
-  · kanon_arm h (bv_and.r_mask_or_mask.swap1.ok FS O hO)
-  · kanon_arm h (bv_and.r_mask_or_mask.swap2.ok FS O hO)
-  · kanon_arm h (bv_and.r_mask_or_mask.swap1_swap2.ok FS O hO)
-  · kanon_arm h (bv_and.r_mask_or_mask.swap3.ok FS O hO)
-  · kanon_arm h (bv_and.r_mask_or_mask.swap1_swap3.ok FS O hO)
-  · kanon_arm h (bv_and.r_mask_or_mask.swap2_swap3.ok FS O hO)
-  · kanon_arm h (bv_and.r_mask_or_mask.swap1_swap2_swap3.ok FS O hO)
+  · kanon_arm h (Bitvec.and_.r_mask_or_mask.main.ok FS O hO)
+  · kanon_arm h (Bitvec.and_.r_mask_or_mask.swap1.ok FS O hO)
+  · kanon_arm h (Bitvec.and_.r_mask_or_mask.swap2.ok FS O hO)
+  · kanon_arm h (Bitvec.and_.r_mask_or_mask.swap1_swap2.ok FS O hO)
+  · kanon_arm h (Bitvec.and_.r_mask_or_mask.swap3.ok FS O hO)
+  · kanon_arm h (Bitvec.and_.r_mask_or_mask.swap1_swap3.ok FS O hO)
+  · kanon_arm h (Bitvec.and_.r_mask_or_mask.swap2_swap3.ok FS O hO)
+  · kanon_arm h (Bitvec.and_.r_mask_or_mask.swap1_swap2_swap3.ok FS O hO)
 
-theorem bv_and.r_mask_or.main.ok : bv_and.r_mask_or.main.Stmt := kanon_proof% bv_and.r_mask_or.main
+theorem Bitvec.and_.r_mask_or.main.ok : Bitvec.and_.r_mask_or.main.Stmt := kanon_proof% Bitvec.and_.r_mask_or.main
 
-theorem bv_and.r_mask_or.swap1.ok : bv_and.r_mask_or.swap1.Stmt := by
+theorem Bitvec.and_.r_mask_or.swap1.ok : Bitvec.and_.r_mask_or.swap1.Stmt := by
   intro FS O hO m_and t__2 m_or t__7 w__5 t__8 hg
   have : Refines FS (Term.mk (Kind.Op2 Op2.BitOr (Term.mk (Kind.BitVec m_or) t__7) w__5) t__8)
     (Term.mk (Kind.Op2 Op2.BitOr w__5 (Term.mk (Kind.BitVec m_or) t__7)) t__8) :=
     Op2.BitOr.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_and.r_mask_or.main.ok FS O hO m_and t__2 w__5 m_or t__7 t__8 hg)
-  simp only [bv_and.spec, ty, Term.ty_mk]
+    (Bitvec.and_.r_mask_or.main.ok FS O hO m_and t__2 w__5 m_or t__7 t__8 hg)
+  simp only [Bitvec.and_.spec, ty, Term.ty_mk]
   kanon_congr
 
-theorem bv_and.r_mask_or.swap2.ok : bv_and.r_mask_or.swap2.Stmt := by
+theorem Bitvec.and_.r_mask_or.swap2.ok : Bitvec.and_.r_mask_or.swap2.Stmt := by
   intro FS O hO w__5 m_or t__7 t__8 m_and t__2 hg
   refine Refinement.trans ?_
-    (bv_and.r_mask_or.main.ok FS O hO m_and t__2 w__5 m_or t__7 t__8 hg)
-  simp only [bv_and.spec, ty, Term.ty_mk]
+    (Bitvec.and_.r_mask_or.main.ok FS O hO m_and t__2 w__5 m_or t__7 t__8 hg)
+  simp only [Bitvec.and_.spec, ty, Term.ty_mk]
   refine Refinement.trans (Op2.BitAnd.comm.ok FS ..) ?_
   kanon_congr
 
-theorem bv_and.r_mask_or.swap1_swap2.ok : bv_and.r_mask_or.swap1_swap2.Stmt := by
+theorem Bitvec.and_.r_mask_or.swap1_swap2.ok : Bitvec.and_.r_mask_or.swap1_swap2.Stmt := by
   intro FS O hO m_or t__7 w__5 t__8 m_and t__2 hg
   have : Refines FS (Term.mk (Kind.Op2 Op2.BitOr (Term.mk (Kind.BitVec m_or) t__7) w__5) t__8)
     (Term.mk (Kind.Op2 Op2.BitOr w__5 (Term.mk (Kind.BitVec m_or) t__7)) t__8) :=
     Op2.BitOr.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_and.r_mask_or.main.ok FS O hO m_and t__2 w__5 m_or t__7 t__8 hg)
-  simp only [bv_and.spec, ty, Term.ty_mk]
+    (Bitvec.and_.r_mask_or.main.ok FS O hO m_and t__2 w__5 m_or t__7 t__8 hg)
+  simp only [Bitvec.and_.spec, ty, Term.ty_mk]
   refine Refinement.trans (Op2.BitAnd.comm.ok FS ..) ?_
   kanon_congr
 
-theorem bv_and.r_mask_or.proof : bv_and.r_mask_or.Stmt := by
+theorem Bitvec.and_.r_mask_or.proof : Bitvec.and_.r_mask_or.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_and.r_mask_or] at h
+  simp only [Bitvec.and_.r_mask_or] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_and.r_mask_or.main.ok FS O hO)
-  · kanon_arm h (bv_and.r_mask_or.swap1.ok FS O hO)
-  · kanon_arm h (bv_and.r_mask_or.swap2.ok FS O hO)
-  · kanon_arm h (bv_and.r_mask_or.swap1_swap2.ok FS O hO)
+  · kanon_arm h (Bitvec.and_.r_mask_or.main.ok FS O hO)
+  · kanon_arm h (Bitvec.and_.r_mask_or.swap1.ok FS O hO)
+  · kanon_arm h (Bitvec.and_.r_mask_or.swap2.ok FS O hO)
+  · kanon_arm h (Bitvec.and_.r_mask_or.swap1_swap2.ok FS O hO)
 
-theorem bv_and.r_mask_or_disj.main.ok : bv_and.r_mask_or_disj.main.Stmt := kanon_proof% bv_and.r_mask_or_disj.main
+theorem Bitvec.and_.r_mask_or_disj.main.ok : Bitvec.and_.r_mask_or_disj.main.Stmt := kanon_proof% Bitvec.and_.r_mask_or_disj.main
 
-theorem bv_and.r_mask_or_disj.swap1.ok : bv_and.r_mask_or_disj.swap1.Stmt := by
+theorem Bitvec.and_.r_mask_or_disj.swap1.ok : Bitvec.and_.r_mask_or_disj.swap1.Stmt := by
   intro FS O hO m_and t__2 m_or t__7 x t__8 hg
   have : Refines FS (Term.mk (Kind.Op2 Op2.BitOr (Term.mk (Kind.BitVec m_or) t__7) x) t__8)
     (Term.mk (Kind.Op2 Op2.BitOr x (Term.mk (Kind.BitVec m_or) t__7)) t__8) :=
     Op2.BitOr.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_and.r_mask_or_disj.main.ok FS O hO m_and t__2 x m_or t__7 t__8 hg)
-  simp only [bv_and.spec, ty, Term.ty_mk]
+    (Bitvec.and_.r_mask_or_disj.main.ok FS O hO m_and t__2 x m_or t__7 t__8 hg)
+  simp only [Bitvec.and_.spec, ty, Term.ty_mk]
   kanon_congr
 
-theorem bv_and.r_mask_or_disj.swap2.ok : bv_and.r_mask_or_disj.swap2.Stmt := by
+theorem Bitvec.and_.r_mask_or_disj.swap2.ok : Bitvec.and_.r_mask_or_disj.swap2.Stmt := by
   intro FS O hO x m_or t__7 t__8 m_and t__2 hg
   refine Refinement.trans ?_
-    (bv_and.r_mask_or_disj.main.ok FS O hO m_and t__2 x m_or t__7 t__8 hg)
-  simp only [bv_and.spec, ty, Term.ty_mk]
+    (Bitvec.and_.r_mask_or_disj.main.ok FS O hO m_and t__2 x m_or t__7 t__8 hg)
+  simp only [Bitvec.and_.spec, ty, Term.ty_mk]
   refine Refinement.trans (Op2.BitAnd.comm.ok FS ..) ?_
   kanon_congr
 
-theorem bv_and.r_mask_or_disj.swap1_swap2.ok : bv_and.r_mask_or_disj.swap1_swap2.Stmt := by
+theorem Bitvec.and_.r_mask_or_disj.swap1_swap2.ok : Bitvec.and_.r_mask_or_disj.swap1_swap2.Stmt := by
   intro FS O hO m_or t__7 x t__8 m_and t__2 hg
   have : Refines FS (Term.mk (Kind.Op2 Op2.BitOr (Term.mk (Kind.BitVec m_or) t__7) x) t__8)
     (Term.mk (Kind.Op2 Op2.BitOr x (Term.mk (Kind.BitVec m_or) t__7)) t__8) :=
     Op2.BitOr.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_and.r_mask_or_disj.main.ok FS O hO m_and t__2 x m_or t__7 t__8 hg)
-  simp only [bv_and.spec, ty, Term.ty_mk]
+    (Bitvec.and_.r_mask_or_disj.main.ok FS O hO m_and t__2 x m_or t__7 t__8 hg)
+  simp only [Bitvec.and_.spec, ty, Term.ty_mk]
   refine Refinement.trans (Op2.BitAnd.comm.ok FS ..) ?_
   kanon_congr
 
-theorem bv_and.r_mask_or_disj.proof : bv_and.r_mask_or_disj.Stmt := by
+theorem Bitvec.and_.r_mask_or_disj.proof : Bitvec.and_.r_mask_or_disj.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_and.r_mask_or_disj] at h
+  simp only [Bitvec.and_.r_mask_or_disj] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_and.r_mask_or_disj.main.ok FS O hO)
-  · kanon_arm h (bv_and.r_mask_or_disj.swap1.ok FS O hO)
-  · kanon_arm h (bv_and.r_mask_or_disj.swap2.ok FS O hO)
-  · kanon_arm h (bv_and.r_mask_or_disj.swap1_swap2.ok FS O hO)
+  · kanon_arm h (Bitvec.and_.r_mask_or_disj.main.ok FS O hO)
+  · kanon_arm h (Bitvec.and_.r_mask_or_disj.swap1.ok FS O hO)
+  · kanon_arm h (Bitvec.and_.r_mask_or_disj.swap2.ok FS O hO)
+  · kanon_arm h (Bitvec.and_.r_mask_or_disj.swap1_swap2.ok FS O hO)
 
-theorem bv_and.r_right_mask.main.ok : bv_and.r_right_mask.main.Stmt := kanon_proof% bv_and.r_right_mask.main
+theorem Bitvec.and_.r_right_mask.main.ok : Bitvec.and_.r_right_mask.main.Stmt := kanon_proof% Bitvec.and_.r_right_mask.main
 
-theorem bv_and.r_right_mask.swap.ok : bv_and.r_right_mask.swap.Stmt := by
+theorem Bitvec.and_.r_right_mask.swap.ok : Bitvec.and_.r_right_mask.swap.Stmt := by
   intro FS O hO l r t__7 mask t__2 hg
   refine Refinement.trans ?_
-    (bv_and.r_right_mask.main.ok FS O hO mask t__2 l r t__7 hg)
-  simp only [bv_and.spec, ty, Term.ty_mk]
+    (Bitvec.and_.r_right_mask.main.ok FS O hO mask t__2 l r t__7 hg)
+  simp only [Bitvec.and_.spec, ty, Term.ty_mk]
   refine Refinement.trans (Op2.BitAnd.comm.ok FS ..) ?_
   kanon_congr
 
-theorem bv_and.r_right_mask.proof : bv_and.r_right_mask.Stmt := by
+theorem Bitvec.and_.r_right_mask.proof : Bitvec.and_.r_right_mask.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_and.r_right_mask] at h
+  simp only [Bitvec.and_.r_right_mask] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_and.r_right_mask.main.ok FS O hO)
-  · kanon_arm h (bv_and.r_right_mask.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.and_.r_right_mask.main.ok FS O hO)
+  · kanon_arm h (Bitvec.and_.r_right_mask.swap.ok FS O hO)
 
-theorem bv_and.r_of_bool.main.ok : bv_and.r_of_bool.main.Stmt := kanon_proof% bv_and.r_of_bool.main
+theorem Bitvec.and_.r_of_bool.main.ok : Bitvec.and_.r_of_bool.main.Stmt := kanon_proof% Bitvec.and_.r_of_bool.main
 
-theorem bv_and.r_of_bool.swap.ok : bv_and.r_of_bool.swap.Stmt := by
+theorem Bitvec.and_.r_of_bool.swap.ok : Bitvec.and_.r_of_bool.swap.Stmt := by
   intro FS O hO w__3 w__5 t__6 kanon__1 t__2 hg
   refine Refinement.trans ?_
-    (bv_and.r_of_bool.main.ok FS O hO kanon__1 t__2 w__3 w__5 t__6 hg)
-  simp only [bv_and.spec, ty, Term.ty_mk]
+    (Bitvec.and_.r_of_bool.main.ok FS O hO kanon__1 t__2 w__3 w__5 t__6 hg)
+  simp only [Bitvec.and_.spec, ty, Term.ty_mk]
   refine Refinement.trans (Op2.BitAnd.comm.ok FS ..) ?_
   kanon_congr
 
-theorem bv_and.r_of_bool.proof : bv_and.r_of_bool.Stmt := by
+theorem Bitvec.and_.r_of_bool.proof : Bitvec.and_.r_of_bool.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_and.r_of_bool] at h
+  simp only [Bitvec.and_.r_of_bool] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_and.r_of_bool.main.ok FS O hO)
-  · kanon_arm h (bv_and.r_of_bool.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.and_.r_of_bool.main.ok FS O hO)
+  · kanon_arm h (Bitvec.and_.r_of_bool.swap.ok FS O hO)
 
-theorem bv_and.r_of_bools.main.ok : bv_and.r_of_bools.main.Stmt := kanon_proof% bv_and.r_of_bools.main
+theorem Bitvec.and_.r_of_bools.main.ok : Bitvec.and_.r_of_bools.main.Stmt := kanon_proof% Bitvec.and_.r_of_bools.main
 
-theorem bv_and.r_of_bools.proof : bv_and.r_of_bools.Stmt := by
+theorem Bitvec.and_.r_of_bools.proof : Bitvec.and_.r_of_bools.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_and.r_of_bools] at h
+  simp only [Bitvec.and_.r_of_bools] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_and.r_of_bools.main.ok FS O hO)
+  · kanon_arm h (Bitvec.and_.r_of_bools.main.ok FS O hO)
 
-theorem bv_and.r_ites.main.ok : bv_and.r_ites.main.Stmt := kanon_proof% bv_and.r_ites.main
+theorem Bitvec.and_.r_ites.main.ok : Bitvec.and_.r_ites.main.Stmt := kanon_proof% Bitvec.and_.r_ites.main
 
-theorem bv_and.r_ites.proof : bv_and.r_ites.Stmt := by
+theorem Bitvec.and_.r_ites.proof : Bitvec.and_.r_ites.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_and.r_ites] at h
+  simp only [Bitvec.and_.r_ites] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_and.r_ites.main.ok FS O hO)
+  · kanon_arm h (Bitvec.and_.r_ites.main.ok FS O hO)
 
-theorem bv_and.r_default.main.ok : bv_and.r_default.main.Stmt := kanon_proof% bv_and.r_default.main
+theorem Bitvec.and_.r_default.main.ok : Bitvec.and_.r_default.main.Stmt := kanon_proof% Bitvec.and_.r_default.main
 
-theorem bv_and.r_default.proof : bv_and.r_default.Stmt := by
+theorem Bitvec.and_.r_default.proof : Bitvec.and_.r_default.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_and.r_default] at h
+  simp only [Bitvec.and_.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_and.r_default.main.ok FS O hO)
+  · kanon_arm h (Bitvec.and_.r_default.main.ok FS O hO)
 
-theorem bv_or.r_lits.main.ok : bv_or.r_lits.main.Stmt := kanon_proof% bv_or.r_lits.main
+theorem Bitvec.or_.r_lits.main.ok : Bitvec.or_.r_lits.main.Stmt := kanon_proof% Bitvec.or_.r_lits.main
 
-theorem bv_or.r_lits.proof : bv_or.r_lits.Stmt := by
+theorem Bitvec.or_.r_lits.proof : Bitvec.or_.r_lits.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_or.r_lits] at h
+  simp only [Bitvec.or_.r_lits] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_or.r_lits.main.ok FS O hO)
+  · kanon_arm h (Bitvec.or_.r_lits.main.ok FS O hO)
 
-theorem bv_or.r_zero.main.ok : bv_or.r_zero.main.Stmt := kanon_proof% bv_or.r_zero.main
+theorem Bitvec.or_.r_zero.main.ok : Bitvec.or_.r_zero.main.Stmt := kanon_proof% Bitvec.or_.r_zero.main
 
-theorem bv_or.r_zero.swap.ok : bv_or.r_zero.swap.Stmt := by
+theorem Bitvec.or_.r_zero.swap.ok : Bitvec.or_.r_zero.swap.Stmt := by
   intro FS O hO v2 kanon__2 t__3 hg
   refine Refinement.trans ?_
-    (bv_or.r_zero.main.ok FS O hO v2 kanon__2 t__3 hg)
-  simp only [bv_or.spec, ty, Term.ty_mk]
+    (Bitvec.or_.r_zero.main.ok FS O hO v2 kanon__2 t__3 hg)
+  simp only [Bitvec.or_.spec, ty, Term.ty_mk]
   refine Refinement.trans (Op2.BitOr.comm.ok FS ..) ?_
   kanon_congr
 
-theorem bv_or.r_zero.proof : bv_or.r_zero.Stmt := by
+theorem Bitvec.or_.r_zero.proof : Bitvec.or_.r_zero.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_or.r_zero] at h
+  simp only [Bitvec.or_.r_zero] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_or.r_zero.main.ok FS O hO)
-  · kanon_arm h (bv_or.r_zero.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.or_.r_zero.main.ok FS O hO)
+  · kanon_arm h (Bitvec.or_.r_zero.swap.ok FS O hO)
 
-theorem bv_or.r_same.main.ok : bv_or.r_same.main.Stmt := kanon_proof% bv_or.r_same.main
+theorem Bitvec.or_.r_same.main.ok : Bitvec.or_.r_same.main.Stmt := kanon_proof% Bitvec.or_.r_same.main
 
-theorem bv_or.r_same.proof : bv_or.r_same.Stmt := by
+theorem Bitvec.or_.r_same.proof : Bitvec.or_.r_same.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_or.r_same] at h
+  simp only [Bitvec.or_.r_same] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_or.r_same.main.ok FS O hO)
+  · kanon_arm h (Bitvec.or_.r_same.main.ok FS O hO)
 
-theorem bv_or.r_mask_and.main.ok : bv_or.r_mask_and.main.Stmt := kanon_proof% bv_or.r_mask_and.main
+theorem Bitvec.or_.r_mask_and.main.ok : Bitvec.or_.r_mask_and.main.Stmt := kanon_proof% Bitvec.or_.r_mask_and.main
 
-theorem bv_or.r_mask_and.swap1.ok : bv_or.r_mask_and.swap1.Stmt := by
+theorem Bitvec.or_.r_mask_and.swap1.ok : Bitvec.or_.r_mask_and.swap1.Stmt := by
   intro FS O hO m1 t__2 m2 t__7 w__5 t__8 hg
   have : Refines FS (Term.mk (Kind.Op2 Op2.BitAnd (Term.mk (Kind.BitVec m2) t__7) w__5) t__8)
     (Term.mk (Kind.Op2 Op2.BitAnd w__5 (Term.mk (Kind.BitVec m2) t__7)) t__8) :=
     Op2.BitAnd.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_or.r_mask_and.main.ok FS O hO m1 t__2 w__5 m2 t__7 t__8 hg)
-  simp only [bv_or.spec, ty, Term.ty_mk]
+    (Bitvec.or_.r_mask_and.main.ok FS O hO m1 t__2 w__5 m2 t__7 t__8 hg)
+  simp only [Bitvec.or_.spec, ty, Term.ty_mk]
   kanon_congr
 
-theorem bv_or.r_mask_and.swap2.ok : bv_or.r_mask_and.swap2.Stmt := by
+theorem Bitvec.or_.r_mask_and.swap2.ok : Bitvec.or_.r_mask_and.swap2.Stmt := by
   intro FS O hO w__5 m2 t__7 t__8 m1 t__2 hg
   refine Refinement.trans ?_
-    (bv_or.r_mask_and.main.ok FS O hO m1 t__2 w__5 m2 t__7 t__8 hg)
-  simp only [bv_or.spec, ty, Term.ty_mk]
+    (Bitvec.or_.r_mask_and.main.ok FS O hO m1 t__2 w__5 m2 t__7 t__8 hg)
+  simp only [Bitvec.or_.spec, ty, Term.ty_mk]
   refine Refinement.trans (Op2.BitOr.comm.ok FS ..) ?_
   kanon_congr
 
-theorem bv_or.r_mask_and.swap1_swap2.ok : bv_or.r_mask_and.swap1_swap2.Stmt := by
+theorem Bitvec.or_.r_mask_and.swap1_swap2.ok : Bitvec.or_.r_mask_and.swap1_swap2.Stmt := by
   intro FS O hO m2 t__7 w__5 t__8 m1 t__2 hg
   have : Refines FS (Term.mk (Kind.Op2 Op2.BitAnd (Term.mk (Kind.BitVec m2) t__7) w__5) t__8)
     (Term.mk (Kind.Op2 Op2.BitAnd w__5 (Term.mk (Kind.BitVec m2) t__7)) t__8) :=
     Op2.BitAnd.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_or.r_mask_and.main.ok FS O hO m1 t__2 w__5 m2 t__7 t__8 hg)
-  simp only [bv_or.spec, ty, Term.ty_mk]
+    (Bitvec.or_.r_mask_and.main.ok FS O hO m1 t__2 w__5 m2 t__7 t__8 hg)
+  simp only [Bitvec.or_.spec, ty, Term.ty_mk]
   refine Refinement.trans (Op2.BitOr.comm.ok FS ..) ?_
   kanon_congr
 
-theorem bv_or.r_mask_and.proof : bv_or.r_mask_and.Stmt := by
+theorem Bitvec.or_.r_mask_and.proof : Bitvec.or_.r_mask_and.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_or.r_mask_and] at h
+  simp only [Bitvec.or_.r_mask_and] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_or.r_mask_and.main.ok FS O hO)
-  · kanon_arm h (bv_or.r_mask_and.swap1.ok FS O hO)
-  · kanon_arm h (bv_or.r_mask_and.swap2.ok FS O hO)
-  · kanon_arm h (bv_or.r_mask_and.swap1_swap2.ok FS O hO)
+  · kanon_arm h (Bitvec.or_.r_mask_and.main.ok FS O hO)
+  · kanon_arm h (Bitvec.or_.r_mask_and.swap1.ok FS O hO)
+  · kanon_arm h (Bitvec.or_.r_mask_and.swap2.ok FS O hO)
+  · kanon_arm h (Bitvec.or_.r_mask_and.swap1_swap2.ok FS O hO)
 
-theorem bv_or.r_masks.main.ok : bv_or.r_masks.main.Stmt := kanon_proof% bv_or.r_masks.main
+theorem Bitvec.or_.r_masks.main.ok : Bitvec.or_.r_masks.main.Stmt := kanon_proof% Bitvec.or_.r_masks.main
 
-theorem bv_or.r_masks.swap1.ok : bv_or.r_masks.swap1.Stmt := by
+theorem Bitvec.or_.r_masks.swap1.ok : Bitvec.or_.r_masks.swap1.Stmt := by
   intro FS O hO m1 t__2 m2 t__6 x t__7
   have : Refines FS (Term.mk (Kind.Op2 Op2.BitOr (Term.mk (Kind.BitVec m2) t__6) x) t__7)
     (Term.mk (Kind.Op2 Op2.BitOr x (Term.mk (Kind.BitVec m2) t__6)) t__7) :=
     Op2.BitOr.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_or.r_masks.main.ok FS O hO m1 t__2 x m2 t__6 t__7)
-  simp only [bv_or.spec, ty, Term.ty_mk]
+    (Bitvec.or_.r_masks.main.ok FS O hO m1 t__2 x m2 t__6 t__7)
+  simp only [Bitvec.or_.spec, ty, Term.ty_mk]
   kanon_congr
 
-theorem bv_or.r_masks.swap2.ok : bv_or.r_masks.swap2.Stmt := kanon_proof% bv_or.r_masks.swap2
-
-theorem bv_or.r_masks.swap1_swap2.ok : bv_or.r_masks.swap1_swap2.Stmt := kanon_proof% bv_or.r_masks.swap1_swap2
-
-theorem bv_or.r_masks.proof : bv_or.r_masks.Stmt := by
-  intro FS O hO v1 v2 res h
-  simp only [bv_or.r_masks] at h
-  repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_or.r_masks.main.ok FS O hO)
-  · kanon_arm h (bv_or.r_masks.swap1.ok FS O hO)
-  · kanon_arm h (bv_or.r_masks.swap2.ok FS O hO)
-  · kanon_arm h (bv_or.r_masks.swap1_swap2.ok FS O hO)
-
-theorem bv_or.r_extend_shl.main.ok : bv_or.r_extend_shl.main.Stmt := kanon_proof% bv_or.r_extend_shl.main
-
-theorem bv_or.r_extend_shl.swap.ok : bv_or.r_extend_shl.swap.Stmt := by
-  intro FS O hO w__8 tail t__11 shift t__13 t__14 nx base t__5 hg
+theorem Bitvec.or_.r_masks.swap2.ok : Bitvec.or_.r_masks.swap2.Stmt := by
+  intro FS O hO x m2 t__6 t__7 m1 t__2
   refine Refinement.trans ?_
-    (bv_or.r_extend_shl.main.ok FS O hO nx base t__5 w__8 tail t__11 shift t__13 t__14 hg)
-  simp only [bv_or.spec, ty, Term.ty_mk]
+    (Bitvec.or_.r_masks.main.ok FS O hO m1 t__2 x m2 t__6 t__7)
+  simp only [Bitvec.or_.spec, ty, Term.ty_mk]
   refine Refinement.trans (Op2.BitOr.comm.ok FS ..) ?_
   kanon_congr
 
-theorem bv_or.r_extend_shl.proof : bv_or.r_extend_shl.Stmt := by
+theorem Bitvec.or_.r_masks.swap1_swap2.ok : Bitvec.or_.r_masks.swap1_swap2.Stmt := by
+  intro FS O hO m2 t__6 x t__7 m1 t__2
+  have : Refines FS (Term.mk (Kind.Op2 Op2.BitOr (Term.mk (Kind.BitVec m2) t__6) x) t__7)
+    (Term.mk (Kind.Op2 Op2.BitOr x (Term.mk (Kind.BitVec m2) t__6)) t__7) :=
+    Op2.BitOr.comm.ok FS ..
+  refine Refinement.trans ?_
+    (Bitvec.or_.r_masks.main.ok FS O hO m1 t__2 x m2 t__6 t__7)
+  simp only [Bitvec.or_.spec, ty, Term.ty_mk]
+  refine Refinement.trans (Op2.BitOr.comm.ok FS ..) ?_
+  kanon_congr
+
+theorem Bitvec.or_.r_masks.proof : Bitvec.or_.r_masks.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_or.r_extend_shl] at h
+  simp only [Bitvec.or_.r_masks] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_or.r_extend_shl.main.ok FS O hO)
-  · kanon_arm h (bv_or.r_extend_shl.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.or_.r_masks.main.ok FS O hO)
+  · kanon_arm h (Bitvec.or_.r_masks.swap1.ok FS O hO)
+  · kanon_arm h (Bitvec.or_.r_masks.swap2.ok FS O hO)
+  · kanon_arm h (Bitvec.or_.r_masks.swap1_swap2.ok FS O hO)
 
-theorem bv_or.r_of_bools.main.ok : bv_or.r_of_bools.main.Stmt := kanon_proof% bv_or.r_of_bools.main
+theorem Bitvec.or_.r_extend_shl.main.ok : Bitvec.or_.r_extend_shl.main.Stmt := kanon_proof% Bitvec.or_.r_extend_shl.main
 
-theorem bv_or.r_of_bools.proof : bv_or.r_of_bools.Stmt := by
+theorem Bitvec.or_.r_extend_shl.swap.ok : Bitvec.or_.r_extend_shl.swap.Stmt := by
+  intro FS O hO w__8 tail t__11 shift t__13 t__14 nx base t__5 hg
+  refine Refinement.trans ?_
+    (Bitvec.or_.r_extend_shl.main.ok FS O hO nx base t__5 w__8 tail t__11 shift t__13 t__14 hg)
+  simp only [Bitvec.or_.spec, ty, Term.ty_mk]
+  refine Refinement.trans (Op2.BitOr.comm.ok FS ..) ?_
+  kanon_congr
+
+theorem Bitvec.or_.r_extend_shl.proof : Bitvec.or_.r_extend_shl.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_or.r_of_bools] at h
+  simp only [Bitvec.or_.r_extend_shl] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_or.r_of_bools.main.ok FS O hO)
+  · kanon_arm h (Bitvec.or_.r_extend_shl.main.ok FS O hO)
+  · kanon_arm h (Bitvec.or_.r_extend_shl.swap.ok FS O hO)
 
-theorem bv_or.r_default.main.ok : bv_or.r_default.main.Stmt := kanon_proof% bv_or.r_default.main
+theorem Bitvec.or_.r_of_bools.main.ok : Bitvec.or_.r_of_bools.main.Stmt := kanon_proof% Bitvec.or_.r_of_bools.main
 
-theorem bv_or.r_default.proof : bv_or.r_default.Stmt := by
+theorem Bitvec.or_.r_of_bools.proof : Bitvec.or_.r_of_bools.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_or.r_default] at h
+  simp only [Bitvec.or_.r_of_bools] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_or.r_default.main.ok FS O hO)
+  · kanon_arm h (Bitvec.or_.r_of_bools.main.ok FS O hO)
 
-theorem bv_xor.r_lits.main.ok : bv_xor.r_lits.main.Stmt := kanon_proof% bv_xor.r_lits.main
+theorem Bitvec.or_.r_default.main.ok : Bitvec.or_.r_default.main.Stmt := kanon_proof% Bitvec.or_.r_default.main
 
-theorem bv_xor.r_lits.proof : bv_xor.r_lits.Stmt := by
+theorem Bitvec.or_.r_default.proof : Bitvec.or_.r_default.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_xor.r_lits] at h
+  simp only [Bitvec.or_.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_xor.r_lits.main.ok FS O hO)
+  · kanon_arm h (Bitvec.or_.r_default.main.ok FS O hO)
 
-theorem bv_xor.r_zero.main.ok : bv_xor.r_zero.main.Stmt := kanon_proof% bv_xor.r_zero.main
+theorem Bitvec.xor.r_lits.main.ok : Bitvec.xor.r_lits.main.Stmt := kanon_proof% Bitvec.xor.r_lits.main
 
-theorem bv_xor.r_zero.swap.ok : bv_xor.r_zero.swap.Stmt := by
+theorem Bitvec.xor.r_lits.proof : Bitvec.xor.r_lits.Stmt := by
+  intro FS O hO v1 v2 res h
+  simp only [Bitvec.xor.r_lits] at h
+  repeat' rcases orElse_some h with h | h
+  · kanon_arm h (Bitvec.xor.r_lits.main.ok FS O hO)
+
+theorem Bitvec.xor.r_zero.main.ok : Bitvec.xor.r_zero.main.Stmt := kanon_proof% Bitvec.xor.r_zero.main
+
+theorem Bitvec.xor.r_zero.swap.ok : Bitvec.xor.r_zero.swap.Stmt := by
   intro FS O hO v2 kanon__2 t__3 hg
   refine Refinement.trans ?_
-    (bv_xor.r_zero.main.ok FS O hO v2 kanon__2 t__3 hg)
-  simp only [bv_xor.spec, ty, Term.ty_mk]
+    (Bitvec.xor.r_zero.main.ok FS O hO v2 kanon__2 t__3 hg)
+  simp only [Bitvec.xor.spec, ty, Term.ty_mk]
   refine Refinement.trans (Op2.BitXor.comm.ok FS ..) ?_
   kanon_congr
 
-theorem bv_xor.r_zero.proof : bv_xor.r_zero.Stmt := by
+theorem Bitvec.xor.r_zero.proof : Bitvec.xor.r_zero.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_xor.r_zero] at h
+  simp only [Bitvec.xor.r_zero] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_xor.r_zero.main.ok FS O hO)
-  · kanon_arm h (bv_xor.r_zero.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.xor.r_zero.main.ok FS O hO)
+  · kanon_arm h (Bitvec.xor.r_zero.swap.ok FS O hO)
 
-theorem bv_xor.r_of_bools.main.ok : bv_xor.r_of_bools.main.Stmt := kanon_proof% bv_xor.r_of_bools.main
+theorem Bitvec.xor.r_of_bools.main.ok : Bitvec.xor.r_of_bools.main.Stmt := kanon_proof% Bitvec.xor.r_of_bools.main
 
-theorem bv_xor.r_of_bools.proof : bv_xor.r_of_bools.Stmt := by
+theorem Bitvec.xor.r_of_bools.proof : Bitvec.xor.r_of_bools.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_xor.r_of_bools] at h
+  simp only [Bitvec.xor.r_of_bools] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_xor.r_of_bools.main.ok FS O hO)
+  · kanon_arm h (Bitvec.xor.r_of_bools.main.ok FS O hO)
 
-theorem bv_xor.r_default.main.ok : bv_xor.r_default.main.Stmt := kanon_proof% bv_xor.r_default.main
+theorem Bitvec.xor.r_default.main.ok : Bitvec.xor.r_default.main.Stmt := kanon_proof% Bitvec.xor.r_default.main
 
-theorem bv_xor.r_default.proof : bv_xor.r_default.Stmt := by
+theorem Bitvec.xor.r_default.proof : Bitvec.xor.r_default.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_xor.r_default] at h
+  simp only [Bitvec.xor.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_xor.r_default.main.ok FS O hO)
+  · kanon_arm h (Bitvec.xor.r_default.main.ok FS O hO)
 
-theorem bv_extract.r_lit.main.ok : bv_extract.r_lit.main.Stmt := kanon_proof% bv_extract.r_lit.main
+theorem Bitvec.extract.r_lit.main.ok : Bitvec.extract.r_lit.main.Stmt := kanon_proof% Bitvec.extract.r_lit.main
 
-theorem bv_extract.r_lit.proof : bv_extract.r_lit.Stmt := by
+theorem Bitvec.extract.r_lit.proof : Bitvec.extract.r_lit.Stmt := by
   intro FS O hO from_ to_ v res h
-  simp only [bv_extract.r_lit] at h
+  simp only [Bitvec.extract.r_lit] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_extract.r_lit.main.ok FS O hO)
+  · kanon_arm h (Bitvec.extract.r_lit.main.ok FS O hO)
 
-theorem bv_extract.r_full.main.ok : bv_extract.r_full.main.Stmt := kanon_proof% bv_extract.r_full.main
+theorem Bitvec.extract.r_full.main.ok : Bitvec.extract.r_full.main.Stmt := kanon_proof% Bitvec.extract.r_full.main
 
-theorem bv_extract.r_full.proof : bv_extract.r_full.Stmt := by
+theorem Bitvec.extract.r_full.proof : Bitvec.extract.r_full.Stmt := by
   intro FS O hO from_ to_ v res h
-  simp only [bv_extract.r_full] at h
+  simp only [Bitvec.extract.r_full] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_extract.r_full.main.ok FS O hO)
+  · kanon_arm h (Bitvec.extract.r_full.main.ok FS O hO)
 
-theorem bv_extract.r_and_.main.ok : bv_extract.r_and_.main.Stmt := kanon_proof% bv_extract.r_and_.main
+theorem Bitvec.extract.r_and_.main.ok : Bitvec.extract.r_and_.main.Stmt := kanon_proof% Bitvec.extract.r_and_.main
 
-theorem bv_extract.r_and_.proof : bv_extract.r_and_.Stmt := by
+theorem Bitvec.extract.r_and_.proof : Bitvec.extract.r_and_.Stmt := by
   intro FS O hO from_ to_ v res h
-  simp only [bv_extract.r_and_] at h
+  simp only [Bitvec.extract.r_and_] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_extract.r_and_.main.ok FS O hO)
+  · kanon_arm h (Bitvec.extract.r_and_.main.ok FS O hO)
 
-theorem bv_extract.r_or_.main.ok : bv_extract.r_or_.main.Stmt := kanon_proof% bv_extract.r_or_.main
+theorem Bitvec.extract.r_or_.main.ok : Bitvec.extract.r_or_.main.Stmt := kanon_proof% Bitvec.extract.r_or_.main
 
-theorem bv_extract.r_or_.proof : bv_extract.r_or_.Stmt := by
+theorem Bitvec.extract.r_or_.proof : Bitvec.extract.r_or_.Stmt := by
   intro FS O hO from_ to_ v res h
-  simp only [bv_extract.r_or_] at h
+  simp only [Bitvec.extract.r_or_] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_extract.r_or_.main.ok FS O hO)
+  · kanon_arm h (Bitvec.extract.r_or_.main.ok FS O hO)
 
-theorem bv_extract.r_xor.main.ok : bv_extract.r_xor.main.Stmt := kanon_proof% bv_extract.r_xor.main
+theorem Bitvec.extract.r_xor.main.ok : Bitvec.extract.r_xor.main.Stmt := kanon_proof% Bitvec.extract.r_xor.main
 
-theorem bv_extract.r_xor.proof : bv_extract.r_xor.Stmt := by
+theorem Bitvec.extract.r_xor.proof : Bitvec.extract.r_xor.Stmt := by
   intro FS O hO from_ to_ v res h
-  simp only [bv_extract.r_xor] at h
+  simp only [Bitvec.extract.r_xor] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_extract.r_xor.main.ok FS O hO)
+  · kanon_arm h (Bitvec.extract.r_xor.main.ok FS O hO)
 
-theorem bv_extract.r_shl.main.ok : bv_extract.r_shl.main.Stmt := kanon_proof% bv_extract.r_shl.main
+theorem Bitvec.extract.r_shl.main.ok : Bitvec.extract.r_shl.main.Stmt := kanon_proof% Bitvec.extract.r_shl.main
 
-theorem bv_extract.r_shl.proof : bv_extract.r_shl.Stmt := by
+theorem Bitvec.extract.r_shl.proof : Bitvec.extract.r_shl.Stmt := by
   intro FS O hO from_ to_ v res h
-  simp only [bv_extract.r_shl] at h
+  simp only [Bitvec.extract.r_shl] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_extract.r_shl.main.ok FS O hO)
+  · kanon_arm h (Bitvec.extract.r_shl.main.ok FS O hO)
 
-theorem bv_extract.r_lshr.main.ok : bv_extract.r_lshr.main.Stmt := kanon_proof% bv_extract.r_lshr.main
+theorem Bitvec.extract.r_lshr.main.ok : Bitvec.extract.r_lshr.main.Stmt := kanon_proof% Bitvec.extract.r_lshr.main
 
-theorem bv_extract.r_lshr.proof : bv_extract.r_lshr.Stmt := by
+theorem Bitvec.extract.r_lshr.proof : Bitvec.extract.r_lshr.Stmt := by
   intro FS O hO from_ to_ v res h
-  simp only [bv_extract.r_lshr] at h
+  simp only [Bitvec.extract.r_lshr] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_extract.r_lshr.main.ok FS O hO)
+  · kanon_arm h (Bitvec.extract.r_lshr.main.ok FS O hO)
 
-theorem bv_extract.r_ite.main.ok : bv_extract.r_ite.main.Stmt := kanon_proof% bv_extract.r_ite.main
+theorem Bitvec.extract.r_ite.main.ok : Bitvec.extract.r_ite.main.Stmt := kanon_proof% Bitvec.extract.r_ite.main
 
-theorem bv_extract.r_ite.proof : bv_extract.r_ite.Stmt := by
+theorem Bitvec.extract.r_ite.proof : Bitvec.extract.r_ite.Stmt := by
   intro FS O hO from_ to_ v res h
-  simp only [bv_extract.r_ite] at h
+  simp only [Bitvec.extract.r_ite] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_extract.r_ite.main.ok FS O hO)
+  · kanon_arm h (Bitvec.extract.r_ite.main.ok FS O hO)
 
-theorem bv_extract.r_zext_high.main.ok : bv_extract.r_zext_high.main.Stmt := kanon_proof% bv_extract.r_zext_high.main
+theorem Bitvec.extract.r_zext_high.main.ok : Bitvec.extract.r_zext_high.main.Stmt := kanon_proof% Bitvec.extract.r_zext_high.main
 
-theorem bv_extract.r_zext_high.proof : bv_extract.r_zext_high.Stmt := by
+theorem Bitvec.extract.r_zext_high.proof : Bitvec.extract.r_zext_high.Stmt := by
   intro FS O hO from_ to_ v res h
-  simp only [bv_extract.r_zext_high] at h
+  simp only [Bitvec.extract.r_zext_high] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_extract.r_zext_high.main.ok FS O hO)
+  · kanon_arm h (Bitvec.extract.r_zext_high.main.ok FS O hO)
 
-theorem bv_extract.r_sext_bit.main.ok : bv_extract.r_sext_bit.main.Stmt := kanon_proof% bv_extract.r_sext_bit.main
+theorem Bitvec.extract.r_sext_bit.main.ok : Bitvec.extract.r_sext_bit.main.Stmt := kanon_proof% Bitvec.extract.r_sext_bit.main
 
-theorem bv_extract.r_sext_bit.proof : bv_extract.r_sext_bit.Stmt := by
+theorem Bitvec.extract.r_sext_bit.proof : Bitvec.extract.r_sext_bit.Stmt := by
   intro FS O hO from_ to_ v res h
-  simp only [bv_extract.r_sext_bit] at h
+  simp only [Bitvec.extract.r_sext_bit] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_extract.r_sext_bit.main.ok FS O hO)
+  · kanon_arm h (Bitvec.extract.r_sext_bit.main.ok FS O hO)
 
-theorem bv_extract.r_ext_low.main.ok : bv_extract.r_ext_low.main.Stmt := kanon_proof% bv_extract.r_ext_low.main
+theorem Bitvec.extract.r_ext_low.main.ok : Bitvec.extract.r_ext_low.main.Stmt := kanon_proof% Bitvec.extract.r_ext_low.main
 
-theorem bv_extract.r_ext_low.proof : bv_extract.r_ext_low.Stmt := by
+theorem Bitvec.extract.r_ext_low.proof : Bitvec.extract.r_ext_low.Stmt := by
   intro FS O hO from_ to_ v res h
-  simp only [bv_extract.r_ext_low] at h
+  simp only [Bitvec.extract.r_ext_low] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_extract.r_ext_low.main.ok FS O hO)
+  · kanon_arm h (Bitvec.extract.r_ext_low.main.ok FS O hO)
 
-theorem bv_extract.r_ext_orig.main.ok : bv_extract.r_ext_orig.main.Stmt := kanon_proof% bv_extract.r_ext_orig.main
+theorem Bitvec.extract.r_ext_orig.main.ok : Bitvec.extract.r_ext_orig.main.Stmt := kanon_proof% Bitvec.extract.r_ext_orig.main
 
-theorem bv_extract.r_ext_orig.proof : bv_extract.r_ext_orig.Stmt := by
+theorem Bitvec.extract.r_ext_orig.proof : Bitvec.extract.r_ext_orig.Stmt := by
   intro FS O hO from_ to_ v res h
-  simp only [bv_extract.r_ext_orig] at h
+  simp only [Bitvec.extract.r_ext_orig] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_extract.r_ext_orig.main.ok FS O hO)
+  · kanon_arm h (Bitvec.extract.r_ext_orig.main.ok FS O hO)
 
-theorem bv_extract.r_extract.main.ok : bv_extract.r_extract.main.Stmt := kanon_proof% bv_extract.r_extract.main
+theorem Bitvec.extract.r_extract.main.ok : Bitvec.extract.r_extract.main.Stmt := kanon_proof% Bitvec.extract.r_extract.main
 
-theorem bv_extract.r_extract.proof : bv_extract.r_extract.Stmt := by
+theorem Bitvec.extract.r_extract.proof : Bitvec.extract.r_extract.Stmt := by
   intro FS O hO from_ to_ v res h
-  simp only [bv_extract.r_extract] at h
+  simp only [Bitvec.extract.r_extract] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_extract.r_extract.main.ok FS O hO)
+  · kanon_arm h (Bitvec.extract.r_extract.main.ok FS O hO)
 
-theorem bv_extract.r_concat.main.ok : bv_extract.r_concat.main.Stmt := kanon_proof% bv_extract.r_concat.main
+theorem Bitvec.extract.r_concat.main.ok : Bitvec.extract.r_concat.main.Stmt := kanon_proof% Bitvec.extract.r_concat.main
 
-theorem bv_extract.r_concat.proof : bv_extract.r_concat.Stmt := by
+theorem Bitvec.extract.r_concat.proof : Bitvec.extract.r_concat.Stmt := by
   intro FS O hO from_ to_ v res h
-  simp only [bv_extract.r_concat] at h
+  simp only [Bitvec.extract.r_concat] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_extract.r_concat.main.ok FS O hO)
+  · kanon_arm h (Bitvec.extract.r_concat.main.ok FS O hO)
 
-theorem bv_extract.r_add_low.main.ok : bv_extract.r_add_low.main.Stmt := kanon_proof% bv_extract.r_add_low.main
+theorem Bitvec.extract.r_add_low.main.ok : Bitvec.extract.r_add_low.main.Stmt := kanon_proof% Bitvec.extract.r_add_low.main
 
-theorem bv_extract.r_add_low.proof : bv_extract.r_add_low.Stmt := by
+theorem Bitvec.extract.r_add_low.proof : Bitvec.extract.r_add_low.Stmt := by
   intro FS O hO from_ to_ v res h
-  simp only [bv_extract.r_add_low] at h
+  simp only [Bitvec.extract.r_add_low] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_extract.r_add_low.main.ok FS O hO)
+  · kanon_arm h (Bitvec.extract.r_add_low.main.ok FS O hO)
 
-theorem bv_extract.r_add_const.main.ok : bv_extract.r_add_const.main.Stmt := kanon_proof% bv_extract.r_add_const.main
+theorem Bitvec.extract.r_add_const.main.ok : Bitvec.extract.r_add_const.main.Stmt := kanon_proof% Bitvec.extract.r_add_const.main
 
-theorem bv_extract.r_add_const.swap.ok : bv_extract.r_add_const.swap.Stmt := by
+theorem Bitvec.extract.r_add_const.swap.ok : Bitvec.extract.r_add_const.swap.Stmt := by
   intro FS O hO from_ to_ w__1 x n t__4 t__6 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Add w__1) x (Term.mk (Kind.BitVec n) t__4)) t__6)
     (Term.mk (Kind.Op2 (Op2.Add w__1) (Term.mk (Kind.BitVec n) t__4) x) t__6) :=
     Op2.Add.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_extract.r_add_const.main.ok FS O hO from_ to_ w__1 n t__4 x t__6 hg)
-  simp only [bv_extract.spec]
+    (Bitvec.extract.r_add_const.main.ok FS O hO from_ to_ w__1 n t__4 x t__6 hg)
+  simp only [Bitvec.extract.spec]
   kanon_congr
 
-theorem bv_extract.r_add_const.proof : bv_extract.r_add_const.Stmt := by
+theorem Bitvec.extract.r_add_const.proof : Bitvec.extract.r_add_const.Stmt := by
   intro FS O hO from_ to_ v res h
-  simp only [bv_extract.r_add_const] at h
+  simp only [Bitvec.extract.r_add_const] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_extract.r_add_const.main.ok FS O hO)
-  · kanon_arm h (bv_extract.r_add_const.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.extract.r_add_const.main.ok FS O hO)
+  · kanon_arm h (Bitvec.extract.r_add_const.swap.ok FS O hO)
 
-theorem bv_extract.r_mul_pow2.main.ok : bv_extract.r_mul_pow2.main.Stmt := kanon_proof% bv_extract.r_mul_pow2.main
+theorem Bitvec.extract.r_mul_pow2.main.ok : Bitvec.extract.r_mul_pow2.main.Stmt := kanon_proof% Bitvec.extract.r_mul_pow2.main
 
-theorem bv_extract.r_mul_pow2.swap.ok : bv_extract.r_mul_pow2.swap.Stmt := by
+theorem Bitvec.extract.r_mul_pow2.swap.ok : Bitvec.extract.r_mul_pow2.swap.Stmt := by
   intro FS O hO from_ to_ w__1 w__5 n t__4 t__6 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Mul w__1) w__5 (Term.mk (Kind.BitVec n) t__4)) t__6)
     (Term.mk (Kind.Op2 (Op2.Mul w__1) (Term.mk (Kind.BitVec n) t__4) w__5) t__6) :=
     Op2.Mul.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_extract.r_mul_pow2.main.ok FS O hO from_ to_ w__1 n t__4 w__5 t__6 hg)
-  simp only [bv_extract.spec]
+    (Bitvec.extract.r_mul_pow2.main.ok FS O hO from_ to_ w__1 n t__4 w__5 t__6 hg)
+  simp only [Bitvec.extract.spec]
   kanon_congr
 
-theorem bv_extract.r_mul_pow2.proof : bv_extract.r_mul_pow2.Stmt := by
+theorem Bitvec.extract.r_mul_pow2.proof : Bitvec.extract.r_mul_pow2.Stmt := by
   intro FS O hO from_ to_ v res h
-  simp only [bv_extract.r_mul_pow2] at h
+  simp only [Bitvec.extract.r_mul_pow2] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_extract.r_mul_pow2.main.ok FS O hO)
-  · kanon_arm h (bv_extract.r_mul_pow2.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.extract.r_mul_pow2.main.ok FS O hO)
+  · kanon_arm h (Bitvec.extract.r_mul_pow2.swap.ok FS O hO)
 
-theorem bv_extract.r_mul_low.main.ok : bv_extract.r_mul_low.main.Stmt := kanon_proof% bv_extract.r_mul_low.main
+theorem Bitvec.extract.r_mul_low.main.ok : Bitvec.extract.r_mul_low.main.Stmt := kanon_proof% Bitvec.extract.r_mul_low.main
 
-theorem bv_extract.r_mul_low.proof : bv_extract.r_mul_low.Stmt := by
+theorem Bitvec.extract.r_mul_low.proof : Bitvec.extract.r_mul_low.Stmt := by
   intro FS O hO from_ to_ v res h
-  simp only [bv_extract.r_mul_low] at h
+  simp only [Bitvec.extract.r_mul_low] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_extract.r_mul_low.main.ok FS O hO)
+  · kanon_arm h (Bitvec.extract.r_mul_low.main.ok FS O hO)
 
-theorem bv_extract.r_urem.main.ok : bv_extract.r_urem.main.Stmt := kanon_proof% bv_extract.r_urem.main
+theorem Bitvec.extract.r_urem.main.ok : Bitvec.extract.r_urem.main.Stmt := kanon_proof% Bitvec.extract.r_urem.main
 
-theorem bv_extract.r_urem.proof : bv_extract.r_urem.Stmt := by
+theorem Bitvec.extract.r_urem.proof : Bitvec.extract.r_urem.Stmt := by
   intro FS O hO from_ to_ v res h
-  simp only [bv_extract.r_urem] at h
+  simp only [Bitvec.extract.r_urem] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_extract.r_urem.main.ok FS O hO)
+  · kanon_arm h (Bitvec.extract.r_urem.main.ok FS O hO)
 
-theorem bv_extract.r_default.main.ok : bv_extract.r_default.main.Stmt := kanon_proof% bv_extract.r_default.main
+theorem Bitvec.extract.r_default.main.ok : Bitvec.extract.r_default.main.Stmt := kanon_proof% Bitvec.extract.r_default.main
 
-theorem bv_extract.r_default.proof : bv_extract.r_default.Stmt := by
+theorem Bitvec.extract.r_default.proof : Bitvec.extract.r_default.Stmt := by
   intro FS O hO from_ to_ v res h
-  simp only [bv_extract.r_default] at h
+  simp only [Bitvec.extract.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_extract.r_default.main.ok FS O hO)
+  · kanon_arm h (Bitvec.extract.r_default.main.ok FS O hO)
 
-theorem bv_extend.r_zero.main.ok : bv_extend.r_zero.main.Stmt := kanon_proof% bv_extend.r_zero.main
+theorem Bitvec.extend_.r_zero.main.ok : Bitvec.extend_.r_zero.main.Stmt := kanon_proof% Bitvec.extend_.r_zero.main
 
-theorem bv_extend.r_zero.proof : bv_extend.r_zero.Stmt := by
+theorem Bitvec.extend_.r_zero.proof : Bitvec.extend_.r_zero.Stmt := by
   intro FS O hO signed extend_by v res h
-  simp only [bv_extend.r_zero] at h
+  simp only [Bitvec.extend_.r_zero] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_extend.r_zero.main.ok FS O hO)
+  · kanon_arm h (Bitvec.extend_.r_zero.main.ok FS O hO)
 
-theorem bv_extend.r_lit.main.ok : bv_extend.r_lit.main.Stmt := kanon_proof% bv_extend.r_lit.main
+theorem Bitvec.extend_.r_lit.main.ok : Bitvec.extend_.r_lit.main.Stmt := kanon_proof% Bitvec.extend_.r_lit.main
 
-theorem bv_extend.r_lit.proof : bv_extend.r_lit.Stmt := by
+theorem Bitvec.extend_.r_lit.proof : Bitvec.extend_.r_lit.Stmt := by
   intro FS O hO signed extend_by v res h
-  simp only [bv_extend.r_lit] at h
+  simp only [Bitvec.extend_.r_lit] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_extend.r_lit.main.ok FS O hO)
+  · kanon_arm h (Bitvec.extend_.r_lit.main.ok FS O hO)
 
-theorem bv_extend.r_extend.main.ok : bv_extend.r_extend.main.Stmt := kanon_proof% bv_extend.r_extend.main
+theorem Bitvec.extend_.r_extend.main.ok : Bitvec.extend_.r_extend.main.Stmt := kanon_proof% Bitvec.extend_.r_extend.main
 
-theorem bv_extend.r_extend.proof : bv_extend.r_extend.Stmt := by
+theorem Bitvec.extend_.r_extend.proof : Bitvec.extend_.r_extend.Stmt := by
   intro FS O hO signed extend_by v res h
-  simp only [bv_extend.r_extend] at h
+  simp only [Bitvec.extend_.r_extend] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_extend.r_extend.main.ok FS O hO)
+  · kanon_arm h (Bitvec.extend_.r_extend.main.ok FS O hO)
 
-theorem bv_extend.r_ite.main.ok : bv_extend.r_ite.main.Stmt := kanon_proof% bv_extend.r_ite.main
+theorem Bitvec.extend_.r_ite.main.ok : Bitvec.extend_.r_ite.main.Stmt := kanon_proof% Bitvec.extend_.r_ite.main
 
-theorem bv_extend.r_ite.proof : bv_extend.r_ite.Stmt := by
+theorem Bitvec.extend_.r_ite.proof : Bitvec.extend_.r_ite.Stmt := by
   intro FS O hO signed extend_by v res h
-  simp only [bv_extend.r_ite] at h
+  simp only [Bitvec.extend_.r_ite] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_extend.r_ite.main.ok FS O hO)
+  · kanon_arm h (Bitvec.extend_.r_ite.main.ok FS O hO)
 
-theorem bv_extend.r_of_bool.main.ok : bv_extend.r_of_bool.main.Stmt := kanon_proof% bv_extend.r_of_bool.main
+theorem Bitvec.extend_.r_of_bool.main.ok : Bitvec.extend_.r_of_bool.main.Stmt := kanon_proof% Bitvec.extend_.r_of_bool.main
 
-theorem bv_extend.r_of_bool.proof : bv_extend.r_of_bool.Stmt := by
+theorem Bitvec.extend_.r_of_bool.proof : Bitvec.extend_.r_of_bool.Stmt := by
   intro FS O hO signed extend_by v res h
-  simp only [bv_extend.r_of_bool] at h
+  simp only [Bitvec.extend_.r_of_bool] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_extend.r_of_bool.main.ok FS O hO)
+  · kanon_arm h (Bitvec.extend_.r_of_bool.main.ok FS O hO)
 
-theorem bv_extend.r_default.main.ok : bv_extend.r_default.main.Stmt := kanon_proof% bv_extend.r_default.main
+theorem Bitvec.extend_.r_default.main.ok : Bitvec.extend_.r_default.main.Stmt := kanon_proof% Bitvec.extend_.r_default.main
 
-theorem bv_extend.r_default.proof : bv_extend.r_default.Stmt := by
+theorem Bitvec.extend_.r_default.proof : Bitvec.extend_.r_default.Stmt := by
   intro FS O hO signed extend_by v res h
-  simp only [bv_extend.r_default] at h
+  simp only [Bitvec.extend_.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_extend.r_default.main.ok FS O hO)
+  · kanon_arm h (Bitvec.extend_.r_default.main.ok FS O hO)
 
-theorem bv_concat.r_lits.main.ok : bv_concat.r_lits.main.Stmt := kanon_proof% bv_concat.r_lits.main
+theorem Bitvec.concat.r_lits.main.ok : Bitvec.concat.r_lits.main.Stmt := kanon_proof% Bitvec.concat.r_lits.main
 
-theorem bv_concat.r_lits.proof : bv_concat.r_lits.Stmt := by
+theorem Bitvec.concat.r_lits.proof : Bitvec.concat.r_lits.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_concat.r_lits] at h
+  simp only [Bitvec.concat.r_lits] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_concat.r_lits.main.ok FS O hO)
+  · kanon_arm h (Bitvec.concat.r_lits.main.ok FS O hO)
 
-theorem bv_concat.r_extracts.main.ok : bv_concat.r_extracts.main.Stmt := kanon_proof% bv_concat.r_extracts.main
+theorem Bitvec.concat.r_extracts.main.ok : Bitvec.concat.r_extracts.main.Stmt := kanon_proof% Bitvec.concat.r_extracts.main
 
-theorem bv_concat.r_extracts.proof : bv_concat.r_extracts.Stmt := by
+theorem Bitvec.concat.r_extracts.proof : Bitvec.concat.r_extracts.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_concat.r_extracts] at h
+  simp only [Bitvec.concat.r_extracts] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_concat.r_extracts.main.ok FS O hO)
+  · kanon_arm h (Bitvec.concat.r_extracts.main.ok FS O hO)
 
-theorem bv_concat.r_extract_extracts.main.ok : bv_concat.r_extract_extracts.main.Stmt := kanon_proof% bv_concat.r_extract_extracts.main
+theorem Bitvec.concat.r_extract_extracts.main.ok : Bitvec.concat.r_extract_extracts.main.Stmt := kanon_proof% Bitvec.concat.r_extract_extracts.main
 
-theorem bv_concat.r_extract_extracts.proof : bv_concat.r_extract_extracts.Stmt := by
+theorem Bitvec.concat.r_extract_extracts.proof : Bitvec.concat.r_extract_extracts.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_concat.r_extract_extracts] at h
+  simp only [Bitvec.concat.r_extract_extracts] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_concat.r_extract_extracts.main.ok FS O hO)
+  · kanon_arm h (Bitvec.concat.r_extract_extracts.main.ok FS O hO)
 
-theorem bv_concat.r_assoc_l.main.ok : bv_concat.r_assoc_l.main.Stmt := kanon_proof% bv_concat.r_assoc_l.main
+theorem Bitvec.concat.r_assoc_l.main.ok : Bitvec.concat.r_assoc_l.main.Stmt := kanon_proof% Bitvec.concat.r_assoc_l.main
 
-theorem bv_concat.r_assoc_l.proof : bv_concat.r_assoc_l.Stmt := by
+theorem Bitvec.concat.r_assoc_l.proof : Bitvec.concat.r_assoc_l.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_concat.r_assoc_l] at h
+  simp only [Bitvec.concat.r_assoc_l] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_concat.r_assoc_l.main.ok FS O hO)
+  · kanon_arm h (Bitvec.concat.r_assoc_l.main.ok FS O hO)
 
-theorem bv_concat.r_assoc_r.main.ok : bv_concat.r_assoc_r.main.Stmt := kanon_proof% bv_concat.r_assoc_r.main
+theorem Bitvec.concat.r_assoc_r.main.ok : Bitvec.concat.r_assoc_r.main.Stmt := kanon_proof% Bitvec.concat.r_assoc_r.main
 
-theorem bv_concat.r_assoc_r.proof : bv_concat.r_assoc_r.Stmt := by
+theorem Bitvec.concat.r_assoc_r.proof : Bitvec.concat.r_assoc_r.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_concat.r_assoc_r] at h
+  simp only [Bitvec.concat.r_assoc_r] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_concat.r_assoc_r.main.ok FS O hO)
+  · kanon_arm h (Bitvec.concat.r_assoc_r.main.ok FS O hO)
 
-theorem bv_concat.r_ites.main.ok : bv_concat.r_ites.main.Stmt := kanon_proof% bv_concat.r_ites.main
+theorem Bitvec.concat.r_ites.main.ok : Bitvec.concat.r_ites.main.Stmt := kanon_proof% Bitvec.concat.r_ites.main
 
-theorem bv_concat.r_ites.proof : bv_concat.r_ites.Stmt := by
+theorem Bitvec.concat.r_ites.proof : Bitvec.concat.r_ites.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_concat.r_ites] at h
+  simp only [Bitvec.concat.r_ites] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_concat.r_ites.main.ok FS O hO)
+  · kanon_arm h (Bitvec.concat.r_ites.main.ok FS O hO)
 
-theorem bv_concat.r_default.main.ok : bv_concat.r_default.main.Stmt := kanon_proof% bv_concat.r_default.main
+theorem Bitvec.concat.r_default.main.ok : Bitvec.concat.r_default.main.Stmt := kanon_proof% Bitvec.concat.r_default.main
 
-theorem bv_concat.r_default.proof : bv_concat.r_default.Stmt := by
+theorem Bitvec.concat.r_default.proof : Bitvec.concat.r_default.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_concat.r_default] at h
+  simp only [Bitvec.concat.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_concat.r_default.main.ok FS O hO)
+  · kanon_arm h (Bitvec.concat.r_default.main.ok FS O hO)
 
-theorem bv_shl.r_lits.main.ok : bv_shl.r_lits.main.Stmt := kanon_proof% bv_shl.r_lits.main
+theorem Bitvec.shl.r_lits.main.ok : Bitvec.shl.r_lits.main.Stmt := kanon_proof% Bitvec.shl.r_lits.main
 
-theorem bv_shl.r_lits.proof : bv_shl.r_lits.Stmt := by
+theorem Bitvec.shl.r_lits.proof : Bitvec.shl.r_lits.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_shl.r_lits] at h
+  simp only [Bitvec.shl.r_lits] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_shl.r_lits.main.ok FS O hO)
+  · kanon_arm h (Bitvec.shl.r_lits.main.ok FS O hO)
 
-theorem bv_shl.r_zero.main.ok : bv_shl.r_zero.main.Stmt := kanon_proof% bv_shl.r_zero.main
+theorem Bitvec.shl.r_zero.main.ok : Bitvec.shl.r_zero.main.Stmt := kanon_proof% Bitvec.shl.r_zero.main
 
-theorem bv_shl.r_zero.proof : bv_shl.r_zero.Stmt := by
+theorem Bitvec.shl.r_zero.proof : Bitvec.shl.r_zero.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_shl.r_zero] at h
+  simp only [Bitvec.shl.r_zero] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_shl.r_zero.main.ok FS O hO)
+  · kanon_arm h (Bitvec.shl.r_zero.main.ok FS O hO)
 
-theorem bv_shl.r_big.main.ok : bv_shl.r_big.main.Stmt := kanon_proof% bv_shl.r_big.main
+theorem Bitvec.shl.r_big.main.ok : Bitvec.shl.r_big.main.Stmt := kanon_proof% Bitvec.shl.r_big.main
 
-theorem bv_shl.r_big.proof : bv_shl.r_big.Stmt := by
+theorem Bitvec.shl.r_big.proof : Bitvec.shl.r_big.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_shl.r_big] at h
+  simp only [Bitvec.shl.r_big] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_shl.r_big.main.ok FS O hO)
+  · kanon_arm h (Bitvec.shl.r_big.main.ok FS O hO)
 
-theorem bv_shl.r_shl.main.ok : bv_shl.r_shl.main.Stmt := kanon_proof% bv_shl.r_shl.main
+theorem Bitvec.shl.r_shl.main.ok : Bitvec.shl.r_shl.main.Stmt := kanon_proof% Bitvec.shl.r_shl.main
 
-theorem bv_shl.r_shl.proof : bv_shl.r_shl.Stmt := by
+theorem Bitvec.shl.r_shl.proof : Bitvec.shl.r_shl.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_shl.r_shl] at h
+  simp only [Bitvec.shl.r_shl] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_shl.r_shl.main.ok FS O hO)
+  · kanon_arm h (Bitvec.shl.r_shl.main.ok FS O hO)
 
-theorem bv_shl.r_lshr.main.ok : bv_shl.r_lshr.main.Stmt := kanon_proof% bv_shl.r_lshr.main
+theorem Bitvec.shl.r_lshr.main.ok : Bitvec.shl.r_lshr.main.Stmt := kanon_proof% Bitvec.shl.r_lshr.main
 
-theorem bv_shl.r_lshr.proof : bv_shl.r_lshr.Stmt := by
+theorem Bitvec.shl.r_lshr.proof : Bitvec.shl.r_lshr.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_shl.r_lshr] at h
+  simp only [Bitvec.shl.r_lshr] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_shl.r_lshr.main.ok FS O hO)
+  · kanon_arm h (Bitvec.shl.r_lshr.main.ok FS O hO)
 
-theorem bv_shl.r_and_mask.main.ok : bv_shl.r_and_mask.main.Stmt := kanon_proof% bv_shl.r_and_mask.main
+theorem Bitvec.shl.r_and_mask.main.ok : Bitvec.shl.r_and_mask.main.Stmt := kanon_proof% Bitvec.shl.r_and_mask.main
 
-theorem bv_shl.r_and_mask.swap.ok : bv_shl.r_and_mask.swap.Stmt := by
+theorem Bitvec.shl.r_and_mask.swap.ok : Bitvec.shl.r_and_mask.swap.Stmt := by
   intro FS O hO mask t__4 x t__5 s t__8
   have : Refines FS (Term.mk (Kind.Op2 Op2.BitAnd (Term.mk (Kind.BitVec mask) t__4) x) t__5)
     (Term.mk (Kind.Op2 Op2.BitAnd x (Term.mk (Kind.BitVec mask) t__4)) t__5) :=
     Op2.BitAnd.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_shl.r_and_mask.main.ok FS O hO x mask t__4 t__5 s t__8)
-  simp only [bv_shl.spec, ty, Term.ty_mk]
+    (Bitvec.shl.r_and_mask.main.ok FS O hO x mask t__4 t__5 s t__8)
+  simp only [Bitvec.shl.spec, ty, Term.ty_mk]
   kanon_congr
 
-theorem bv_shl.r_and_mask.proof : bv_shl.r_and_mask.Stmt := by
+theorem Bitvec.shl.r_and_mask.proof : Bitvec.shl.r_and_mask.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_shl.r_and_mask] at h
+  simp only [Bitvec.shl.r_and_mask] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_shl.r_and_mask.main.ok FS O hO)
-  · kanon_arm h (bv_shl.r_and_mask.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.shl.r_and_mask.main.ok FS O hO)
+  · kanon_arm h (Bitvec.shl.r_and_mask.swap.ok FS O hO)
 
-theorem bv_shl.r_or_mask.main.ok : bv_shl.r_or_mask.main.Stmt := kanon_proof% bv_shl.r_or_mask.main
+theorem Bitvec.shl.r_or_mask.main.ok : Bitvec.shl.r_or_mask.main.Stmt := kanon_proof% Bitvec.shl.r_or_mask.main
 
-theorem bv_shl.r_or_mask.swap.ok : bv_shl.r_or_mask.swap.Stmt := by
+theorem Bitvec.shl.r_or_mask.swap.ok : Bitvec.shl.r_or_mask.swap.Stmt := by
   intro FS O hO mask t__4 x t__5 s t__8
   have : Refines FS (Term.mk (Kind.Op2 Op2.BitOr (Term.mk (Kind.BitVec mask) t__4) x) t__5)
     (Term.mk (Kind.Op2 Op2.BitOr x (Term.mk (Kind.BitVec mask) t__4)) t__5) :=
     Op2.BitOr.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_shl.r_or_mask.main.ok FS O hO x mask t__4 t__5 s t__8)
-  simp only [bv_shl.spec, ty, Term.ty_mk]
+    (Bitvec.shl.r_or_mask.main.ok FS O hO x mask t__4 t__5 s t__8)
+  simp only [Bitvec.shl.spec, ty, Term.ty_mk]
   kanon_congr
 
-theorem bv_shl.r_or_mask.proof : bv_shl.r_or_mask.Stmt := by
+theorem Bitvec.shl.r_or_mask.proof : Bitvec.shl.r_or_mask.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_shl.r_or_mask] at h
+  simp only [Bitvec.shl.r_or_mask] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_shl.r_or_mask.main.ok FS O hO)
-  · kanon_arm h (bv_shl.r_or_mask.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.shl.r_or_mask.main.ok FS O hO)
+  · kanon_arm h (Bitvec.shl.r_or_mask.swap.ok FS O hO)
 
-theorem bv_shl.r_default.main.ok : bv_shl.r_default.main.Stmt := kanon_proof% bv_shl.r_default.main
+theorem Bitvec.shl.r_default.main.ok : Bitvec.shl.r_default.main.Stmt := kanon_proof% Bitvec.shl.r_default.main
 
-theorem bv_shl.r_default.proof : bv_shl.r_default.Stmt := by
+theorem Bitvec.shl.r_default.proof : Bitvec.shl.r_default.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_shl.r_default] at h
+  simp only [Bitvec.shl.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_shl.r_default.main.ok FS O hO)
+  · kanon_arm h (Bitvec.shl.r_default.main.ok FS O hO)
 
-theorem bv_lshr.r_lits.main.ok : bv_lshr.r_lits.main.Stmt := kanon_proof% bv_lshr.r_lits.main
+theorem Bitvec.lshr.r_lits.main.ok : Bitvec.lshr.r_lits.main.Stmt := kanon_proof% Bitvec.lshr.r_lits.main
 
-theorem bv_lshr.r_lits.proof : bv_lshr.r_lits.Stmt := by
+theorem Bitvec.lshr.r_lits.proof : Bitvec.lshr.r_lits.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_lshr.r_lits] at h
+  simp only [Bitvec.lshr.r_lits] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lshr.r_lits.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lshr.r_lits.main.ok FS O hO)
 
-theorem bv_lshr.r_zero.main.ok : bv_lshr.r_zero.main.Stmt := kanon_proof% bv_lshr.r_zero.main
+theorem Bitvec.lshr.r_zero.main.ok : Bitvec.lshr.r_zero.main.Stmt := kanon_proof% Bitvec.lshr.r_zero.main
 
-theorem bv_lshr.r_zero.proof : bv_lshr.r_zero.Stmt := by
+theorem Bitvec.lshr.r_zero.proof : Bitvec.lshr.r_zero.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_lshr.r_zero] at h
+  simp only [Bitvec.lshr.r_zero] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lshr.r_zero.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lshr.r_zero.main.ok FS O hO)
 
-theorem bv_lshr.r_big.main.ok : bv_lshr.r_big.main.Stmt := kanon_proof% bv_lshr.r_big.main
+theorem Bitvec.lshr.r_big.main.ok : Bitvec.lshr.r_big.main.Stmt := kanon_proof% Bitvec.lshr.r_big.main
 
-theorem bv_lshr.r_big.proof : bv_lshr.r_big.Stmt := by
+theorem Bitvec.lshr.r_big.proof : Bitvec.lshr.r_big.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_lshr.r_big] at h
+  simp only [Bitvec.lshr.r_big] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lshr.r_big.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lshr.r_big.main.ok FS O hO)
 
-theorem bv_lshr.r_lshr.main.ok : bv_lshr.r_lshr.main.Stmt := kanon_proof% bv_lshr.r_lshr.main
+theorem Bitvec.lshr.r_lshr.main.ok : Bitvec.lshr.r_lshr.main.Stmt := kanon_proof% Bitvec.lshr.r_lshr.main
 
-theorem bv_lshr.r_lshr.proof : bv_lshr.r_lshr.Stmt := by
+theorem Bitvec.lshr.r_lshr.proof : Bitvec.lshr.r_lshr.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_lshr.r_lshr] at h
+  simp only [Bitvec.lshr.r_lshr] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lshr.r_lshr.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lshr.r_lshr.main.ok FS O hO)
 
-theorem bv_lshr.r_and_mask.main.ok : bv_lshr.r_and_mask.main.Stmt := kanon_proof% bv_lshr.r_and_mask.main
+theorem Bitvec.lshr.r_and_mask.main.ok : Bitvec.lshr.r_and_mask.main.Stmt := kanon_proof% Bitvec.lshr.r_and_mask.main
 
-theorem bv_lshr.r_and_mask.swap.ok : bv_lshr.r_and_mask.swap.Stmt := by
+theorem Bitvec.lshr.r_and_mask.swap.ok : Bitvec.lshr.r_and_mask.swap.Stmt := by
   intro FS O hO mask t__4 x t__5 s t__8
   have : Refines FS (Term.mk (Kind.Op2 Op2.BitAnd (Term.mk (Kind.BitVec mask) t__4) x) t__5)
     (Term.mk (Kind.Op2 Op2.BitAnd x (Term.mk (Kind.BitVec mask) t__4)) t__5) :=
     Op2.BitAnd.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_lshr.r_and_mask.main.ok FS O hO x mask t__4 t__5 s t__8)
-  simp only [bv_lshr.spec, ty, Term.ty_mk]
+    (Bitvec.lshr.r_and_mask.main.ok FS O hO x mask t__4 t__5 s t__8)
+  simp only [Bitvec.lshr.spec, ty, Term.ty_mk]
   kanon_congr
 
-theorem bv_lshr.r_and_mask.proof : bv_lshr.r_and_mask.Stmt := by
+theorem Bitvec.lshr.r_and_mask.proof : Bitvec.lshr.r_and_mask.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_lshr.r_and_mask] at h
+  simp only [Bitvec.lshr.r_and_mask] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lshr.r_and_mask.main.ok FS O hO)
-  · kanon_arm h (bv_lshr.r_and_mask.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.lshr.r_and_mask.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lshr.r_and_mask.swap.ok FS O hO)
 
-theorem bv_lshr.r_or_mask.main.ok : bv_lshr.r_or_mask.main.Stmt := kanon_proof% bv_lshr.r_or_mask.main
+theorem Bitvec.lshr.r_or_mask.main.ok : Bitvec.lshr.r_or_mask.main.Stmt := kanon_proof% Bitvec.lshr.r_or_mask.main
 
-theorem bv_lshr.r_or_mask.swap.ok : bv_lshr.r_or_mask.swap.Stmt := by
+theorem Bitvec.lshr.r_or_mask.swap.ok : Bitvec.lshr.r_or_mask.swap.Stmt := by
   intro FS O hO mask t__4 x t__5 s t__8
   have : Refines FS (Term.mk (Kind.Op2 Op2.BitOr (Term.mk (Kind.BitVec mask) t__4) x) t__5)
     (Term.mk (Kind.Op2 Op2.BitOr x (Term.mk (Kind.BitVec mask) t__4)) t__5) :=
     Op2.BitOr.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_lshr.r_or_mask.main.ok FS O hO x mask t__4 t__5 s t__8)
-  simp only [bv_lshr.spec, ty, Term.ty_mk]
+    (Bitvec.lshr.r_or_mask.main.ok FS O hO x mask t__4 t__5 s t__8)
+  simp only [Bitvec.lshr.spec, ty, Term.ty_mk]
   kanon_congr
 
-theorem bv_lshr.r_or_mask.proof : bv_lshr.r_or_mask.Stmt := by
+theorem Bitvec.lshr.r_or_mask.proof : Bitvec.lshr.r_or_mask.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_lshr.r_or_mask] at h
+  simp only [Bitvec.lshr.r_or_mask] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lshr.r_or_mask.main.ok FS O hO)
-  · kanon_arm h (bv_lshr.r_or_mask.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.lshr.r_or_mask.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lshr.r_or_mask.swap.ok FS O hO)
 
-theorem bv_lshr.r_default.main.ok : bv_lshr.r_default.main.Stmt := kanon_proof% bv_lshr.r_default.main
+theorem Bitvec.lshr.r_default.main.ok : Bitvec.lshr.r_default.main.Stmt := kanon_proof% Bitvec.lshr.r_default.main
 
-theorem bv_lshr.r_default.proof : bv_lshr.r_default.Stmt := by
+theorem Bitvec.lshr.r_default.proof : Bitvec.lshr.r_default.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_lshr.r_default] at h
+  simp only [Bitvec.lshr.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lshr.r_default.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lshr.r_default.main.ok FS O hO)
 
-theorem bv_ashr.r_lits.main.ok : bv_ashr.r_lits.main.Stmt := kanon_proof% bv_ashr.r_lits.main
+theorem Bitvec.ashr.r_lits.main.ok : Bitvec.ashr.r_lits.main.Stmt := kanon_proof% Bitvec.ashr.r_lits.main
 
-theorem bv_ashr.r_lits.proof : bv_ashr.r_lits.Stmt := by
+theorem Bitvec.ashr.r_lits.proof : Bitvec.ashr.r_lits.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_ashr.r_lits] at h
+  simp only [Bitvec.ashr.r_lits] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_ashr.r_lits.main.ok FS O hO)
+  · kanon_arm h (Bitvec.ashr.r_lits.main.ok FS O hO)
 
-theorem bv_ashr.r_zero.main.ok : bv_ashr.r_zero.main.Stmt := kanon_proof% bv_ashr.r_zero.main
+theorem Bitvec.ashr.r_zero.main.ok : Bitvec.ashr.r_zero.main.Stmt := kanon_proof% Bitvec.ashr.r_zero.main
 
-theorem bv_ashr.r_zero.proof : bv_ashr.r_zero.Stmt := by
+theorem Bitvec.ashr.r_zero.proof : Bitvec.ashr.r_zero.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_ashr.r_zero] at h
+  simp only [Bitvec.ashr.r_zero] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_ashr.r_zero.main.ok FS O hO)
+  · kanon_arm h (Bitvec.ashr.r_zero.main.ok FS O hO)
 
-theorem bv_ashr.r_big.main.ok : bv_ashr.r_big.main.Stmt := kanon_proof% bv_ashr.r_big.main
+theorem Bitvec.ashr.r_big.main.ok : Bitvec.ashr.r_big.main.Stmt := kanon_proof% Bitvec.ashr.r_big.main
 
-theorem bv_ashr.r_big.proof : bv_ashr.r_big.Stmt := by
+theorem Bitvec.ashr.r_big.proof : Bitvec.ashr.r_big.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_ashr.r_big] at h
+  simp only [Bitvec.ashr.r_big] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_ashr.r_big.main.ok FS O hO)
+  · kanon_arm h (Bitvec.ashr.r_big.main.ok FS O hO)
 
-theorem bv_ashr.r_ashr.main.ok : bv_ashr.r_ashr.main.Stmt := kanon_proof% bv_ashr.r_ashr.main
+theorem Bitvec.ashr.r_ashr.main.ok : Bitvec.ashr.r_ashr.main.Stmt := kanon_proof% Bitvec.ashr.r_ashr.main
 
-theorem bv_ashr.r_ashr.proof : bv_ashr.r_ashr.Stmt := by
+theorem Bitvec.ashr.r_ashr.proof : Bitvec.ashr.r_ashr.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_ashr.r_ashr] at h
+  simp only [Bitvec.ashr.r_ashr] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_ashr.r_ashr.main.ok FS O hO)
+  · kanon_arm h (Bitvec.ashr.r_ashr.main.ok FS O hO)
 
-theorem bv_ashr.r_default.main.ok : bv_ashr.r_default.main.Stmt := kanon_proof% bv_ashr.r_default.main
+theorem Bitvec.ashr.r_default.main.ok : Bitvec.ashr.r_default.main.Stmt := kanon_proof% Bitvec.ashr.r_default.main
 
-theorem bv_ashr.r_default.proof : bv_ashr.r_default.Stmt := by
+theorem Bitvec.ashr.r_default.proof : Bitvec.ashr.r_default.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [bv_ashr.r_default] at h
+  simp only [Bitvec.ashr.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_ashr.r_default.main.ok FS O hO)
+  · kanon_arm h (Bitvec.ashr.r_default.main.ok FS O hO)
 
-theorem bv_mul.r_lits.main.ok : bv_mul.r_lits.main.Stmt := kanon_proof% bv_mul.r_lits.main
+theorem Bitvec.mul.r_lits.main.ok : Bitvec.mul.r_lits.main.Stmt := kanon_proof% Bitvec.mul.r_lits.main
 
-theorem bv_mul.r_lits.proof : bv_mul.r_lits.Stmt := by
+theorem Bitvec.mul.r_lits.proof : Bitvec.mul.r_lits.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_mul.r_lits] at h
+  simp only [Bitvec.mul.r_lits] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_mul.r_lits.main.ok FS O hO)
+  · kanon_arm h (Bitvec.mul.r_lits.main.ok FS O hO)
 
-theorem bv_mul.r_one.main.ok : bv_mul.r_one.main.Stmt := kanon_proof% bv_mul.r_one.main
+theorem Bitvec.mul.r_one.main.ok : Bitvec.mul.r_one.main.Stmt := kanon_proof% Bitvec.mul.r_one.main
 
-theorem bv_mul.r_one.swap.ok : bv_mul.r_one.swap.Stmt := by
+theorem Bitvec.mul.r_one.swap.ok : Bitvec.mul.r_one.swap.Stmt := by
   intro FS O hO checked v2 kanon__2 t__3 hg
   refine Refinement.trans ?_
-    (bv_mul.r_one.main.ok FS O hO checked v2 kanon__2 t__3 hg)
-  simp only [bv_mul.spec, ty, Term.ty_mk]
+    (Bitvec.mul.r_one.main.ok FS O hO checked v2 kanon__2 t__3 hg)
+  simp only [Bitvec.mul.spec, ty, Term.ty_mk]
   refine Refinement.trans (Op2.Mul.comm.ok FS ..) ?_
   kanon_congr
 
-theorem bv_mul.r_one.proof : bv_mul.r_one.Stmt := by
+theorem Bitvec.mul.r_one.proof : Bitvec.mul.r_one.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_mul.r_one] at h
+  simp only [Bitvec.mul.r_one] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_mul.r_one.main.ok FS O hO)
-  · kanon_arm h (bv_mul.r_one.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.mul.r_one.main.ok FS O hO)
+  · kanon_arm h (Bitvec.mul.r_one.swap.ok FS O hO)
 
-theorem bv_mul.r_zero.main.ok : bv_mul.r_zero.main.Stmt := kanon_proof% bv_mul.r_zero.main
+theorem Bitvec.mul.r_zero.main.ok : Bitvec.mul.r_zero.main.Stmt := kanon_proof% Bitvec.mul.r_zero.main
 
-theorem bv_mul.r_zero.swap.ok : bv_mul.r_zero.swap.Stmt := kanon_proof% bv_mul.r_zero.swap
+theorem Bitvec.mul.r_zero.swap.ok : Bitvec.mul.r_zero.swap.Stmt := by
+  intro FS O hO checked v2 kanon__2 t__3 hg
+  refine Refinement.trans ?_
+    (Bitvec.mul.r_zero.main.ok FS O hO checked v2 kanon__2 t__3 hg)
+  simp only [Bitvec.mul.spec, ty, Term.ty_mk]
+  refine Refinement.trans (Op2.Mul.comm.ok FS ..) ?_
+  kanon_congr
 
-theorem bv_mul.r_zero.proof : bv_mul.r_zero.Stmt := by
+theorem Bitvec.mul.r_zero.proof : Bitvec.mul.r_zero.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_mul.r_zero] at h
+  simp only [Bitvec.mul.r_zero] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_mul.r_zero.main.ok FS O hO)
-  · kanon_arm h (bv_mul.r_zero.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.mul.r_zero.main.ok FS O hO)
+  · kanon_arm h (Bitvec.mul.r_zero.swap.ok FS O hO)
 
-theorem bv_mul.r_neg.main.ok : bv_mul.r_neg.main.Stmt := kanon_proof% bv_mul.r_neg.main
+theorem Bitvec.mul.r_neg.main.ok : Bitvec.mul.r_neg.main.Stmt := kanon_proof% Bitvec.mul.r_neg.main
 
-theorem bv_mul.r_neg.swap.ok : bv_mul.r_neg.swap.Stmt := kanon_proof% bv_mul.r_neg.swap
+theorem Bitvec.mul.r_neg.swap.ok : Bitvec.mul.r_neg.swap.Stmt := by
+  intro FS O hO checked x t__6 c t__2 hg
+  refine Refinement.trans ?_
+    (Bitvec.mul.r_neg.main.ok FS O hO checked c t__2 x t__6 hg)
+  simp only [Bitvec.mul.spec, ty, Term.ty_mk]
+  refine Refinement.trans (Op2.Mul.comm.ok FS ..) ?_
+  kanon_congr
 
-theorem bv_mul.r_neg.proof : bv_mul.r_neg.Stmt := by
+theorem Bitvec.mul.r_neg.proof : Bitvec.mul.r_neg.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_mul.r_neg] at h
+  simp only [Bitvec.mul.r_neg] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_mul.r_neg.main.ok FS O hO)
-  · kanon_arm h (bv_mul.r_neg.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.mul.r_neg.main.ok FS O hO)
+  · kanon_arm h (Bitvec.mul.r_neg.swap.ok FS O hO)
 
-theorem bv_mul.r_mul_const.main.ok : bv_mul.r_mul_const.main.Stmt := kanon_proof% bv_mul.r_mul_const.main
+theorem Bitvec.mul.r_mul_const.main.ok : Bitvec.mul.r_mul_const.main.Stmt := kanon_proof% Bitvec.mul.r_mul_const.main
 
-theorem bv_mul.r_mul_const.swap1.ok : bv_mul.r_mul_const.swap1.Stmt := by
+theorem Bitvec.mul.r_mul_const.swap1.ok : Bitvec.mul.r_mul_const.swap1.Stmt := by
   intro FS O hO checked ckm n t__5 x t__6 m t__9 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Mul ckm) (Term.mk (Kind.BitVec n) t__5) x) t__6)
     (Term.mk (Kind.Op2 (Op2.Mul ckm) x (Term.mk (Kind.BitVec n) t__5)) t__6) :=
     Op2.Mul.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_mul.r_mul_const.main.ok FS O hO checked ckm x n t__5 t__6 m t__9 hg)
-  simp only [bv_mul.spec, ty, Term.ty_mk]
+    (Bitvec.mul.r_mul_const.main.ok FS O hO checked ckm x n t__5 t__6 m t__9 hg)
+  simp only [Bitvec.mul.spec, ty, Term.ty_mk]
   kanon_congr
 
-theorem bv_mul.r_mul_const.swap2.ok : bv_mul.r_mul_const.swap2.Stmt := kanon_proof% bv_mul.r_mul_const.swap2
-
-theorem bv_mul.r_mul_const.swap1_swap2.ok : bv_mul.r_mul_const.swap1_swap2.Stmt := kanon_proof% bv_mul.r_mul_const.swap1_swap2
-
-theorem bv_mul.r_mul_const.proof : bv_mul.r_mul_const.Stmt := by
-  intro FS O hO checked v1 v2 res h
-  simp only [bv_mul.r_mul_const] at h
-  repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_mul.r_mul_const.main.ok FS O hO)
-  · kanon_arm h (bv_mul.r_mul_const.swap1.ok FS O hO)
-  · kanon_arm h (bv_mul.r_mul_const.swap2.ok FS O hO)
-  · kanon_arm h (bv_mul.r_mul_const.swap1_swap2.ok FS O hO)
-
-theorem bv_mul.r_ite.main.ok : bv_mul.r_ite.main.Stmt := kanon_proof% bv_mul.r_ite.main
-
-theorem bv_mul.r_ite.swap.ok : bv_mul.r_ite.swap.Stmt := by
-  intro FS O hO checked w__6 t__7 b l r t__5
+theorem Bitvec.mul.r_mul_const.swap2.ok : Bitvec.mul.r_mul_const.swap2.Stmt := by
+  intro FS O hO checked m t__9 ckm x n t__5 t__6 hg
   refine Refinement.trans ?_
-    (bv_mul.r_ite.main.ok FS O hO checked b l r t__5 w__6 t__7)
-  simp only [bv_mul.spec, ty, Term.ty_mk]
+    (Bitvec.mul.r_mul_const.main.ok FS O hO checked ckm x n t__5 t__6 m t__9 hg)
+  simp only [Bitvec.mul.spec, ty, Term.ty_mk]
   refine Refinement.trans (Op2.Mul.comm.ok FS ..) ?_
   kanon_congr
 
-theorem bv_mul.r_ite.proof : bv_mul.r_ite.Stmt := by
+theorem Bitvec.mul.r_mul_const.swap1_swap2.ok : Bitvec.mul.r_mul_const.swap1_swap2.Stmt := by
+  intro FS O hO checked m t__9 ckm n t__5 x t__6 hg
+  have : Refines FS (Term.mk (Kind.Op2 (Op2.Mul ckm) (Term.mk (Kind.BitVec n) t__5) x) t__6)
+    (Term.mk (Kind.Op2 (Op2.Mul ckm) x (Term.mk (Kind.BitVec n) t__5)) t__6) :=
+    Op2.Mul.comm.ok FS ..
+  refine Refinement.trans ?_
+    (Bitvec.mul.r_mul_const.main.ok FS O hO checked ckm x n t__5 t__6 m t__9 hg)
+  simp only [Bitvec.mul.spec, ty, Term.ty_mk]
+  refine Refinement.trans (Op2.Mul.comm.ok FS ..) ?_
+  kanon_congr
+
+theorem Bitvec.mul.r_mul_const.proof : Bitvec.mul.r_mul_const.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_mul.r_ite] at h
+  simp only [Bitvec.mul.r_mul_const] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_mul.r_ite.main.ok FS O hO)
-  · kanon_arm h (bv_mul.r_ite.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.mul.r_mul_const.main.ok FS O hO)
+  · kanon_arm h (Bitvec.mul.r_mul_const.swap1.ok FS O hO)
+  · kanon_arm h (Bitvec.mul.r_mul_const.swap2.ok FS O hO)
+  · kanon_arm h (Bitvec.mul.r_mul_const.swap1_swap2.ok FS O hO)
 
-theorem bv_mul.r_default.main.ok : bv_mul.r_default.main.Stmt := kanon_proof% bv_mul.r_default.main
+theorem Bitvec.mul.r_ite.main.ok : Bitvec.mul.r_ite.main.Stmt := kanon_proof% Bitvec.mul.r_ite.main
 
-theorem bv_mul.r_default.proof : bv_mul.r_default.Stmt := by
+theorem Bitvec.mul.r_ite.swap.ok : Bitvec.mul.r_ite.swap.Stmt := by
+  intro FS O hO checked w__6 t__7 b l r t__5
+  refine Refinement.trans ?_
+    (Bitvec.mul.r_ite.main.ok FS O hO checked b l r t__5 w__6 t__7)
+  simp only [Bitvec.mul.spec, ty, Term.ty_mk]
+  refine Refinement.trans (Op2.Mul.comm.ok FS ..) ?_
+  kanon_congr
+
+theorem Bitvec.mul.r_ite.proof : Bitvec.mul.r_ite.Stmt := by
   intro FS O hO checked v1 v2 res h
-  simp only [bv_mul.r_default] at h
+  simp only [Bitvec.mul.r_ite] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_mul.r_default.main.ok FS O hO)
+  · kanon_arm h (Bitvec.mul.r_ite.main.ok FS O hO)
+  · kanon_arm h (Bitvec.mul.r_ite.swap.ok FS O hO)
 
-theorem bv_div.r_lits.main.ok : bv_div.r_lits.main.Stmt := kanon_proof% bv_div.r_lits.main
+theorem Bitvec.mul.r_default.main.ok : Bitvec.mul.r_default.main.Stmt := kanon_proof% Bitvec.mul.r_default.main
 
-theorem bv_div.r_lits.proof : bv_div.r_lits.Stmt := by
+theorem Bitvec.mul.r_default.proof : Bitvec.mul.r_default.Stmt := by
+  intro FS O hO checked v1 v2 res h
+  simp only [Bitvec.mul.r_default] at h
+  repeat' rcases orElse_some h with h | h
+  · kanon_arm h (Bitvec.mul.r_default.main.ok FS O hO)
+
+theorem Bitvec.div.r_lits.main.ok : Bitvec.div.r_lits.main.Stmt := kanon_proof% Bitvec.div.r_lits.main
+
+theorem Bitvec.div.r_lits.proof : Bitvec.div.r_lits.Stmt := by
   intro FS O hO signed v1 v2 res hs_v2 h
-  simp only [bv_div.r_lits] at h
+  simp only [Bitvec.div.r_lits] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_div.r_lits.main.ok FS O hO)
+  · kanon_arm h (Bitvec.div.r_lits.main.ok FS O hO)
 
-theorem bv_div.r_one.main.ok : bv_div.r_one.main.Stmt := kanon_proof% bv_div.r_one.main
+theorem Bitvec.div.r_one.main.ok : Bitvec.div.r_one.main.Stmt := kanon_proof% Bitvec.div.r_one.main
 
-theorem bv_div.r_one.proof : bv_div.r_one.Stmt := by
+theorem Bitvec.div.r_one.proof : Bitvec.div.r_one.Stmt := by
   intro FS O hO signed v1 v2 res hs_v2 h
-  simp only [bv_div.r_one] at h
+  simp only [Bitvec.div.r_one] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_div.r_one.main.ok FS O hO)
+  · kanon_arm h (Bitvec.div.r_one.main.ok FS O hO)
 
-theorem bv_div.r_mul_lits.main.ok : bv_div.r_mul_lits.main.Stmt := kanon_proof% bv_div.r_mul_lits.main
+theorem Bitvec.div.r_mul_lits.main.ok : Bitvec.div.r_mul_lits.main.Stmt := kanon_proof% Bitvec.div.r_mul_lits.main
 
-theorem bv_div.r_mul_lits.proof : bv_div.r_mul_lits.Stmt := by
+theorem Bitvec.div.r_mul_lits.proof : Bitvec.div.r_mul_lits.Stmt := by
   intro FS O hO signed v1 v2 res hs_v2 h
-  simp only [bv_div.r_mul_lits] at h
+  simp only [Bitvec.div.r_mul_lits] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_div.r_mul_lits.main.ok FS O hO)
+  · kanon_arm h (Bitvec.div.r_mul_lits.main.ok FS O hO)
 
-theorem bv_div.r_mul_div.main.ok : bv_div.r_mul_div.main.Stmt := kanon_proof% bv_div.r_mul_div.main
+theorem Bitvec.div.r_mul_div.main.ok : Bitvec.div.r_mul_div.main.Stmt := kanon_proof% Bitvec.div.r_mul_div.main
 
-theorem bv_div.r_mul_div.swap.ok : bv_div.r_mul_div.swap.Stmt := kanon_proof% bv_div.r_mul_div.swap
+theorem Bitvec.div.r_mul_div.swap.ok : Bitvec.div.r_mul_div.swap.Stmt := kanon_proof% Bitvec.div.r_mul_div.swap
 
-theorem bv_div.r_mul_div.proof : bv_div.r_mul_div.Stmt := by
+theorem Bitvec.div.r_mul_div.proof : Bitvec.div.r_mul_div.Stmt := by
   intro FS O hO signed v1 v2 res hs_v2 h
-  simp only [bv_div.r_mul_div] at h
+  simp only [Bitvec.div.r_mul_div] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_div.r_mul_div.main.ok FS O hO)
-  · kanon_arm h (bv_div.r_mul_div.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.div.r_mul_div.main.ok FS O hO)
+  · kanon_arm h (Bitvec.div.r_mul_div.swap.ok FS O hO)
 
-theorem bv_div.r_div_mul.main.ok : bv_div.r_div_mul.main.Stmt := kanon_proof% bv_div.r_div_mul.main
+theorem Bitvec.div.r_div_mul.main.ok : Bitvec.div.r_div_mul.main.Stmt := kanon_proof% Bitvec.div.r_div_mul.main
 
-theorem bv_div.r_div_mul.swap.ok : bv_div.r_div_mul.swap.Stmt := kanon_proof% bv_div.r_div_mul.swap
+theorem Bitvec.div.r_div_mul.swap.ok : Bitvec.div.r_div_mul.swap.Stmt := kanon_proof% Bitvec.div.r_div_mul.swap
 
-theorem bv_div.r_div_mul.proof : bv_div.r_div_mul.Stmt := by
+theorem Bitvec.div.r_div_mul.proof : Bitvec.div.r_div_mul.Stmt := by
   intro FS O hO signed v1 v2 res hs_v2 h
-  simp only [bv_div.r_div_mul] at h
+  simp only [Bitvec.div.r_div_mul] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_div.r_div_mul.main.ok FS O hO)
-  · kanon_arm h (bv_div.r_div_mul.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.div.r_div_mul.main.ok FS O hO)
+  · kanon_arm h (Bitvec.div.r_div_mul.swap.ok FS O hO)
 
-theorem bv_div.r_div_div.main.ok : bv_div.r_div_div.main.Stmt := kanon_proof% bv_div.r_div_div.main
+theorem Bitvec.div.r_div_div.main.ok : Bitvec.div.r_div_div.main.Stmt := kanon_proof% Bitvec.div.r_div_div.main
 
-theorem bv_div.r_div_div.proof : bv_div.r_div_div.Stmt := by
+theorem Bitvec.div.r_div_div.proof : Bitvec.div.r_div_div.Stmt := by
   intro FS O hO signed v1 v2 res hs_v2 h
-  simp only [bv_div.r_div_div] at h
+  simp only [Bitvec.div.r_div_div] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_div.r_div_div.main.ok FS O hO)
+  · kanon_arm h (Bitvec.div.r_div_div.main.ok FS O hO)
 
-theorem bv_div.r_zext.main.ok : bv_div.r_zext.main.Stmt := kanon_proof% bv_div.r_zext.main
+theorem Bitvec.div.r_zext.main.ok : Bitvec.div.r_zext.main.Stmt := kanon_proof% Bitvec.div.r_zext.main
 
-theorem bv_div.r_zext.proof : bv_div.r_zext.Stmt := by
+theorem Bitvec.div.r_zext.proof : Bitvec.div.r_zext.Stmt := by
   intro FS O hO signed v1 v2 res hs_v2 h
-  simp only [bv_div.r_zext] at h
+  simp only [Bitvec.div.r_zext] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_div.r_zext.main.ok FS O hO)
+  · kanon_arm h (Bitvec.div.r_zext.main.ok FS O hO)
 
-theorem bv_div.r_default.main.ok : bv_div.r_default.main.Stmt := kanon_proof% bv_div.r_default.main
+theorem Bitvec.div.r_default.main.ok : Bitvec.div.r_default.main.Stmt := kanon_proof% Bitvec.div.r_default.main
 
-theorem bv_div.r_default.proof : bv_div.r_default.Stmt := by
+theorem Bitvec.div.r_default.proof : Bitvec.div.r_default.Stmt := by
   intro FS O hO signed v1 v2 res hs_v2 h
-  simp only [bv_div.r_default] at h
+  simp only [Bitvec.div.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_div.r_default.main.ok FS O hO)
+  · kanon_arm h (Bitvec.div.r_default.main.ok FS O hO)
 
-theorem bv_lt_zero.r_sext.main.ok : bv_lt_zero.r_sext.main.Stmt := kanon_proof% bv_lt_zero.r_sext.main
+theorem Bitvec.lt_zero.r_sext.main.ok : Bitvec.lt_zero.r_sext.main.Stmt := kanon_proof% Bitvec.lt_zero.r_sext.main
 
-theorem bv_lt_zero.r_sext.proof : bv_lt_zero.r_sext.Stmt := by
+theorem Bitvec.lt_zero.r_sext.proof : Bitvec.lt_zero.r_sext.Stmt := by
   intro FS O hO v res h
-  simp only [bv_lt_zero.r_sext] at h
+  simp only [Bitvec.lt_zero.r_sext] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt_zero.r_sext.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt_zero.r_sext.main.ok FS O hO)
 
-theorem bv_lt_zero.r_zext.main.ok : bv_lt_zero.r_zext.main.Stmt := kanon_proof% bv_lt_zero.r_zext.main
+theorem Bitvec.lt_zero.r_zext.main.ok : Bitvec.lt_zero.r_zext.main.Stmt := kanon_proof% Bitvec.lt_zero.r_zext.main
 
-theorem bv_lt_zero.r_zext.proof : bv_lt_zero.r_zext.Stmt := by
+theorem Bitvec.lt_zero.r_zext.proof : Bitvec.lt_zero.r_zext.Stmt := by
   intro FS O hO v res h
-  simp only [bv_lt_zero.r_zext] at h
+  simp only [Bitvec.lt_zero.r_zext] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt_zero.r_zext.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt_zero.r_zext.main.ok FS O hO)
 
-theorem bv_lt_zero.r_srem.main.ok : bv_lt_zero.r_srem.main.Stmt := kanon_proof% bv_lt_zero.r_srem.main
+theorem Bitvec.lt_zero.r_srem.main.ok : Bitvec.lt_zero.r_srem.main.Stmt := kanon_proof% Bitvec.lt_zero.r_srem.main
 
-theorem bv_lt_zero.r_srem.proof : bv_lt_zero.r_srem.Stmt := by
+theorem Bitvec.lt_zero.r_srem.proof : Bitvec.lt_zero.r_srem.Stmt := by
   intro FS O hO v res h
-  simp only [bv_lt_zero.r_srem] at h
+  simp only [Bitvec.lt_zero.r_srem] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt_zero.r_srem.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt_zero.r_srem.main.ok FS O hO)
 
-theorem bv_lt_zero.r_concat.main.ok : bv_lt_zero.r_concat.main.Stmt := kanon_proof% bv_lt_zero.r_concat.main
+theorem Bitvec.lt_zero.r_concat.main.ok : Bitvec.lt_zero.r_concat.main.Stmt := kanon_proof% Bitvec.lt_zero.r_concat.main
 
-theorem bv_lt_zero.r_concat.proof : bv_lt_zero.r_concat.Stmt := by
+theorem Bitvec.lt_zero.r_concat.proof : Bitvec.lt_zero.r_concat.Stmt := by
   intro FS O hO v res h
-  simp only [bv_lt_zero.r_concat] at h
+  simp only [Bitvec.lt_zero.r_concat] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt_zero.r_concat.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt_zero.r_concat.main.ok FS O hO)
 
-theorem bv_lt_zero.r_not.main.ok : bv_lt_zero.r_not.main.Stmt := kanon_proof% bv_lt_zero.r_not.main
+theorem Bitvec.lt_zero.r_not.main.ok : Bitvec.lt_zero.r_not.main.Stmt := kanon_proof% Bitvec.lt_zero.r_not.main
 
-theorem bv_lt_zero.r_not.proof : bv_lt_zero.r_not.Stmt := by
+theorem Bitvec.lt_zero.r_not.proof : Bitvec.lt_zero.r_not.Stmt := by
   intro FS O hO v res h
-  simp only [bv_lt_zero.r_not] at h
+  simp only [Bitvec.lt_zero.r_not] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt_zero.r_not.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt_zero.r_not.main.ok FS O hO)
 
-theorem bv_lt_zero.r_of_bool.main.ok : bv_lt_zero.r_of_bool.main.Stmt := kanon_proof% bv_lt_zero.r_of_bool.main
+theorem Bitvec.lt_zero.r_of_bool.main.ok : Bitvec.lt_zero.r_of_bool.main.Stmt := kanon_proof% Bitvec.lt_zero.r_of_bool.main
 
-theorem bv_lt_zero.r_of_bool.proof : bv_lt_zero.r_of_bool.Stmt := by
+theorem Bitvec.lt_zero.r_of_bool.proof : Bitvec.lt_zero.r_of_bool.Stmt := by
   intro FS O hO v res h
-  simp only [bv_lt_zero.r_of_bool] at h
+  simp only [Bitvec.lt_zero.r_of_bool] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt_zero.r_of_bool.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt_zero.r_of_bool.main.ok FS O hO)
 
-theorem bv_lt_zero.r_ite.main.ok : bv_lt_zero.r_ite.main.Stmt := kanon_proof% bv_lt_zero.r_ite.main
+theorem Bitvec.lt_zero.r_ite.main.ok : Bitvec.lt_zero.r_ite.main.Stmt := kanon_proof% Bitvec.lt_zero.r_ite.main
 
-theorem bv_lt_zero.r_ite.proof : bv_lt_zero.r_ite.Stmt := by
+theorem Bitvec.lt_zero.r_ite.proof : Bitvec.lt_zero.r_ite.Stmt := by
   intro FS O hO v res h
-  simp only [bv_lt_zero.r_ite] at h
+  simp only [Bitvec.lt_zero.r_ite] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt_zero.r_ite.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt_zero.r_ite.main.ok FS O hO)
 
-theorem bv_lt_zero.r_default.main.ok : bv_lt_zero.r_default.main.Stmt := kanon_proof% bv_lt_zero.r_default.main
+theorem Bitvec.lt_zero.r_default.main.ok : Bitvec.lt_zero.r_default.main.Stmt := kanon_proof% Bitvec.lt_zero.r_default.main
 
-theorem bv_lt_zero.r_default.proof : bv_lt_zero.r_default.Stmt := by
+theorem Bitvec.lt_zero.r_default.proof : Bitvec.lt_zero.r_default.Stmt := by
   intro FS O hO v res h
-  simp only [bv_lt_zero.r_default] at h
+  simp only [Bitvec.lt_zero.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt_zero.r_default.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt_zero.r_default.main.ok FS O hO)
 
-theorem bv_lt.r_lits.main.ok : bv_lt.r_lits.main.Stmt := kanon_proof% bv_lt.r_lits.main
+theorem Bitvec.lt.r_lits.main.ok : Bitvec.lt.r_lits.main.Stmt := kanon_proof% Bitvec.lt.r_lits.main
 
-theorem bv_lt.r_lits.proof : bv_lt.r_lits.Stmt := by
+theorem Bitvec.lt.r_lits.proof : Bitvec.lt.r_lits.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_lt.r_lits] at h
+  simp only [Bitvec.lt.r_lits] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt.r_lits.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_lits.main.ok FS O hO)
 
-theorem bv_lt.r_same.main.ok : bv_lt.r_same.main.Stmt := kanon_proof% bv_lt.r_same.main
+theorem Bitvec.lt.r_same.main.ok : Bitvec.lt.r_same.main.Stmt := kanon_proof% Bitvec.lt.r_same.main
 
-theorem bv_lt.r_same.proof : bv_lt.r_same.Stmt := by
+theorem Bitvec.lt.r_same.proof : Bitvec.lt.r_same.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_lt.r_same] at h
+  simp only [Bitvec.lt.r_same] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt.r_same.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_same.main.ok FS O hO)
 
-theorem bv_lt.r_negs.main.ok : bv_lt.r_negs.main.Stmt := kanon_proof% bv_lt.r_negs.main
+theorem Bitvec.lt.r_negs.main.ok : Bitvec.lt.r_negs.main.Stmt := kanon_proof% Bitvec.lt.r_negs.main
 
-theorem bv_lt.r_negs.proof : bv_lt.r_negs.Stmt := by
+theorem Bitvec.lt.r_negs.proof : Bitvec.lt.r_negs.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_lt.r_negs] at h
+  simp only [Bitvec.lt.r_negs] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt.r_negs.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_negs.main.ok FS O hO)
 
-theorem bv_lt.r_neg_l.main.ok : bv_lt.r_neg_l.main.Stmt := kanon_proof% bv_lt.r_neg_l.main
+theorem Bitvec.lt.r_neg_l.main.ok : Bitvec.lt.r_neg_l.main.Stmt := kanon_proof% Bitvec.lt.r_neg_l.main
 
-theorem bv_lt.r_neg_l.proof : bv_lt.r_neg_l.Stmt := by
+theorem Bitvec.lt.r_neg_l.proof : Bitvec.lt.r_neg_l.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_lt.r_neg_l] at h
+  simp only [Bitvec.lt.r_neg_l] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt.r_neg_l.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_neg_l.main.ok FS O hO)
 
-theorem bv_lt.r_neg_r.main.ok : bv_lt.r_neg_r.main.Stmt := kanon_proof% bv_lt.r_neg_r.main
+theorem Bitvec.lt.r_neg_r.main.ok : Bitvec.lt.r_neg_r.main.Stmt := kanon_proof% Bitvec.lt.r_neg_r.main
 
-theorem bv_lt.r_neg_r.proof : bv_lt.r_neg_r.Stmt := by
+theorem Bitvec.lt.r_neg_r.proof : Bitvec.lt.r_neg_r.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_lt.r_neg_r] at h
+  simp only [Bitvec.lt.r_neg_r] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt.r_neg_r.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_neg_r.main.ok FS O hO)
 
-theorem bv_lt.r_const_add.main.ok : bv_lt.r_const_add.main.Stmt := kanon_proof% bv_lt.r_const_add.main
+theorem Bitvec.lt.r_const_add.main.ok : Bitvec.lt.r_const_add.main.Stmt := kanon_proof% Bitvec.lt.r_const_add.main
 
-theorem bv_lt.r_const_add.swap.ok : bv_lt.r_const_add.swap.Stmt := kanon_proof% bv_lt.r_const_add.swap
+theorem Bitvec.lt.r_const_add.swap.ok : Bitvec.lt.r_const_add.swap.Stmt := kanon_proof% Bitvec.lt.r_const_add.swap
 
-theorem bv_lt.r_const_add.proof : bv_lt.r_const_add.Stmt := by
+theorem Bitvec.lt.r_const_add.proof : Bitvec.lt.r_const_add.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_lt.r_const_add] at h
+  simp only [Bitvec.lt.r_const_add] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt.r_const_add.main.ok FS O hO)
-  · kanon_arm h (bv_lt.r_const_add.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_const_add.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_const_add.swap.ok FS O hO)
 
-theorem bv_lt.r_add_const.main.ok : bv_lt.r_add_const.main.Stmt := kanon_proof% bv_lt.r_add_const.main
+theorem Bitvec.lt.r_add_const.main.ok : Bitvec.lt.r_add_const.main.Stmt := kanon_proof% Bitvec.lt.r_add_const.main
 
-theorem bv_lt.r_add_const.swap.ok : bv_lt.r_add_const.swap.Stmt := kanon_proof% bv_lt.r_add_const.swap
+theorem Bitvec.lt.r_add_const.swap.ok : Bitvec.lt.r_add_const.swap.Stmt := kanon_proof% Bitvec.lt.r_add_const.swap
 
-theorem bv_lt.r_add_const.proof : bv_lt.r_add_const.Stmt := by
+theorem Bitvec.lt.r_add_const.proof : Bitvec.lt.r_add_const.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_lt.r_add_const] at h
+  simp only [Bitvec.lt.r_add_const] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt.r_add_const.main.ok FS O hO)
-  · kanon_arm h (bv_lt.r_add_const.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_add_const.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_add_const.swap.ok FS O hO)
 
-theorem bv_lt.r_self_add_r.main.ok : bv_lt.r_self_add_r.main.Stmt := kanon_proof% bv_lt.r_self_add_r.main
+theorem Bitvec.lt.r_self_add_r.main.ok : Bitvec.lt.r_self_add_r.main.Stmt := kanon_proof% Bitvec.lt.r_self_add_r.main
 
-theorem bv_lt.r_self_add_r.swap.ok : bv_lt.r_self_add_r.swap.Stmt := by
+theorem Bitvec.lt.r_self_add_r.swap.ok : Bitvec.lt.r_self_add_r.swap.Stmt := by
   intro FS O hO signed v1 checked b kanon__4 t__6 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Add checked) b kanon__4) t__6)
     (Term.mk (Kind.Op2 (Op2.Add checked) kanon__4 b) t__6) :=
     Op2.Add.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_lt.r_self_add_r.main.ok FS O hO signed v1 checked kanon__4 b t__6 hg)
-  simp only [bv_lt.spec]
+    (Bitvec.lt.r_self_add_r.main.ok FS O hO signed v1 checked kanon__4 b t__6 hg)
+  simp only [Bitvec.lt.spec]
   kanon_congr
 
-theorem bv_lt.r_self_add_r.proof : bv_lt.r_self_add_r.Stmt := by
+theorem Bitvec.lt.r_self_add_r.proof : Bitvec.lt.r_self_add_r.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_lt.r_self_add_r] at h
+  simp only [Bitvec.lt.r_self_add_r] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt.r_self_add_r.main.ok FS O hO)
-  · kanon_arm h (bv_lt.r_self_add_r.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_self_add_r.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_self_add_r.swap.ok FS O hO)
 
-theorem bv_lt.r_self_add_l.main.ok : bv_lt.r_self_add_l.main.Stmt := kanon_proof% bv_lt.r_self_add_l.main
+theorem Bitvec.lt.r_self_add_l.main.ok : Bitvec.lt.r_self_add_l.main.Stmt := kanon_proof% Bitvec.lt.r_self_add_l.main
 
-theorem bv_lt.r_self_add_l.swap.ok : bv_lt.r_self_add_l.swap.Stmt := by
+theorem Bitvec.lt.r_self_add_l.swap.ok : Bitvec.lt.r_self_add_l.swap.Stmt := by
   intro FS O hO signed v2 checked b a t__5 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Add checked) b a) t__5)
     (Term.mk (Kind.Op2 (Op2.Add checked) a b) t__5) :=
     Op2.Add.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_lt.r_self_add_l.main.ok FS O hO signed v2 checked a b t__5 hg)
-  simp only [bv_lt.spec]
+    (Bitvec.lt.r_self_add_l.main.ok FS O hO signed v2 checked a b t__5 hg)
+  simp only [Bitvec.lt.spec]
   kanon_congr
 
-theorem bv_lt.r_self_add_l.proof : bv_lt.r_self_add_l.Stmt := by
+theorem Bitvec.lt.r_self_add_l.proof : Bitvec.lt.r_self_add_l.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_lt.r_self_add_l] at h
+  simp only [Bitvec.lt.r_self_add_l] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt.r_self_add_l.main.ok FS O hO)
-  · kanon_arm h (bv_lt.r_self_add_l.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_self_add_l.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_self_add_l.swap.ok FS O hO)
 
-theorem bv_lt.r_add_add.main.ok : bv_lt.r_add_add.main.Stmt := kanon_proof% bv_lt.r_add_add.main
+theorem Bitvec.lt.r_add_add.main.ok : Bitvec.lt.r_add_add.main.Stmt := kanon_proof% Bitvec.lt.r_add_add.main
 
-theorem bv_lt.r_add_add.swap2.ok : bv_lt.r_add_add.swap2.Stmt := kanon_proof% bv_lt.r_add_add.swap2
+theorem Bitvec.lt.r_add_add.swap2.ok : Bitvec.lt.r_add_add.swap2.Stmt := kanon_proof% Bitvec.lt.r_add_add.swap2
 
-theorem bv_lt.r_add_add.swap1.ok : bv_lt.r_add_add.swap1.Stmt := kanon_proof% bv_lt.r_add_add.swap1
+theorem Bitvec.lt.r_add_add.swap1.ok : Bitvec.lt.r_add_add.swap1.Stmt := kanon_proof% Bitvec.lt.r_add_add.swap1
 
-theorem bv_lt.r_add_add.swap1_swap2.ok : bv_lt.r_add_add.swap1_swap2.Stmt := kanon_proof% bv_lt.r_add_add.swap1_swap2
+theorem Bitvec.lt.r_add_add.swap1_swap2.ok : Bitvec.lt.r_add_add.swap1_swap2.Stmt := kanon_proof% Bitvec.lt.r_add_add.swap1_swap2
 
-theorem bv_lt.r_add_add.proof : bv_lt.r_add_add.Stmt := by
+theorem Bitvec.lt.r_add_add.proof : Bitvec.lt.r_add_add.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_lt.r_add_add] at h
+  simp only [Bitvec.lt.r_add_add] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt.r_add_add.main.ok FS O hO)
-  · kanon_arm h (bv_lt.r_add_add.swap2.ok FS O hO)
-  · kanon_arm h (bv_lt.r_add_add.swap1.ok FS O hO)
-  · kanon_arm h (bv_lt.r_add_add.swap1_swap2.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_add_add.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_add_add.swap2.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_add_add.swap1.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_add_add.swap1_swap2.ok FS O hO)
 
-theorem bv_lt.r_one.main.ok : bv_lt.r_one.main.Stmt := kanon_proof% bv_lt.r_one.main
+theorem Bitvec.lt.r_one.main.ok : Bitvec.lt.r_one.main.Stmt := kanon_proof% Bitvec.lt.r_one.main
 
-theorem bv_lt.r_one.proof : bv_lt.r_one.Stmt := by
+theorem Bitvec.lt.r_one.proof : Bitvec.lt.r_one.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_lt.r_one] at h
+  simp only [Bitvec.lt.r_one] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt.r_one.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_one.main.ok FS O hO)
 
-theorem bv_lt.r_of_bool.main.ok : bv_lt.r_of_bool.main.Stmt := kanon_proof% bv_lt.r_of_bool.main
+theorem Bitvec.lt.r_of_bool.main.ok : Bitvec.lt.r_of_bool.main.Stmt := kanon_proof% Bitvec.lt.r_of_bool.main
 
-theorem bv_lt.r_of_bool.proof : bv_lt.r_of_bool.Stmt := by
+theorem Bitvec.lt.r_of_bool.proof : Bitvec.lt.r_of_bool.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_lt.r_of_bool] at h
+  simp only [Bitvec.lt.r_of_bool] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt.r_of_bool.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_of_bool.main.ok FS O hO)
 
-theorem bv_lt.r_ite_l.main.ok : bv_lt.r_ite_l.main.Stmt := kanon_proof% bv_lt.r_ite_l.main
+theorem Bitvec.lt.r_ite_l.main.ok : Bitvec.lt.r_ite_l.main.Stmt := kanon_proof% Bitvec.lt.r_ite_l.main
 
-theorem bv_lt.r_ite_l.proof : bv_lt.r_ite_l.Stmt := by
+theorem Bitvec.lt.r_ite_l.proof : Bitvec.lt.r_ite_l.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_lt.r_ite_l] at h
+  simp only [Bitvec.lt.r_ite_l] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt.r_ite_l.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_ite_l.main.ok FS O hO)
 
-theorem bv_lt.r_ite_r.main.ok : bv_lt.r_ite_r.main.Stmt := kanon_proof% bv_lt.r_ite_r.main
+theorem Bitvec.lt.r_ite_r.main.ok : Bitvec.lt.r_ite_r.main.Stmt := kanon_proof% Bitvec.lt.r_ite_r.main
 
-theorem bv_lt.r_ite_r.proof : bv_lt.r_ite_r.Stmt := by
+theorem Bitvec.lt.r_ite_r.proof : Bitvec.lt.r_ite_r.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_lt.r_ite_r] at h
+  simp only [Bitvec.lt.r_ite_r] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt.r_ite_r.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_ite_r.main.ok FS O hO)
 
-theorem bv_lt.r_lt_zero.main.ok : bv_lt.r_lt_zero.main.Stmt := kanon_proof% bv_lt.r_lt_zero.main
+theorem Bitvec.lt.r_lt_zero.main.ok : Bitvec.lt.r_lt_zero.main.Stmt := kanon_proof% Bitvec.lt.r_lt_zero.main
 
-theorem bv_lt.r_lt_zero.proof : bv_lt.r_lt_zero.Stmt := by
+theorem Bitvec.lt.r_lt_zero.proof : Bitvec.lt.r_lt_zero.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_lt.r_lt_zero] at h
+  simp only [Bitvec.lt.r_lt_zero] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt.r_lt_zero.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_lt_zero.main.ok FS O hO)
 
-theorem bv_lt.r_max_l.main.ok : bv_lt.r_max_l.main.Stmt := kanon_proof% bv_lt.r_max_l.main
+theorem Bitvec.lt.r_max_l.main.ok : Bitvec.lt.r_max_l.main.Stmt := kanon_proof% Bitvec.lt.r_max_l.main
 
-theorem bv_lt.r_max_l.proof : bv_lt.r_max_l.Stmt := by
+theorem Bitvec.lt.r_max_l.proof : Bitvec.lt.r_max_l.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_lt.r_max_l] at h
+  simp only [Bitvec.lt.r_max_l] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt.r_max_l.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_max_l.main.ok FS O hO)
 
-theorem bv_lt.r_min_r.main.ok : bv_lt.r_min_r.main.Stmt := kanon_proof% bv_lt.r_min_r.main
+theorem Bitvec.lt.r_min_r.main.ok : Bitvec.lt.r_min_r.main.Stmt := kanon_proof% Bitvec.lt.r_min_r.main
 
-theorem bv_lt.r_min_r.proof : bv_lt.r_min_r.Stmt := by
+theorem Bitvec.lt.r_min_r.proof : Bitvec.lt.r_min_r.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_lt.r_min_r] at h
+  simp only [Bitvec.lt.r_min_r] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt.r_min_r.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_min_r.main.ok FS O hO)
 
-theorem bv_lt.r_min_l.main.ok : bv_lt.r_min_l.main.Stmt := kanon_proof% bv_lt.r_min_l.main
+theorem Bitvec.lt.r_min_l.main.ok : Bitvec.lt.r_min_l.main.Stmt := kanon_proof% Bitvec.lt.r_min_l.main
 
-theorem bv_lt.r_min_l.proof : bv_lt.r_min_l.Stmt := by
+theorem Bitvec.lt.r_min_l.proof : Bitvec.lt.r_min_l.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_lt.r_min_l] at h
+  simp only [Bitvec.lt.r_min_l] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt.r_min_l.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_min_l.main.ok FS O hO)
 
-theorem bv_lt.r_max_r.main.ok : bv_lt.r_max_r.main.Stmt := kanon_proof% bv_lt.r_max_r.main
+theorem Bitvec.lt.r_max_r.main.ok : Bitvec.lt.r_max_r.main.Stmt := kanon_proof% Bitvec.lt.r_max_r.main
 
-theorem bv_lt.r_max_r.proof : bv_lt.r_max_r.Stmt := by
+theorem Bitvec.lt.r_max_r.proof : Bitvec.lt.r_max_r.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_lt.r_max_r] at h
+  simp only [Bitvec.lt.r_max_r] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt.r_max_r.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_max_r.main.ok FS O hO)
 
-theorem bv_lt.r_const_mul.main.ok : bv_lt.r_const_mul.main.Stmt := kanon_proof% bv_lt.r_const_mul.main
+theorem Bitvec.lt.r_const_mul.main.ok : Bitvec.lt.r_const_mul.main.Stmt := kanon_proof% Bitvec.lt.r_const_mul.main
 
-theorem bv_lt.r_const_mul.swap.ok : bv_lt.r_const_mul.swap.Stmt := by
+theorem Bitvec.lt.r_const_mul.swap.ok : Bitvec.lt.r_const_mul.swap.Stmt := by
   intro FS O hO signed c2 t__2 checked c1 t__7 x t__9 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Mul checked) (Term.mk (Kind.BitVec c1) t__7) x) t__9)
     (Term.mk (Kind.Op2 (Op2.Mul checked) x (Term.mk (Kind.BitVec c1) t__7)) t__9) :=
     Op2.Mul.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_lt.r_const_mul.main.ok FS O hO signed c2 t__2 checked x c1 t__7 t__9 hg)
-  simp only [bv_lt.spec]
+    (Bitvec.lt.r_const_mul.main.ok FS O hO signed c2 t__2 checked x c1 t__7 t__9 hg)
+  simp only [Bitvec.lt.spec]
   kanon_congr
 
-theorem bv_lt.r_const_mul.proof : bv_lt.r_const_mul.Stmt := by
+theorem Bitvec.lt.r_const_mul.proof : Bitvec.lt.r_const_mul.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_lt.r_const_mul] at h
+  simp only [Bitvec.lt.r_const_mul] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt.r_const_mul.main.ok FS O hO)
-  · kanon_arm h (bv_lt.r_const_mul.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_const_mul.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_const_mul.swap.ok FS O hO)
 
-theorem bv_lt.r_mul_const.main.ok : bv_lt.r_mul_const.main.Stmt := kanon_proof% bv_lt.r_mul_const.main
+theorem Bitvec.lt.r_mul_const.main.ok : Bitvec.lt.r_mul_const.main.Stmt := kanon_proof% Bitvec.lt.r_mul_const.main
 
-theorem bv_lt.r_mul_const.swap.ok : bv_lt.r_mul_const.swap.Stmt := by
+theorem Bitvec.lt.r_mul_const.swap.ok : Bitvec.lt.r_mul_const.swap.Stmt := by
   intro FS O hO signed checked c1 t__5 x t__7 c2 t__10 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Mul checked) (Term.mk (Kind.BitVec c1) t__5) x) t__7)
     (Term.mk (Kind.Op2 (Op2.Mul checked) x (Term.mk (Kind.BitVec c1) t__5)) t__7) :=
     Op2.Mul.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_lt.r_mul_const.main.ok FS O hO signed checked x c1 t__5 t__7 c2 t__10 hg)
-  simp only [bv_lt.spec]
+    (Bitvec.lt.r_mul_const.main.ok FS O hO signed checked x c1 t__5 t__7 c2 t__10 hg)
+  simp only [Bitvec.lt.spec]
   kanon_congr
 
-theorem bv_lt.r_mul_const.proof : bv_lt.r_mul_const.Stmt := by
+theorem Bitvec.lt.r_mul_const.proof : Bitvec.lt.r_mul_const.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_lt.r_mul_const] at h
+  simp only [Bitvec.lt.r_mul_const] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt.r_mul_const.main.ok FS O hO)
-  · kanon_arm h (bv_lt.r_mul_const.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_mul_const.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_mul_const.swap.ok FS O hO)
 
-theorem bv_lt.r_mul_mul.main.ok : bv_lt.r_mul_mul.main.Stmt := kanon_proof% bv_lt.r_mul_mul.main
+theorem Bitvec.lt.r_mul_mul.main.ok : Bitvec.lt.r_mul_mul.main.Stmt := kanon_proof% Bitvec.lt.r_mul_mul.main
 
-theorem bv_lt.r_mul_mul.swap2.ok : bv_lt.r_mul_mul.swap2.Stmt := by
+theorem Bitvec.lt.r_mul_mul.swap2.ok : Bitvec.lt.r_mul_mul.swap2.Stmt := by
   intro FS O hO signed checked_l a x t__5 checked_r y kanon__9 t__11 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Mul checked_r) y kanon__9) t__11)
     (Term.mk (Kind.Op2 (Op2.Mul checked_r) kanon__9 y) t__11) :=
     Op2.Mul.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_lt.r_mul_mul.main.ok FS O hO signed checked_l a x t__5 checked_r kanon__9 y t__11 hg)
-  simp only [bv_lt.spec]
+    (Bitvec.lt.r_mul_mul.main.ok FS O hO signed checked_l a x t__5 checked_r kanon__9 y t__11 hg)
+  simp only [Bitvec.lt.spec]
   kanon_congr
 
-theorem bv_lt.r_mul_mul.swap1.ok : bv_lt.r_mul_mul.swap1.Stmt := by
+theorem Bitvec.lt.r_mul_mul.swap1.ok : Bitvec.lt.r_mul_mul.swap1.Stmt := by
   intro FS O hO signed checked_l x a t__5 checked_r kanon__9 y t__11 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Mul checked_l) x a) t__5)
     (Term.mk (Kind.Op2 (Op2.Mul checked_l) a x) t__5) :=
     Op2.Mul.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_lt.r_mul_mul.main.ok FS O hO signed checked_l a x t__5 checked_r kanon__9 y t__11 hg)
-  simp only [bv_lt.spec]
+    (Bitvec.lt.r_mul_mul.main.ok FS O hO signed checked_l a x t__5 checked_r kanon__9 y t__11 hg)
+  simp only [Bitvec.lt.spec]
   kanon_congr
 
-theorem bv_lt.r_mul_mul.swap1_swap2.ok : bv_lt.r_mul_mul.swap1_swap2.Stmt := by
+theorem Bitvec.lt.r_mul_mul.swap1_swap2.ok : Bitvec.lt.r_mul_mul.swap1_swap2.Stmt := by
   intro FS O hO signed checked_l x a t__5 checked_r y kanon__9 t__11 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Mul checked_l) x a) t__5)
     (Term.mk (Kind.Op2 (Op2.Mul checked_l) a x) t__5) :=
@@ -3702,285 +3825,285 @@ theorem bv_lt.r_mul_mul.swap1_swap2.ok : bv_lt.r_mul_mul.swap1_swap2.Stmt := by
     (Term.mk (Kind.Op2 (Op2.Mul checked_r) kanon__9 y) t__11) :=
     Op2.Mul.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_lt.r_mul_mul.main.ok FS O hO signed checked_l a x t__5 checked_r kanon__9 y t__11 hg)
-  simp only [bv_lt.spec]
+    (Bitvec.lt.r_mul_mul.main.ok FS O hO signed checked_l a x t__5 checked_r kanon__9 y t__11 hg)
+  simp only [Bitvec.lt.spec]
   kanon_congr
 
-theorem bv_lt.r_mul_mul.proof : bv_lt.r_mul_mul.Stmt := by
+theorem Bitvec.lt.r_mul_mul.proof : Bitvec.lt.r_mul_mul.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_lt.r_mul_mul] at h
+  simp only [Bitvec.lt.r_mul_mul] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt.r_mul_mul.main.ok FS O hO)
-  · kanon_arm h (bv_lt.r_mul_mul.swap2.ok FS O hO)
-  · kanon_arm h (bv_lt.r_mul_mul.swap1.ok FS O hO)
-  · kanon_arm h (bv_lt.r_mul_mul.swap1_swap2.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_mul_mul.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_mul_mul.swap2.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_mul_mul.swap1.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_mul_mul.swap1_swap2.ok FS O hO)
 
-theorem bv_lt.r_const_sub1.main.ok : bv_lt.r_const_sub1.main.Stmt := kanon_proof% bv_lt.r_const_sub1.main
+theorem Bitvec.lt.r_const_sub1.main.ok : Bitvec.lt.r_const_sub1.main.Stmt := kanon_proof% Bitvec.lt.r_const_sub1.main
 
-theorem bv_lt.r_const_sub1.proof : bv_lt.r_const_sub1.Stmt := by
+theorem Bitvec.lt.r_const_sub1.proof : Bitvec.lt.r_const_sub1.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_lt.r_const_sub1] at h
+  simp only [Bitvec.lt.r_const_sub1] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt.r_const_sub1.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_const_sub1.main.ok FS O hO)
 
-theorem bv_lt.r_const_sub2.main.ok : bv_lt.r_const_sub2.main.Stmt := kanon_proof% bv_lt.r_const_sub2.main
+theorem Bitvec.lt.r_const_sub2.main.ok : Bitvec.lt.r_const_sub2.main.Stmt := kanon_proof% Bitvec.lt.r_const_sub2.main
 
-theorem bv_lt.r_const_sub2.proof : bv_lt.r_const_sub2.Stmt := by
+theorem Bitvec.lt.r_const_sub2.proof : Bitvec.lt.r_const_sub2.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_lt.r_const_sub2] at h
+  simp only [Bitvec.lt.r_const_sub2] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt.r_const_sub2.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_const_sub2.main.ok FS O hO)
 
-theorem bv_lt.r_sub_const1.main.ok : bv_lt.r_sub_const1.main.Stmt := kanon_proof% bv_lt.r_sub_const1.main
+theorem Bitvec.lt.r_sub_const1.main.ok : Bitvec.lt.r_sub_const1.main.Stmt := kanon_proof% Bitvec.lt.r_sub_const1.main
 
-theorem bv_lt.r_sub_const1.proof : bv_lt.r_sub_const1.Stmt := by
+theorem Bitvec.lt.r_sub_const1.proof : Bitvec.lt.r_sub_const1.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_lt.r_sub_const1] at h
+  simp only [Bitvec.lt.r_sub_const1] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt.r_sub_const1.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_sub_const1.main.ok FS O hO)
 
-theorem bv_lt.r_sub_const2.main.ok : bv_lt.r_sub_const2.main.Stmt := kanon_proof% bv_lt.r_sub_const2.main
+theorem Bitvec.lt.r_sub_const2.main.ok : Bitvec.lt.r_sub_const2.main.Stmt := kanon_proof% Bitvec.lt.r_sub_const2.main
 
-theorem bv_lt.r_sub_const2.proof : bv_lt.r_sub_const2.Stmt := by
+theorem Bitvec.lt.r_sub_const2.proof : Bitvec.lt.r_sub_const2.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_lt.r_sub_const2] at h
+  simp only [Bitvec.lt.r_sub_const2] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt.r_sub_const2.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_sub_const2.main.ok FS O hO)
 
-theorem bv_lt.r_ub_r.main.ok : bv_lt.r_ub_r.main.Stmt := kanon_proof% bv_lt.r_ub_r.main
+theorem Bitvec.lt.r_ub_r.main.ok : Bitvec.lt.r_ub_r.main.Stmt := kanon_proof% Bitvec.lt.r_ub_r.main
 
-theorem bv_lt.r_ub_r.proof : bv_lt.r_ub_r.Stmt := by
+theorem Bitvec.lt.r_ub_r.proof : Bitvec.lt.r_ub_r.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_lt.r_ub_r] at h
+  simp only [Bitvec.lt.r_ub_r] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt.r_ub_r.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_ub_r.main.ok FS O hO)
 
-theorem bv_lt.r_ub_l.main.ok : bv_lt.r_ub_l.main.Stmt := kanon_proof% bv_lt.r_ub_l.main
+theorem Bitvec.lt.r_ub_l.main.ok : Bitvec.lt.r_ub_l.main.Stmt := kanon_proof% Bitvec.lt.r_ub_l.main
 
-theorem bv_lt.r_ub_l.proof : bv_lt.r_ub_l.Stmt := by
+theorem Bitvec.lt.r_ub_l.proof : Bitvec.lt.r_ub_l.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_lt.r_ub_l] at h
+  simp only [Bitvec.lt.r_ub_l] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt.r_ub_l.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_ub_l.main.ok FS O hO)
 
-theorem bv_lt.r_to_unsigned_l.main.ok : bv_lt.r_to_unsigned_l.main.Stmt := kanon_proof% bv_lt.r_to_unsigned_l.main
+theorem Bitvec.lt.r_to_unsigned_l.main.ok : Bitvec.lt.r_to_unsigned_l.main.Stmt := kanon_proof% Bitvec.lt.r_to_unsigned_l.main
 
-theorem bv_lt.r_to_unsigned_l.proof : bv_lt.r_to_unsigned_l.Stmt := by
+theorem Bitvec.lt.r_to_unsigned_l.proof : Bitvec.lt.r_to_unsigned_l.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_lt.r_to_unsigned_l] at h
+  simp only [Bitvec.lt.r_to_unsigned_l] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt.r_to_unsigned_l.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_to_unsigned_l.main.ok FS O hO)
 
-theorem bv_lt.r_to_unsigned_r.main.ok : bv_lt.r_to_unsigned_r.main.Stmt := kanon_proof% bv_lt.r_to_unsigned_r.main
+theorem Bitvec.lt.r_to_unsigned_r.main.ok : Bitvec.lt.r_to_unsigned_r.main.Stmt := kanon_proof% Bitvec.lt.r_to_unsigned_r.main
 
-theorem bv_lt.r_to_unsigned_r.proof : bv_lt.r_to_unsigned_r.Stmt := by
+theorem Bitvec.lt.r_to_unsigned_r.proof : Bitvec.lt.r_to_unsigned_r.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_lt.r_to_unsigned_r] at h
+  simp only [Bitvec.lt.r_to_unsigned_r] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt.r_to_unsigned_r.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_to_unsigned_r.main.ok FS O hO)
 
-theorem bv_lt.r_default.main.ok : bv_lt.r_default.main.Stmt := kanon_proof% bv_lt.r_default.main
+theorem Bitvec.lt.r_default.main.ok : Bitvec.lt.r_default.main.Stmt := kanon_proof% Bitvec.lt.r_default.main
 
-theorem bv_lt.r_default.proof : bv_lt.r_default.Stmt := by
+theorem Bitvec.lt.r_default.proof : Bitvec.lt.r_default.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_lt.r_default] at h
+  simp only [Bitvec.lt.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_lt.r_default.main.ok FS O hO)
+  · kanon_arm h (Bitvec.lt.r_default.main.ok FS O hO)
 
-theorem bv_leq.r_same.main.ok : bv_leq.r_same.main.Stmt := kanon_proof% bv_leq.r_same.main
+theorem Bitvec.leq.r_same.main.ok : Bitvec.leq.r_same.main.Stmt := kanon_proof% Bitvec.leq.r_same.main
 
-theorem bv_leq.r_same.proof : bv_leq.r_same.Stmt := by
+theorem Bitvec.leq.r_same.proof : Bitvec.leq.r_same.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_leq.r_same] at h
+  simp only [Bitvec.leq.r_same] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_leq.r_same.main.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_same.main.ok FS O hO)
 
-theorem bv_leq.r_lits.main.ok : bv_leq.r_lits.main.Stmt := kanon_proof% bv_leq.r_lits.main
+theorem Bitvec.leq.r_lits.main.ok : Bitvec.leq.r_lits.main.Stmt := kanon_proof% Bitvec.leq.r_lits.main
 
-theorem bv_leq.r_lits.proof : bv_leq.r_lits.Stmt := by
+theorem Bitvec.leq.r_lits.proof : Bitvec.leq.r_lits.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_leq.r_lits] at h
+  simp only [Bitvec.leq.r_lits] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_leq.r_lits.main.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_lits.main.ok FS O hO)
 
-theorem bv_leq.r_negs.main.ok : bv_leq.r_negs.main.Stmt := kanon_proof% bv_leq.r_negs.main
+theorem Bitvec.leq.r_negs.main.ok : Bitvec.leq.r_negs.main.Stmt := kanon_proof% Bitvec.leq.r_negs.main
 
-theorem bv_leq.r_negs.proof : bv_leq.r_negs.Stmt := by
+theorem Bitvec.leq.r_negs.proof : Bitvec.leq.r_negs.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_leq.r_negs] at h
+  simp only [Bitvec.leq.r_negs] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_leq.r_negs.main.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_negs.main.ok FS O hO)
 
-theorem bv_leq.r_neg_l.main.ok : bv_leq.r_neg_l.main.Stmt := kanon_proof% bv_leq.r_neg_l.main
+theorem Bitvec.leq.r_neg_l.main.ok : Bitvec.leq.r_neg_l.main.Stmt := kanon_proof% Bitvec.leq.r_neg_l.main
 
-theorem bv_leq.r_neg_l.proof : bv_leq.r_neg_l.Stmt := by
+theorem Bitvec.leq.r_neg_l.proof : Bitvec.leq.r_neg_l.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_leq.r_neg_l] at h
+  simp only [Bitvec.leq.r_neg_l] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_leq.r_neg_l.main.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_neg_l.main.ok FS O hO)
 
-theorem bv_leq.r_neg_r.main.ok : bv_leq.r_neg_r.main.Stmt := kanon_proof% bv_leq.r_neg_r.main
+theorem Bitvec.leq.r_neg_r.main.ok : Bitvec.leq.r_neg_r.main.Stmt := kanon_proof% Bitvec.leq.r_neg_r.main
 
-theorem bv_leq.r_neg_r.proof : bv_leq.r_neg_r.Stmt := by
+theorem Bitvec.leq.r_neg_r.proof : Bitvec.leq.r_neg_r.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_leq.r_neg_r] at h
+  simp only [Bitvec.leq.r_neg_r] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_leq.r_neg_r.main.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_neg_r.main.ok FS O hO)
 
-theorem bv_leq.r_const_add.main.ok : bv_leq.r_const_add.main.Stmt := kanon_proof% bv_leq.r_const_add.main
+theorem Bitvec.leq.r_const_add.main.ok : Bitvec.leq.r_const_add.main.Stmt := kanon_proof% Bitvec.leq.r_const_add.main
 
-theorem bv_leq.r_const_add.swap.ok : bv_leq.r_const_add.swap.Stmt := kanon_proof% bv_leq.r_const_add.swap
+theorem Bitvec.leq.r_const_add.swap.ok : Bitvec.leq.r_const_add.swap.Stmt := kanon_proof% Bitvec.leq.r_const_add.swap
 
-theorem bv_leq.r_const_add.proof : bv_leq.r_const_add.Stmt := by
+theorem Bitvec.leq.r_const_add.proof : Bitvec.leq.r_const_add.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_leq.r_const_add] at h
+  simp only [Bitvec.leq.r_const_add] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_leq.r_const_add.main.ok FS O hO)
-  · kanon_arm h (bv_leq.r_const_add.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_const_add.main.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_const_add.swap.ok FS O hO)
 
-theorem bv_leq.r_add_const.main.ok : bv_leq.r_add_const.main.Stmt := kanon_proof% bv_leq.r_add_const.main
+theorem Bitvec.leq.r_add_const.main.ok : Bitvec.leq.r_add_const.main.Stmt := kanon_proof% Bitvec.leq.r_add_const.main
 
-theorem bv_leq.r_add_const.swap.ok : bv_leq.r_add_const.swap.Stmt := kanon_proof% bv_leq.r_add_const.swap
+theorem Bitvec.leq.r_add_const.swap.ok : Bitvec.leq.r_add_const.swap.Stmt := kanon_proof% Bitvec.leq.r_add_const.swap
 
-theorem bv_leq.r_add_const.proof : bv_leq.r_add_const.Stmt := by
+theorem Bitvec.leq.r_add_const.proof : Bitvec.leq.r_add_const.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_leq.r_add_const] at h
+  simp only [Bitvec.leq.r_add_const] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_leq.r_add_const.main.ok FS O hO)
-  · kanon_arm h (bv_leq.r_add_const.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_add_const.main.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_add_const.swap.ok FS O hO)
 
-theorem bv_leq.r_add_add.main.ok : bv_leq.r_add_add.main.Stmt := kanon_proof% bv_leq.r_add_add.main
+theorem Bitvec.leq.r_add_add.main.ok : Bitvec.leq.r_add_add.main.Stmt := kanon_proof% Bitvec.leq.r_add_add.main
 
-theorem bv_leq.r_add_add.swap2.ok : bv_leq.r_add_add.swap2.Stmt := kanon_proof% bv_leq.r_add_add.swap2
+theorem Bitvec.leq.r_add_add.swap2.ok : Bitvec.leq.r_add_add.swap2.Stmt := kanon_proof% Bitvec.leq.r_add_add.swap2
 
-theorem bv_leq.r_add_add.swap1.ok : bv_leq.r_add_add.swap1.Stmt := kanon_proof% bv_leq.r_add_add.swap1
+theorem Bitvec.leq.r_add_add.swap1.ok : Bitvec.leq.r_add_add.swap1.Stmt := kanon_proof% Bitvec.leq.r_add_add.swap1
 
-theorem bv_leq.r_add_add.swap1_swap2.ok : bv_leq.r_add_add.swap1_swap2.Stmt := kanon_proof% bv_leq.r_add_add.swap1_swap2
+theorem Bitvec.leq.r_add_add.swap1_swap2.ok : Bitvec.leq.r_add_add.swap1_swap2.Stmt := kanon_proof% Bitvec.leq.r_add_add.swap1_swap2
 
-theorem bv_leq.r_add_add.proof : bv_leq.r_add_add.Stmt := by
+theorem Bitvec.leq.r_add_add.proof : Bitvec.leq.r_add_add.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_leq.r_add_add] at h
+  simp only [Bitvec.leq.r_add_add] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_leq.r_add_add.main.ok FS O hO)
-  · kanon_arm h (bv_leq.r_add_add.swap2.ok FS O hO)
-  · kanon_arm h (bv_leq.r_add_add.swap1.ok FS O hO)
-  · kanon_arm h (bv_leq.r_add_add.swap1_swap2.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_add_add.main.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_add_add.swap2.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_add_add.swap1.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_add_add.swap1_swap2.ok FS O hO)
 
-theorem bv_leq.r_self_add_r.main.ok : bv_leq.r_self_add_r.main.Stmt := kanon_proof% bv_leq.r_self_add_r.main
+theorem Bitvec.leq.r_self_add_r.main.ok : Bitvec.leq.r_self_add_r.main.Stmt := kanon_proof% Bitvec.leq.r_self_add_r.main
 
-theorem bv_leq.r_self_add_r.swap.ok : bv_leq.r_self_add_r.swap.Stmt := by
+theorem Bitvec.leq.r_self_add_r.swap.ok : Bitvec.leq.r_self_add_r.swap.Stmt := by
   intro FS O hO signed v1 checked b kanon__4 t__6 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Add checked) b kanon__4) t__6)
     (Term.mk (Kind.Op2 (Op2.Add checked) kanon__4 b) t__6) :=
     Op2.Add.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_leq.r_self_add_r.main.ok FS O hO signed v1 checked kanon__4 b t__6 hg)
-  simp only [bv_leq.spec]
+    (Bitvec.leq.r_self_add_r.main.ok FS O hO signed v1 checked kanon__4 b t__6 hg)
+  simp only [Bitvec.leq.spec]
   kanon_congr
 
-theorem bv_leq.r_self_add_r.proof : bv_leq.r_self_add_r.Stmt := by
+theorem Bitvec.leq.r_self_add_r.proof : Bitvec.leq.r_self_add_r.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_leq.r_self_add_r] at h
+  simp only [Bitvec.leq.r_self_add_r] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_leq.r_self_add_r.main.ok FS O hO)
-  · kanon_arm h (bv_leq.r_self_add_r.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_self_add_r.main.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_self_add_r.swap.ok FS O hO)
 
-theorem bv_leq.r_self_add_l.main.ok : bv_leq.r_self_add_l.main.Stmt := kanon_proof% bv_leq.r_self_add_l.main
+theorem Bitvec.leq.r_self_add_l.main.ok : Bitvec.leq.r_self_add_l.main.Stmt := kanon_proof% Bitvec.leq.r_self_add_l.main
 
-theorem bv_leq.r_self_add_l.swap.ok : bv_leq.r_self_add_l.swap.Stmt := by
+theorem Bitvec.leq.r_self_add_l.swap.ok : Bitvec.leq.r_self_add_l.swap.Stmt := by
   intro FS O hO signed v2 checked b a t__5 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Add checked) b a) t__5)
     (Term.mk (Kind.Op2 (Op2.Add checked) a b) t__5) :=
     Op2.Add.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_leq.r_self_add_l.main.ok FS O hO signed v2 checked a b t__5 hg)
-  simp only [bv_leq.spec]
+    (Bitvec.leq.r_self_add_l.main.ok FS O hO signed v2 checked a b t__5 hg)
+  simp only [Bitvec.leq.spec]
   kanon_congr
 
-theorem bv_leq.r_self_add_l.proof : bv_leq.r_self_add_l.Stmt := by
+theorem Bitvec.leq.r_self_add_l.proof : Bitvec.leq.r_self_add_l.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_leq.r_self_add_l] at h
+  simp only [Bitvec.leq.r_self_add_l] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_leq.r_self_add_l.main.ok FS O hO)
-  · kanon_arm h (bv_leq.r_self_add_l.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_self_add_l.main.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_self_add_l.swap.ok FS O hO)
 
-theorem bv_leq.r_min_l.main.ok : bv_leq.r_min_l.main.Stmt := kanon_proof% bv_leq.r_min_l.main
+theorem Bitvec.leq.r_min_l.main.ok : Bitvec.leq.r_min_l.main.Stmt := kanon_proof% Bitvec.leq.r_min_l.main
 
-theorem bv_leq.r_min_l.proof : bv_leq.r_min_l.Stmt := by
+theorem Bitvec.leq.r_min_l.proof : Bitvec.leq.r_min_l.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_leq.r_min_l] at h
+  simp only [Bitvec.leq.r_min_l] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_leq.r_min_l.main.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_min_l.main.ok FS O hO)
 
-theorem bv_leq.r_max_r.main.ok : bv_leq.r_max_r.main.Stmt := kanon_proof% bv_leq.r_max_r.main
+theorem Bitvec.leq.r_max_r.main.ok : Bitvec.leq.r_max_r.main.Stmt := kanon_proof% Bitvec.leq.r_max_r.main
 
-theorem bv_leq.r_max_r.proof : bv_leq.r_max_r.Stmt := by
+theorem Bitvec.leq.r_max_r.proof : Bitvec.leq.r_max_r.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_leq.r_max_r] at h
+  simp only [Bitvec.leq.r_max_r] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_leq.r_max_r.main.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_max_r.main.ok FS O hO)
 
-theorem bv_leq.r_const_mul.main.ok : bv_leq.r_const_mul.main.Stmt := kanon_proof% bv_leq.r_const_mul.main
+theorem Bitvec.leq.r_const_mul.main.ok : Bitvec.leq.r_const_mul.main.Stmt := kanon_proof% Bitvec.leq.r_const_mul.main
 
-theorem bv_leq.r_const_mul.swap.ok : bv_leq.r_const_mul.swap.Stmt := by
+theorem Bitvec.leq.r_const_mul.swap.ok : Bitvec.leq.r_const_mul.swap.Stmt := by
   intro FS O hO signed c2 t__2 checked c1 t__7 x t__9 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Mul checked) (Term.mk (Kind.BitVec c1) t__7) x) t__9)
     (Term.mk (Kind.Op2 (Op2.Mul checked) x (Term.mk (Kind.BitVec c1) t__7)) t__9) :=
     Op2.Mul.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_leq.r_const_mul.main.ok FS O hO signed c2 t__2 checked x c1 t__7 t__9 hg)
-  simp only [bv_leq.spec]
+    (Bitvec.leq.r_const_mul.main.ok FS O hO signed c2 t__2 checked x c1 t__7 t__9 hg)
+  simp only [Bitvec.leq.spec]
   kanon_congr
 
-theorem bv_leq.r_const_mul.proof : bv_leq.r_const_mul.Stmt := by
+theorem Bitvec.leq.r_const_mul.proof : Bitvec.leq.r_const_mul.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_leq.r_const_mul] at h
+  simp only [Bitvec.leq.r_const_mul] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_leq.r_const_mul.main.ok FS O hO)
-  · kanon_arm h (bv_leq.r_const_mul.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_const_mul.main.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_const_mul.swap.ok FS O hO)
 
-theorem bv_leq.r_mul_const.main.ok : bv_leq.r_mul_const.main.Stmt := kanon_proof% bv_leq.r_mul_const.main
+theorem Bitvec.leq.r_mul_const.main.ok : Bitvec.leq.r_mul_const.main.Stmt := kanon_proof% Bitvec.leq.r_mul_const.main
 
-theorem bv_leq.r_mul_const.swap.ok : bv_leq.r_mul_const.swap.Stmt := by
+theorem Bitvec.leq.r_mul_const.swap.ok : Bitvec.leq.r_mul_const.swap.Stmt := by
   intro FS O hO signed checked c1 t__5 x t__7 c2 t__10 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Mul checked) (Term.mk (Kind.BitVec c1) t__5) x) t__7)
     (Term.mk (Kind.Op2 (Op2.Mul checked) x (Term.mk (Kind.BitVec c1) t__5)) t__7) :=
     Op2.Mul.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_leq.r_mul_const.main.ok FS O hO signed checked x c1 t__5 t__7 c2 t__10 hg)
-  simp only [bv_leq.spec]
+    (Bitvec.leq.r_mul_const.main.ok FS O hO signed checked x c1 t__5 t__7 c2 t__10 hg)
+  simp only [Bitvec.leq.spec]
   kanon_congr
 
-theorem bv_leq.r_mul_const.proof : bv_leq.r_mul_const.Stmt := by
+theorem Bitvec.leq.r_mul_const.proof : Bitvec.leq.r_mul_const.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_leq.r_mul_const] at h
+  simp only [Bitvec.leq.r_mul_const] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_leq.r_mul_const.main.ok FS O hO)
-  · kanon_arm h (bv_leq.r_mul_const.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_mul_const.main.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_mul_const.swap.ok FS O hO)
 
-theorem bv_leq.r_mul_mul.main.ok : bv_leq.r_mul_mul.main.Stmt := kanon_proof% bv_leq.r_mul_mul.main
+theorem Bitvec.leq.r_mul_mul.main.ok : Bitvec.leq.r_mul_mul.main.Stmt := kanon_proof% Bitvec.leq.r_mul_mul.main
 
-theorem bv_leq.r_mul_mul.swap2.ok : bv_leq.r_mul_mul.swap2.Stmt := by
+theorem Bitvec.leq.r_mul_mul.swap2.ok : Bitvec.leq.r_mul_mul.swap2.Stmt := by
   intro FS O hO signed checked_l a x t__5 checked_r y kanon__9 t__11 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Mul checked_r) y kanon__9) t__11)
     (Term.mk (Kind.Op2 (Op2.Mul checked_r) kanon__9 y) t__11) :=
     Op2.Mul.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_leq.r_mul_mul.main.ok FS O hO signed checked_l a x t__5 checked_r kanon__9 y t__11 hg)
-  simp only [bv_leq.spec]
+    (Bitvec.leq.r_mul_mul.main.ok FS O hO signed checked_l a x t__5 checked_r kanon__9 y t__11 hg)
+  simp only [Bitvec.leq.spec]
   kanon_congr
 
-theorem bv_leq.r_mul_mul.swap1.ok : bv_leq.r_mul_mul.swap1.Stmt := by
+theorem Bitvec.leq.r_mul_mul.swap1.ok : Bitvec.leq.r_mul_mul.swap1.Stmt := by
   intro FS O hO signed checked_l x a t__5 checked_r kanon__9 y t__11 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Mul checked_l) x a) t__5)
     (Term.mk (Kind.Op2 (Op2.Mul checked_l) a x) t__5) :=
     Op2.Mul.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_leq.r_mul_mul.main.ok FS O hO signed checked_l a x t__5 checked_r kanon__9 y t__11 hg)
-  simp only [bv_leq.spec]
+    (Bitvec.leq.r_mul_mul.main.ok FS O hO signed checked_l a x t__5 checked_r kanon__9 y t__11 hg)
+  simp only [Bitvec.leq.spec]
   kanon_congr
 
-theorem bv_leq.r_mul_mul.swap1_swap2.ok : bv_leq.r_mul_mul.swap1_swap2.Stmt := by
+theorem Bitvec.leq.r_mul_mul.swap1_swap2.ok : Bitvec.leq.r_mul_mul.swap1_swap2.Stmt := by
   intro FS O hO signed checked_l x a t__5 checked_r y kanon__9 t__11 hg
   have : Refines FS (Term.mk (Kind.Op2 (Op2.Mul checked_l) x a) t__5)
     (Term.mk (Kind.Op2 (Op2.Mul checked_l) a x) t__5) :=
@@ -3989,1442 +4112,1466 @@ theorem bv_leq.r_mul_mul.swap1_swap2.ok : bv_leq.r_mul_mul.swap1_swap2.Stmt := b
     (Term.mk (Kind.Op2 (Op2.Mul checked_r) kanon__9 y) t__11) :=
     Op2.Mul.comm.ok FS ..
   refine Refinement.trans ?_
-    (bv_leq.r_mul_mul.main.ok FS O hO signed checked_l a x t__5 checked_r kanon__9 y t__11 hg)
-  simp only [bv_leq.spec]
+    (Bitvec.leq.r_mul_mul.main.ok FS O hO signed checked_l a x t__5 checked_r kanon__9 y t__11 hg)
+  simp only [Bitvec.leq.spec]
   kanon_congr
 
-theorem bv_leq.r_mul_mul.proof : bv_leq.r_mul_mul.Stmt := by
+theorem Bitvec.leq.r_mul_mul.proof : Bitvec.leq.r_mul_mul.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_leq.r_mul_mul] at h
+  simp only [Bitvec.leq.r_mul_mul] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_leq.r_mul_mul.main.ok FS O hO)
-  · kanon_arm h (bv_leq.r_mul_mul.swap2.ok FS O hO)
-  · kanon_arm h (bv_leq.r_mul_mul.swap1.ok FS O hO)
-  · kanon_arm h (bv_leq.r_mul_mul.swap1_swap2.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_mul_mul.main.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_mul_mul.swap2.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_mul_mul.swap1.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_mul_mul.swap1_swap2.ok FS O hO)
 
-theorem bv_leq.r_udiv_big.main.ok : bv_leq.r_udiv_big.main.Stmt := kanon_proof% bv_leq.r_udiv_big.main
+theorem Bitvec.leq.r_udiv_big.main.ok : Bitvec.leq.r_udiv_big.main.Stmt := kanon_proof% Bitvec.leq.r_udiv_big.main
 
-theorem bv_leq.r_udiv_big.proof : bv_leq.r_udiv_big.Stmt := by
+theorem Bitvec.leq.r_udiv_big.proof : Bitvec.leq.r_udiv_big.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_leq.r_udiv_big] at h
+  simp only [Bitvec.leq.r_udiv_big] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_leq.r_udiv_big.main.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_udiv_big.main.ok FS O hO)
 
-theorem bv_leq.r_ite_l.main.ok : bv_leq.r_ite_l.main.Stmt := kanon_proof% bv_leq.r_ite_l.main
+theorem Bitvec.leq.r_ite_l.main.ok : Bitvec.leq.r_ite_l.main.Stmt := kanon_proof% Bitvec.leq.r_ite_l.main
 
-theorem bv_leq.r_ite_l.proof : bv_leq.r_ite_l.Stmt := by
+theorem Bitvec.leq.r_ite_l.proof : Bitvec.leq.r_ite_l.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_leq.r_ite_l] at h
+  simp only [Bitvec.leq.r_ite_l] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_leq.r_ite_l.main.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_ite_l.main.ok FS O hO)
 
-theorem bv_leq.r_ite_r.main.ok : bv_leq.r_ite_r.main.Stmt := kanon_proof% bv_leq.r_ite_r.main
+theorem Bitvec.leq.r_ite_r.main.ok : Bitvec.leq.r_ite_r.main.Stmt := kanon_proof% Bitvec.leq.r_ite_r.main
 
-theorem bv_leq.r_ite_r.proof : bv_leq.r_ite_r.Stmt := by
+theorem Bitvec.leq.r_ite_r.proof : Bitvec.leq.r_ite_r.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_leq.r_ite_r] at h
+  simp only [Bitvec.leq.r_ite_r] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_leq.r_ite_r.main.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_ite_r.main.ok FS O hO)
 
-theorem bv_leq.r_const_sub1.main.ok : bv_leq.r_const_sub1.main.Stmt := kanon_proof% bv_leq.r_const_sub1.main
+theorem Bitvec.leq.r_const_sub1.main.ok : Bitvec.leq.r_const_sub1.main.Stmt := kanon_proof% Bitvec.leq.r_const_sub1.main
 
-theorem bv_leq.r_const_sub1.proof : bv_leq.r_const_sub1.Stmt := by
+theorem Bitvec.leq.r_const_sub1.proof : Bitvec.leq.r_const_sub1.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_leq.r_const_sub1] at h
+  simp only [Bitvec.leq.r_const_sub1] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_leq.r_const_sub1.main.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_const_sub1.main.ok FS O hO)
 
-theorem bv_leq.r_const_sub2.main.ok : bv_leq.r_const_sub2.main.Stmt := kanon_proof% bv_leq.r_const_sub2.main
+theorem Bitvec.leq.r_const_sub2.main.ok : Bitvec.leq.r_const_sub2.main.Stmt := kanon_proof% Bitvec.leq.r_const_sub2.main
 
-theorem bv_leq.r_const_sub2.proof : bv_leq.r_const_sub2.Stmt := by
+theorem Bitvec.leq.r_const_sub2.proof : Bitvec.leq.r_const_sub2.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_leq.r_const_sub2] at h
+  simp only [Bitvec.leq.r_const_sub2] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_leq.r_const_sub2.main.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_const_sub2.main.ok FS O hO)
 
-theorem bv_leq.r_sub_const1.main.ok : bv_leq.r_sub_const1.main.Stmt := kanon_proof% bv_leq.r_sub_const1.main
+theorem Bitvec.leq.r_sub_const1.main.ok : Bitvec.leq.r_sub_const1.main.Stmt := kanon_proof% Bitvec.leq.r_sub_const1.main
 
-theorem bv_leq.r_sub_const1.proof : bv_leq.r_sub_const1.Stmt := by
+theorem Bitvec.leq.r_sub_const1.proof : Bitvec.leq.r_sub_const1.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_leq.r_sub_const1] at h
+  simp only [Bitvec.leq.r_sub_const1] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_leq.r_sub_const1.main.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_sub_const1.main.ok FS O hO)
 
-theorem bv_leq.r_sub_const2.main.ok : bv_leq.r_sub_const2.main.Stmt := kanon_proof% bv_leq.r_sub_const2.main
+theorem Bitvec.leq.r_sub_const2.main.ok : Bitvec.leq.r_sub_const2.main.Stmt := kanon_proof% Bitvec.leq.r_sub_const2.main
 
-theorem bv_leq.r_sub_const2.proof : bv_leq.r_sub_const2.Stmt := by
+theorem Bitvec.leq.r_sub_const2.proof : Bitvec.leq.r_sub_const2.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_leq.r_sub_const2] at h
+  simp only [Bitvec.leq.r_sub_const2] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_leq.r_sub_const2.main.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_sub_const2.main.ok FS O hO)
 
-theorem bv_leq.r_ub_r.main.ok : bv_leq.r_ub_r.main.Stmt := kanon_proof% bv_leq.r_ub_r.main
+theorem Bitvec.leq.r_ub_r.main.ok : Bitvec.leq.r_ub_r.main.Stmt := kanon_proof% Bitvec.leq.r_ub_r.main
 
-theorem bv_leq.r_ub_r.proof : bv_leq.r_ub_r.Stmt := by
+theorem Bitvec.leq.r_ub_r.proof : Bitvec.leq.r_ub_r.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_leq.r_ub_r] at h
+  simp only [Bitvec.leq.r_ub_r] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_leq.r_ub_r.main.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_ub_r.main.ok FS O hO)
 
-theorem bv_leq.r_ub_l.main.ok : bv_leq.r_ub_l.main.Stmt := kanon_proof% bv_leq.r_ub_l.main
+theorem Bitvec.leq.r_ub_l.main.ok : Bitvec.leq.r_ub_l.main.Stmt := kanon_proof% Bitvec.leq.r_ub_l.main
 
-theorem bv_leq.r_ub_l.proof : bv_leq.r_ub_l.Stmt := by
+theorem Bitvec.leq.r_ub_l.proof : Bitvec.leq.r_ub_l.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_leq.r_ub_l] at h
+  simp only [Bitvec.leq.r_ub_l] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_leq.r_ub_l.main.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_ub_l.main.ok FS O hO)
 
-theorem bv_leq.r_to_unsigned_l.main.ok : bv_leq.r_to_unsigned_l.main.Stmt := kanon_proof% bv_leq.r_to_unsigned_l.main
+theorem Bitvec.leq.r_to_unsigned_l.main.ok : Bitvec.leq.r_to_unsigned_l.main.Stmt := kanon_proof% Bitvec.leq.r_to_unsigned_l.main
 
-theorem bv_leq.r_to_unsigned_l.proof : bv_leq.r_to_unsigned_l.Stmt := by
+theorem Bitvec.leq.r_to_unsigned_l.proof : Bitvec.leq.r_to_unsigned_l.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_leq.r_to_unsigned_l] at h
+  simp only [Bitvec.leq.r_to_unsigned_l] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_leq.r_to_unsigned_l.main.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_to_unsigned_l.main.ok FS O hO)
 
-theorem bv_leq.r_to_unsigned_r.main.ok : bv_leq.r_to_unsigned_r.main.Stmt := kanon_proof% bv_leq.r_to_unsigned_r.main
+theorem Bitvec.leq.r_to_unsigned_r.main.ok : Bitvec.leq.r_to_unsigned_r.main.Stmt := kanon_proof% Bitvec.leq.r_to_unsigned_r.main
 
-theorem bv_leq.r_to_unsigned_r.proof : bv_leq.r_to_unsigned_r.Stmt := by
+theorem Bitvec.leq.r_to_unsigned_r.proof : Bitvec.leq.r_to_unsigned_r.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_leq.r_to_unsigned_r] at h
+  simp only [Bitvec.leq.r_to_unsigned_r] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_leq.r_to_unsigned_r.main.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_to_unsigned_r.main.ok FS O hO)
 
-theorem bv_leq.r_default.main.ok : bv_leq.r_default.main.Stmt := kanon_proof% bv_leq.r_default.main
+theorem Bitvec.leq.r_default.main.ok : Bitvec.leq.r_default.main.Stmt := kanon_proof% Bitvec.leq.r_default.main
 
-theorem bv_leq.r_default.proof : bv_leq.r_default.Stmt := by
+theorem Bitvec.leq.r_default.proof : Bitvec.leq.r_default.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_leq.r_default] at h
+  simp only [Bitvec.leq.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_leq.r_default.main.ok FS O hO)
+  · kanon_arm h (Bitvec.leq.r_default.main.ok FS O hO)
 
-theorem bv_add_overflows.r_lits.main.ok : bv_add_overflows.r_lits.main.Stmt := kanon_proof% bv_add_overflows.r_lits.main
+theorem Bitvec.add_overflows.r_lits.main.ok : Bitvec.add_overflows.r_lits.main.Stmt := kanon_proof% Bitvec.add_overflows.r_lits.main
 
-theorem bv_add_overflows.r_lits.proof : bv_add_overflows.r_lits.Stmt := by
+theorem Bitvec.add_overflows.r_lits.proof : Bitvec.add_overflows.r_lits.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_add_overflows.r_lits] at h
+  simp only [Bitvec.add_overflows.r_lits] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_add_overflows.r_lits.main.ok FS O hO)
+  · kanon_arm h (Bitvec.add_overflows.r_lits.main.ok FS O hO)
 
-theorem bv_add_overflows.r_zero.main.ok : bv_add_overflows.r_zero.main.Stmt := kanon_proof% bv_add_overflows.r_zero.main
+theorem Bitvec.add_overflows.r_zero.main.ok : Bitvec.add_overflows.r_zero.main.Stmt := kanon_proof% Bitvec.add_overflows.r_zero.main
 
-theorem bv_add_overflows.r_zero.swap.ok : bv_add_overflows.r_zero.swap.Stmt := by
+theorem Bitvec.add_overflows.r_zero.swap.ok : Bitvec.add_overflows.r_zero.swap.Stmt := by
   intro FS O hO signed v1 kanon__1 t__2 hg
   refine Refinement.trans ?_
-    (bv_add_overflows.r_zero.main.ok FS O hO signed v1 kanon__1 t__2 hg)
-  simp only [bv_add_overflows.spec]
+    (Bitvec.add_overflows.r_zero.main.ok FS O hO signed v1 kanon__1 t__2 hg)
+  simp only [Bitvec.add_overflows.spec]
   refine Refinement.trans (Op2.AddOvf.comm.ok FS ..) ?_
   kanon_congr
 
-theorem bv_add_overflows.r_zero.proof : bv_add_overflows.r_zero.Stmt := by
+theorem Bitvec.add_overflows.r_zero.proof : Bitvec.add_overflows.r_zero.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_add_overflows.r_zero] at h
+  simp only [Bitvec.add_overflows.r_zero] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_add_overflows.r_zero.main.ok FS O hO)
-  · kanon_arm h (bv_add_overflows.r_zero.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.add_overflows.r_zero.main.ok FS O hO)
+  · kanon_arm h (Bitvec.add_overflows.r_zero.swap.ok FS O hO)
 
-theorem bv_add_overflows.r_size1.main.ok : bv_add_overflows.r_size1.main.Stmt := kanon_proof% bv_add_overflows.r_size1.main
+theorem Bitvec.add_overflows.r_size1.main.ok : Bitvec.add_overflows.r_size1.main.Stmt := kanon_proof% Bitvec.add_overflows.r_size1.main
 
-theorem bv_add_overflows.r_size1.proof : bv_add_overflows.r_size1.Stmt := by
+theorem Bitvec.add_overflows.r_size1.proof : Bitvec.add_overflows.r_size1.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_add_overflows.r_size1] at h
+  simp only [Bitvec.add_overflows.r_size1] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_add_overflows.r_size1.main.ok FS O hO)
+  · kanon_arm h (Bitvec.add_overflows.r_size1.main.ok FS O hO)
 
-theorem bv_add_overflows.r_unsigned.main.ok : bv_add_overflows.r_unsigned.main.Stmt := kanon_proof% bv_add_overflows.r_unsigned.main
+theorem Bitvec.add_overflows.r_unsigned.main.ok : Bitvec.add_overflows.r_unsigned.main.Stmt := kanon_proof% Bitvec.add_overflows.r_unsigned.main
 
-theorem bv_add_overflows.r_unsigned.swap.ok : bv_add_overflows.r_unsigned.swap.Stmt := kanon_proof% bv_add_overflows.r_unsigned.swap
+theorem Bitvec.add_overflows.r_unsigned.swap.ok : Bitvec.add_overflows.r_unsigned.swap.Stmt := by
+  intro FS O hO signed v1 z t__2 hg
+  refine Refinement.trans ?_
+    (Bitvec.add_overflows.r_unsigned.main.ok FS O hO signed v1 z t__2 hg)
+  simp only [Bitvec.add_overflows.spec]
+  refine Refinement.trans (Op2.AddOvf.comm.ok FS ..) ?_
+  kanon_congr
 
-theorem bv_add_overflows.r_unsigned.proof : bv_add_overflows.r_unsigned.Stmt := by
+theorem Bitvec.add_overflows.r_unsigned.proof : Bitvec.add_overflows.r_unsigned.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_add_overflows.r_unsigned] at h
+  simp only [Bitvec.add_overflows.r_unsigned] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_add_overflows.r_unsigned.main.ok FS O hO)
-  · kanon_arm h (bv_add_overflows.r_unsigned.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.add_overflows.r_unsigned.main.ok FS O hO)
+  · kanon_arm h (Bitvec.add_overflows.r_unsigned.swap.ok FS O hO)
 
-theorem bv_add_overflows.r_signed.main.ok : bv_add_overflows.r_signed.main.Stmt := kanon_proof% bv_add_overflows.r_signed.main
+theorem Bitvec.add_overflows.r_signed.main.ok : Bitvec.add_overflows.r_signed.main.Stmt := kanon_proof% Bitvec.add_overflows.r_signed.main
 
-theorem bv_add_overflows.r_signed.swap.ok : bv_add_overflows.r_signed.swap.Stmt := kanon_proof% bv_add_overflows.r_signed.swap
+theorem Bitvec.add_overflows.r_signed.swap.ok : Bitvec.add_overflows.r_signed.swap.Stmt := by
+  intro FS O hO signed v1 z t__2 hg
+  refine Refinement.trans ?_
+    (Bitvec.add_overflows.r_signed.main.ok FS O hO signed v1 z t__2 hg)
+  simp only [Bitvec.add_overflows.spec]
+  refine Refinement.trans (Op2.AddOvf.comm.ok FS ..) ?_
+  kanon_congr
 
-theorem bv_add_overflows.r_signed.proof : bv_add_overflows.r_signed.Stmt := by
+theorem Bitvec.add_overflows.r_signed.proof : Bitvec.add_overflows.r_signed.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_add_overflows.r_signed] at h
+  simp only [Bitvec.add_overflows.r_signed] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_add_overflows.r_signed.main.ok FS O hO)
-  · kanon_arm h (bv_add_overflows.r_signed.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.add_overflows.r_signed.main.ok FS O hO)
+  · kanon_arm h (Bitvec.add_overflows.r_signed.swap.ok FS O hO)
 
-theorem bv_add_overflows.r_of_bools.main.ok : bv_add_overflows.r_of_bools.main.Stmt := kanon_proof% bv_add_overflows.r_of_bools.main
+theorem Bitvec.add_overflows.r_of_bools.main.ok : Bitvec.add_overflows.r_of_bools.main.Stmt := kanon_proof% Bitvec.add_overflows.r_of_bools.main
 
-theorem bv_add_overflows.r_of_bools.swap.ok : bv_add_overflows.r_of_bools.swap.Stmt := by
+theorem Bitvec.add_overflows.r_of_bools.swap.ok : Bitvec.add_overflows.r_of_bools.swap.Stmt := by
   intro FS O hO signed w__5 b2 t__8 n b1 t__4 hg
   refine Refinement.trans ?_
-    (bv_add_overflows.r_of_bools.main.ok FS O hO signed n b1 t__4 w__5 b2 t__8 hg)
-  simp only [bv_add_overflows.spec]
+    (Bitvec.add_overflows.r_of_bools.main.ok FS O hO signed n b1 t__4 w__5 b2 t__8 hg)
+  simp only [Bitvec.add_overflows.spec]
   refine Refinement.trans (Op2.AddOvf.comm.ok FS ..) ?_
   kanon_congr
 
-theorem bv_add_overflows.r_of_bools.proof : bv_add_overflows.r_of_bools.Stmt := by
+theorem Bitvec.add_overflows.r_of_bools.proof : Bitvec.add_overflows.r_of_bools.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_add_overflows.r_of_bools] at h
+  simp only [Bitvec.add_overflows.r_of_bools] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_add_overflows.r_of_bools.main.ok FS O hO)
-  · kanon_arm h (bv_add_overflows.r_of_bools.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.add_overflows.r_of_bools.main.ok FS O hO)
+  · kanon_arm h (Bitvec.add_overflows.r_of_bools.swap.ok FS O hO)
 
-theorem bv_add_overflows.r_of_bool.main.ok : bv_add_overflows.r_of_bool.main.Stmt := kanon_proof% bv_add_overflows.r_of_bool.main
+theorem Bitvec.add_overflows.r_of_bool.main.ok : Bitvec.add_overflows.r_of_bool.main.Stmt := kanon_proof% Bitvec.add_overflows.r_of_bool.main
 
-theorem bv_add_overflows.r_of_bool.swap.ok : bv_add_overflows.r_of_bool.swap.Stmt := kanon_proof% bv_add_overflows.r_of_bool.swap
-
-theorem bv_add_overflows.r_of_bool.proof : bv_add_overflows.r_of_bool.Stmt := by
-  intro FS O hO signed v1 v2 res h
-  simp only [bv_add_overflows.r_of_bool] at h
-  repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_add_overflows.r_of_bool.main.ok FS O hO)
-  · kanon_arm h (bv_add_overflows.r_of_bool.swap.ok FS O hO)
-
-theorem bv_add_overflows.r_default.main.ok : bv_add_overflows.r_default.main.Stmt := kanon_proof% bv_add_overflows.r_default.main
-
-theorem bv_add_overflows.r_default.proof : bv_add_overflows.r_default.Stmt := by
-  intro FS O hO signed v1 v2 res h
-  simp only [bv_add_overflows.r_default] at h
-  repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_add_overflows.r_default.main.ok FS O hO)
-
-theorem bv_mul_overflows.r_lits.main.ok : bv_mul_overflows.r_lits.main.Stmt := kanon_proof% bv_mul_overflows.r_lits.main
-
-theorem bv_mul_overflows.r_lits.proof : bv_mul_overflows.r_lits.Stmt := by
-  intro FS O hO signed v1 v2 res h
-  simp only [bv_mul_overflows.r_lits] at h
-  repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_mul_overflows.r_lits.main.ok FS O hO)
-
-theorem bv_mul_overflows.r_size1.main.ok : bv_mul_overflows.r_size1.main.Stmt := kanon_proof% bv_mul_overflows.r_size1.main
-
-theorem bv_mul_overflows.r_size1.proof : bv_mul_overflows.r_size1.Stmt := by
-  intro FS O hO signed v1 v2 res h
-  simp only [bv_mul_overflows.r_size1] at h
-  repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_mul_overflows.r_size1.main.ok FS O hO)
-
-theorem bv_mul_overflows.r_msb.main.ok : bv_mul_overflows.r_msb.main.Stmt := kanon_proof% bv_mul_overflows.r_msb.main
-
-theorem bv_mul_overflows.r_msb.proof : bv_mul_overflows.r_msb.Stmt := by
-  intro FS O hO signed v1 v2 res h
-  simp only [bv_mul_overflows.r_msb] at h
-  repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_mul_overflows.r_msb.main.ok FS O hO)
-
-theorem bv_mul_overflows.r_const.main.ok : bv_mul_overflows.r_const.main.Stmt := kanon_proof% bv_mul_overflows.r_const.main
-
-theorem bv_mul_overflows.r_const.swap.ok : bv_mul_overflows.r_const.swap.Stmt := kanon_proof% bv_mul_overflows.r_const.swap
-
-theorem bv_mul_overflows.r_const.proof : bv_mul_overflows.r_const.Stmt := by
-  intro FS O hO signed v1 v2 res h
-  simp only [bv_mul_overflows.r_const] at h
-  repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_mul_overflows.r_const.main.ok FS O hO)
-  · kanon_arm h (bv_mul_overflows.r_const.swap.ok FS O hO)
-
-theorem bv_mul_overflows.r_div.main.ok : bv_mul_overflows.r_div.main.Stmt := kanon_proof% bv_mul_overflows.r_div.main
-
-theorem bv_mul_overflows.r_div.swap.ok : bv_mul_overflows.r_div.swap.Stmt := by
-  intro FS O hO signed v2 w__4 kanon__5 t__6 hg
+theorem Bitvec.add_overflows.r_of_bool.swap.ok : Bitvec.add_overflows.r_of_bool.swap.Stmt := by
+  intro FS O hO signed v1 w__1 b t__4 hg
   refine Refinement.trans ?_
-    (bv_mul_overflows.r_div.main.ok FS O hO signed v2 w__4 kanon__5 t__6 hg)
-  simp only [bv_mul_overflows.spec]
+    (Bitvec.add_overflows.r_of_bool.main.ok FS O hO signed v1 w__1 b t__4 hg)
+  simp only [Bitvec.add_overflows.spec]
+  refine Refinement.trans (Op2.AddOvf.comm.ok FS ..) ?_
+  kanon_congr
+
+theorem Bitvec.add_overflows.r_of_bool.proof : Bitvec.add_overflows.r_of_bool.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [Bitvec.add_overflows.r_of_bool] at h
+  repeat' rcases orElse_some h with h | h
+  · kanon_arm h (Bitvec.add_overflows.r_of_bool.main.ok FS O hO)
+  · kanon_arm h (Bitvec.add_overflows.r_of_bool.swap.ok FS O hO)
+
+theorem Bitvec.add_overflows.r_default.main.ok : Bitvec.add_overflows.r_default.main.Stmt := kanon_proof% Bitvec.add_overflows.r_default.main
+
+theorem Bitvec.add_overflows.r_default.proof : Bitvec.add_overflows.r_default.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [Bitvec.add_overflows.r_default] at h
+  repeat' rcases orElse_some h with h | h
+  · kanon_arm h (Bitvec.add_overflows.r_default.main.ok FS O hO)
+
+theorem Bitvec.mul_overflows.r_lits.main.ok : Bitvec.mul_overflows.r_lits.main.Stmt := kanon_proof% Bitvec.mul_overflows.r_lits.main
+
+theorem Bitvec.mul_overflows.r_lits.proof : Bitvec.mul_overflows.r_lits.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [Bitvec.mul_overflows.r_lits] at h
+  repeat' rcases orElse_some h with h | h
+  · kanon_arm h (Bitvec.mul_overflows.r_lits.main.ok FS O hO)
+
+theorem Bitvec.mul_overflows.r_size1.main.ok : Bitvec.mul_overflows.r_size1.main.Stmt := kanon_proof% Bitvec.mul_overflows.r_size1.main
+
+theorem Bitvec.mul_overflows.r_size1.proof : Bitvec.mul_overflows.r_size1.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [Bitvec.mul_overflows.r_size1] at h
+  repeat' rcases orElse_some h with h | h
+  · kanon_arm h (Bitvec.mul_overflows.r_size1.main.ok FS O hO)
+
+theorem Bitvec.mul_overflows.r_msb.main.ok : Bitvec.mul_overflows.r_msb.main.Stmt := kanon_proof% Bitvec.mul_overflows.r_msb.main
+
+theorem Bitvec.mul_overflows.r_msb.proof : Bitvec.mul_overflows.r_msb.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [Bitvec.mul_overflows.r_msb] at h
+  repeat' rcases orElse_some h with h | h
+  · kanon_arm h (Bitvec.mul_overflows.r_msb.main.ok FS O hO)
+
+theorem Bitvec.mul_overflows.r_const.main.ok : Bitvec.mul_overflows.r_const.main.Stmt := kanon_proof% Bitvec.mul_overflows.r_const.main
+
+theorem Bitvec.mul_overflows.r_const.swap.ok : Bitvec.mul_overflows.r_const.swap.Stmt := by
+  intro FS O hO signed v1 z t__2 hg
+  refine Refinement.trans ?_
+    (Bitvec.mul_overflows.r_const.main.ok FS O hO signed v1 z t__2 hg)
+  simp only [Bitvec.mul_overflows.spec]
   refine Refinement.trans (Op2.MulOvf.comm.ok FS ..) ?_
   kanon_congr
 
-theorem bv_mul_overflows.r_div.proof : bv_mul_overflows.r_div.Stmt := by
+theorem Bitvec.mul_overflows.r_const.proof : Bitvec.mul_overflows.r_const.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_mul_overflows.r_div] at h
+  simp only [Bitvec.mul_overflows.r_const] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_mul_overflows.r_div.main.ok FS O hO)
-  · kanon_arm h (bv_mul_overflows.r_div.swap.ok FS O hO)
+  · kanon_arm h (Bitvec.mul_overflows.r_const.main.ok FS O hO)
+  · kanon_arm h (Bitvec.mul_overflows.r_const.swap.ok FS O hO)
 
-theorem bv_mul_overflows.r_default.main.ok : bv_mul_overflows.r_default.main.Stmt := kanon_proof% bv_mul_overflows.r_default.main
+theorem Bitvec.mul_overflows.r_div.main.ok : Bitvec.mul_overflows.r_div.main.Stmt := kanon_proof% Bitvec.mul_overflows.r_div.main
 
-theorem bv_mul_overflows.r_default.proof : bv_mul_overflows.r_default.Stmt := by
+theorem Bitvec.mul_overflows.r_div.swap.ok : Bitvec.mul_overflows.r_div.swap.Stmt := by
+  intro FS O hO signed v2 w__4 kanon__5 t__6 hg
+  refine Refinement.trans ?_
+    (Bitvec.mul_overflows.r_div.main.ok FS O hO signed v2 w__4 kanon__5 t__6 hg)
+  simp only [Bitvec.mul_overflows.spec]
+  refine Refinement.trans (Op2.MulOvf.comm.ok FS ..) ?_
+  kanon_congr
+
+theorem Bitvec.mul_overflows.r_div.proof : Bitvec.mul_overflows.r_div.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_mul_overflows.r_default] at h
+  simp only [Bitvec.mul_overflows.r_div] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_mul_overflows.r_default.main.ok FS O hO)
+  · kanon_arm h (Bitvec.mul_overflows.r_div.main.ok FS O hO)
+  · kanon_arm h (Bitvec.mul_overflows.r_div.swap.ok FS O hO)
 
-theorem bv_neg_overflows.r_main.main.ok : bv_neg_overflows.r_main.main.Stmt := kanon_proof% bv_neg_overflows.r_main.main
+theorem Bitvec.mul_overflows.r_default.main.ok : Bitvec.mul_overflows.r_default.main.Stmt := kanon_proof% Bitvec.mul_overflows.r_default.main
 
-theorem bv_neg_overflows.r_main.proof : bv_neg_overflows.r_main.Stmt := by
+theorem Bitvec.mul_overflows.r_default.proof : Bitvec.mul_overflows.r_default.Stmt := by
+  intro FS O hO signed v1 v2 res h
+  simp only [Bitvec.mul_overflows.r_default] at h
+  repeat' rcases orElse_some h with h | h
+  · kanon_arm h (Bitvec.mul_overflows.r_default.main.ok FS O hO)
+
+theorem Bitvec.neg_overflows.r_main.main.ok : Bitvec.neg_overflows.r_main.main.Stmt := kanon_proof% Bitvec.neg_overflows.r_main.main
+
+theorem Bitvec.neg_overflows.r_main.proof : Bitvec.neg_overflows.r_main.Stmt := by
   intro FS O hO v res h
-  simp only [bv_neg_overflows.r_main] at h
+  simp only [Bitvec.neg_overflows.r_main] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_neg_overflows.r_main.main.ok FS O hO)
+  · kanon_arm h (Bitvec.neg_overflows.r_main.main.ok FS O hO)
 
-theorem bv_sub_overflows.r_lits.main.ok : bv_sub_overflows.r_lits.main.Stmt := kanon_proof% bv_sub_overflows.r_lits.main
+theorem Bitvec.sub_overflows.r_lits.main.ok : Bitvec.sub_overflows.r_lits.main.Stmt := kanon_proof% Bitvec.sub_overflows.r_lits.main
 
-theorem bv_sub_overflows.r_lits.proof : bv_sub_overflows.r_lits.Stmt := by
+theorem Bitvec.sub_overflows.r_lits.proof : Bitvec.sub_overflows.r_lits.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_sub_overflows.r_lits] at h
+  simp only [Bitvec.sub_overflows.r_lits] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_sub_overflows.r_lits.main.ok FS O hO)
+  · kanon_arm h (Bitvec.sub_overflows.r_lits.main.ok FS O hO)
 
-theorem bv_sub_overflows.r_same.main.ok : bv_sub_overflows.r_same.main.Stmt := kanon_proof% bv_sub_overflows.r_same.main
+theorem Bitvec.sub_overflows.r_same.main.ok : Bitvec.sub_overflows.r_same.main.Stmt := kanon_proof% Bitvec.sub_overflows.r_same.main
 
-theorem bv_sub_overflows.r_same.proof : bv_sub_overflows.r_same.Stmt := by
+theorem Bitvec.sub_overflows.r_same.proof : Bitvec.sub_overflows.r_same.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_sub_overflows.r_same] at h
+  simp only [Bitvec.sub_overflows.r_same] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_sub_overflows.r_same.main.ok FS O hO)
+  · kanon_arm h (Bitvec.sub_overflows.r_same.main.ok FS O hO)
 
-theorem bv_sub_overflows.r_unsigned.main.ok : bv_sub_overflows.r_unsigned.main.Stmt := kanon_proof% bv_sub_overflows.r_unsigned.main
+theorem Bitvec.sub_overflows.r_unsigned.main.ok : Bitvec.sub_overflows.r_unsigned.main.Stmt := kanon_proof% Bitvec.sub_overflows.r_unsigned.main
 
-theorem bv_sub_overflows.r_unsigned.proof : bv_sub_overflows.r_unsigned.Stmt := by
+theorem Bitvec.sub_overflows.r_unsigned.proof : Bitvec.sub_overflows.r_unsigned.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_sub_overflows.r_unsigned] at h
+  simp only [Bitvec.sub_overflows.r_unsigned] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_sub_overflows.r_unsigned.main.ok FS O hO)
+  · kanon_arm h (Bitvec.sub_overflows.r_unsigned.main.ok FS O hO)
 
-theorem bv_sub_overflows.r_default.main.ok : bv_sub_overflows.r_default.main.Stmt := kanon_proof% bv_sub_overflows.r_default.main
+theorem Bitvec.sub_overflows.r_default.main.ok : Bitvec.sub_overflows.r_default.main.Stmt := kanon_proof% Bitvec.sub_overflows.r_default.main
 
-theorem bv_sub_overflows.r_default.proof : bv_sub_overflows.r_default.Stmt := by
+theorem Bitvec.sub_overflows.r_default.proof : Bitvec.sub_overflows.r_default.Stmt := by
   intro FS O hO signed v1 v2 res h
-  simp only [bv_sub_overflows.r_default] at h
+  simp only [Bitvec.sub_overflows.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_sub_overflows.r_default.main.ok FS O hO)
+  · kanon_arm h (Bitvec.sub_overflows.r_default.main.ok FS O hO)
 
-theorem bv_of_float.r_lit.main.ok : bv_of_float.r_lit.main.Stmt := kanon_proof% bv_of_float.r_lit.main
+theorem Bitvec.of_float.r_lit.main.ok : Bitvec.of_float.r_lit.main.Stmt := kanon_proof% Bitvec.of_float.r_lit.main
 
-theorem bv_of_float.r_lit.proof : bv_of_float.r_lit.Stmt := by
+theorem Bitvec.of_float.r_lit.proof : Bitvec.of_float.r_lit.Stmt := by
   intro FS O hO rounding signed sz v res h
-  simp only [bv_of_float.r_lit] at h
+  simp only [Bitvec.of_float.r_lit] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_of_float.r_lit.main.ok FS O hO)
+  · kanon_arm h (Bitvec.of_float.r_lit.main.ok FS O hO)
 
-theorem bv_of_float.r_default.main.ok : bv_of_float.r_default.main.Stmt := kanon_proof% bv_of_float.r_default.main
+theorem Bitvec.of_float.r_default.main.ok : Bitvec.of_float.r_default.main.Stmt := kanon_proof% Bitvec.of_float.r_default.main
 
-theorem bv_of_float.r_default.proof : bv_of_float.r_default.Stmt := by
+theorem Bitvec.of_float.r_default.proof : Bitvec.of_float.r_default.Stmt := by
   intro FS O hO rounding signed sz v res h
-  simp only [bv_of_float.r_default] at h
+  simp only [Bitvec.of_float.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_of_float.r_default.main.ok FS O hO)
+  · kanon_arm h (Bitvec.of_float.r_default.main.ok FS O hO)
 
-theorem bv_to_float.r_lit.main.ok : bv_to_float.r_lit.main.Stmt := kanon_proof% bv_to_float.r_lit.main
+theorem Bitvec.to_float.r_lit.main.ok : Bitvec.to_float.r_lit.main.Stmt := kanon_proof% Bitvec.to_float.r_lit.main
 
-theorem bv_to_float.r_lit.proof : bv_to_float.r_lit.Stmt := by
+theorem Bitvec.to_float.r_lit.proof : Bitvec.to_float.r_lit.Stmt := by
   intro FS O hO rounding signed fp v res h
-  simp only [bv_to_float.r_lit] at h
+  simp only [Bitvec.to_float.r_lit] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_to_float.r_lit.main.ok FS O hO)
+  · kanon_arm h (Bitvec.to_float.r_lit.main.ok FS O hO)
 
-theorem bv_to_float.r_default.main.ok : bv_to_float.r_default.main.Stmt := kanon_proof% bv_to_float.r_default.main
+theorem Bitvec.to_float.r_default.main.ok : Bitvec.to_float.r_default.main.Stmt := kanon_proof% Bitvec.to_float.r_default.main
 
-theorem bv_to_float.r_default.proof : bv_to_float.r_default.Stmt := by
+theorem Bitvec.to_float.r_default.proof : Bitvec.to_float.r_default.Stmt := by
   intro FS O hO rounding signed fp v res h
-  simp only [bv_to_float.r_default] at h
+  simp only [Bitvec.to_float.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_to_float.r_default.main.ok FS O hO)
+  · kanon_arm h (Bitvec.to_float.r_default.main.ok FS O hO)
 
-theorem bv_to_float_raw.r_lit.main.ok : bv_to_float_raw.r_lit.main.Stmt := kanon_proof% bv_to_float_raw.r_lit.main
+theorem Bitvec.to_float_raw.r_lit.main.ok : Bitvec.to_float_raw.r_lit.main.Stmt := kanon_proof% Bitvec.to_float_raw.r_lit.main
 
-theorem bv_to_float_raw.r_lit.proof : bv_to_float_raw.r_lit.Stmt := by
+theorem Bitvec.to_float_raw.r_lit.proof : Bitvec.to_float_raw.r_lit.Stmt := by
   intro FS O hO v res h
-  simp only [bv_to_float_raw.r_lit] at h
+  simp only [Bitvec.to_float_raw.r_lit] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_to_float_raw.r_lit.main.ok FS O hO)
+  · kanon_arm h (Bitvec.to_float_raw.r_lit.main.ok FS O hO)
 
-theorem bv_to_float_raw.r_default.main.ok : bv_to_float_raw.r_default.main.Stmt := kanon_proof% bv_to_float_raw.r_default.main
+theorem Bitvec.to_float_raw.r_default.main.ok : Bitvec.to_float_raw.r_default.main.Stmt := kanon_proof% Bitvec.to_float_raw.r_default.main
 
-theorem bv_to_float_raw.r_default.proof : bv_to_float_raw.r_default.Stmt := by
+theorem Bitvec.to_float_raw.r_default.proof : Bitvec.to_float_raw.r_default.Stmt := by
   intro FS O hO v res h
-  simp only [bv_to_float_raw.r_default] at h
+  simp only [Bitvec.to_float_raw.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (bv_to_float_raw.r_default.main.ok FS O hO)
+  · kanon_arm h (Bitvec.to_float_raw.r_default.main.ok FS O hO)
 
-theorem float_is_floatclass.r_lit.main.ok : float_is_floatclass.r_lit.main.Stmt := kanon_proof% float_is_floatclass.r_lit.main
+theorem Float.is_floatclass.r_lit.main.ok : Float.is_floatclass.r_lit.main.Stmt := kanon_proof% Float.is_floatclass.r_lit.main
 
-theorem float_is_floatclass.r_lit.proof : float_is_floatclass.r_lit.Stmt := by
+theorem Float.is_floatclass.r_lit.proof : Float.is_floatclass.r_lit.Stmt := by
   intro FS O hO fc sv res h
-  simp only [float_is_floatclass.r_lit] at h
+  simp only [Float.is_floatclass.r_lit] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_is_floatclass.r_lit.main.ok FS O hO)
+  · kanon_arm h (Float.is_floatclass.r_lit.main.ok FS O hO)
 
-theorem float_is_floatclass.r_default.main.ok : float_is_floatclass.r_default.main.Stmt := kanon_proof% float_is_floatclass.r_default.main
+theorem Float.is_floatclass.r_default.main.ok : Float.is_floatclass.r_default.main.Stmt := kanon_proof% Float.is_floatclass.r_default.main
 
-theorem float_is_floatclass.r_default.proof : float_is_floatclass.r_default.Stmt := by
+theorem Float.is_floatclass.r_default.proof : Float.is_floatclass.r_default.Stmt := by
   intro FS O hO fc sv res h
-  simp only [float_is_floatclass.r_default] at h
+  simp only [Float.is_floatclass.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_is_floatclass.r_default.main.ok FS O hO)
+  · kanon_arm h (Float.is_floatclass.r_default.main.ok FS O hO)
 
-theorem float_is_negative.r_lit.main.ok : float_is_negative.r_lit.main.Stmt := kanon_proof% float_is_negative.r_lit.main
+theorem Float.is_negative.r_lit.main.ok : Float.is_negative.r_lit.main.Stmt := kanon_proof% Float.is_negative.r_lit.main
 
-theorem float_is_negative.r_lit.proof : float_is_negative.r_lit.Stmt := by
+theorem Float.is_negative.r_lit.proof : Float.is_negative.r_lit.Stmt := by
   intro FS O hO v res h
-  simp only [float_is_negative.r_lit] at h
+  simp only [Float.is_negative.r_lit] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_is_negative.r_lit.main.ok FS O hO)
+  · kanon_arm h (Float.is_negative.r_lit.main.ok FS O hO)
 
-theorem float_is_negative.r_default.main.ok : float_is_negative.r_default.main.Stmt := kanon_proof% float_is_negative.r_default.main
+theorem Float.is_negative.r_default.main.ok : Float.is_negative.r_default.main.Stmt := kanon_proof% Float.is_negative.r_default.main
 
-theorem float_is_negative.r_default.proof : float_is_negative.r_default.Stmt := by
+theorem Float.is_negative.r_default.proof : Float.is_negative.r_default.Stmt := by
   intro FS O hO v res h
-  simp only [float_is_negative.r_default] at h
+  simp only [Float.is_negative.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_is_negative.r_default.main.ok FS O hO)
+  · kanon_arm h (Float.is_negative.r_default.main.ok FS O hO)
 
-theorem float_is_positive.r_lit.main.ok : float_is_positive.r_lit.main.Stmt := kanon_proof% float_is_positive.r_lit.main
+theorem Float.is_positive.r_lit.main.ok : Float.is_positive.r_lit.main.Stmt := kanon_proof% Float.is_positive.r_lit.main
 
-theorem float_is_positive.r_lit.proof : float_is_positive.r_lit.Stmt := by
+theorem Float.is_positive.r_lit.proof : Float.is_positive.r_lit.Stmt := by
   intro FS O hO v res h
-  simp only [float_is_positive.r_lit] at h
+  simp only [Float.is_positive.r_lit] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_is_positive.r_lit.main.ok FS O hO)
+  · kanon_arm h (Float.is_positive.r_lit.main.ok FS O hO)
 
-theorem float_is_positive.r_default.main.ok : float_is_positive.r_default.main.Stmt := kanon_proof% float_is_positive.r_default.main
+theorem Float.is_positive.r_default.main.ok : Float.is_positive.r_default.main.Stmt := kanon_proof% Float.is_positive.r_default.main
 
-theorem float_is_positive.r_default.proof : float_is_positive.r_default.Stmt := by
+theorem Float.is_positive.r_default.proof : Float.is_positive.r_default.Stmt := by
   intro FS O hO v res h
-  simp only [float_is_positive.r_default] at h
+  simp only [Float.is_positive.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_is_positive.r_default.main.ok FS O hO)
+  · kanon_arm h (Float.is_positive.r_default.main.ok FS O hO)
 
-theorem float_cast.r_lit.main.ok : float_cast.r_lit.main.Stmt := kanon_proof% float_cast.r_lit.main
+theorem Float.cast.r_lit.main.ok : Float.cast.r_lit.main.Stmt := kanon_proof% Float.cast.r_lit.main
 
-theorem float_cast.r_lit.proof : float_cast.r_lit.Stmt := by
+theorem Float.cast.r_lit.proof : Float.cast.r_lit.Stmt := by
   intro FS O hO rounding fp v res h
-  simp only [float_cast.r_lit] at h
+  simp only [Float.cast.r_lit] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_cast.r_lit.main.ok FS O hO)
+  · kanon_arm h (Float.cast.r_lit.main.ok FS O hO)
 
-theorem float_cast.r_default.main.ok : float_cast.r_default.main.Stmt := kanon_proof% float_cast.r_default.main
+theorem Float.cast.r_default.main.ok : Float.cast.r_default.main.Stmt := kanon_proof% Float.cast.r_default.main
 
-theorem float_cast.r_default.proof : float_cast.r_default.Stmt := by
+theorem Float.cast.r_default.proof : Float.cast.r_default.Stmt := by
   intro FS O hO rounding fp v res h
-  simp only [float_cast.r_default] at h
+  simp only [Float.cast.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_cast.r_default.main.ok FS O hO)
+  · kanon_arm h (Float.cast.r_default.main.ok FS O hO)
 
-theorem float_eq.r_lits.main.ok : float_eq.r_lits.main.Stmt := kanon_proof% float_eq.r_lits.main
+theorem Float.eq.r_lits.main.ok : Float.eq.r_lits.main.Stmt := kanon_proof% Float.eq.r_lits.main
 
-theorem float_eq.r_lits.proof : float_eq.r_lits.Stmt := by
+theorem Float.eq.r_lits.proof : Float.eq.r_lits.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [float_eq.r_lits] at h
+  simp only [Float.eq.r_lits] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_eq.r_lits.main.ok FS O hO)
+  · kanon_arm h (Float.eq.r_lits.main.ok FS O hO)
 
-theorem float_eq.r_same.main.ok : float_eq.r_same.main.Stmt := kanon_proof% float_eq.r_same.main
+theorem Float.eq.r_same.main.ok : Float.eq.r_same.main.Stmt := kanon_proof% Float.eq.r_same.main
 
-theorem float_eq.r_same.proof : float_eq.r_same.Stmt := by
+theorem Float.eq.r_same.proof : Float.eq.r_same.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [float_eq.r_same] at h
+  simp only [Float.eq.r_same] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_eq.r_same.main.ok FS O hO)
+  · kanon_arm h (Float.eq.r_same.main.ok FS O hO)
 
-theorem float_eq.r_lit.main.ok : float_eq.r_lit.main.Stmt := kanon_proof% float_eq.r_lit.main
+theorem Float.eq.r_lit.main.ok : Float.eq.r_lit.main.Stmt := kanon_proof% Float.eq.r_lit.main
 
-theorem float_eq.r_lit.swap.ok : float_eq.r_lit.swap.Stmt := by
+theorem Float.eq.r_lit.swap.ok : Float.eq.r_lit.swap.Stmt := by
   intro FS O hO v1 f t__2
-  refine Refinement.trans ?_ (float_eq.r_lit.main.ok FS O hO v1 f t__2)
-  simp only [float_eq.spec]
+  refine Refinement.trans ?_ (Float.eq.r_lit.main.ok FS O hO v1 f t__2)
+  simp only [Float.eq.spec]
   refine Refinement.trans (Op2.FEq.comm.ok FS ..) ?_
   kanon_congr
 
-theorem float_eq.r_lit.proof : float_eq.r_lit.Stmt := by
+theorem Float.eq.r_lit.proof : Float.eq.r_lit.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [float_eq.r_lit] at h
+  simp only [Float.eq.r_lit] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_eq.r_lit.main.ok FS O hO)
-  · kanon_arm h (float_eq.r_lit.swap.ok FS O hO)
+  · kanon_arm h (Float.eq.r_lit.main.ok FS O hO)
+  · kanon_arm h (Float.eq.r_lit.swap.ok FS O hO)
 
-theorem float_eq.r_default.main.ok : float_eq.r_default.main.Stmt := kanon_proof% float_eq.r_default.main
+theorem Float.eq.r_default.main.ok : Float.eq.r_default.main.Stmt := kanon_proof% Float.eq.r_default.main
 
-theorem float_eq.r_default.proof : float_eq.r_default.Stmt := by
+theorem Float.eq.r_default.proof : Float.eq.r_default.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [float_eq.r_default] at h
+  simp only [Float.eq.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_eq.r_default.main.ok FS O hO)
+  · kanon_arm h (Float.eq.r_default.main.ok FS O hO)
 
-theorem float_lt.r_lits.main.ok : float_lt.r_lits.main.Stmt := kanon_proof% float_lt.r_lits.main
+theorem Float.lt.r_lits.main.ok : Float.lt.r_lits.main.Stmt := kanon_proof% Float.lt.r_lits.main
 
-theorem float_lt.r_lits.proof : float_lt.r_lits.Stmt := by
+theorem Float.lt.r_lits.proof : Float.lt.r_lits.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [float_lt.r_lits] at h
+  simp only [Float.lt.r_lits] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_lt.r_lits.main.ok FS O hO)
+  · kanon_arm h (Float.lt.r_lits.main.ok FS O hO)
 
-theorem float_lt.r_default.main.ok : float_lt.r_default.main.Stmt := kanon_proof% float_lt.r_default.main
+theorem Float.lt.r_default.main.ok : Float.lt.r_default.main.Stmt := kanon_proof% Float.lt.r_default.main
 
-theorem float_lt.r_default.proof : float_lt.r_default.Stmt := by
+theorem Float.lt.r_default.proof : Float.lt.r_default.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [float_lt.r_default] at h
+  simp only [Float.lt.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_lt.r_default.main.ok FS O hO)
+  · kanon_arm h (Float.lt.r_default.main.ok FS O hO)
 
-theorem float_leq.r_lits.main.ok : float_leq.r_lits.main.Stmt := kanon_proof% float_leq.r_lits.main
+theorem Float.leq.r_lits.main.ok : Float.leq.r_lits.main.Stmt := kanon_proof% Float.leq.r_lits.main
 
-theorem float_leq.r_lits.proof : float_leq.r_lits.Stmt := by
+theorem Float.leq.r_lits.proof : Float.leq.r_lits.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [float_leq.r_lits] at h
+  simp only [Float.leq.r_lits] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_leq.r_lits.main.ok FS O hO)
+  · kanon_arm h (Float.leq.r_lits.main.ok FS O hO)
 
-theorem float_leq.r_default.main.ok : float_leq.r_default.main.Stmt := kanon_proof% float_leq.r_default.main
+theorem Float.leq.r_default.main.ok : Float.leq.r_default.main.Stmt := kanon_proof% Float.leq.r_default.main
 
-theorem float_leq.r_default.proof : float_leq.r_default.Stmt := by
+theorem Float.leq.r_default.proof : Float.leq.r_default.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [float_leq.r_default] at h
+  simp only [Float.leq.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_leq.r_default.main.ok FS O hO)
+  · kanon_arm h (Float.leq.r_default.main.ok FS O hO)
 
-theorem float_add.r_lits.main.ok : float_add.r_lits.main.Stmt := kanon_proof% float_add.r_lits.main
+theorem Float.add.r_lits.main.ok : Float.add.r_lits.main.Stmt := kanon_proof% Float.add.r_lits.main
 
-theorem float_add.r_lits.proof : float_add.r_lits.Stmt := by
+theorem Float.add.r_lits.proof : Float.add.r_lits.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [float_add.r_lits] at h
+  simp only [Float.add.r_lits] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_add.r_lits.main.ok FS O hO)
+  · kanon_arm h (Float.add.r_lits.main.ok FS O hO)
 
-theorem float_add.r_default.main.ok : float_add.r_default.main.Stmt := kanon_proof% float_add.r_default.main
+theorem Float.add.r_default.main.ok : Float.add.r_default.main.Stmt := kanon_proof% Float.add.r_default.main
 
-theorem float_add.r_default.proof : float_add.r_default.Stmt := by
+theorem Float.add.r_default.proof : Float.add.r_default.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [float_add.r_default] at h
+  simp only [Float.add.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_add.r_default.main.ok FS O hO)
+  · kanon_arm h (Float.add.r_default.main.ok FS O hO)
 
-theorem float_sub.r_lits.main.ok : float_sub.r_lits.main.Stmt := kanon_proof% float_sub.r_lits.main
+theorem Float.sub.r_lits.main.ok : Float.sub.r_lits.main.Stmt := kanon_proof% Float.sub.r_lits.main
 
-theorem float_sub.r_lits.proof : float_sub.r_lits.Stmt := by
+theorem Float.sub.r_lits.proof : Float.sub.r_lits.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [float_sub.r_lits] at h
+  simp only [Float.sub.r_lits] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_sub.r_lits.main.ok FS O hO)
+  · kanon_arm h (Float.sub.r_lits.main.ok FS O hO)
 
-theorem float_sub.r_default.main.ok : float_sub.r_default.main.Stmt := kanon_proof% float_sub.r_default.main
+theorem Float.sub.r_default.main.ok : Float.sub.r_default.main.Stmt := kanon_proof% Float.sub.r_default.main
 
-theorem float_sub.r_default.proof : float_sub.r_default.Stmt := by
+theorem Float.sub.r_default.proof : Float.sub.r_default.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [float_sub.r_default] at h
+  simp only [Float.sub.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_sub.r_default.main.ok FS O hO)
+  · kanon_arm h (Float.sub.r_default.main.ok FS O hO)
 
-theorem float_div.r_lits.main.ok : float_div.r_lits.main.Stmt := kanon_proof% float_div.r_lits.main
+theorem Float.div.r_lits.main.ok : Float.div.r_lits.main.Stmt := kanon_proof% Float.div.r_lits.main
 
-theorem float_div.r_lits.proof : float_div.r_lits.Stmt := by
+theorem Float.div.r_lits.proof : Float.div.r_lits.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [float_div.r_lits] at h
+  simp only [Float.div.r_lits] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_div.r_lits.main.ok FS O hO)
+  · kanon_arm h (Float.div.r_lits.main.ok FS O hO)
 
-theorem float_div.r_default.main.ok : float_div.r_default.main.Stmt := kanon_proof% float_div.r_default.main
+theorem Float.div.r_default.main.ok : Float.div.r_default.main.Stmt := kanon_proof% Float.div.r_default.main
 
-theorem float_div.r_default.proof : float_div.r_default.Stmt := by
+theorem Float.div.r_default.proof : Float.div.r_default.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [float_div.r_default] at h
+  simp only [Float.div.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_div.r_default.main.ok FS O hO)
+  · kanon_arm h (Float.div.r_default.main.ok FS O hO)
 
-theorem float_mul.r_lits.main.ok : float_mul.r_lits.main.Stmt := kanon_proof% float_mul.r_lits.main
+theorem Float.mul.r_lits.main.ok : Float.mul.r_lits.main.Stmt := kanon_proof% Float.mul.r_lits.main
 
-theorem float_mul.r_lits.proof : float_mul.r_lits.Stmt := by
+theorem Float.mul.r_lits.proof : Float.mul.r_lits.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [float_mul.r_lits] at h
+  simp only [Float.mul.r_lits] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_mul.r_lits.main.ok FS O hO)
+  · kanon_arm h (Float.mul.r_lits.main.ok FS O hO)
 
-theorem float_mul.r_default.main.ok : float_mul.r_default.main.Stmt := kanon_proof% float_mul.r_default.main
+theorem Float.mul.r_default.main.ok : Float.mul.r_default.main.Stmt := kanon_proof% Float.mul.r_default.main
 
-theorem float_mul.r_default.proof : float_mul.r_default.Stmt := by
+theorem Float.mul.r_default.proof : Float.mul.r_default.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [float_mul.r_default] at h
+  simp only [Float.mul.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_mul.r_default.main.ok FS O hO)
+  · kanon_arm h (Float.mul.r_default.main.ok FS O hO)
 
-theorem float_rem.r_lits.main.ok : float_rem.r_lits.main.Stmt := kanon_proof% float_rem.r_lits.main
+theorem Float.rem.r_lits.main.ok : Float.rem.r_lits.main.Stmt := kanon_proof% Float.rem.r_lits.main
 
-theorem float_rem.r_lits.proof : float_rem.r_lits.Stmt := by
+theorem Float.rem.r_lits.proof : Float.rem.r_lits.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [float_rem.r_lits] at h
+  simp only [Float.rem.r_lits] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_rem.r_lits.main.ok FS O hO)
+  · kanon_arm h (Float.rem.r_lits.main.ok FS O hO)
 
-theorem float_rem.r_default.main.ok : float_rem.r_default.main.Stmt := kanon_proof% float_rem.r_default.main
+theorem Float.rem.r_default.main.ok : Float.rem.r_default.main.Stmt := kanon_proof% Float.rem.r_default.main
 
-theorem float_rem.r_default.proof : float_rem.r_default.Stmt := by
+theorem Float.rem.r_default.proof : Float.rem.r_default.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [float_rem.r_default] at h
+  simp only [Float.rem.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_rem.r_default.main.ok FS O hO)
+  · kanon_arm h (Float.rem.r_default.main.ok FS O hO)
 
-theorem float_abs.r_lit.main.ok : float_abs.r_lit.main.Stmt := kanon_proof% float_abs.r_lit.main
+theorem Float.abs.r_lit.main.ok : Float.abs.r_lit.main.Stmt := kanon_proof% Float.abs.r_lit.main
 
-theorem float_abs.r_lit.proof : float_abs.r_lit.Stmt := by
+theorem Float.abs.r_lit.proof : Float.abs.r_lit.Stmt := by
   intro FS O hO v res h
-  simp only [float_abs.r_lit] at h
+  simp only [Float.abs.r_lit] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_abs.r_lit.main.ok FS O hO)
+  · kanon_arm h (Float.abs.r_lit.main.ok FS O hO)
 
-theorem float_abs.r_abs.main.ok : float_abs.r_abs.main.Stmt := kanon_proof% float_abs.r_abs.main
+theorem Float.abs.r_abs.main.ok : Float.abs.r_abs.main.Stmt := kanon_proof% Float.abs.r_abs.main
 
-theorem float_abs.r_abs.proof : float_abs.r_abs.Stmt := by
+theorem Float.abs.r_abs.proof : Float.abs.r_abs.Stmt := by
   intro FS O hO v res h
-  simp only [float_abs.r_abs] at h
+  simp only [Float.abs.r_abs] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_abs.r_abs.main.ok FS O hO)
+  · kanon_arm h (Float.abs.r_abs.main.ok FS O hO)
 
-theorem float_abs.r_default.main.ok : float_abs.r_default.main.Stmt := kanon_proof% float_abs.r_default.main
+theorem Float.abs.r_default.main.ok : Float.abs.r_default.main.Stmt := kanon_proof% Float.abs.r_default.main
 
-theorem float_abs.r_default.proof : float_abs.r_default.Stmt := by
+theorem Float.abs.r_default.proof : Float.abs.r_default.Stmt := by
   intro FS O hO v res h
-  simp only [float_abs.r_default] at h
+  simp only [Float.abs.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_abs.r_default.main.ok FS O hO)
+  · kanon_arm h (Float.abs.r_default.main.ok FS O hO)
 
-theorem float_neg.r_lit.main.ok : float_neg.r_lit.main.Stmt := kanon_proof% float_neg.r_lit.main
+theorem Float.neg.r_lit.main.ok : Float.neg.r_lit.main.Stmt := kanon_proof% Float.neg.r_lit.main
 
-theorem float_neg.r_lit.proof : float_neg.r_lit.Stmt := by
+theorem Float.neg.r_lit.proof : Float.neg.r_lit.Stmt := by
   intro FS O hO v res h
-  simp only [float_neg.r_lit] at h
+  simp only [Float.neg.r_lit] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_neg.r_lit.main.ok FS O hO)
+  · kanon_arm h (Float.neg.r_lit.main.ok FS O hO)
 
-theorem float_neg.r_neg.main.ok : float_neg.r_neg.main.Stmt := kanon_proof% float_neg.r_neg.main
+theorem Float.neg.r_neg.main.ok : Float.neg.r_neg.main.Stmt := kanon_proof% Float.neg.r_neg.main
 
-theorem float_neg.r_neg.proof : float_neg.r_neg.Stmt := by
+theorem Float.neg.r_neg.proof : Float.neg.r_neg.Stmt := by
   intro FS O hO v res h
-  simp only [float_neg.r_neg] at h
+  simp only [Float.neg.r_neg] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_neg.r_neg.main.ok FS O hO)
+  · kanon_arm h (Float.neg.r_neg.main.ok FS O hO)
 
-theorem float_neg.r_default.main.ok : float_neg.r_default.main.Stmt := kanon_proof% float_neg.r_default.main
+theorem Float.neg.r_default.main.ok : Float.neg.r_default.main.Stmt := kanon_proof% Float.neg.r_default.main
 
-theorem float_neg.r_default.proof : float_neg.r_default.Stmt := by
+theorem Float.neg.r_default.proof : Float.neg.r_default.Stmt := by
   intro FS O hO v res h
-  simp only [float_neg.r_default] at h
+  simp only [Float.neg.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_neg.r_default.main.ok FS O hO)
+  · kanon_arm h (Float.neg.r_default.main.ok FS O hO)
 
-theorem float_fma.r_lits.main.ok : float_fma.r_lits.main.Stmt := kanon_proof% float_fma.r_lits.main
+theorem Float.fma.r_lits.main.ok : Float.fma.r_lits.main.Stmt := kanon_proof% Float.fma.r_lits.main
 
-theorem float_fma.r_lits.proof : float_fma.r_lits.Stmt := by
+theorem Float.fma.r_lits.proof : Float.fma.r_lits.Stmt := by
   intro FS O hO a b c res h
-  simp only [float_fma.r_lits] at h
+  simp only [Float.fma.r_lits] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_fma.r_lits.main.ok FS O hO)
+  · kanon_arm h (Float.fma.r_lits.main.ok FS O hO)
 
-theorem float_fma.r_default.main.ok : float_fma.r_default.main.Stmt := kanon_proof% float_fma.r_default.main
+theorem Float.fma.r_default.main.ok : Float.fma.r_default.main.Stmt := kanon_proof% Float.fma.r_default.main
 
-theorem float_fma.r_default.proof : float_fma.r_default.Stmt := by
+theorem Float.fma.r_default.proof : Float.fma.r_default.Stmt := by
   intro FS O hO a b c res h
-  simp only [float_fma.r_default] at h
+  simp only [Float.fma.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_fma.r_default.main.ok FS O hO)
+  · kanon_arm h (Float.fma.r_default.main.ok FS O hO)
 
-theorem float_fmod_of_rem.r_main.main.ok : float_fmod_of_rem.r_main.main.Stmt := kanon_proof% float_fmod_of_rem.r_main.main
+theorem Float.fmod_of_rem.r_main.main.ok : Float.fmod_of_rem.r_main.main.Stmt := kanon_proof% Float.fmod_of_rem.r_main.main
 
-theorem float_fmod_of_rem.r_main.proof : float_fmod_of_rem.r_main.Stmt := by
+theorem Float.fmod_of_rem.r_main.proof : Float.fmod_of_rem.r_main.Stmt := by
   intro FS O hO r v1 v2 res h
-  simp only [float_fmod_of_rem.r_main] at h
+  simp only [Float.fmod_of_rem.r_main] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_fmod_of_rem.r_main.main.ok FS O hO)
+  · kanon_arm h (Float.fmod_of_rem.r_main.main.ok FS O hO)
 
-theorem float_fmod.r_lits.main.ok : float_fmod.r_lits.main.Stmt := kanon_proof% float_fmod.r_lits.main
+theorem Float.fmod.r_lits.main.ok : Float.fmod.r_lits.main.Stmt := kanon_proof% Float.fmod.r_lits.main
 
-theorem float_fmod.r_lits.proof : float_fmod.r_lits.Stmt := by
+theorem Float.fmod.r_lits.proof : Float.fmod.r_lits.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [float_fmod.r_lits] at h
+  simp only [Float.fmod.r_lits] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_fmod.r_lits.main.ok FS O hO)
+  · kanon_arm h (Float.fmod.r_lits.main.ok FS O hO)
 
-theorem float_fmod.r_default.main.ok : float_fmod.r_default.main.Stmt := kanon_proof% float_fmod.r_default.main
+theorem Float.fmod.r_default.main.ok : Float.fmod.r_default.main.Stmt := kanon_proof% Float.fmod.r_default.main
 
-theorem float_fmod.r_default.proof : float_fmod.r_default.Stmt := by
+theorem Float.fmod.r_default.proof : Float.fmod.r_default.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [float_fmod.r_default] at h
+  simp only [Float.fmod.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_fmod.r_default.main.ok FS O hO)
+  · kanon_arm h (Float.fmod.r_default.main.ok FS O hO)
 
-theorem float_min.r_lits.main.ok : float_min.r_lits.main.Stmt := kanon_proof% float_min.r_lits.main
+theorem Float.min.r_lits.main.ok : Float.min.r_lits.main.Stmt := kanon_proof% Float.min.r_lits.main
 
-theorem float_min.r_lits.proof : float_min.r_lits.Stmt := by
+theorem Float.min.r_lits.proof : Float.min.r_lits.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [float_min.r_lits] at h
+  simp only [Float.min.r_lits] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_min.r_lits.main.ok FS O hO)
+  · kanon_arm h (Float.min.r_lits.main.ok FS O hO)
 
-theorem float_min.r_default.main.ok : float_min.r_default.main.Stmt := kanon_proof% float_min.r_default.main
+theorem Float.min.r_default.main.ok : Float.min.r_default.main.Stmt := kanon_proof% Float.min.r_default.main
 
-theorem float_min.r_default.proof : float_min.r_default.Stmt := by
+theorem Float.min.r_default.proof : Float.min.r_default.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [float_min.r_default] at h
+  simp only [Float.min.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_min.r_default.main.ok FS O hO)
+  · kanon_arm h (Float.min.r_default.main.ok FS O hO)
 
-theorem float_max.r_lits.main.ok : float_max.r_lits.main.Stmt := kanon_proof% float_max.r_lits.main
+theorem Float.max.r_lits.main.ok : Float.max.r_lits.main.Stmt := kanon_proof% Float.max.r_lits.main
 
-theorem float_max.r_lits.proof : float_max.r_lits.Stmt := by
+theorem Float.max.r_lits.proof : Float.max.r_lits.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [float_max.r_lits] at h
+  simp only [Float.max.r_lits] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_max.r_lits.main.ok FS O hO)
+  · kanon_arm h (Float.max.r_lits.main.ok FS O hO)
 
-theorem float_max.r_default.main.ok : float_max.r_default.main.Stmt := kanon_proof% float_max.r_default.main
+theorem Float.max.r_default.main.ok : Float.max.r_default.main.Stmt := kanon_proof% Float.max.r_default.main
 
-theorem float_max.r_default.proof : float_max.r_default.Stmt := by
+theorem Float.max.r_default.proof : Float.max.r_default.Stmt := by
   intro FS O hO v1 v2 res h
-  simp only [float_max.r_default] at h
+  simp only [Float.max.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_max.r_default.main.ok FS O hO)
+  · kanon_arm h (Float.max.r_default.main.ok FS O hO)
 
-theorem float_sqrt.r_lit.main.ok : float_sqrt.r_lit.main.Stmt := kanon_proof% float_sqrt.r_lit.main
+theorem Float.sqrt.r_lit.main.ok : Float.sqrt.r_lit.main.Stmt := kanon_proof% Float.sqrt.r_lit.main
 
-theorem float_sqrt.r_lit.proof : float_sqrt.r_lit.Stmt := by
+theorem Float.sqrt.r_lit.proof : Float.sqrt.r_lit.Stmt := by
   intro FS O hO v res h
-  simp only [float_sqrt.r_lit] at h
+  simp only [Float.sqrt.r_lit] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_sqrt.r_lit.main.ok FS O hO)
+  · kanon_arm h (Float.sqrt.r_lit.main.ok FS O hO)
 
-theorem float_sqrt.r_default.main.ok : float_sqrt.r_default.main.Stmt := kanon_proof% float_sqrt.r_default.main
+theorem Float.sqrt.r_default.main.ok : Float.sqrt.r_default.main.Stmt := kanon_proof% Float.sqrt.r_default.main
 
-theorem float_sqrt.r_default.proof : float_sqrt.r_default.Stmt := by
+theorem Float.sqrt.r_default.proof : Float.sqrt.r_default.Stmt := by
   intro FS O hO v res h
-  simp only [float_sqrt.r_default] at h
+  simp only [Float.sqrt.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_sqrt.r_default.main.ok FS O hO)
+  · kanon_arm h (Float.sqrt.r_default.main.ok FS O hO)
 
-theorem float_round.r_lit.main.ok : float_round.r_lit.main.Stmt := kanon_proof% float_round.r_lit.main
+theorem Float.round.r_lit.main.ok : Float.round.r_lit.main.Stmt := kanon_proof% Float.round.r_lit.main
 
-theorem float_round.r_lit.proof : float_round.r_lit.Stmt := by
+theorem Float.round.r_lit.proof : Float.round.r_lit.Stmt := by
   intro FS O hO rm sv res h
-  simp only [float_round.r_lit] at h
+  simp only [Float.round.r_lit] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_round.r_lit.main.ok FS O hO)
+  · kanon_arm h (Float.round.r_lit.main.ok FS O hO)
 
-theorem float_round.r_default.main.ok : float_round.r_default.main.Stmt := kanon_proof% float_round.r_default.main
+theorem Float.round.r_default.main.ok : Float.round.r_default.main.Stmt := kanon_proof% Float.round.r_default.main
 
-theorem float_round.r_default.proof : float_round.r_default.Stmt := by
+theorem Float.round.r_default.proof : Float.round.r_default.Stmt := by
   intro FS O hO rm sv res h
-  simp only [float_round.r_default] at h
+  simp only [Float.round.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (float_round.r_default.main.ok FS O hO)
+  · kanon_arm h (Float.round.r_default.main.ok FS O hO)
 
-theorem ptr_loc.r_ptr.main.ok : ptr_loc.r_ptr.main.Stmt := kanon_proof% ptr_loc.r_ptr.main
+theorem Ptr.loc.r_ptr.main.ok : Ptr.loc.r_ptr.main.Stmt := kanon_proof% Ptr.loc.r_ptr.main
 
-theorem ptr_loc.r_ptr.proof : ptr_loc.r_ptr.Stmt := by
+theorem Ptr.loc.r_ptr.proof : Ptr.loc.r_ptr.Stmt := by
   intro FS O hO p res h
-  simp only [ptr_loc.r_ptr] at h
+  simp only [Ptr.loc.r_ptr] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (ptr_loc.r_ptr.main.ok FS O hO)
+  · kanon_arm h (Ptr.loc.r_ptr.main.ok FS O hO)
 
-theorem ptr_loc.r_default.main.ok : ptr_loc.r_default.main.Stmt := kanon_proof% ptr_loc.r_default.main
+theorem Ptr.loc.r_default.main.ok : Ptr.loc.r_default.main.Stmt := kanon_proof% Ptr.loc.r_default.main
 
-theorem ptr_loc.r_default.proof : ptr_loc.r_default.Stmt := by
+theorem Ptr.loc.r_default.proof : Ptr.loc.r_default.Stmt := by
   intro FS O hO p res h
-  simp only [ptr_loc.r_default] at h
+  simp only [Ptr.loc.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (ptr_loc.r_default.main.ok FS O hO)
+  · kanon_arm h (Ptr.loc.r_default.main.ok FS O hO)
 
-theorem ptr_ofs.r_ptr.main.ok : ptr_ofs.r_ptr.main.Stmt := kanon_proof% ptr_ofs.r_ptr.main
+theorem Ptr.ofs.r_ptr.main.ok : Ptr.ofs.r_ptr.main.Stmt := kanon_proof% Ptr.ofs.r_ptr.main
 
-theorem ptr_ofs.r_ptr.proof : ptr_ofs.r_ptr.Stmt := by
+theorem Ptr.ofs.r_ptr.proof : Ptr.ofs.r_ptr.Stmt := by
   intro FS O hO p res h
-  simp only [ptr_ofs.r_ptr] at h
+  simp only [Ptr.ofs.r_ptr] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (ptr_ofs.r_ptr.main.ok FS O hO)
+  · kanon_arm h (Ptr.ofs.r_ptr.main.ok FS O hO)
 
-theorem ptr_ofs.r_default.main.ok : ptr_ofs.r_default.main.Stmt := kanon_proof% ptr_ofs.r_default.main
+theorem Ptr.ofs.r_default.main.ok : Ptr.ofs.r_default.main.Stmt := kanon_proof% Ptr.ofs.r_default.main
 
-theorem ptr_ofs.r_default.proof : ptr_ofs.r_default.Stmt := by
+theorem Ptr.ofs.r_default.proof : Ptr.ofs.r_default.Stmt := by
   intro FS O hO p res h
-  simp only [ptr_ofs.r_default] at h
+  simp only [Ptr.ofs.r_default] at h
   repeat' rcases orElse_some h with h | h
-  · kanon_arm h (ptr_ofs.r_default.main.ok FS O hO)
+  · kanon_arm h (Ptr.ofs.r_default.main.ok FS O hO)
 
-theorem b_and.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
-  Refines FS (b_and.spec v1 v2) (b_and.step O v1 v2) := by
-  unfold b_and.step
-  refine Refinement.firstSome_cons (fun res h => b_and.r_same.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_and.r_false_.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_and.r_true_.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_and.r_not.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_and.r_and_.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_and.r_or_.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_and.r_eq_neq.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_and.r_eq_extracts.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_and.r_upper_bounds.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_and.r_lower_bounds.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_and.r_default.proof FS O hO v1 v2 res h) ?_
+theorem Bool.and_.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
+  Refines FS (Bool.and_.spec v1 v2) (Bool.and_.step O v1 v2) := by
+  unfold Bool.and_.step
+  refine Refinement.firstSome_cons (fun res h => Bool.and_.r_same.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.and_.r_false_.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.and_.r_true_.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.and_.r_not.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.and_.r_and_.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.and_.r_or_.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.and_.r_eq_neq.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.and_.r_eq_extracts.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.and_.r_upper_bounds.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.and_.r_lower_bounds.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.and_.r_default.proof FS O hO v1 v2 res h) ?_
   exact Refinement.firstSome_nil
 
-theorem b_or.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
-  Refines FS (b_or.spec v1 v2) (b_or.step O v1 v2) := by
-  unfold b_or.step
-  refine Refinement.firstSome_cons (fun res h => b_or.r_same.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_or.r_true_.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_or.r_false_.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_or.r_not.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_or.r_or_.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_or.r_and_.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_or.r_lt_lt.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_or.r_lt_leq.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_or.r_complementary.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_or.r_upper_eq.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_or.r_lower_eq.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_or.r_upper_bounds.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_or.r_lower_bounds.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_or.r_default.proof FS O hO v1 v2 res h) ?_
+theorem Bool.or_.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
+  Refines FS (Bool.or_.spec v1 v2) (Bool.or_.step O v1 v2) := by
+  unfold Bool.or_.step
+  refine Refinement.firstSome_cons (fun res h => Bool.or_.r_same.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.or_.r_true_.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.or_.r_false_.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.or_.r_not.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.or_.r_or_.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.or_.r_and_.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.or_.r_lt_lt.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.or_.r_lt_leq.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.or_.r_complementary.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.or_.r_upper_eq.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.or_.r_lower_eq.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.or_.r_upper_bounds.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.or_.r_lower_bounds.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.or_.r_default.proof FS O hO v1 v2 res h) ?_
   exact Refinement.firstSome_nil
 
-theorem b_not.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (sv : Term) :
-  Refines FS (b_not.spec sv) (b_not.step O sv) := by
-  unfold b_not.step
-  refine Refinement.firstSome_cons (fun res h => b_not.r_true_.proof FS O hO sv res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_not.r_false_.proof FS O hO sv res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_not.r_not.proof FS O hO sv res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_not.r_or_.proof FS O hO sv res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_not.r_and_.proof FS O hO sv res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_not.r_ite.proof FS O hO sv res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_not.r_distinct.proof FS O hO sv res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_not.r_lt.proof FS O hO sv res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_not.r_leq.proof FS O hO sv res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_not.r_eq_bit.proof FS O hO sv res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_not.r_default.proof FS O hO sv res h) ?_
+theorem Bool.not_.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (sv : Term) :
+  Refines FS (Bool.not_.spec sv) (Bool.not_.step O sv) := by
+  unfold Bool.not_.step
+  refine Refinement.firstSome_cons (fun res h => Bool.not_.r_true_.proof FS O hO sv res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.not_.r_false_.proof FS O hO sv res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.not_.r_not.proof FS O hO sv res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.not_.r_or_.proof FS O hO sv res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.not_.r_and_.proof FS O hO sv res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.not_.r_ite.proof FS O hO sv res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.not_.r_distinct.proof FS O hO sv res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.not_.r_lt.proof FS O hO sv res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.not_.r_leq.proof FS O hO sv res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.not_.r_eq_bit.proof FS O hO sv res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.not_.r_default.proof FS O hO sv res h) ?_
   exact Refinement.firstSome_nil
 
-theorem b_ite.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (guard : Term) (if_ : Term) (else_ : Term) :
-  Refines FS (b_ite.spec guard if_ else_) (b_ite.step O guard if_ else_) := by
-  unfold b_ite.step
-  refine Refinement.firstSome_cons (fun res h => b_ite.r_true_.proof FS O hO guard if_ else_ res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_ite.r_false_.proof FS O hO guard if_ else_ res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_ite.r_bool.proof FS O hO guard if_ else_ res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_ite.r_not_bool.proof FS O hO guard if_ else_ res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_ite.r_false_then.proof FS O hO guard if_ else_ res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_ite.r_true_then.proof FS O hO guard if_ else_ res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_ite.r_false_else.proof FS O hO guard if_ else_ res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_ite.r_true_else.proof FS O hO guard if_ else_ res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_ite.r_not_guard.proof FS O hO guard if_ else_ res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_ite.r_guard_then.proof FS O hO guard if_ else_ res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_ite.r_guard_else.proof FS O hO guard if_ else_ res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_ite.r_ite_then.proof FS O hO guard if_ else_ res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_ite.r_ite_else.proof FS O hO guard if_ else_ res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_ite.r_and_ite_then.proof FS O hO guard if_ else_ res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_ite.r_or_ite_else.proof FS O hO guard if_ else_ res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_ite.r_same.proof FS O hO guard if_ else_ res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_ite.r_bv_of_bool.proof FS O hO guard if_ else_ res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_ite.r_default.proof FS O hO guard if_ else_ res h) ?_
+theorem Bool.ite.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (guard : Term) (if_ : Term) (else_ : Term) :
+  Refines FS (Bool.ite.spec guard if_ else_) (Bool.ite.step O guard if_ else_) := by
+  unfold Bool.ite.step
+  refine Refinement.firstSome_cons (fun res h => Bool.ite.r_true_.proof FS O hO guard if_ else_ res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.ite.r_false_.proof FS O hO guard if_ else_ res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.ite.r_bool.proof FS O hO guard if_ else_ res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.ite.r_not_bool.proof FS O hO guard if_ else_ res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.ite.r_false_then.proof FS O hO guard if_ else_ res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.ite.r_true_then.proof FS O hO guard if_ else_ res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.ite.r_false_else.proof FS O hO guard if_ else_ res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.ite.r_true_else.proof FS O hO guard if_ else_ res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.ite.r_not_guard.proof FS O hO guard if_ else_ res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.ite.r_guard_then.proof FS O hO guard if_ else_ res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.ite.r_guard_else.proof FS O hO guard if_ else_ res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.ite.r_ite_then.proof FS O hO guard if_ else_ res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.ite.r_ite_else.proof FS O hO guard if_ else_ res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.ite.r_and_ite_then.proof FS O hO guard if_ else_ res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.ite.r_or_ite_else.proof FS O hO guard if_ else_ res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.ite.r_same.proof FS O hO guard if_ else_ res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.ite.r_bv_of_bool.proof FS O hO guard if_ else_ res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.ite.r_default.proof FS O hO guard if_ else_ res h) ?_
   exact Refinement.firstSome_nil
 
-theorem sem_eq.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
-  Refines FS (sem_eq.spec v1 v2) (sem_eq.step O v1 v2) := by
-  unfold sem_eq.step
-  refine Refinement.firstSome_cons (fun res h => sem_eq.r_same.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => sem_eq.r_bools.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => sem_eq.r_ite_ite.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => sem_eq.r_false_.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => sem_eq.r_true_.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => sem_eq.r_nots.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => sem_eq.r_bvs.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => sem_eq.r_neg.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => sem_eq.r_not.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => sem_eq.r_add_const.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => sem_eq.r_sub_const1.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => sem_eq.r_sub_const2.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => sem_eq.r_self_add.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => sem_eq.r_add_add.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => sem_eq.r_mul_const.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => sem_eq.r_mul_cancel.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => sem_eq.r_or_zero.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => sem_eq.r_and_mask.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => sem_eq.r_concat_const.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => sem_eq.r_zext_const.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => sem_eq.r_ite_concat.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => sem_eq.r_concat_concat.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => sem_eq.r_ite_const.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => sem_eq.r_of_bools.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => sem_eq.r_of_bool_const.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => sem_eq.r_msb.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => sem_eq.r_floats.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => sem_eq.r_ptrs.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => sem_eq.r_default.proof FS O hO v1 v2 res h) ?_
+theorem Bool.eq.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
+  Refines FS (Bool.eq.spec v1 v2) (Bool.eq.step O v1 v2) := by
+  unfold Bool.eq.step
+  refine Refinement.firstSome_cons (fun res h => Bool.eq.r_same.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.eq.r_bools.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.eq.r_ite_ite.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.eq.r_false_.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.eq.r_true_.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.eq.r_nots.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.eq.r_bvs.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.eq.r_neg.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.eq.r_not.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.eq.r_add_const.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.eq.r_sub_const1.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.eq.r_sub_const2.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.eq.r_self_add.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.eq.r_add_add.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.eq.r_mul_const.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.eq.r_mul_cancel.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.eq.r_or_zero.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.eq.r_and_mask.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.eq.r_concat_const.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.eq.r_zext_const.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.eq.r_ite_concat.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.eq.r_concat_concat.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.eq.r_ite_const.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.eq.r_of_bools.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.eq.r_of_bool_const.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.eq.r_msb.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.eq.r_floats.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.eq.r_ptrs.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.eq.r_default.proof FS O hO v1 v2 res h) ?_
   exact Refinement.firstSome_nil
 
-theorem sem_eq_untyped.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
-  Refines FS (sem_eq_untyped.spec v1 v2) (sem_eq_untyped.step O v1 v2) := by
-  unfold sem_eq_untyped.step
-  refine Refinement.firstSome_cons (fun res h => sem_eq_untyped.r_ill_typed.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => sem_eq_untyped.r_typed.proof FS O hO v1 v2 res h) ?_
+theorem Bool.eq_untyped.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
+  Refines FS (Bool.eq_untyped.spec v1 v2) (Bool.eq_untyped.step O v1 v2) := by
+  unfold Bool.eq_untyped.step
+  refine Refinement.firstSome_cons (fun res h => Bool.eq_untyped.r_ill_typed.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.eq_untyped.r_typed.proof FS O hO v1 v2 res h) ?_
   exact Refinement.firstSome_nil
 
-theorem b_distinct.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (l : (List Term)) :
-  Refines FS (b_distinct.spec l) (b_distinct.step O l) := by
-  unfold b_distinct.step
-  refine Refinement.firstSome_cons (fun res h => b_distinct.r_small.proof FS O hO l res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_distinct.r_distinct.proof FS O hO l res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_distinct.r_not_distinct.proof FS O hO l res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_distinct.r_default.proof FS O hO l res h) ?_
+theorem Bool.distinct.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (l : (List Term)) :
+  Refines FS (Bool.distinct.spec l) (Bool.distinct.step O l) := by
+  unfold Bool.distinct.step
+  refine Refinement.firstSome_cons (fun res h => Bool.distinct.r_small.proof FS O hO l res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.distinct.r_distinct.proof FS O hO l res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.distinct.r_not_distinct.proof FS O hO l res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bool.distinct.r_default.proof FS O hO l res h) ?_
   exact Refinement.firstSome_nil
 
-theorem b_mk_exists.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (binders : (List (Int × Ty))) (body : Term) :
-  Refines FS (b_mk_exists.spec binders body) (b_mk_exists.step O binders body) := by
-  unfold b_mk_exists.step
-  refine Refinement.firstSome_cons (fun res h => b_mk_exists.r_empty.proof FS O hO binders body res h) ?_
-  refine Refinement.firstSome_cons (fun res h => b_mk_exists.r_default.proof FS O hO binders body res h) ?_
+theorem Exists.mk.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (binders : (List (Int × Ty))) (body : Term) :
+  Refines FS (Exists.mk.spec binders body) (Exists.mk.step O binders body) := by
+  unfold Exists.mk.step
+  refine Refinement.firstSome_cons (fun res h => Exists.mk.r_empty.proof FS O hO binders body res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Exists.mk.r_default.proof FS O hO binders body res h) ?_
   exact Refinement.firstSome_nil
 
-theorem bv_of_bool.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (n : Int) (b : Term) :
-  Refines FS (bv_of_bool.spec n b) (bv_of_bool.step O n b) := by
-  unfold bv_of_bool.step
-  refine Refinement.firstSome_cons (fun res h => bv_of_bool.r_true_.proof FS O hO n b res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_of_bool.r_false_.proof FS O hO n b res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_of_bool.r_default.proof FS O hO n b res h) ?_
+theorem Bitvec.of_bool.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (n : Int) (b : Term) :
+  Refines FS (Bitvec.of_bool.spec n b) (Bitvec.of_bool.step O n b) := by
+  unfold Bitvec.of_bool.step
+  refine Refinement.firstSome_cons (fun res h => Bitvec.of_bool.r_true_.proof FS O hO n b res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.of_bool.r_false_.proof FS O hO n b res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.of_bool.r_default.proof FS O hO n b res h) ?_
   exact Refinement.firstSome_nil
 
-theorem bv_to_bool.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v : Term) :
-  Refines FS (bv_to_bool.spec v) (bv_to_bool.step O v) := by
-  unfold bv_to_bool.step
-  refine Refinement.firstSome_cons (fun res h => bv_to_bool.r_lit.proof FS O hO v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_to_bool.r_of_bool.proof FS O hO v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_to_bool.r_default.proof FS O hO v res h) ?_
+theorem Bitvec.to_bool.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v : Term) :
+  Refines FS (Bitvec.to_bool.spec v) (Bitvec.to_bool.step O v) := by
+  unfold Bitvec.to_bool.step
+  refine Refinement.firstSome_cons (fun res h => Bitvec.to_bool.r_lit.proof FS O hO v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.to_bool.r_of_bool.proof FS O hO v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.to_bool.r_default.proof FS O hO v res h) ?_
   exact Refinement.firstSome_nil
 
-theorem bv_not_bool.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v : Term) :
-  Refines FS (bv_not_bool.spec v) (bv_not_bool.step O v) := by
-  unfold bv_not_bool.step
-  refine Refinement.firstSome_cons (fun res h => bv_not_bool.r_lit.proof FS O hO v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_not_bool.r_of_bool.proof FS O hO v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_not_bool.r_default.proof FS O hO v res h) ?_
+theorem Bitvec.not_bool.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v : Term) :
+  Refines FS (Bitvec.not_bool.spec v) (Bitvec.not_bool.step O v) := by
+  unfold Bitvec.not_bool.step
+  refine Refinement.firstSome_cons (fun res h => Bitvec.not_bool.r_lit.proof FS O hO v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.not_bool.r_of_bool.proof FS O hO v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.not_bool.r_default.proof FS O hO v res h) ?_
   exact Refinement.firstSome_nil
 
-theorem bv_add.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (checked : Checked) (v1 : Term) (v2 : Term) :
-  Refines FS (bv_add.spec checked v1 v2) (bv_add.step O checked v1 v2) := by
-  unfold bv_add.step
-  refine Refinement.firstSome_cons (fun res h => bv_add.r_lits.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_add.r_neg.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_add.r_zero.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_add.r_not_one.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_add.r_add_const.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_add.r_sub_const_r.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_add.r_sub_const_l.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_add.r_sub_cancel.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_add.r_add_sub.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_add.r_factor.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_add.r_factor_const.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_add.r_ite.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_add.r_default.proof FS O hO checked v1 v2 res h) ?_
+theorem Bitvec.add.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (checked : Checked) (v1 : Term) (v2 : Term) :
+  Refines FS (Bitvec.add.spec checked v1 v2) (Bitvec.add.step O checked v1 v2) := by
+  unfold Bitvec.add.step
+  refine Refinement.firstSome_cons (fun res h => Bitvec.add.r_lits.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.add.r_neg.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.add.r_zero.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.add.r_not_one.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.add.r_add_const.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.add.r_sub_const_r.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.add.r_sub_const_l.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.add.r_sub_cancel.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.add.r_add_sub.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.add.r_factor.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.add.r_factor_const.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.add.r_ite.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.add.r_default.proof FS O hO checked v1 v2 res h) ?_
   exact Refinement.firstSome_nil
 
-theorem bv_sub.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (checked : Checked) (v1 : Term) (v2 : Term) :
-  Refines FS (bv_sub.spec checked v1 v2) (bv_sub.step O checked v1 v2) := by
-  unfold bv_sub.step
-  refine Refinement.firstSome_cons (fun res h => bv_sub.r_lits.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_sub.r_zero_r.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_sub.r_zero_l.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_sub.r_same.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_sub.r_neg_r.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_sub.r_sub_const_l.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_sub.r_sub_const_r.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_sub.r_const_add.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_sub.r_add_const.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_sub.r_add_cancel_l.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_sub.r_add_cancel_r.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_sub.r_add_add.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_sub.r_sub_sub.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_sub.r_ite_ite.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_sub.r_ite_l.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_sub.r_ite_r.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_sub.r_of_bool_l.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_sub.r_of_bool_r.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_sub.r_default.proof FS O hO checked v1 v2 res h) ?_
+theorem Bitvec.sub.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (checked : Checked) (v1 : Term) (v2 : Term) :
+  Refines FS (Bitvec.sub.spec checked v1 v2) (Bitvec.sub.step O checked v1 v2) := by
+  unfold Bitvec.sub.step
+  refine Refinement.firstSome_cons (fun res h => Bitvec.sub.r_lits.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.sub.r_zero_r.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.sub.r_zero_l.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.sub.r_same.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.sub.r_neg_r.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.sub.r_sub_const_l.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.sub.r_sub_const_r.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.sub.r_const_add.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.sub.r_add_const.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.sub.r_add_cancel_l.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.sub.r_add_cancel_r.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.sub.r_add_add.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.sub.r_sub_sub.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.sub.r_ite_ite.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.sub.r_ite_l.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.sub.r_ite_r.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.sub.r_of_bool_l.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.sub.r_of_bool_r.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.sub.r_default.proof FS O hO checked v1 v2 res h) ?_
   exact Refinement.firstSome_nil
 
-theorem bv_neg.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (checked : Bool) (v : Term) :
-  Refines FS (bv_neg.spec checked v) (bv_neg.step O checked v) := by
-  unfold bv_neg.step
-  refine Refinement.firstSome_cons (fun res h => bv_neg.r_lit.proof FS O hO checked v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_neg.r_neg.proof FS O hO checked v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_neg.r_ite.proof FS O hO checked v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_neg.r_of_bool.proof FS O hO checked v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_neg.r_default.proof FS O hO checked v res h) ?_
+theorem Bitvec.neg.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (checked : Bool) (v : Term) :
+  Refines FS (Bitvec.neg.spec checked v) (Bitvec.neg.step O checked v) := by
+  unfold Bitvec.neg.step
+  refine Refinement.firstSome_cons (fun res h => Bitvec.neg.r_lit.proof FS O hO checked v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.neg.r_neg.proof FS O hO checked v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.neg.r_ite.proof FS O hO checked v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.neg.r_of_bool.proof FS O hO checked v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.neg.r_default.proof FS O hO checked v res h) ?_
   exact Refinement.firstSome_nil
 
-theorem bv_mod.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
-  Refines FS (bv_mod.spec v1 v2) (bv_mod.step O v1 v2) := by
-  unfold bv_mod.step
-  refine Refinement.firstSome_cons (fun res h => bv_mod.r_lits.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_mod.r_zero_r.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_mod.r_default.proof FS O hO v1 v2 res h) ?_
+theorem Bitvec.mod_.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
+  Refines FS (Bitvec.mod_.spec v1 v2) (Bitvec.mod_.step O v1 v2) := by
+  unfold Bitvec.mod_.step
+  refine Refinement.firstSome_cons (fun res h => Bitvec.mod_.r_lits.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.mod_.r_zero_r.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.mod_.r_default.proof FS O hO v1 v2 res h) ?_
   exact Refinement.firstSome_nil
 
-theorem bv_rem.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (signed : Bool) (v1 : Term) (v2 : Term) (hs_v2 : Nonzero v2) :
-  Refines FS (bv_rem.spec signed v1 v2) (bv_rem.step O signed v1 v2) := by
-  unfold bv_rem.step
-  refine Refinement.firstSome_cons (fun res h => bv_rem.r_lits.proof FS O hO signed v1 v2 res hs_v2 h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_rem.r_zero_r.proof FS O hO signed v1 v2 res hs_v2 h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_rem.r_zero_l.proof FS O hO signed v1 v2 res hs_v2 h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_rem.r_one_r.proof FS O hO signed v1 v2 res hs_v2 h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_rem.r_pow2.proof FS O hO signed v1 v2 res hs_v2 h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_rem.r_add.proof FS O hO signed v1 v2 res hs_v2 h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_rem.r_rem_rem.proof FS O hO signed v1 v2 res hs_v2 h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_rem.r_default.proof FS O hO signed v1 v2 res hs_v2 h) ?_
+theorem Bitvec.rem.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (signed : Bool) (v1 : Term) (v2 : Term) (hs_v2 : Nonzero v2) :
+  Refines FS (Bitvec.rem.spec signed v1 v2) (Bitvec.rem.step O signed v1 v2) := by
+  unfold Bitvec.rem.step
+  refine Refinement.firstSome_cons (fun res h => Bitvec.rem.r_lits.proof FS O hO signed v1 v2 res hs_v2 h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.rem.r_zero_r.proof FS O hO signed v1 v2 res hs_v2 h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.rem.r_zero_l.proof FS O hO signed v1 v2 res hs_v2 h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.rem.r_one_r.proof FS O hO signed v1 v2 res hs_v2 h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.rem.r_pow2.proof FS O hO signed v1 v2 res hs_v2 h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.rem.r_add.proof FS O hO signed v1 v2 res hs_v2 h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.rem.r_rem_rem.proof FS O hO signed v1 v2 res hs_v2 h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.rem.r_default.proof FS O hO signed v1 v2 res hs_v2 h) ?_
   exact Refinement.firstSome_nil
 
-theorem bv_not.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v : Term) :
-  Refines FS (bv_not.spec v) (bv_not.step O v) := by
-  unfold bv_not.step
-  refine Refinement.firstSome_cons (fun res h => bv_not.r_lit.proof FS O hO v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_not.r_ite.proof FS O hO v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_not.r_default.proof FS O hO v res h) ?_
+theorem Bitvec.not_.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v : Term) :
+  Refines FS (Bitvec.not_.spec v) (Bitvec.not_.step O v) := by
+  unfold Bitvec.not_.step
+  refine Refinement.firstSome_cons (fun res h => Bitvec.not_.r_lit.proof FS O hO v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.not_.r_ite.proof FS O hO v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.not_.r_default.proof FS O hO v res h) ?_
   exact Refinement.firstSome_nil
 
-theorem bv_and.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
-  Refines FS (bv_and.spec v1 v2) (bv_and.step O v1 v2) := by
-  unfold bv_and.step
-  refine Refinement.firstSome_cons (fun res h => bv_and.r_lits.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_and.r_zero.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_and.r_ones.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_and.r_lshr_mask.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_and.r_ite.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_and.r_masks.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_and.r_mask_or_mask.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_and.r_mask_or.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_and.r_mask_or_disj.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_and.r_right_mask.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_and.r_of_bool.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_and.r_of_bools.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_and.r_ites.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_and.r_default.proof FS O hO v1 v2 res h) ?_
+theorem Bitvec.and_.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
+  Refines FS (Bitvec.and_.spec v1 v2) (Bitvec.and_.step O v1 v2) := by
+  unfold Bitvec.and_.step
+  refine Refinement.firstSome_cons (fun res h => Bitvec.and_.r_lits.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.and_.r_zero.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.and_.r_ones.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.and_.r_lshr_mask.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.and_.r_ite.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.and_.r_masks.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.and_.r_mask_or_mask.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.and_.r_mask_or.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.and_.r_mask_or_disj.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.and_.r_right_mask.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.and_.r_of_bool.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.and_.r_of_bools.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.and_.r_ites.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.and_.r_default.proof FS O hO v1 v2 res h) ?_
   exact Refinement.firstSome_nil
 
-theorem bv_or.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
-  Refines FS (bv_or.spec v1 v2) (bv_or.step O v1 v2) := by
-  unfold bv_or.step
-  refine Refinement.firstSome_cons (fun res h => bv_or.r_lits.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_or.r_zero.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_or.r_same.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_or.r_mask_and.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_or.r_masks.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_or.r_extend_shl.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_or.r_of_bools.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_or.r_default.proof FS O hO v1 v2 res h) ?_
+theorem Bitvec.or_.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
+  Refines FS (Bitvec.or_.spec v1 v2) (Bitvec.or_.step O v1 v2) := by
+  unfold Bitvec.or_.step
+  refine Refinement.firstSome_cons (fun res h => Bitvec.or_.r_lits.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.or_.r_zero.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.or_.r_same.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.or_.r_mask_and.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.or_.r_masks.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.or_.r_extend_shl.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.or_.r_of_bools.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.or_.r_default.proof FS O hO v1 v2 res h) ?_
   exact Refinement.firstSome_nil
 
-theorem bv_xor.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
-  Refines FS (bv_xor.spec v1 v2) (bv_xor.step O v1 v2) := by
-  unfold bv_xor.step
-  refine Refinement.firstSome_cons (fun res h => bv_xor.r_lits.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_xor.r_zero.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_xor.r_of_bools.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_xor.r_default.proof FS O hO v1 v2 res h) ?_
+theorem Bitvec.xor.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
+  Refines FS (Bitvec.xor.spec v1 v2) (Bitvec.xor.step O v1 v2) := by
+  unfold Bitvec.xor.step
+  refine Refinement.firstSome_cons (fun res h => Bitvec.xor.r_lits.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.xor.r_zero.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.xor.r_of_bools.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.xor.r_default.proof FS O hO v1 v2 res h) ?_
   exact Refinement.firstSome_nil
 
-theorem bv_extract.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (from_ : Int) (to_ : Int) (v : Term) :
-  Refines FS (bv_extract.spec from_ to_ v) (bv_extract.step O from_ to_ v) := by
-  unfold bv_extract.step
-  refine Refinement.firstSome_cons (fun res h => bv_extract.r_lit.proof FS O hO from_ to_ v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_extract.r_full.proof FS O hO from_ to_ v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_extract.r_and_.proof FS O hO from_ to_ v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_extract.r_or_.proof FS O hO from_ to_ v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_extract.r_xor.proof FS O hO from_ to_ v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_extract.r_shl.proof FS O hO from_ to_ v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_extract.r_lshr.proof FS O hO from_ to_ v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_extract.r_ite.proof FS O hO from_ to_ v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_extract.r_zext_high.proof FS O hO from_ to_ v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_extract.r_sext_bit.proof FS O hO from_ to_ v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_extract.r_ext_low.proof FS O hO from_ to_ v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_extract.r_ext_orig.proof FS O hO from_ to_ v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_extract.r_extract.proof FS O hO from_ to_ v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_extract.r_concat.proof FS O hO from_ to_ v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_extract.r_add_low.proof FS O hO from_ to_ v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_extract.r_add_const.proof FS O hO from_ to_ v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_extract.r_mul_pow2.proof FS O hO from_ to_ v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_extract.r_mul_low.proof FS O hO from_ to_ v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_extract.r_urem.proof FS O hO from_ to_ v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_extract.r_default.proof FS O hO from_ to_ v res h) ?_
+theorem Bitvec.extract.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (from_ : Int) (to_ : Int) (v : Term) :
+  Refines FS (Bitvec.extract.spec from_ to_ v) (Bitvec.extract.step O from_ to_ v) := by
+  unfold Bitvec.extract.step
+  refine Refinement.firstSome_cons (fun res h => Bitvec.extract.r_lit.proof FS O hO from_ to_ v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.extract.r_full.proof FS O hO from_ to_ v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.extract.r_and_.proof FS O hO from_ to_ v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.extract.r_or_.proof FS O hO from_ to_ v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.extract.r_xor.proof FS O hO from_ to_ v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.extract.r_shl.proof FS O hO from_ to_ v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.extract.r_lshr.proof FS O hO from_ to_ v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.extract.r_ite.proof FS O hO from_ to_ v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.extract.r_zext_high.proof FS O hO from_ to_ v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.extract.r_sext_bit.proof FS O hO from_ to_ v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.extract.r_ext_low.proof FS O hO from_ to_ v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.extract.r_ext_orig.proof FS O hO from_ to_ v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.extract.r_extract.proof FS O hO from_ to_ v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.extract.r_concat.proof FS O hO from_ to_ v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.extract.r_add_low.proof FS O hO from_ to_ v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.extract.r_add_const.proof FS O hO from_ to_ v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.extract.r_mul_pow2.proof FS O hO from_ to_ v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.extract.r_mul_low.proof FS O hO from_ to_ v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.extract.r_urem.proof FS O hO from_ to_ v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.extract.r_default.proof FS O hO from_ to_ v res h) ?_
   exact Refinement.firstSome_nil
 
-theorem bv_extend.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (signed : Bool) (extend_by : Int) (v : Term) :
-  Refines FS (bv_extend.spec signed extend_by v) (bv_extend.step O signed extend_by v) := by
-  unfold bv_extend.step
-  refine Refinement.firstSome_cons (fun res h => bv_extend.r_zero.proof FS O hO signed extend_by v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_extend.r_lit.proof FS O hO signed extend_by v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_extend.r_extend.proof FS O hO signed extend_by v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_extend.r_ite.proof FS O hO signed extend_by v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_extend.r_of_bool.proof FS O hO signed extend_by v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_extend.r_default.proof FS O hO signed extend_by v res h) ?_
+theorem Bitvec.extend_.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (signed : Bool) (extend_by : Int) (v : Term) :
+  Refines FS (Bitvec.extend_.spec signed extend_by v) (Bitvec.extend_.step O signed extend_by v) := by
+  unfold Bitvec.extend_.step
+  refine Refinement.firstSome_cons (fun res h => Bitvec.extend_.r_zero.proof FS O hO signed extend_by v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.extend_.r_lit.proof FS O hO signed extend_by v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.extend_.r_extend.proof FS O hO signed extend_by v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.extend_.r_ite.proof FS O hO signed extend_by v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.extend_.r_of_bool.proof FS O hO signed extend_by v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.extend_.r_default.proof FS O hO signed extend_by v res h) ?_
   exact Refinement.firstSome_nil
 
-theorem bv_concat.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
-  Refines FS (bv_concat.spec v1 v2) (bv_concat.step O v1 v2) := by
-  unfold bv_concat.step
-  refine Refinement.firstSome_cons (fun res h => bv_concat.r_lits.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_concat.r_extracts.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_concat.r_extract_extracts.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_concat.r_assoc_l.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_concat.r_assoc_r.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_concat.r_ites.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_concat.r_default.proof FS O hO v1 v2 res h) ?_
+theorem Bitvec.concat.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
+  Refines FS (Bitvec.concat.spec v1 v2) (Bitvec.concat.step O v1 v2) := by
+  unfold Bitvec.concat.step
+  refine Refinement.firstSome_cons (fun res h => Bitvec.concat.r_lits.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.concat.r_extracts.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.concat.r_extract_extracts.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.concat.r_assoc_l.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.concat.r_assoc_r.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.concat.r_ites.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.concat.r_default.proof FS O hO v1 v2 res h) ?_
   exact Refinement.firstSome_nil
 
-theorem bv_shl.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
-  Refines FS (bv_shl.spec v1 v2) (bv_shl.step O v1 v2) := by
-  unfold bv_shl.step
-  refine Refinement.firstSome_cons (fun res h => bv_shl.r_lits.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_shl.r_zero.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_shl.r_big.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_shl.r_shl.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_shl.r_lshr.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_shl.r_and_mask.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_shl.r_or_mask.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_shl.r_default.proof FS O hO v1 v2 res h) ?_
+theorem Bitvec.shl.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
+  Refines FS (Bitvec.shl.spec v1 v2) (Bitvec.shl.step O v1 v2) := by
+  unfold Bitvec.shl.step
+  refine Refinement.firstSome_cons (fun res h => Bitvec.shl.r_lits.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.shl.r_zero.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.shl.r_big.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.shl.r_shl.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.shl.r_lshr.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.shl.r_and_mask.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.shl.r_or_mask.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.shl.r_default.proof FS O hO v1 v2 res h) ?_
   exact Refinement.firstSome_nil
 
-theorem bv_lshr.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
-  Refines FS (bv_lshr.spec v1 v2) (bv_lshr.step O v1 v2) := by
-  unfold bv_lshr.step
-  refine Refinement.firstSome_cons (fun res h => bv_lshr.r_lits.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lshr.r_zero.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lshr.r_big.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lshr.r_lshr.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lshr.r_and_mask.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lshr.r_or_mask.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lshr.r_default.proof FS O hO v1 v2 res h) ?_
+theorem Bitvec.lshr.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
+  Refines FS (Bitvec.lshr.spec v1 v2) (Bitvec.lshr.step O v1 v2) := by
+  unfold Bitvec.lshr.step
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lshr.r_lits.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lshr.r_zero.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lshr.r_big.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lshr.r_lshr.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lshr.r_and_mask.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lshr.r_or_mask.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lshr.r_default.proof FS O hO v1 v2 res h) ?_
   exact Refinement.firstSome_nil
 
-theorem bv_ashr.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
-  Refines FS (bv_ashr.spec v1 v2) (bv_ashr.step O v1 v2) := by
-  unfold bv_ashr.step
-  refine Refinement.firstSome_cons (fun res h => bv_ashr.r_lits.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_ashr.r_zero.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_ashr.r_big.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_ashr.r_ashr.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_ashr.r_default.proof FS O hO v1 v2 res h) ?_
+theorem Bitvec.ashr.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
+  Refines FS (Bitvec.ashr.spec v1 v2) (Bitvec.ashr.step O v1 v2) := by
+  unfold Bitvec.ashr.step
+  refine Refinement.firstSome_cons (fun res h => Bitvec.ashr.r_lits.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.ashr.r_zero.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.ashr.r_big.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.ashr.r_ashr.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.ashr.r_default.proof FS O hO v1 v2 res h) ?_
   exact Refinement.firstSome_nil
 
-theorem bv_mul.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (checked : Checked) (v1 : Term) (v2 : Term) :
-  Refines FS (bv_mul.spec checked v1 v2) (bv_mul.step O checked v1 v2) := by
-  unfold bv_mul.step
-  refine Refinement.firstSome_cons (fun res h => bv_mul.r_lits.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_mul.r_one.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_mul.r_zero.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_mul.r_neg.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_mul.r_mul_const.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_mul.r_ite.proof FS O hO checked v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_mul.r_default.proof FS O hO checked v1 v2 res h) ?_
+theorem Bitvec.mul.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (checked : Checked) (v1 : Term) (v2 : Term) :
+  Refines FS (Bitvec.mul.spec checked v1 v2) (Bitvec.mul.step O checked v1 v2) := by
+  unfold Bitvec.mul.step
+  refine Refinement.firstSome_cons (fun res h => Bitvec.mul.r_lits.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.mul.r_one.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.mul.r_zero.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.mul.r_neg.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.mul.r_mul_const.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.mul.r_ite.proof FS O hO checked v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.mul.r_default.proof FS O hO checked v1 v2 res h) ?_
   exact Refinement.firstSome_nil
 
-theorem bv_div.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (signed : Bool) (v1 : Term) (v2 : Term) (hs_v2 : Nonzero v2) :
-  Refines FS (bv_div.spec signed v1 v2) (bv_div.step O signed v1 v2) := by
-  unfold bv_div.step
-  refine Refinement.firstSome_cons (fun res h => bv_div.r_lits.proof FS O hO signed v1 v2 res hs_v2 h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_div.r_one.proof FS O hO signed v1 v2 res hs_v2 h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_div.r_mul_lits.proof FS O hO signed v1 v2 res hs_v2 h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_div.r_mul_div.proof FS O hO signed v1 v2 res hs_v2 h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_div.r_div_mul.proof FS O hO signed v1 v2 res hs_v2 h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_div.r_div_div.proof FS O hO signed v1 v2 res hs_v2 h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_div.r_zext.proof FS O hO signed v1 v2 res hs_v2 h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_div.r_default.proof FS O hO signed v1 v2 res hs_v2 h) ?_
+theorem Bitvec.div.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (signed : Bool) (v1 : Term) (v2 : Term) (hs_v2 : Nonzero v2) :
+  Refines FS (Bitvec.div.spec signed v1 v2) (Bitvec.div.step O signed v1 v2) := by
+  unfold Bitvec.div.step
+  refine Refinement.firstSome_cons (fun res h => Bitvec.div.r_lits.proof FS O hO signed v1 v2 res hs_v2 h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.div.r_one.proof FS O hO signed v1 v2 res hs_v2 h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.div.r_mul_lits.proof FS O hO signed v1 v2 res hs_v2 h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.div.r_mul_div.proof FS O hO signed v1 v2 res hs_v2 h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.div.r_div_mul.proof FS O hO signed v1 v2 res hs_v2 h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.div.r_div_div.proof FS O hO signed v1 v2 res hs_v2 h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.div.r_zext.proof FS O hO signed v1 v2 res hs_v2 h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.div.r_default.proof FS O hO signed v1 v2 res hs_v2 h) ?_
   exact Refinement.firstSome_nil
 
-theorem bv_lt_zero.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v : Term) :
-  Refines FS (bv_lt_zero.spec v) (bv_lt_zero.step O v) := by
-  unfold bv_lt_zero.step
-  refine Refinement.firstSome_cons (fun res h => bv_lt_zero.r_sext.proof FS O hO v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt_zero.r_zext.proof FS O hO v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt_zero.r_srem.proof FS O hO v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt_zero.r_concat.proof FS O hO v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt_zero.r_not.proof FS O hO v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt_zero.r_of_bool.proof FS O hO v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt_zero.r_ite.proof FS O hO v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt_zero.r_default.proof FS O hO v res h) ?_
+theorem Bitvec.lt_zero.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v : Term) :
+  Refines FS (Bitvec.lt_zero.spec v) (Bitvec.lt_zero.step O v) := by
+  unfold Bitvec.lt_zero.step
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt_zero.r_sext.proof FS O hO v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt_zero.r_zext.proof FS O hO v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt_zero.r_srem.proof FS O hO v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt_zero.r_concat.proof FS O hO v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt_zero.r_not.proof FS O hO v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt_zero.r_of_bool.proof FS O hO v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt_zero.r_ite.proof FS O hO v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt_zero.r_default.proof FS O hO v res h) ?_
   exact Refinement.firstSome_nil
 
-theorem bv_lt.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (signed : Bool) (v1 : Term) (v2 : Term) :
-  Refines FS (bv_lt.spec signed v1 v2) (bv_lt.step O signed v1 v2) := by
-  unfold bv_lt.step
-  refine Refinement.firstSome_cons (fun res h => bv_lt.r_lits.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt.r_same.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt.r_negs.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt.r_neg_l.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt.r_neg_r.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt.r_const_add.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt.r_add_const.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt.r_self_add_r.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt.r_self_add_l.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt.r_add_add.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt.r_one.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt.r_of_bool.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt.r_ite_l.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt.r_ite_r.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt.r_lt_zero.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt.r_max_l.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt.r_min_r.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt.r_min_l.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt.r_max_r.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt.r_const_mul.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt.r_mul_const.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt.r_mul_mul.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt.r_const_sub1.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt.r_const_sub2.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt.r_sub_const1.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt.r_sub_const2.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt.r_ub_r.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt.r_ub_l.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt.r_to_unsigned_l.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt.r_to_unsigned_r.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_lt.r_default.proof FS O hO signed v1 v2 res h) ?_
+theorem Bitvec.lt.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (signed : Bool) (v1 : Term) (v2 : Term) :
+  Refines FS (Bitvec.lt.spec signed v1 v2) (Bitvec.lt.step O signed v1 v2) := by
+  unfold Bitvec.lt.step
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt.r_lits.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt.r_same.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt.r_negs.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt.r_neg_l.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt.r_neg_r.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt.r_const_add.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt.r_add_const.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt.r_self_add_r.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt.r_self_add_l.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt.r_add_add.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt.r_one.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt.r_of_bool.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt.r_ite_l.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt.r_ite_r.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt.r_lt_zero.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt.r_max_l.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt.r_min_r.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt.r_min_l.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt.r_max_r.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt.r_const_mul.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt.r_mul_const.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt.r_mul_mul.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt.r_const_sub1.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt.r_const_sub2.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt.r_sub_const1.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt.r_sub_const2.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt.r_ub_r.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt.r_ub_l.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt.r_to_unsigned_l.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt.r_to_unsigned_r.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.lt.r_default.proof FS O hO signed v1 v2 res h) ?_
   exact Refinement.firstSome_nil
 
-theorem bv_leq.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (signed : Bool) (v1 : Term) (v2 : Term) :
-  Refines FS (bv_leq.spec signed v1 v2) (bv_leq.step O signed v1 v2) := by
-  unfold bv_leq.step
-  refine Refinement.firstSome_cons (fun res h => bv_leq.r_same.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_leq.r_lits.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_leq.r_negs.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_leq.r_neg_l.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_leq.r_neg_r.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_leq.r_const_add.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_leq.r_add_const.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_leq.r_add_add.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_leq.r_self_add_r.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_leq.r_self_add_l.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_leq.r_min_l.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_leq.r_max_r.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_leq.r_const_mul.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_leq.r_mul_const.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_leq.r_mul_mul.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_leq.r_udiv_big.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_leq.r_ite_l.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_leq.r_ite_r.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_leq.r_const_sub1.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_leq.r_const_sub2.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_leq.r_sub_const1.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_leq.r_sub_const2.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_leq.r_ub_r.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_leq.r_ub_l.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_leq.r_to_unsigned_l.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_leq.r_to_unsigned_r.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_leq.r_default.proof FS O hO signed v1 v2 res h) ?_
+theorem Bitvec.leq.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (signed : Bool) (v1 : Term) (v2 : Term) :
+  Refines FS (Bitvec.leq.spec signed v1 v2) (Bitvec.leq.step O signed v1 v2) := by
+  unfold Bitvec.leq.step
+  refine Refinement.firstSome_cons (fun res h => Bitvec.leq.r_same.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.leq.r_lits.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.leq.r_negs.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.leq.r_neg_l.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.leq.r_neg_r.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.leq.r_const_add.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.leq.r_add_const.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.leq.r_add_add.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.leq.r_self_add_r.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.leq.r_self_add_l.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.leq.r_min_l.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.leq.r_max_r.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.leq.r_const_mul.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.leq.r_mul_const.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.leq.r_mul_mul.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.leq.r_udiv_big.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.leq.r_ite_l.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.leq.r_ite_r.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.leq.r_const_sub1.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.leq.r_const_sub2.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.leq.r_sub_const1.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.leq.r_sub_const2.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.leq.r_ub_r.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.leq.r_ub_l.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.leq.r_to_unsigned_l.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.leq.r_to_unsigned_r.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.leq.r_default.proof FS O hO signed v1 v2 res h) ?_
   exact Refinement.firstSome_nil
 
-theorem bv_add_overflows.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (signed : Bool) (v1 : Term) (v2 : Term) :
-  Refines FS (bv_add_overflows.spec signed v1 v2) (bv_add_overflows.step O signed v1 v2) := by
-  unfold bv_add_overflows.step
-  refine Refinement.firstSome_cons (fun res h => bv_add_overflows.r_lits.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_add_overflows.r_zero.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_add_overflows.r_size1.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_add_overflows.r_unsigned.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_add_overflows.r_signed.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_add_overflows.r_of_bools.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_add_overflows.r_of_bool.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_add_overflows.r_default.proof FS O hO signed v1 v2 res h) ?_
+theorem Bitvec.add_overflows.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (signed : Bool) (v1 : Term) (v2 : Term) :
+  Refines FS (Bitvec.add_overflows.spec signed v1 v2) (Bitvec.add_overflows.step O signed v1 v2) := by
+  unfold Bitvec.add_overflows.step
+  refine Refinement.firstSome_cons (fun res h => Bitvec.add_overflows.r_lits.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.add_overflows.r_zero.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.add_overflows.r_size1.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.add_overflows.r_unsigned.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.add_overflows.r_signed.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.add_overflows.r_of_bools.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.add_overflows.r_of_bool.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.add_overflows.r_default.proof FS O hO signed v1 v2 res h) ?_
   exact Refinement.firstSome_nil
 
-theorem bv_mul_overflows.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (signed : Bool) (v1 : Term) (v2 : Term) :
-  Refines FS (bv_mul_overflows.spec signed v1 v2) (bv_mul_overflows.step O signed v1 v2) := by
-  unfold bv_mul_overflows.step
-  refine Refinement.firstSome_cons (fun res h => bv_mul_overflows.r_lits.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_mul_overflows.r_size1.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_mul_overflows.r_msb.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_mul_overflows.r_const.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_mul_overflows.r_div.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_mul_overflows.r_default.proof FS O hO signed v1 v2 res h) ?_
+theorem Bitvec.mul_overflows.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (signed : Bool) (v1 : Term) (v2 : Term) :
+  Refines FS (Bitvec.mul_overflows.spec signed v1 v2) (Bitvec.mul_overflows.step O signed v1 v2) := by
+  unfold Bitvec.mul_overflows.step
+  refine Refinement.firstSome_cons (fun res h => Bitvec.mul_overflows.r_lits.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.mul_overflows.r_size1.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.mul_overflows.r_msb.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.mul_overflows.r_const.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.mul_overflows.r_div.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.mul_overflows.r_default.proof FS O hO signed v1 v2 res h) ?_
   exact Refinement.firstSome_nil
 
-theorem bv_neg_overflows.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v : Term) :
-  Refines FS (bv_neg_overflows.spec v) (bv_neg_overflows.step O v) := by
-  unfold bv_neg_overflows.step
-  refine Refinement.firstSome_cons (fun res h => bv_neg_overflows.r_main.proof FS O hO v res h) ?_
+theorem Bitvec.neg_overflows.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v : Term) :
+  Refines FS (Bitvec.neg_overflows.spec v) (Bitvec.neg_overflows.step O v) := by
+  unfold Bitvec.neg_overflows.step
+  refine Refinement.firstSome_cons (fun res h => Bitvec.neg_overflows.r_main.proof FS O hO v res h) ?_
   exact Refinement.firstSome_nil
 
-theorem bv_sub_overflows.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (signed : Bool) (v1 : Term) (v2 : Term) :
-  Refines FS (bv_sub_overflows.spec signed v1 v2) (bv_sub_overflows.step O signed v1 v2) := by
-  unfold bv_sub_overflows.step
-  refine Refinement.firstSome_cons (fun res h => bv_sub_overflows.r_lits.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_sub_overflows.r_same.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_sub_overflows.r_unsigned.proof FS O hO signed v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_sub_overflows.r_default.proof FS O hO signed v1 v2 res h) ?_
+theorem Bitvec.sub_overflows.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (signed : Bool) (v1 : Term) (v2 : Term) :
+  Refines FS (Bitvec.sub_overflows.spec signed v1 v2) (Bitvec.sub_overflows.step O signed v1 v2) := by
+  unfold Bitvec.sub_overflows.step
+  refine Refinement.firstSome_cons (fun res h => Bitvec.sub_overflows.r_lits.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.sub_overflows.r_same.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.sub_overflows.r_unsigned.proof FS O hO signed v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.sub_overflows.r_default.proof FS O hO signed v1 v2 res h) ?_
   exact Refinement.firstSome_nil
 
-theorem bv_of_float.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (rounding : Rm) (signed : Bool) (sz : Int) (v : Term) :
-  Refines FS (bv_of_float.spec rounding signed sz v) (bv_of_float.step O rounding signed sz v) := by
-  unfold bv_of_float.step
-  refine Refinement.firstSome_cons (fun res h => bv_of_float.r_lit.proof FS O hO rounding signed sz v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_of_float.r_default.proof FS O hO rounding signed sz v res h) ?_
+theorem Bitvec.of_float.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (rounding : Rm) (signed : Bool) (sz : Int) (v : Term) :
+  Refines FS (Bitvec.of_float.spec rounding signed sz v) (Bitvec.of_float.step O rounding signed sz v) := by
+  unfold Bitvec.of_float.step
+  refine Refinement.firstSome_cons (fun res h => Bitvec.of_float.r_lit.proof FS O hO rounding signed sz v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.of_float.r_default.proof FS O hO rounding signed sz v res h) ?_
   exact Refinement.firstSome_nil
 
-theorem bv_to_float.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (rounding : Rm) (signed : Bool) (fp : Fp) (v : Term) :
-  Refines FS (bv_to_float.spec rounding signed fp v) (bv_to_float.step O rounding signed fp v) := by
-  unfold bv_to_float.step
-  refine Refinement.firstSome_cons (fun res h => bv_to_float.r_lit.proof FS O hO rounding signed fp v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_to_float.r_default.proof FS O hO rounding signed fp v res h) ?_
+theorem Bitvec.to_float.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (rounding : Rm) (signed : Bool) (fp : Fp) (v : Term) :
+  Refines FS (Bitvec.to_float.spec rounding signed fp v) (Bitvec.to_float.step O rounding signed fp v) := by
+  unfold Bitvec.to_float.step
+  refine Refinement.firstSome_cons (fun res h => Bitvec.to_float.r_lit.proof FS O hO rounding signed fp v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.to_float.r_default.proof FS O hO rounding signed fp v res h) ?_
   exact Refinement.firstSome_nil
 
-theorem bv_to_float_raw.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v : Term) :
-  Refines FS (bv_to_float_raw.spec v) (bv_to_float_raw.step O v) := by
-  unfold bv_to_float_raw.step
-  refine Refinement.firstSome_cons (fun res h => bv_to_float_raw.r_lit.proof FS O hO v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => bv_to_float_raw.r_default.proof FS O hO v res h) ?_
+theorem Bitvec.to_float_raw.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v : Term) :
+  Refines FS (Bitvec.to_float_raw.spec v) (Bitvec.to_float_raw.step O v) := by
+  unfold Bitvec.to_float_raw.step
+  refine Refinement.firstSome_cons (fun res h => Bitvec.to_float_raw.r_lit.proof FS O hO v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Bitvec.to_float_raw.r_default.proof FS O hO v res h) ?_
   exact Refinement.firstSome_nil
 
-theorem float_is_floatclass.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (fc : Fc) (sv : Term) :
-  Refines FS (float_is_floatclass.spec fc sv) (float_is_floatclass.step O fc sv) := by
-  unfold float_is_floatclass.step
-  refine Refinement.firstSome_cons (fun res h => float_is_floatclass.r_lit.proof FS O hO fc sv res h) ?_
-  refine Refinement.firstSome_cons (fun res h => float_is_floatclass.r_default.proof FS O hO fc sv res h) ?_
+theorem Float.is_floatclass.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (fc : Fc) (sv : Term) :
+  Refines FS (Float.is_floatclass.spec fc sv) (Float.is_floatclass.step O fc sv) := by
+  unfold Float.is_floatclass.step
+  refine Refinement.firstSome_cons (fun res h => Float.is_floatclass.r_lit.proof FS O hO fc sv res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Float.is_floatclass.r_default.proof FS O hO fc sv res h) ?_
   exact Refinement.firstSome_nil
 
-theorem float_is_negative.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v : Term) :
-  Refines FS (float_is_negative.spec v) (float_is_negative.step O v) := by
-  unfold float_is_negative.step
-  refine Refinement.firstSome_cons (fun res h => float_is_negative.r_lit.proof FS O hO v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => float_is_negative.r_default.proof FS O hO v res h) ?_
+theorem Float.is_negative.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v : Term) :
+  Refines FS (Float.is_negative.spec v) (Float.is_negative.step O v) := by
+  unfold Float.is_negative.step
+  refine Refinement.firstSome_cons (fun res h => Float.is_negative.r_lit.proof FS O hO v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Float.is_negative.r_default.proof FS O hO v res h) ?_
   exact Refinement.firstSome_nil
 
-theorem float_is_positive.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v : Term) :
-  Refines FS (float_is_positive.spec v) (float_is_positive.step O v) := by
-  unfold float_is_positive.step
-  refine Refinement.firstSome_cons (fun res h => float_is_positive.r_lit.proof FS O hO v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => float_is_positive.r_default.proof FS O hO v res h) ?_
+theorem Float.is_positive.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v : Term) :
+  Refines FS (Float.is_positive.spec v) (Float.is_positive.step O v) := by
+  unfold Float.is_positive.step
+  refine Refinement.firstSome_cons (fun res h => Float.is_positive.r_lit.proof FS O hO v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Float.is_positive.r_default.proof FS O hO v res h) ?_
   exact Refinement.firstSome_nil
 
-theorem float_cast.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (rounding : Rm) (fp : Fp) (v : Term) :
-  Refines FS (float_cast.spec rounding fp v) (float_cast.step O rounding fp v) := by
-  unfold float_cast.step
-  refine Refinement.firstSome_cons (fun res h => float_cast.r_lit.proof FS O hO rounding fp v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => float_cast.r_default.proof FS O hO rounding fp v res h) ?_
+theorem Float.cast.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (rounding : Rm) (fp : Fp) (v : Term) :
+  Refines FS (Float.cast.spec rounding fp v) (Float.cast.step O rounding fp v) := by
+  unfold Float.cast.step
+  refine Refinement.firstSome_cons (fun res h => Float.cast.r_lit.proof FS O hO rounding fp v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Float.cast.r_default.proof FS O hO rounding fp v res h) ?_
   exact Refinement.firstSome_nil
 
-theorem float_eq.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
-  Refines FS (float_eq.spec v1 v2) (float_eq.step O v1 v2) := by
-  unfold float_eq.step
-  refine Refinement.firstSome_cons (fun res h => float_eq.r_lits.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => float_eq.r_same.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => float_eq.r_lit.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => float_eq.r_default.proof FS O hO v1 v2 res h) ?_
+theorem Float.eq.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
+  Refines FS (Float.eq.spec v1 v2) (Float.eq.step O v1 v2) := by
+  unfold Float.eq.step
+  refine Refinement.firstSome_cons (fun res h => Float.eq.r_lits.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Float.eq.r_same.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Float.eq.r_lit.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Float.eq.r_default.proof FS O hO v1 v2 res h) ?_
   exact Refinement.firstSome_nil
 
-theorem float_lt.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
-  Refines FS (float_lt.spec v1 v2) (float_lt.step O v1 v2) := by
-  unfold float_lt.step
-  refine Refinement.firstSome_cons (fun res h => float_lt.r_lits.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => float_lt.r_default.proof FS O hO v1 v2 res h) ?_
+theorem Float.lt.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
+  Refines FS (Float.lt.spec v1 v2) (Float.lt.step O v1 v2) := by
+  unfold Float.lt.step
+  refine Refinement.firstSome_cons (fun res h => Float.lt.r_lits.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Float.lt.r_default.proof FS O hO v1 v2 res h) ?_
   exact Refinement.firstSome_nil
 
-theorem float_leq.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
-  Refines FS (float_leq.spec v1 v2) (float_leq.step O v1 v2) := by
-  unfold float_leq.step
-  refine Refinement.firstSome_cons (fun res h => float_leq.r_lits.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => float_leq.r_default.proof FS O hO v1 v2 res h) ?_
+theorem Float.leq.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
+  Refines FS (Float.leq.spec v1 v2) (Float.leq.step O v1 v2) := by
+  unfold Float.leq.step
+  refine Refinement.firstSome_cons (fun res h => Float.leq.r_lits.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Float.leq.r_default.proof FS O hO v1 v2 res h) ?_
   exact Refinement.firstSome_nil
 
-theorem float_add.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
-  Refines FS (float_add.spec v1 v2) (float_add.step O v1 v2) := by
-  unfold float_add.step
-  refine Refinement.firstSome_cons (fun res h => float_add.r_lits.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => float_add.r_default.proof FS O hO v1 v2 res h) ?_
+theorem Float.add.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
+  Refines FS (Float.add.spec v1 v2) (Float.add.step O v1 v2) := by
+  unfold Float.add.step
+  refine Refinement.firstSome_cons (fun res h => Float.add.r_lits.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Float.add.r_default.proof FS O hO v1 v2 res h) ?_
   exact Refinement.firstSome_nil
 
-theorem float_sub.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
-  Refines FS (float_sub.spec v1 v2) (float_sub.step O v1 v2) := by
-  unfold float_sub.step
-  refine Refinement.firstSome_cons (fun res h => float_sub.r_lits.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => float_sub.r_default.proof FS O hO v1 v2 res h) ?_
+theorem Float.sub.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
+  Refines FS (Float.sub.spec v1 v2) (Float.sub.step O v1 v2) := by
+  unfold Float.sub.step
+  refine Refinement.firstSome_cons (fun res h => Float.sub.r_lits.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Float.sub.r_default.proof FS O hO v1 v2 res h) ?_
   exact Refinement.firstSome_nil
 
-theorem float_div.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
-  Refines FS (float_div.spec v1 v2) (float_div.step O v1 v2) := by
-  unfold float_div.step
-  refine Refinement.firstSome_cons (fun res h => float_div.r_lits.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => float_div.r_default.proof FS O hO v1 v2 res h) ?_
+theorem Float.div.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
+  Refines FS (Float.div.spec v1 v2) (Float.div.step O v1 v2) := by
+  unfold Float.div.step
+  refine Refinement.firstSome_cons (fun res h => Float.div.r_lits.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Float.div.r_default.proof FS O hO v1 v2 res h) ?_
   exact Refinement.firstSome_nil
 
-theorem float_mul.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
-  Refines FS (float_mul.spec v1 v2) (float_mul.step O v1 v2) := by
-  unfold float_mul.step
-  refine Refinement.firstSome_cons (fun res h => float_mul.r_lits.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => float_mul.r_default.proof FS O hO v1 v2 res h) ?_
+theorem Float.mul.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
+  Refines FS (Float.mul.spec v1 v2) (Float.mul.step O v1 v2) := by
+  unfold Float.mul.step
+  refine Refinement.firstSome_cons (fun res h => Float.mul.r_lits.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Float.mul.r_default.proof FS O hO v1 v2 res h) ?_
   exact Refinement.firstSome_nil
 
-theorem float_rem.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
-  Refines FS (float_rem.spec v1 v2) (float_rem.step O v1 v2) := by
-  unfold float_rem.step
-  refine Refinement.firstSome_cons (fun res h => float_rem.r_lits.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => float_rem.r_default.proof FS O hO v1 v2 res h) ?_
+theorem Float.rem.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
+  Refines FS (Float.rem.spec v1 v2) (Float.rem.step O v1 v2) := by
+  unfold Float.rem.step
+  refine Refinement.firstSome_cons (fun res h => Float.rem.r_lits.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Float.rem.r_default.proof FS O hO v1 v2 res h) ?_
   exact Refinement.firstSome_nil
 
-theorem float_abs.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v : Term) :
-  Refines FS (float_abs.spec v) (float_abs.step O v) := by
-  unfold float_abs.step
-  refine Refinement.firstSome_cons (fun res h => float_abs.r_lit.proof FS O hO v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => float_abs.r_abs.proof FS O hO v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => float_abs.r_default.proof FS O hO v res h) ?_
+theorem Float.abs.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v : Term) :
+  Refines FS (Float.abs.spec v) (Float.abs.step O v) := by
+  unfold Float.abs.step
+  refine Refinement.firstSome_cons (fun res h => Float.abs.r_lit.proof FS O hO v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Float.abs.r_abs.proof FS O hO v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Float.abs.r_default.proof FS O hO v res h) ?_
   exact Refinement.firstSome_nil
 
-theorem float_neg.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v : Term) :
-  Refines FS (float_neg.spec v) (float_neg.step O v) := by
-  unfold float_neg.step
-  refine Refinement.firstSome_cons (fun res h => float_neg.r_lit.proof FS O hO v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => float_neg.r_neg.proof FS O hO v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => float_neg.r_default.proof FS O hO v res h) ?_
+theorem Float.neg.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v : Term) :
+  Refines FS (Float.neg.spec v) (Float.neg.step O v) := by
+  unfold Float.neg.step
+  refine Refinement.firstSome_cons (fun res h => Float.neg.r_lit.proof FS O hO v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Float.neg.r_neg.proof FS O hO v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Float.neg.r_default.proof FS O hO v res h) ?_
   exact Refinement.firstSome_nil
 
-theorem float_fma.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (a : Term) (b : Term) (c : Term) :
-  Refines FS (float_fma.spec a b c) (float_fma.step O a b c) := by
-  unfold float_fma.step
-  refine Refinement.firstSome_cons (fun res h => float_fma.r_lits.proof FS O hO a b c res h) ?_
-  refine Refinement.firstSome_cons (fun res h => float_fma.r_default.proof FS O hO a b c res h) ?_
+theorem Float.fma.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (a : Term) (b : Term) (c : Term) :
+  Refines FS (Float.fma.spec a b c) (Float.fma.step O a b c) := by
+  unfold Float.fma.step
+  refine Refinement.firstSome_cons (fun res h => Float.fma.r_lits.proof FS O hO a b c res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Float.fma.r_default.proof FS O hO a b c res h) ?_
   exact Refinement.firstSome_nil
 
-theorem float_fmod_of_rem.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (r : Term) (v1 : Term) (v2 : Term) :
-  Refines FS (float_fmod_of_rem.spec r v1 v2) (float_fmod_of_rem.step O r v1 v2) := by
-  unfold float_fmod_of_rem.step
-  refine Refinement.firstSome_cons (fun res h => float_fmod_of_rem.r_main.proof FS O hO r v1 v2 res h) ?_
+theorem Float.fmod_of_rem.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (r : Term) (v1 : Term) (v2 : Term) :
+  Refines FS (Float.fmod_of_rem.spec r v1 v2) (Float.fmod_of_rem.step O r v1 v2) := by
+  unfold Float.fmod_of_rem.step
+  refine Refinement.firstSome_cons (fun res h => Float.fmod_of_rem.r_main.proof FS O hO r v1 v2 res h) ?_
   exact Refinement.firstSome_nil
 
-theorem float_fmod.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
-  Refines FS (float_fmod.spec v1 v2) (float_fmod.step O v1 v2) := by
-  unfold float_fmod.step
-  refine Refinement.firstSome_cons (fun res h => float_fmod.r_lits.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => float_fmod.r_default.proof FS O hO v1 v2 res h) ?_
+theorem Float.fmod.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
+  Refines FS (Float.fmod.spec v1 v2) (Float.fmod.step O v1 v2) := by
+  unfold Float.fmod.step
+  refine Refinement.firstSome_cons (fun res h => Float.fmod.r_lits.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Float.fmod.r_default.proof FS O hO v1 v2 res h) ?_
   exact Refinement.firstSome_nil
 
-theorem float_min.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
-  Refines FS (float_min.spec v1 v2) (float_min.step O v1 v2) := by
-  unfold float_min.step
-  refine Refinement.firstSome_cons (fun res h => float_min.r_lits.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => float_min.r_default.proof FS O hO v1 v2 res h) ?_
+theorem Float.min.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
+  Refines FS (Float.min.spec v1 v2) (Float.min.step O v1 v2) := by
+  unfold Float.min.step
+  refine Refinement.firstSome_cons (fun res h => Float.min.r_lits.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Float.min.r_default.proof FS O hO v1 v2 res h) ?_
   exact Refinement.firstSome_nil
 
-theorem float_max.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
-  Refines FS (float_max.spec v1 v2) (float_max.step O v1 v2) := by
-  unfold float_max.step
-  refine Refinement.firstSome_cons (fun res h => float_max.r_lits.proof FS O hO v1 v2 res h) ?_
-  refine Refinement.firstSome_cons (fun res h => float_max.r_default.proof FS O hO v1 v2 res h) ?_
+theorem Float.max.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v1 : Term) (v2 : Term) :
+  Refines FS (Float.max.spec v1 v2) (Float.max.step O v1 v2) := by
+  unfold Float.max.step
+  refine Refinement.firstSome_cons (fun res h => Float.max.r_lits.proof FS O hO v1 v2 res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Float.max.r_default.proof FS O hO v1 v2 res h) ?_
   exact Refinement.firstSome_nil
 
-theorem float_sqrt.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v : Term) :
-  Refines FS (float_sqrt.spec v) (float_sqrt.step O v) := by
-  unfold float_sqrt.step
-  refine Refinement.firstSome_cons (fun res h => float_sqrt.r_lit.proof FS O hO v res h) ?_
-  refine Refinement.firstSome_cons (fun res h => float_sqrt.r_default.proof FS O hO v res h) ?_
+theorem Float.sqrt.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (v : Term) :
+  Refines FS (Float.sqrt.spec v) (Float.sqrt.step O v) := by
+  unfold Float.sqrt.step
+  refine Refinement.firstSome_cons (fun res h => Float.sqrt.r_lit.proof FS O hO v res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Float.sqrt.r_default.proof FS O hO v res h) ?_
   exact Refinement.firstSome_nil
 
-theorem float_round.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (rm : Rm) (sv : Term) :
-  Refines FS (float_round.spec rm sv) (float_round.step O rm sv) := by
-  unfold float_round.step
-  refine Refinement.firstSome_cons (fun res h => float_round.r_lit.proof FS O hO rm sv res h) ?_
-  refine Refinement.firstSome_cons (fun res h => float_round.r_default.proof FS O hO rm sv res h) ?_
+theorem Float.round.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (rm : Rm) (sv : Term) :
+  Refines FS (Float.round.spec rm sv) (Float.round.step O rm sv) := by
+  unfold Float.round.step
+  refine Refinement.firstSome_cons (fun res h => Float.round.r_lit.proof FS O hO rm sv res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Float.round.r_default.proof FS O hO rm sv res h) ?_
   exact Refinement.firstSome_nil
 
-theorem ptr_loc.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (p : Term) :
-  Refines FS (ptr_loc.spec p) (ptr_loc.step O p) := by
-  unfold ptr_loc.step
-  refine Refinement.firstSome_cons (fun res h => ptr_loc.r_ptr.proof FS O hO p res h) ?_
-  refine Refinement.firstSome_cons (fun res h => ptr_loc.r_default.proof FS O hO p res h) ?_
+theorem Ptr.loc.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (p : Term) :
+  Refines FS (Ptr.loc.spec p) (Ptr.loc.step O p) := by
+  unfold Ptr.loc.step
+  refine Refinement.firstSome_cons (fun res h => Ptr.loc.r_ptr.proof FS O hO p res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Ptr.loc.r_default.proof FS O hO p res h) ?_
   exact Refinement.firstSome_nil
 
-theorem ptr_ofs.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (p : Term) :
-  Refines FS (ptr_ofs.spec p) (ptr_ofs.step O p) := by
-  unfold ptr_ofs.step
-  refine Refinement.firstSome_cons (fun res h => ptr_ofs.r_ptr.proof FS O hO p res h) ?_
-  refine Refinement.firstSome_cons (fun res h => ptr_ofs.r_default.proof FS O hO p res h) ?_
+theorem Ptr.ofs.step_sound (FS : FloatSem) (O : Ops) (hO : O.Sound FS) (p : Term) :
+  Refines FS (Ptr.ofs.spec p) (Ptr.ofs.step O p) := by
+  unfold Ptr.ofs.step
+  refine Refinement.firstSome_cons (fun res h => Ptr.ofs.r_ptr.proof FS O hO p res h) ?_
+  refine Refinement.firstSome_cons (fun res h => Ptr.ofs.r_default.proof FS O hO p res h) ?_
   exact Refinement.firstSome_nil
 
 /-- Every rule function refines its spec, for any amount of fuel. -/
@@ -5432,44 +5579,44 @@ theorem opsN_sound (FS : FloatSem) (orc : Oracle) (h : orc.Compat FS) :
   ∀ n, (opsN orc n).Sound FS
   | 0 =>
     { orc := h,
-      b_and := fun v1 v2 => Refinement.refl,
-      b_or := fun v1 v2 => Refinement.refl,
-      b_not := fun sv => Refinement.refl,
-      b_ite := fun guard if_ else_ => Refinement.refl,
-      sem_eq := fun v1 v2 => Refinement.refl,
-      sem_eq_untyped := fun v1 v2 => Refinement.refl,
-      b_distinct := fun l => Refinement.refl,
-      b_mk_exists := fun binders body => Refinement.refl,
-      bv_of_bool := fun n b => Refinement.refl,
-      bv_to_bool := fun v => Refinement.refl,
-      bv_not_bool := fun v => Refinement.refl,
-      bv_add := fun checked v1 v2 => Refinement.refl,
-      bv_sub := fun checked v1 v2 => Refinement.refl,
-      bv_neg := fun checked v => Refinement.refl,
-      bv_mod := fun v1 v2 => Refinement.refl,
-      bv_rem := fun signed v1 v2 hs_v2 => Refinement.refl,
-      bv_not := fun v => Refinement.refl,
-      bv_and := fun v1 v2 => Refinement.refl,
-      bv_or := fun v1 v2 => Refinement.refl,
-      bv_xor := fun v1 v2 => Refinement.refl,
-      bv_extract := fun from_ to_ v => Refinement.refl,
-      bv_extend := fun signed extend_by v => Refinement.refl,
-      bv_concat := fun v1 v2 => Refinement.refl,
-      bv_shl := fun v1 v2 => Refinement.refl,
-      bv_lshr := fun v1 v2 => Refinement.refl,
-      bv_ashr := fun v1 v2 => Refinement.refl,
-      bv_mul := fun checked v1 v2 => Refinement.refl,
-      bv_div := fun signed v1 v2 hs_v2 => Refinement.refl,
-      bv_lt_zero := fun v => Refinement.refl,
-      bv_lt := fun signed v1 v2 => Refinement.refl,
-      bv_leq := fun signed v1 v2 => Refinement.refl,
-      bv_add_overflows := fun signed v1 v2 => Refinement.refl,
-      bv_mul_overflows := fun signed v1 v2 => Refinement.refl,
-      bv_neg_overflows := fun v => Refinement.refl,
-      bv_sub_overflows := fun signed v1 v2 => Refinement.refl,
-      bv_of_float := fun rounding signed sz v => Refinement.refl,
-      bv_to_float := fun rounding signed fp v => Refinement.refl,
-      bv_to_float_raw := fun v => Refinement.refl,
+      bool_and_ := fun v1 v2 => Refinement.refl,
+      bool_or_ := fun v1 v2 => Refinement.refl,
+      bool_not_ := fun sv => Refinement.refl,
+      bool_ite := fun guard if_ else_ => Refinement.refl,
+      bool_eq := fun v1 v2 => Refinement.refl,
+      bool_eq_untyped := fun v1 v2 => Refinement.refl,
+      bool_distinct := fun l => Refinement.refl,
+      exists_mk := fun binders body => Refinement.refl,
+      bitvec_of_bool := fun n b => Refinement.refl,
+      bitvec_to_bool := fun v => Refinement.refl,
+      bitvec_not_bool := fun v => Refinement.refl,
+      bitvec_add := fun checked v1 v2 => Refinement.refl,
+      bitvec_sub := fun checked v1 v2 => Refinement.refl,
+      bitvec_neg := fun checked v => Refinement.refl,
+      bitvec_mod_ := fun v1 v2 => Refinement.refl,
+      bitvec_rem := fun signed v1 v2 hs_v2 => Refinement.refl,
+      bitvec_not_ := fun v => Refinement.refl,
+      bitvec_and_ := fun v1 v2 => Refinement.refl,
+      bitvec_or_ := fun v1 v2 => Refinement.refl,
+      bitvec_xor := fun v1 v2 => Refinement.refl,
+      bitvec_extract := fun from_ to_ v => Refinement.refl,
+      bitvec_extend_ := fun signed extend_by v => Refinement.refl,
+      bitvec_concat := fun v1 v2 => Refinement.refl,
+      bitvec_shl := fun v1 v2 => Refinement.refl,
+      bitvec_lshr := fun v1 v2 => Refinement.refl,
+      bitvec_ashr := fun v1 v2 => Refinement.refl,
+      bitvec_mul := fun checked v1 v2 => Refinement.refl,
+      bitvec_div := fun signed v1 v2 hs_v2 => Refinement.refl,
+      bitvec_lt_zero := fun v => Refinement.refl,
+      bitvec_lt := fun signed v1 v2 => Refinement.refl,
+      bitvec_leq := fun signed v1 v2 => Refinement.refl,
+      bitvec_add_overflows := fun signed v1 v2 => Refinement.refl,
+      bitvec_mul_overflows := fun signed v1 v2 => Refinement.refl,
+      bitvec_neg_overflows := fun v => Refinement.refl,
+      bitvec_sub_overflows := fun signed v1 v2 => Refinement.refl,
+      bitvec_of_float := fun rounding signed sz v => Refinement.refl,
+      bitvec_to_float := fun rounding signed fp v => Refinement.refl,
+      bitvec_to_float_raw := fun v => Refinement.refl,
       float_is_floatclass := fun fc sv => Refinement.refl,
       float_is_negative := fun v => Refinement.refl,
       float_is_positive := fun v => Refinement.refl,
@@ -5496,66 +5643,66 @@ theorem opsN_sound (FS : FloatSem) (orc : Oracle) (h : orc.Compat FS) :
   | n + 1 =>
     have hO := opsN_sound FS orc h n
     { orc := hO.orc,
-      b_and := b_and.step_sound FS _ hO,
-      b_or := b_or.step_sound FS _ hO,
-      b_not := b_not.step_sound FS _ hO,
-      b_ite := b_ite.step_sound FS _ hO,
-      sem_eq := sem_eq.step_sound FS _ hO,
-      sem_eq_untyped := sem_eq_untyped.step_sound FS _ hO,
-      b_distinct := b_distinct.step_sound FS _ hO,
-      b_mk_exists := b_mk_exists.step_sound FS _ hO,
-      bv_of_bool := bv_of_bool.step_sound FS _ hO,
-      bv_to_bool := bv_to_bool.step_sound FS _ hO,
-      bv_not_bool := bv_not_bool.step_sound FS _ hO,
-      bv_add := bv_add.step_sound FS _ hO,
-      bv_sub := bv_sub.step_sound FS _ hO,
-      bv_neg := bv_neg.step_sound FS _ hO,
-      bv_mod := bv_mod.step_sound FS _ hO,
-      bv_rem := bv_rem.step_sound FS _ hO,
-      bv_not := bv_not.step_sound FS _ hO,
-      bv_and := bv_and.step_sound FS _ hO,
-      bv_or := bv_or.step_sound FS _ hO,
-      bv_xor := bv_xor.step_sound FS _ hO,
-      bv_extract := bv_extract.step_sound FS _ hO,
-      bv_extend := bv_extend.step_sound FS _ hO,
-      bv_concat := bv_concat.step_sound FS _ hO,
-      bv_shl := bv_shl.step_sound FS _ hO,
-      bv_lshr := bv_lshr.step_sound FS _ hO,
-      bv_ashr := bv_ashr.step_sound FS _ hO,
-      bv_mul := bv_mul.step_sound FS _ hO,
-      bv_div := bv_div.step_sound FS _ hO,
-      bv_lt_zero := bv_lt_zero.step_sound FS _ hO,
-      bv_lt := bv_lt.step_sound FS _ hO,
-      bv_leq := bv_leq.step_sound FS _ hO,
-      bv_add_overflows := bv_add_overflows.step_sound FS _ hO,
-      bv_mul_overflows := bv_mul_overflows.step_sound FS _ hO,
-      bv_neg_overflows := bv_neg_overflows.step_sound FS _ hO,
-      bv_sub_overflows := bv_sub_overflows.step_sound FS _ hO,
-      bv_of_float := bv_of_float.step_sound FS _ hO,
-      bv_to_float := bv_to_float.step_sound FS _ hO,
-      bv_to_float_raw := bv_to_float_raw.step_sound FS _ hO,
-      float_is_floatclass := float_is_floatclass.step_sound FS _ hO,
-      float_is_negative := float_is_negative.step_sound FS _ hO,
-      float_is_positive := float_is_positive.step_sound FS _ hO,
-      float_cast := float_cast.step_sound FS _ hO,
-      float_eq := float_eq.step_sound FS _ hO,
-      float_lt := float_lt.step_sound FS _ hO,
-      float_leq := float_leq.step_sound FS _ hO,
-      float_add := float_add.step_sound FS _ hO,
-      float_sub := float_sub.step_sound FS _ hO,
-      float_div := float_div.step_sound FS _ hO,
-      float_mul := float_mul.step_sound FS _ hO,
-      float_rem := float_rem.step_sound FS _ hO,
-      float_abs := float_abs.step_sound FS _ hO,
-      float_neg := float_neg.step_sound FS _ hO,
-      float_fma := float_fma.step_sound FS _ hO,
-      float_fmod_of_rem := float_fmod_of_rem.step_sound FS _ hO,
-      float_fmod := float_fmod.step_sound FS _ hO,
-      float_min := float_min.step_sound FS _ hO,
-      float_max := float_max.step_sound FS _ hO,
-      float_sqrt := float_sqrt.step_sound FS _ hO,
-      float_round := float_round.step_sound FS _ hO,
-      ptr_loc := ptr_loc.step_sound FS _ hO,
-      ptr_ofs := ptr_ofs.step_sound FS _ hO }
+      bool_and_ := Bool.and_.step_sound FS _ hO,
+      bool_or_ := Bool.or_.step_sound FS _ hO,
+      bool_not_ := Bool.not_.step_sound FS _ hO,
+      bool_ite := Bool.ite.step_sound FS _ hO,
+      bool_eq := Bool.eq.step_sound FS _ hO,
+      bool_eq_untyped := Bool.eq_untyped.step_sound FS _ hO,
+      bool_distinct := Bool.distinct.step_sound FS _ hO,
+      exists_mk := Exists.mk.step_sound FS _ hO,
+      bitvec_of_bool := Bitvec.of_bool.step_sound FS _ hO,
+      bitvec_to_bool := Bitvec.to_bool.step_sound FS _ hO,
+      bitvec_not_bool := Bitvec.not_bool.step_sound FS _ hO,
+      bitvec_add := Bitvec.add.step_sound FS _ hO,
+      bitvec_sub := Bitvec.sub.step_sound FS _ hO,
+      bitvec_neg := Bitvec.neg.step_sound FS _ hO,
+      bitvec_mod_ := Bitvec.mod_.step_sound FS _ hO,
+      bitvec_rem := Bitvec.rem.step_sound FS _ hO,
+      bitvec_not_ := Bitvec.not_.step_sound FS _ hO,
+      bitvec_and_ := Bitvec.and_.step_sound FS _ hO,
+      bitvec_or_ := Bitvec.or_.step_sound FS _ hO,
+      bitvec_xor := Bitvec.xor.step_sound FS _ hO,
+      bitvec_extract := Bitvec.extract.step_sound FS _ hO,
+      bitvec_extend_ := Bitvec.extend_.step_sound FS _ hO,
+      bitvec_concat := Bitvec.concat.step_sound FS _ hO,
+      bitvec_shl := Bitvec.shl.step_sound FS _ hO,
+      bitvec_lshr := Bitvec.lshr.step_sound FS _ hO,
+      bitvec_ashr := Bitvec.ashr.step_sound FS _ hO,
+      bitvec_mul := Bitvec.mul.step_sound FS _ hO,
+      bitvec_div := Bitvec.div.step_sound FS _ hO,
+      bitvec_lt_zero := Bitvec.lt_zero.step_sound FS _ hO,
+      bitvec_lt := Bitvec.lt.step_sound FS _ hO,
+      bitvec_leq := Bitvec.leq.step_sound FS _ hO,
+      bitvec_add_overflows := Bitvec.add_overflows.step_sound FS _ hO,
+      bitvec_mul_overflows := Bitvec.mul_overflows.step_sound FS _ hO,
+      bitvec_neg_overflows := Bitvec.neg_overflows.step_sound FS _ hO,
+      bitvec_sub_overflows := Bitvec.sub_overflows.step_sound FS _ hO,
+      bitvec_of_float := Bitvec.of_float.step_sound FS _ hO,
+      bitvec_to_float := Bitvec.to_float.step_sound FS _ hO,
+      bitvec_to_float_raw := Bitvec.to_float_raw.step_sound FS _ hO,
+      float_is_floatclass := Float.is_floatclass.step_sound FS _ hO,
+      float_is_negative := Float.is_negative.step_sound FS _ hO,
+      float_is_positive := Float.is_positive.step_sound FS _ hO,
+      float_cast := Float.cast.step_sound FS _ hO,
+      float_eq := Float.eq.step_sound FS _ hO,
+      float_lt := Float.lt.step_sound FS _ hO,
+      float_leq := Float.leq.step_sound FS _ hO,
+      float_add := Float.add.step_sound FS _ hO,
+      float_sub := Float.sub.step_sound FS _ hO,
+      float_div := Float.div.step_sound FS _ hO,
+      float_mul := Float.mul.step_sound FS _ hO,
+      float_rem := Float.rem.step_sound FS _ hO,
+      float_abs := Float.abs.step_sound FS _ hO,
+      float_neg := Float.neg.step_sound FS _ hO,
+      float_fma := Float.fma.step_sound FS _ hO,
+      float_fmod_of_rem := Float.fmod_of_rem.step_sound FS _ hO,
+      float_fmod := Float.fmod.step_sound FS _ hO,
+      float_min := Float.min.step_sound FS _ hO,
+      float_max := Float.max.step_sound FS _ hO,
+      float_sqrt := Float.sqrt.step_sound FS _ hO,
+      float_round := Float.round.step_sound FS _ hO,
+      ptr_loc := Ptr.loc.step_sound FS _ hO,
+      ptr_ofs := Ptr.ofs.step_sound FS _ hO }
 
 end Kanon

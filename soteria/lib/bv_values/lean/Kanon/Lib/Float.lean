@@ -19,27 +19,27 @@ theorem eval_eq_of {FS ρ a b t x y} (w : (Term.mk (.Op2 .Eq a b) t).WT)
     eval FS ρ (.mk (.Op2 .Eq a b) t) = some (.bool (decide (x = y))) := by
   rw [eval_op2 w, ha, hb]; simp [evOp2, BoolMod.peq]
 
-theorem WT_sem_eq {a b} : (sem_eq.spec a b).WT ↔ a.ty = b.ty ∧ a.WT ∧ b.WT := by
-  simp [sem_eq.spec, WT_eq]
+theorem WT_sem_eq {a b} : (Bool.eq.spec a b).WT ↔ a.ty = b.ty ∧ a.WT ∧ b.WT := by
+  simp [Bool.eq.spec, WT_eq]
 
-@[simp] theorem sem_eq_ty {a b} : (sem_eq.spec a b).ty = .TBool := rfl
+@[simp] theorem sem_eq_ty {a b} : (Bool.eq.spec a b).ty = .TBool := rfl
 
 theorem Refines.sem_eq {FS : FloatSem} {O : Ops} {a b a' b'} (hO : O.Sound FS) (ha : Refines FS a a')
-    (hb : Refines FS b b') : Refines FS (sem_eq.spec a b) (O.sem_eq a' b') :=
-  Sem.Refines.trans (Refines.op2 ha hb (fun _ => rfl)) (hO.sem_eq a' b')
+    (hb : Refines FS b b') : Refines FS (Bool.eq.spec a b) (O.bool_eq a' b') :=
+  Sem.Refines.trans (Refines.op2 ha hb (fun _ => rfl)) (hO.bool_eq a' b')
 
 theorem Refines.b_and {FS : FloatSem} {O : Ops} {a b a' b'} (hO : O.Sound FS) (ha : Refines FS a a')
-    (hb : Refines FS b b') : Refines FS (b_and.spec a b) (O.b_and a' b') :=
-  Sem.Refines.trans (Refines.op2 ha hb (fun _ => rfl)) (hO.b_and a' b')
+    (hb : Refines FS b b') : Refines FS (Bool.and_.spec a b) (O.bool_and_ a' b') :=
+  Sem.Refines.trans (Refines.op2 ha hb (fun _ => rfl)) (hO.bool_and_ a' b')
 
 theorem Refines.b_not {FS : FloatSem} {O : Ops} {a a'} (hO : O.Sound FS) (ha : Refines FS a a') :
-    Refines FS (b_not.spec a) (O.b_not a') :=
-  Sem.Refines.trans (Refines.op1 ha (fun _ => rfl)) (hO.b_not a')
+    Refines FS (Bool.not_.spec a) (O.bool_not_ a') :=
+  Sem.Refines.trans (Refines.op1 ha (fun _ => rfl)) (hO.bool_not_ a')
 
 theorem Refines.b_ite {FS : FloatSem} {O : Ops} {g a b g' a' b'} (hO : O.Sound FS) (hg : Refines FS g g')
     (ha : Refines FS a a') (hb : Refines FS b b') :
-    Refines FS (b_ite.spec g a b) (O.b_ite g' a' b') := by
-  refine Sem.Refines.trans (Refines.ite hg ha hb (fun w => ?_)) (hO.b_ite g' a' b')
+    Refines FS (Bool.ite.spec g a b) (O.bool_ite g' a' b') := by
+  refine Sem.Refines.trans (Refines.ite hg ha hb (fun w => ?_)) (hO.bool_ite g' a' b')
   exact (ha.syn (WT_op3.1 w).2.2.1).2
 
 /-! ## Literals -/
@@ -308,7 +308,7 @@ theorem Refines.eq_ite_r {g l r c : Term} {T t : Ty} :
 
 theorem Refines.eq_lits {z1 z2 : Int} {T1 T2 t : Ty} :
     Refines FS (.mk (.Op2 .Eq (.mk (.BitVec z1) T1) (.mk (.BitVec z2) T2)) t)
-      (of_bool (decide (z1 = z2))) := by
+      (Bool.of_bool (decide (z1 = z2))) := by
   refine Sem.Refines.intro_eval (fun w => ?_) (fun ρ x w _ e => ?_)
   · simp [(WT_eq.1 w).2.1]
   · have ⟨hT, _, w1, w2⟩ := WT_eq.1 w
@@ -326,7 +326,7 @@ theorem Refines.eq_lits {z1 z2 : Int} {T1 T2 t : Ty} :
 
 theorem Refines.eq_locLits {z1 z2 : Int} {T1 T2 t : Ty} :
     Refines FS (.mk (.Op2 .Eq (.mk (.LocLit z1) T1) (.mk (.LocLit z2) T2)) t)
-      (of_bool (decide (z1 = z2))) := by
+      (Bool.of_bool (decide (z1 = z2))) := by
   refine Sem.Refines.intro_eval (fun w => ?_) (fun ρ x w _ e => ?_)
   · simp [(WT_eq.1 w).2.1]
   · have ⟨hT, _, w1, w2⟩ := WT_eq.1 w
@@ -344,7 +344,7 @@ theorem Refines.eq_locLits {z1 z2 : Int} {T1 T2 t : Ty} :
 
 theorem Refines.eq_floats {f1 f2 : Float} {T1 T2 t : Ty} :
     Refines FS (.mk (.Op2 .Eq (.mk (.Float f1) T1) (.mk (.Float f2) T2)) t)
-      (of_bool (f_bits_equal f1 f2)) := by
+      (Bool.of_bool (f_bits_equal f1 f2)) := by
   refine Sem.Refines.intro_eval (fun w => ?_) (fun ρ x w _ e => ?_)
   · simp [(WT_eq.1 w).2.1]
   · have ⟨hT, _, w1, w2⟩ := WT_eq.1 w

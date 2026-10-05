@@ -28,17 +28,17 @@ that are known. -/
 
 /-! ## Helpers -/
 
-theorem ones_nat (n : Nat) : ones (n : Int) = 2 ^ n - 1 := by
-  simp only [ones, z_lsl, Int.toNat_natCast, Int.one_mul]
+theorem ones_nat (n : Nat) : Bitvec.ones (n : Int) = 2 ^ n - 1 := by
+  simp only [Bitvec.ones, z_lsl, Int.toNat_natCast, Int.one_mul]
 
-theorem ones_nonneg (n : Nat) : 0 ≤ ones (n : Int) := by
+theorem ones_nonneg (n : Nat) : 0 ≤ Bitvec.ones (n : Int) := by
   have : (0 : Int) < 2 ^ n := by exact_mod_cast Nat.two_pow_pos n
   rw [ones_nat]; omega
 
-theorem ones_lt (n : Nat) : ones (n : Int) < 2 ^ n := by
+theorem ones_lt (n : Nat) : Bitvec.ones (n : Int) < 2 ^ n := by
   rw [ones_nat]; omega
 
-theorem ofInt_ones (n : Nat) : BitVec.ofInt n (ones (n : Int)) = BitVec.allOnes n := by
+theorem ofInt_ones (n : Nat) : BitVec.ofInt n (Bitvec.ones (n : Int)) = BitVec.allOnes n := by
   have e : ((2 ^ n - 1 : Nat) : Int) = 2 ^ n - 1 := by
     rw [Int.natCast_sub (Nat.one_le_two_pow)]; push_cast; rfl
   rw [← BitVec.toNat_inj, BitVec.toNat_allOnes, BitVec.toNat_ofInt,
@@ -46,8 +46,8 @@ theorem ofInt_ones (n : Nat) : BitVec.ofInt n (ones (n : Int)) = BitVec.allOnes 
     Int.toNat_natCast]
 
 theorem is_ones_ofInt {n : Nat} (hn : 0 < n) {z : Int} (h0 : 0 ≤ z) (h1 : z < 2 ^ n) :
-    is_ones n z = decide (BitVec.ofInt n z = BitVec.allOnes n) := by
-  rw [is_ones, ones_nat, decide_eq_decide, ← BitVec.toNat_inj, BitVec.toNat_allOnes,
+    Bitvec.is_ones n z = decide (BitVec.ofInt n z = BitVec.allOnes n) := by
+  rw [Bitvec.is_ones, ones_nat, decide_eq_decide, ← BitVec.toNat_inj, BitVec.toNat_allOnes,
     BitVec.toNat_ofInt, Int.emod_eq_of_lt h0 (by exact_mod_cast h1)]
   obtain ⟨p, rfl⟩ := Int.eq_ofNat_of_zero_le h0
   simp only [Int.toNat_natCast]
@@ -59,12 +59,12 @@ attribute [kanon_close_simp] is_ones_ofInt
 
 theorem bits_in_ofInt {n : Nat} {a b : Int} (hb0 : 0 ≤ b) (hb1 : b < 2 ^ n) (ha0 : 0 ≤ a)
     (ha1 : a < 2 ^ n) :
-    bits_in a b = decide (BitVec.ofInt n a &&& BitVec.ofInt n b = BitVec.ofInt n a) := by
+    Bitvec.bits_in a b = decide (BitVec.ofInt n a &&& BitVec.ofInt n b = BitVec.ofInt n a) := by
   obtain ⟨p, rfl⟩ := Int.eq_ofNat_of_zero_le ha0
   obtain ⟨q, rfl⟩ := Int.eq_ofNat_of_zero_le hb0
   have hp : p < 2 ^ n := by exact_mod_cast ha1
   have hq : q < 2 ^ n := by exact_mod_cast hb1
-  rw [bits_in, decide_eq_decide, ← BitVec.toNat_inj, BitVec.toNat_and, BitVec.ofInt_natCast,
+  rw [Bitvec.bits_in, decide_eq_decide, ← BitVec.toNat_inj, BitVec.toNat_and, BitVec.ofInt_natCast,
     BitVec.ofInt_natCast, BitVec.toNat_ofNat, BitVec.toNat_ofNat, Nat.mod_eq_of_lt hp,
     Nat.mod_eq_of_lt hq]
   show ((p &&& q : Nat) : Int) = p ↔ _
@@ -72,12 +72,12 @@ theorem bits_in_ofInt {n : Nat} {a b : Int} (hb0 : 0 ≤ b) (hb1 : b < 2 ^ n) (h
 
 theorem disjoint_ofInt {n : Nat} {a b : Int} (hb0 : 0 ≤ b) (hb1 : b < 2 ^ n) (ha0 : 0 ≤ a)
     (ha1 : a < 2 ^ n) :
-    disjoint a b = decide (BitVec.ofInt n a &&& BitVec.ofInt n b = 0) := by
+    Bitvec.disjoint a b = decide (BitVec.ofInt n a &&& BitVec.ofInt n b = 0) := by
   obtain ⟨p, rfl⟩ := Int.eq_ofNat_of_zero_le ha0
   obtain ⟨q, rfl⟩ := Int.eq_ofNat_of_zero_le hb0
   have hp : p < 2 ^ n := by exact_mod_cast ha1
   have hq : q < 2 ^ n := by exact_mod_cast hb1
-  rw [disjoint, decide_eq_decide, ← BitVec.toNat_inj, BitVec.toNat_and, BitVec.ofInt_natCast,
+  rw [Bitvec.disjoint, decide_eq_decide, ← BitVec.toNat_inj, BitVec.toNat_and, BitVec.ofInt_natCast,
     BitVec.ofInt_natCast, BitVec.toNat_ofNat, BitVec.toNat_ofNat, Nat.mod_eq_of_lt hp,
     Nat.mod_eq_of_lt hq]
   show ((p &&& q : Nat) : Int) = 0 ↔ _
@@ -181,8 +181,8 @@ theorem emod_two_pow_of_le {z : Int} {n : Nat} (h0 : 0 ≤ z) (h : z ≤ n) : z 
     omega)
 
 theorem zmin_emod {z m : Int} {n : Nat} (h0 : 0 ≤ z) (hm : 0 ≤ m) (hmn : m ≤ n) :
-    (zmin z m % 2 ^ n).toNat = min z.toNat m.toNat := by
-  simp only [zmin, decide_eq_true_eq]
+    (Bitvec.zmin z m % 2 ^ n).toNat = min z.toNat m.toNat := by
+  simp only [Bitvec.zmin, decide_eq_true_eq]
   split <;> rw [emod_two_pow_of_le (by omega) (by omega)] <;> omega
 
 theorem sub_mod_two_pow {a b n : Nat} (h : b ≤ a) (ha : (a : Int) < 2 ^ n) :
@@ -221,6 +221,6 @@ macro "kanon_shift" : tactic => `(tactic| (
        congr 1
        rw [zmin_emod (by omega) (by omega) (by omega)]; omega)))
 
-attribute [kanon_tactic "kanon_shift"] bv_shl.spec bv_lshr.spec bv_ashr.spec
+attribute [kanon_tactic "kanon_shift"] Bitvec.shl.spec Bitvec.lshr.spec Bitvec.ashr.spec
 
 end Kanon.Lib

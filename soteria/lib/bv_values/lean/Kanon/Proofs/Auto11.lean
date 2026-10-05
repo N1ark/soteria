@@ -19,24 +19,26 @@ namespace Kanon
 
 open Classical Kanon
 
-@[kanon_arm] theorem bv_rem.r_lits.main.proof : bv_rem.r_lits.main.Stmt := kanon_proof% bv_rem.r_lits.main
+@[kanon_arm] theorem Bitvec.rem.r_add.main.proof : Bitvec.rem.r_add.main.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem bv_rem.r_zero_r.main.proof : bv_rem.r_zero_r.main.Stmt := kanon_proof% bv_rem.r_zero_r.main
+@[kanon_arm] theorem Bitvec.rem.r_add.swap.proof : Bitvec.rem.r_add.swap.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem bv_rem.r_zero_l.main.proof : bv_rem.r_zero_l.main.Stmt := kanon_proof% bv_rem.r_zero_l.main
+@[kanon_arm] theorem Bitvec.rem.r_rem_rem.main.proof : Bitvec.rem.r_rem_rem.main.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem bv_rem.r_one_r.main.proof : bv_rem.r_one_r.main.Stmt := kanon_proof% bv_rem.r_one_r.main
+@[kanon_arm] theorem Bitvec.rem.r_default.main.proof : Bitvec.rem.r_default.main.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem bv_rem.r_pow2.main.proof : bv_rem.r_pow2.main.Stmt := kanon_proof% bv_rem.r_pow2.main
+@[kanon_arm] theorem Bitvec.not_.r_lit.main.proof : Bitvec.not_.r_lit.main.Stmt := kanon_proof% Bitvec.not_.r_lit.main
 
-@[kanon_arm] theorem bv_rem.r_add.main.proof : bv_rem.r_add.main.Stmt := kanon_proof% bv_rem.r_add.main
+@[kanon_arm] theorem Bitvec.not_.r_ite.main.proof : Bitvec.not_.r_ite.main.Stmt := kanon_proof% Bitvec.not_.r_ite.main
 
-@[kanon_arm] theorem bv_rem.r_add.swap.proof : bv_rem.r_add.swap.Stmt := kanon_proof% bv_rem.r_add.swap
+@[kanon_arm] theorem Bitvec.not_.r_default.main.proof : Bitvec.not_.r_default.main.Stmt := kanon_proof% Bitvec.not_.r_default.main
 
-@[kanon_arm] theorem bv_rem.r_rem_rem.main.proof : bv_rem.r_rem_rem.main.Stmt := kanon_proof% bv_rem.r_rem_rem.main
+@[kanon_arm] theorem Bitvec.and_.r_lits.main.proof : Bitvec.and_.r_lits.main.Stmt := kanon_proof% Bitvec.and_.r_lits.main
 
-@[kanon_arm] theorem bv_rem.r_default.main.proof : bv_rem.r_default.main.Stmt := kanon_proof% bv_rem.r_default.main
+@[kanon_arm] theorem Bitvec.and_.r_zero.main.proof : Bitvec.and_.r_zero.main.Stmt := kanon_proof% Bitvec.and_.r_zero.main
 
-@[kanon_arm] theorem bv_not.r_lit.main.proof : bv_not.r_lit.main.Stmt := kanon_proof% bv_not.r_lit.main
-
-end Kanon
+@[kanon_arm] theorem Bitvec.and_.r_ones.main.proof : Bitvec.and_.r_ones.main.Stmt := kanon_proof% Bitvec.and_.r_ones.main

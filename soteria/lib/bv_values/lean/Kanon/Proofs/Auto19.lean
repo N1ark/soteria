@@ -19,24 +19,27 @@ namespace Kanon
 
 open Classical Kanon
 
-@[kanon_arm] theorem bv_shl.r_shl.main.proof : bv_shl.r_shl.main.Stmt := kanon_proof% bv_shl.r_shl.main
+@[kanon_arm] theorem Bitvec.ashr.r_lits.main.proof : Bitvec.ashr.r_lits.main.Stmt := by
+  first | (kanon_shift; done) | kanon_auto
 
-@[kanon_arm] theorem bv_shl.r_lshr.main.proof : bv_shl.r_lshr.main.Stmt := kanon_proof% bv_shl.r_lshr.main
+@[kanon_arm] theorem Bitvec.ashr.r_zero.main.proof : Bitvec.ashr.r_zero.main.Stmt := by
+  first | (kanon_shift; done) | kanon_auto
 
-@[kanon_arm] theorem bv_shl.r_and_mask.main.proof : bv_shl.r_and_mask.main.Stmt := kanon_proof% bv_shl.r_and_mask.main
+@[kanon_arm] theorem Bitvec.ashr.r_big.main.proof : Bitvec.ashr.r_big.main.Stmt := by
+  first | (kanon_shift; done) | kanon_auto
 
-@[kanon_arm] theorem bv_shl.r_or_mask.main.proof : bv_shl.r_or_mask.main.Stmt := kanon_proof% bv_shl.r_or_mask.main
+@[kanon_arm] theorem Bitvec.ashr.r_ashr.main.proof : Bitvec.ashr.r_ashr.main.Stmt := by
+  first | (kanon_shift; done) | kanon_auto
 
-@[kanon_arm] theorem bv_shl.r_default.main.proof : bv_shl.r_default.main.Stmt := kanon_proof% bv_shl.r_default.main
+@[kanon_arm] theorem Bitvec.ashr.r_default.main.proof : Bitvec.ashr.r_default.main.Stmt := by
+  first | (kanon_shift; done) | kanon_auto
 
-@[kanon_arm] theorem bv_lshr.r_lits.main.proof : bv_lshr.r_lits.main.Stmt := kanon_proof% bv_lshr.r_lits.main
+@[kanon_arm] theorem Bitvec.mul.r_lits.main.proof : Bitvec.mul.r_lits.main.Stmt := kanon_proof% Bitvec.mul.r_lits.main
 
-@[kanon_arm] theorem bv_lshr.r_zero.main.proof : bv_lshr.r_zero.main.Stmt := kanon_proof% bv_lshr.r_zero.main
+@[kanon_arm] theorem Bitvec.mul.r_one.main.proof : Bitvec.mul.r_one.main.Stmt := kanon_proof% Bitvec.mul.r_one.main
 
-@[kanon_arm] theorem bv_lshr.r_big.main.proof : bv_lshr.r_big.main.Stmt := kanon_proof% bv_lshr.r_big.main
+@[kanon_arm] theorem Bitvec.mul.r_zero.main.proof : Bitvec.mul.r_zero.main.Stmt := kanon_proof% Bitvec.mul.r_zero.main
 
-@[kanon_arm] theorem bv_lshr.r_lshr.main.proof : bv_lshr.r_lshr.main.Stmt := kanon_proof% bv_lshr.r_lshr.main
+@[kanon_arm] theorem Bitvec.mul.r_neg.main.proof : Bitvec.mul.r_neg.main.Stmt := kanon_proof% Bitvec.mul.r_neg.main
 
-@[kanon_arm] theorem bv_lshr.r_and_mask.main.proof : bv_lshr.r_and_mask.main.Stmt := kanon_proof% bv_lshr.r_and_mask.main
-
-end Kanon
+@[kanon_arm] theorem Bitvec.mul.r_mul_const.main.proof : Bitvec.mul.r_mul_const.main.Stmt := kanon_proof% Bitvec.mul.r_mul_const.main

@@ -329,7 +329,7 @@ structure Oracle.Compat (orc : Oracle) (FS : FloatSem) : Prop where
   /-- C's [fmod] agrees with its emulation from the IEEE remainder. -/
   fmod : ∀ f1 f2 ρ, f1.WF → f2.WF → f1.prec = f2.prec →
     (orc.f_fmod f1 f2).prec = f1.prec ∧ (orc.f_fmod f1 f2).WF ∧
-      eval FS ρ (raw_fmod_of_rem (.mk (.Op2 .FRem f1.term f2.term) (.TFloat f1.prec))
+      eval FS ρ (Float.raw_fmod_of_rem (.mk (.Op2 .FRem f1.term f2.term) (.TFloat f1.prec))
         f1.term f2.term) = some (orc.f_fmod f1 f2).sem
 
 end Kanon

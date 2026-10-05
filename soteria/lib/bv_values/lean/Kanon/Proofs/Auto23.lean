@@ -19,24 +19,32 @@ namespace Kanon
 
 open Classical Kanon
 
-@[kanon_arm] theorem bv_lt_zero.r_concat.main.proof : bv_lt_zero.r_concat.main.Stmt := kanon_proof% bv_lt_zero.r_concat.main
+@[kanon_arm] theorem Bitvec.lt.r_add_add.swap2.proof : Bitvec.lt.r_add_add.swap2.Stmt := by
+  first | (kanon_cmp; done) | kanon_auto
 
-@[kanon_arm] theorem bv_lt_zero.r_not.main.proof : bv_lt_zero.r_not.main.Stmt := kanon_proof% bv_lt_zero.r_not.main
+@[kanon_arm] theorem Bitvec.lt.r_add_add.swap1.proof : Bitvec.lt.r_add_add.swap1.Stmt := by
+  first | (kanon_cmp; done) | kanon_auto
 
-@[kanon_arm] theorem bv_lt_zero.r_of_bool.main.proof : bv_lt_zero.r_of_bool.main.Stmt := kanon_proof% bv_lt_zero.r_of_bool.main
+@[kanon_arm] theorem Bitvec.lt.r_add_add.swap1_swap2.proof : Bitvec.lt.r_add_add.swap1_swap2.Stmt := by
+  first | (kanon_cmp; done) | kanon_auto
 
-@[kanon_arm] theorem bv_lt_zero.r_default.main.proof : bv_lt_zero.r_default.main.Stmt := kanon_proof% bv_lt_zero.r_default.main
+@[kanon_arm] theorem Bitvec.lt.r_one.main.proof : Bitvec.lt.r_one.main.Stmt := by
+  first | (kanon_cmp; done) | kanon_auto
 
-@[kanon_arm] theorem bv_lt.r_lits.main.proof : bv_lt.r_lits.main.Stmt := kanon_proof% bv_lt.r_lits.main
+@[kanon_arm] theorem Bitvec.lt.r_of_bool.main.proof : Bitvec.lt.r_of_bool.main.Stmt := by
+  first | (kanon_cmp; done) | kanon_auto
 
-@[kanon_arm] theorem bv_lt.r_same.main.proof : bv_lt.r_same.main.Stmt := kanon_proof% bv_lt.r_same.main
+@[kanon_arm] theorem Bitvec.lt.r_ite_l.main.proof : Bitvec.lt.r_ite_l.main.Stmt := by
+  first | (kanon_cmp; done) | kanon_auto
 
-@[kanon_arm] theorem bv_lt.r_negs.main.proof : bv_lt.r_negs.main.Stmt := kanon_proof% bv_lt.r_negs.main
+@[kanon_arm] theorem Bitvec.lt.r_ite_r.main.proof : Bitvec.lt.r_ite_r.main.Stmt := by
+  first | (kanon_cmp; done) | kanon_auto
 
-@[kanon_arm] theorem bv_lt.r_neg_l.main.proof : bv_lt.r_neg_l.main.Stmt := kanon_proof% bv_lt.r_neg_l.main
+@[kanon_arm] theorem Bitvec.lt.r_lt_zero.main.proof : Bitvec.lt.r_lt_zero.main.Stmt := by
+  first | (kanon_cmp; done) | kanon_auto
 
-@[kanon_arm] theorem bv_lt.r_neg_r.main.proof : bv_lt.r_neg_r.main.Stmt := kanon_proof% bv_lt.r_neg_r.main
+@[kanon_arm] theorem Bitvec.lt.r_max_l.main.proof : Bitvec.lt.r_max_l.main.Stmt := by
+  first | (kanon_cmp; done) | kanon_auto
 
-@[kanon_arm] theorem bv_lt.r_const_add.main.proof : bv_lt.r_const_add.main.Stmt := kanon_proof% bv_lt.r_const_add.main
-
-end Kanon
+@[kanon_arm] theorem Bitvec.lt.r_min_r.main.proof : Bitvec.lt.r_min_r.main.Stmt := by
+  first | (kanon_cmp; done) | kanon_auto

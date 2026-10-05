@@ -19,24 +19,22 @@ namespace Kanon
 
 open Classical Kanon
 
-@[kanon_arm] theorem bv_extract.r_lshr.main.proof : bv_extract.r_lshr.main.Stmt := kanon_proof% bv_extract.r_lshr.main
+@[kanon_arm] theorem Bitvec.extract.r_urem.main.proof : Bitvec.extract.r_urem.main.Stmt := kanon_proof% Bitvec.extract.r_urem.main
 
-@[kanon_arm] theorem bv_extract.r_ite.main.proof : bv_extract.r_ite.main.Stmt := kanon_proof% bv_extract.r_ite.main
+@[kanon_arm] theorem Bitvec.extract.r_default.main.proof : Bitvec.extract.r_default.main.Stmt := kanon_proof% Bitvec.extract.r_default.main
 
-@[kanon_arm] theorem bv_extract.r_zext_high.main.proof : bv_extract.r_zext_high.main.Stmt := kanon_proof% bv_extract.r_zext_high.main
+@[kanon_arm] theorem Bitvec.extend_.r_zero.main.proof : Bitvec.extend_.r_zero.main.Stmt := kanon_proof% Bitvec.extend_.r_zero.main
 
-@[kanon_arm] theorem bv_extract.r_sext_bit.main.proof : bv_extract.r_sext_bit.main.Stmt := kanon_proof% bv_extract.r_sext_bit.main
+@[kanon_arm] theorem Bitvec.extend_.r_lit.main.proof : Bitvec.extend_.r_lit.main.Stmt := kanon_proof% Bitvec.extend_.r_lit.main
 
-@[kanon_arm] theorem bv_extract.r_ext_low.main.proof : bv_extract.r_ext_low.main.Stmt := kanon_proof% bv_extract.r_ext_low.main
+@[kanon_arm] theorem Bitvec.extend_.r_extend.main.proof : Bitvec.extend_.r_extend.main.Stmt := kanon_proof% Bitvec.extend_.r_extend.main
 
-@[kanon_arm] theorem bv_extract.r_ext_orig.main.proof : bv_extract.r_ext_orig.main.Stmt := kanon_proof% bv_extract.r_ext_orig.main
+@[kanon_arm] theorem Bitvec.extend_.r_ite.main.proof : Bitvec.extend_.r_ite.main.Stmt := kanon_proof% Bitvec.extend_.r_ite.main
 
-@[kanon_arm] theorem bv_extract.r_extract.main.proof : bv_extract.r_extract.main.Stmt := kanon_proof% bv_extract.r_extract.main
+@[kanon_arm] theorem Bitvec.extend_.r_of_bool.main.proof : Bitvec.extend_.r_of_bool.main.Stmt := kanon_proof% Bitvec.extend_.r_of_bool.main
 
-@[kanon_arm] theorem bv_extract.r_concat.main.proof : bv_extract.r_concat.main.Stmt := kanon_proof% bv_extract.r_concat.main
+@[kanon_arm] theorem Bitvec.extend_.r_default.main.proof : Bitvec.extend_.r_default.main.Stmt := kanon_proof% Bitvec.extend_.r_default.main
 
-@[kanon_arm] theorem bv_extract.r_add_low.main.proof : bv_extract.r_add_low.main.Stmt := kanon_proof% bv_extract.r_add_low.main
+@[kanon_arm] theorem Bitvec.concat.r_lits.main.proof : Bitvec.concat.r_lits.main.Stmt := kanon_proof% Bitvec.concat.r_lits.main
 
-@[kanon_arm] theorem bv_extract.r_add_const.main.proof : bv_extract.r_add_const.main.Stmt := kanon_proof% bv_extract.r_add_const.main
-
-end Kanon
+@[kanon_arm] theorem Bitvec.concat.r_extracts.main.proof : Bitvec.concat.r_extracts.main.Stmt := kanon_proof% Bitvec.concat.r_extracts.main

@@ -31,8 +31,8 @@ theorem smtUDiv_toNat {n : Nat} {a b : BitVec n} (hb : b.toNat ≠ 0) :
   simp [BitVec.smtUDiv_eq, ← BitVec.toNat_inj, hb]
 
 theorem msb_of_lit (z : Int) (T : Ty) :
-    msb_of (.mk (.BitVec z) T) = if 0 < z then log2 z else size_of_ty T - 1 := by
-  rw [msb_of]
+    Bitvec.msb_of (.mk (.BitVec z) T) = if 0 < z then log2 z else size_of_ty T - 1 := by
+  rw [Bitvec.msb_of]
   by_cases h : 0 < z
   · simp [firstSome, h, HOrElse.hOrElse, OrElse.orElse, Option.orElse]
   · by_cases h' : z = 0
@@ -60,8 +60,8 @@ theorem popcountNat_eq_one : ∀ {m : Nat}, popcountNat m = 1 → ∃ j, m = 2 ^
       · obtain ⟨j, hj⟩ := popcountNat_eq_one (m := (k + 1) / 2) (by omega)
         exact ⟨j + 1, by rw [Nat.pow_succ]; omega⟩
 
-theorem is_pow2_eq {z : Int} (h : is_pow2 z = true) : z = 2 ^ (log2 z).toNat ∧ 0 ≤ log2 z := by
-  unfold is_pow2 at h
+theorem is_pow2_eq {z : Int} (h : Bitvec.is_pow2 z = true) : z = 2 ^ (log2 z).toNat ∧ 0 ≤ log2 z := by
+  unfold Bitvec.is_pow2 at h
   simp only [Bool.and_eq_true, decide_eq_true_eq] at h
   obtain ⟨h0, h1⟩ := h
   simp only [popcount] at h1
@@ -71,7 +71,7 @@ theorem is_pow2_eq {z : Int} (h : is_pow2 z = true) : z = 2 ^ (log2 z).toNat ∧
   simp only [log2, hj, Nat.log2_two_pow, Int.toNat_natCast]
   omega
 
-theorem is_pow2_exists {z : Int} (h : is_pow2 z = true) : ∃ k : Nat, z = 2 ^ k :=
+theorem is_pow2_exists {z : Int} (h : Bitvec.is_pow2 z = true) : ∃ k : Nat, z = 2 ^ k :=
   ⟨_, (is_pow2_eq h).1⟩
 
 @[simp] theorem log2_two_pow (k : Nat) : log2 ((2 : Int) ^ k) = k := by
@@ -85,8 +85,8 @@ theorem lt_two_pow_log2 {z w : Int} (hz : 0 < z) (h : log2 z < w) : z < 2 ^ w.to
   have : ((z.toNat : Nat) : Int) < ((2 ^ w.toNat : Nat) : Int) := by exact_mod_cast (by omega)
   push_cast at this; omega
 
-theorem is_bv_iff {t : Ty} : is_bv t = true ↔ ∃ n, t = .TBitVector n := by
-  cases t <;> simp [is_bv, firstSome]
+theorem is_bv_iff {t : Ty} : Bitvec.is_bv t = true ↔ ∃ n, t = .TBitVector n := by
+  cases t <;> simp [Bitvec.is_bv, firstSome]
 
 theorem WT_mk_masked {n z : Int} : (mk_masked n z).WT ↔ 0 < n := by
   refine ⟨fun w => ?_, mk_masked_WT⟩
@@ -95,15 +95,15 @@ theorem WT_mk_masked {n z : Int} : (mk_masked n z).WT ↔ 0 < n := by
 
 /-! ## Boolean literals -/
 
-@[simp] theorem of_bool_WT (b : Bool) : (of_bool b).WT := by cases b <;> simp [of_bool]
-@[simp] theorem of_bool_ty (b : Bool) : (of_bool b).ty = .TBool := by cases b <;> rfl
-theorem of_bool_eq (b : Bool) : of_bool b = .mk (.Bool b) .TBool := by
+@[simp] theorem of_bool_WT (b : Bool) : (Bool.of_bool b).WT := by cases b <;> simp [Bool.of_bool]
+@[simp] theorem of_bool_ty (b : Bool) : (Bool.of_bool b).ty = .TBool := by cases b <;> rfl
+theorem of_bool_eq (b : Bool) : Bool.of_bool b = .mk (.Bool b) .TBool := by
   cases b <;> rfl
 
-@[simp] theorem denB_of_bool {FS ρ} (b : Bool) : denB FS ρ (of_bool b) = some b := by
+@[simp] theorem denB_of_bool {FS ρ} (b : Bool) : denB FS ρ (Bool.of_bool b) = some b := by
   cases b <;> rfl
-@[simp] theorem eval_of_bool {FS ρ} (b : Bool) : eval FS ρ (of_bool b) = some (.bool b) := by
-  cases b <;> simp [of_bool]
+@[simp] theorem eval_of_bool {FS ρ} (b : Bool) : eval FS ρ (Bool.of_bool b) = some (.bool b) := by
+  cases b <;> simp [Bool.of_bool]
 
 
 /-! ## `Nonzero` -/
@@ -144,14 +144,14 @@ theorem ne_zero_of_nonzero_bitVec {FS : FloatSem} {z : Int} {N : Nat} {t : Ty} (
   have w : (Term.mk (.BitVec 0) t).WT := WT_bitVec.2 ⟨N, hN, ht, h0, h1⟩
   exact hs FS ⟨fun _ => none⟩ N 0#N (by rw [eval_bitVec' w ht]; simp) rfl
 
-/-- The divisor `mk_masked (size x) z` of the rule `bv_div.zext`, which divides the extension of
+/-- The divisor `mk_masked (Bitvec.size x) z` of the rule `Bitvec.div.zext`, which divides the extension of
 `x` by the literal `z`, is not zero. -/
 theorem nonzero_zext_masked {FS : FloatSem} {signed : Bool} {by_ z : Int} {x : Term} {t5 t7 : Ty}
-    (kw : (sem FS).WT (bv_div.spec signed (.mk (.Op1 (.BvExtend false by_) x) t5)
+    (kw : (sem FS).WT (Bitvec.div.spec signed (.mk (.Op1 (.BvExtend false by_) x) t5)
       (.mk (.BitVec z) t7)))
-    (hs : Nonzero (.mk (.BitVec z) t7)) (hg : msb_of (.mk (.BitVec z) t7) < size x) :
-    Nonzero (mk_masked (size x) z) := by
-  simp only [sem, bv_div.spec, Term.WT, Op2.WT, Op1.WT] at kw
+    (hs : Nonzero (.mk (.BitVec z) t7)) (hg : Bitvec.msb_of (.mk (.BitVec z) t7) < Bitvec.size x) :
+    Nonzero (mk_masked (Bitvec.size x) z) := by
+  simp only [sem, Bitvec.div.spec, Term.WT, Op2.WT, Op1.WT] at kw
   kanon_split
   rename_i N _ _ W hN hW ht hx h0 h1 _ _
   have hz := ne_zero_of_nonzero_bitVec (FS := FS) ht hN h0 h1 hs

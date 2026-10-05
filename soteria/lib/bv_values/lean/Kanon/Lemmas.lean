@@ -24,7 +24,7 @@ theorem size_of_ty_of_bits {t : Ty} {n : Int} (h : t = .TBitVector n ∨ t = .TL
 @[simp] theorem size_of_ty_bitVector (n : Int) : size_of_ty (.TBitVector n) = n := rfl
 @[simp] theorem ty_eq (v : Term) : ty v = v.ty := rfl
 @[simp] theorem kind_eq (v : Term) : kind v = v.kind := rfl
-@[simp] theorem size_eq (v : Term) : size v = size_of_ty v.ty := rfl
+@[simp] theorem size_eq (v : Term) : Bitvec.size v = size_of_ty v.ty := rfl
 
 end Kanon
 

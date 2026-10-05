@@ -16,7 +16,7 @@ macro_rules | `(tactic| kanon_auto) => `(tactic| first
   | (kanon_rule_ev; done)
   | (kanon_rule_bounds; done))
 
-/-- The rule tactic of `bv_lt_zero`: `v <s 0` is the sign bit of `v`. -/
+/-- The rule tactic of `Bitvec.lt_zero`: `v <s 0` is the sign bit of `v`. -/
 macro "kanon_msb" : tactic => `(tactic| (
   kanon_rule_b_sem
   all_goals simp only [BitVec.slt_zero_eq_msb] at *
@@ -31,6 +31,6 @@ macro "kanon_msb" : tactic => `(tactic| (
        · omega
        · exact h))))
 
-attribute [kanon_tactic "kanon_msb"] bv_lt_zero.spec
+attribute [kanon_tactic "kanon_msb"] Bitvec.lt_zero.spec
 
 end Kanon.Lib

@@ -19,24 +19,32 @@ namespace Kanon
 
 open Classical Kanon
 
-@[kanon_arm] theorem bv_leq.r_ite_l.main.proof : bv_leq.r_ite_l.main.Stmt := kanon_proof% bv_leq.r_ite_l.main
+@[kanon_arm] theorem Bitvec.add_overflows.r_of_bools.main.proof : Bitvec.add_overflows.r_of_bools.main.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem bv_leq.r_ite_r.main.proof : bv_leq.r_ite_r.main.Stmt := kanon_proof% bv_leq.r_ite_r.main
+@[kanon_arm] theorem Bitvec.add_overflows.r_of_bool.main.proof : Bitvec.add_overflows.r_of_bool.main.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem bv_leq.r_const_sub1.main.proof : bv_leq.r_const_sub1.main.Stmt := kanon_proof% bv_leq.r_const_sub1.main
+@[kanon_arm] theorem Bitvec.add_overflows.r_default.main.proof : Bitvec.add_overflows.r_default.main.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem bv_leq.r_const_sub2.main.proof : bv_leq.r_const_sub2.main.Stmt := kanon_proof% bv_leq.r_const_sub2.main
+@[kanon_arm] theorem Bitvec.mul_overflows.r_lits.main.proof : Bitvec.mul_overflows.r_lits.main.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem bv_leq.r_sub_const1.main.proof : bv_leq.r_sub_const1.main.Stmt := kanon_proof% bv_leq.r_sub_const1.main
+@[kanon_arm] theorem Bitvec.mul_overflows.r_size1.main.proof : Bitvec.mul_overflows.r_size1.main.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem bv_leq.r_sub_const2.main.proof : bv_leq.r_sub_const2.main.Stmt := kanon_proof% bv_leq.r_sub_const2.main
+@[kanon_arm] theorem Bitvec.mul_overflows.r_msb.main.proof : Bitvec.mul_overflows.r_msb.main.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem bv_leq.r_ub_r.main.proof : bv_leq.r_ub_r.main.Stmt := kanon_proof% bv_leq.r_ub_r.main
+@[kanon_arm] theorem Bitvec.mul_overflows.r_const.main.proof : Bitvec.mul_overflows.r_const.main.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem bv_leq.r_ub_l.main.proof : bv_leq.r_ub_l.main.Stmt := kanon_proof% bv_leq.r_ub_l.main
+@[kanon_arm] theorem Bitvec.mul_overflows.r_div.main.proof : Bitvec.mul_overflows.r_div.main.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem bv_leq.r_to_unsigned_l.main.proof : bv_leq.r_to_unsigned_l.main.Stmt := kanon_proof% bv_leq.r_to_unsigned_l.main
+@[kanon_arm] theorem Bitvec.mul_overflows.r_default.main.proof : Bitvec.mul_overflows.r_default.main.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem bv_leq.r_to_unsigned_r.main.proof : bv_leq.r_to_unsigned_r.main.Stmt := kanon_proof% bv_leq.r_to_unsigned_r.main
-
-end Kanon
+@[kanon_arm] theorem Bitvec.neg_overflows.r_main.main.proof : Bitvec.neg_overflows.r_main.main.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto

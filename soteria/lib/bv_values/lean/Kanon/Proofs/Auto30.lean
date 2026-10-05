@@ -19,24 +19,29 @@ namespace Kanon
 
 open Classical Kanon
 
-@[kanon_arm] theorem bv_leq.r_default.main.proof : bv_leq.r_default.main.Stmt := kanon_proof% bv_leq.r_default.main
+@[kanon_arm] theorem Bitvec.sub_overflows.r_lits.main.proof : Bitvec.sub_overflows.r_lits.main.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem bv_add_overflows.r_lits.main.proof : bv_add_overflows.r_lits.main.Stmt := kanon_proof% bv_add_overflows.r_lits.main
+@[kanon_arm] theorem Bitvec.sub_overflows.r_same.main.proof : Bitvec.sub_overflows.r_same.main.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem bv_add_overflows.r_zero.main.proof : bv_add_overflows.r_zero.main.Stmt := kanon_proof% bv_add_overflows.r_zero.main
+@[kanon_arm] theorem Bitvec.sub_overflows.r_unsigned.main.proof : Bitvec.sub_overflows.r_unsigned.main.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem bv_add_overflows.r_size1.main.proof : bv_add_overflows.r_size1.main.Stmt := kanon_proof% bv_add_overflows.r_size1.main
+@[kanon_arm] theorem Bitvec.sub_overflows.r_default.main.proof : Bitvec.sub_overflows.r_default.main.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem bv_add_overflows.r_unsigned.main.proof : bv_add_overflows.r_unsigned.main.Stmt := kanon_proof% bv_add_overflows.r_unsigned.main
+@[kanon_arm] theorem Bitvec.of_float.r_default.main.proof : Bitvec.of_float.r_default.main.Stmt := kanon_proof% Bitvec.of_float.r_default.main
 
-@[kanon_arm] theorem bv_add_overflows.r_unsigned.swap.proof : bv_add_overflows.r_unsigned.swap.Stmt := kanon_proof% bv_add_overflows.r_unsigned.swap
+@[kanon_arm] theorem Bitvec.to_float.r_default.main.proof : Bitvec.to_float.r_default.main.Stmt := kanon_proof% Bitvec.to_float.r_default.main
 
-@[kanon_arm] theorem bv_add_overflows.r_signed.main.proof : bv_add_overflows.r_signed.main.Stmt := kanon_proof% bv_add_overflows.r_signed.main
+@[kanon_arm] theorem Bitvec.to_float_raw.r_default.main.proof : Bitvec.to_float_raw.r_default.main.Stmt := kanon_proof% Bitvec.to_float_raw.r_default.main
 
-@[kanon_arm] theorem bv_add_overflows.r_signed.swap.proof : bv_add_overflows.r_signed.swap.Stmt := kanon_proof% bv_add_overflows.r_signed.swap
+@[kanon_arm] theorem Float.is_floatclass.r_lit.main.proof : Float.is_floatclass.r_lit.main.Stmt := by
+  first | (kanon_float; done) | kanon_auto
 
-@[kanon_arm] theorem bv_add_overflows.r_of_bools.main.proof : bv_add_overflows.r_of_bools.main.Stmt := kanon_proof% bv_add_overflows.r_of_bools.main
+@[kanon_arm] theorem Float.is_floatclass.r_default.main.proof : Float.is_floatclass.r_default.main.Stmt := by
+  first | (kanon_float; done) | kanon_auto
 
-@[kanon_arm] theorem bv_add_overflows.r_of_bool.main.proof : bv_add_overflows.r_of_bool.main.Stmt := kanon_proof% bv_add_overflows.r_of_bool.main
-
-end Kanon
+@[kanon_arm] theorem Float.is_negative.r_lit.main.proof : Float.is_negative.r_lit.main.Stmt := by
+  first | (kanon_float; done) | kanon_auto

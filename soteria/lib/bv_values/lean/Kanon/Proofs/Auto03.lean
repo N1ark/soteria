@@ -19,24 +19,22 @@ namespace Kanon
 
 open Classical Kanon
 
-@[kanon_arm] theorem b_or.r_upper_bounds.leq_lt.proof : b_or.r_upper_bounds.leq_lt.Stmt := kanon_proof% b_or.r_upper_bounds.leq_lt
+@[kanon_arm] theorem Bool.or_.r_upper_bounds.leq_lt.proof : Bool.or_.r_upper_bounds.leq_lt.Stmt := kanon_proof% Bool.or_.r_upper_bounds.leq_lt
 
-@[kanon_arm] theorem b_or.r_upper_bounds.leq_leq.proof : b_or.r_upper_bounds.leq_leq.Stmt := kanon_proof% b_or.r_upper_bounds.leq_leq
+@[kanon_arm] theorem Bool.or_.r_upper_bounds.leq_leq.proof : Bool.or_.r_upper_bounds.leq_leq.Stmt := kanon_proof% Bool.or_.r_upper_bounds.leq_leq
 
-@[kanon_arm] theorem b_or.r_lower_bounds.lt_lt.proof : b_or.r_lower_bounds.lt_lt.Stmt := kanon_proof% b_or.r_lower_bounds.lt_lt
+@[kanon_arm] theorem Bool.or_.r_lower_bounds.lt_lt.proof : Bool.or_.r_lower_bounds.lt_lt.Stmt := kanon_proof% Bool.or_.r_lower_bounds.lt_lt
 
-@[kanon_arm] theorem b_or.r_lower_bounds.lt_leq.proof : b_or.r_lower_bounds.lt_leq.Stmt := kanon_proof% b_or.r_lower_bounds.lt_leq
+@[kanon_arm] theorem Bool.or_.r_lower_bounds.lt_leq.proof : Bool.or_.r_lower_bounds.lt_leq.Stmt := kanon_proof% Bool.or_.r_lower_bounds.lt_leq
 
-@[kanon_arm] theorem b_or.r_lower_bounds.leq_lt.proof : b_or.r_lower_bounds.leq_lt.Stmt := kanon_proof% b_or.r_lower_bounds.leq_lt
+@[kanon_arm] theorem Bool.or_.r_lower_bounds.leq_lt.proof : Bool.or_.r_lower_bounds.leq_lt.Stmt := kanon_proof% Bool.or_.r_lower_bounds.leq_lt
 
-@[kanon_arm] theorem b_or.r_lower_bounds.leq_leq.proof : b_or.r_lower_bounds.leq_leq.Stmt := kanon_proof% b_or.r_lower_bounds.leq_leq
+@[kanon_arm] theorem Bool.or_.r_lower_bounds.leq_leq.proof : Bool.or_.r_lower_bounds.leq_leq.Stmt := kanon_proof% Bool.or_.r_lower_bounds.leq_leq
 
-@[kanon_arm] theorem b_not.r_lt.main.proof : b_not.r_lt.main.Stmt := kanon_proof% b_not.r_lt.main
+@[kanon_arm] theorem Bool.not_.r_lt.main.proof : Bool.not_.r_lt.main.Stmt := kanon_proof% Bool.not_.r_lt.main
 
-@[kanon_arm] theorem b_not.r_leq.main.proof : b_not.r_leq.main.Stmt := kanon_proof% b_not.r_leq.main
+@[kanon_arm] theorem Bool.not_.r_leq.main.proof : Bool.not_.r_leq.main.Stmt := kanon_proof% Bool.not_.r_leq.main
 
-@[kanon_arm] theorem b_not.r_eq_bit.main.proof : b_not.r_eq_bit.main.Stmt := kanon_proof% b_not.r_eq_bit.main
+@[kanon_arm] theorem Bool.not_.r_eq_bit.main.proof : Bool.not_.r_eq_bit.main.Stmt := kanon_proof% Bool.not_.r_eq_bit.main
 
-@[kanon_arm] theorem b_ite.r_bv_of_bool.main.proof : b_ite.r_bv_of_bool.main.Stmt := kanon_proof% b_ite.r_bv_of_bool.main
-
-end Kanon
+@[kanon_arm] theorem Bool.ite.r_bv_of_bool.main.proof : Bool.ite.r_bv_of_bool.main.Stmt := kanon_proof% Bool.ite.r_bv_of_bool.main

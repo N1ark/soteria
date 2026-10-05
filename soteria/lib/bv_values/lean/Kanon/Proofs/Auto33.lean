@@ -19,24 +19,32 @@ namespace Kanon
 
 open Classical Kanon
 
-@[kanon_arm] theorem float_is_negative.r_default.main.proof : float_is_negative.r_default.main.Stmt := kanon_proof% float_is_negative.r_default.main
+@[kanon_arm] theorem Float.abs.r_default.main.proof : Float.abs.r_default.main.Stmt := by
+  first | (kanon_float; done) | kanon_auto
 
-@[kanon_arm] theorem float_is_positive.r_lit.main.proof : float_is_positive.r_lit.main.Stmt := kanon_proof% float_is_positive.r_lit.main
+@[kanon_arm] theorem Float.neg.r_lit.main.proof : Float.neg.r_lit.main.Stmt := by
+  first | (kanon_float; done) | kanon_auto
 
-@[kanon_arm] theorem float_is_positive.r_default.main.proof : float_is_positive.r_default.main.Stmt := kanon_proof% float_is_positive.r_default.main
+@[kanon_arm] theorem Float.neg.r_default.main.proof : Float.neg.r_default.main.Stmt := by
+  first | (kanon_float; done) | kanon_auto
 
-@[kanon_arm] theorem float_cast.r_default.main.proof : float_cast.r_default.main.Stmt := kanon_proof% float_cast.r_default.main
+@[kanon_arm] theorem Float.fma.r_default.main.proof : Float.fma.r_default.main.Stmt := by
+  first | (kanon_float; done) | kanon_auto
 
-@[kanon_arm] theorem float_eq.r_lits.main.proof : float_eq.r_lits.main.Stmt := kanon_proof% float_eq.r_lits.main
+@[kanon_arm] theorem Float.fmod_of_rem.r_main.main.proof : Float.fmod_of_rem.r_main.main.Stmt := by
+  first | (kanon_float; done) | kanon_auto
 
-@[kanon_arm] theorem float_lt.r_lits.main.proof : float_lt.r_lits.main.Stmt := kanon_proof% float_lt.r_lits.main
+@[kanon_arm] theorem Float.fmod.r_default.main.proof : Float.fmod.r_default.main.Stmt := by
+  first | (kanon_float; done) | kanon_auto
 
-@[kanon_arm] theorem float_lt.r_default.main.proof : float_lt.r_default.main.Stmt := kanon_proof% float_lt.r_default.main
+@[kanon_arm] theorem Float.min.r_lits.main.proof : Float.min.r_lits.main.Stmt := by
+  first | (kanon_float; done) | kanon_auto
 
-@[kanon_arm] theorem float_leq.r_lits.main.proof : float_leq.r_lits.main.Stmt := kanon_proof% float_leq.r_lits.main
+@[kanon_arm] theorem Float.min.r_default.main.proof : Float.min.r_default.main.Stmt := by
+  first | (kanon_float; done) | kanon_auto
 
-@[kanon_arm] theorem float_leq.r_default.main.proof : float_leq.r_default.main.Stmt := kanon_proof% float_leq.r_default.main
+@[kanon_arm] theorem Float.max.r_lits.main.proof : Float.max.r_lits.main.Stmt := by
+  first | (kanon_float; done) | kanon_auto
 
-@[kanon_arm] theorem float_add.r_lits.main.proof : float_add.r_lits.main.Stmt := kanon_proof% float_add.r_lits.main
-
-end Kanon
+@[kanon_arm] theorem Float.max.r_default.main.proof : Float.max.r_default.main.Stmt := by
+  first | (kanon_float; done) | kanon_auto

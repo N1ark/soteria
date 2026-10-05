@@ -19,24 +19,26 @@ namespace Kanon
 
 open Classical Kanon
 
-@[kanon_arm] theorem float_add.r_default.main.proof : float_add.r_default.main.Stmt := kanon_proof% float_add.r_default.main
+@[kanon_arm] theorem Float.sqrt.r_lit.main.proof : Float.sqrt.r_lit.main.Stmt := by
+  first | (kanon_float; done) | kanon_auto
 
-@[kanon_arm] theorem float_sub.r_lits.main.proof : float_sub.r_lits.main.Stmt := kanon_proof% float_sub.r_lits.main
+@[kanon_arm] theorem Float.sqrt.r_default.main.proof : Float.sqrt.r_default.main.Stmt := by
+  first | (kanon_float; done) | kanon_auto
 
-@[kanon_arm] theorem float_sub.r_default.main.proof : float_sub.r_default.main.Stmt := kanon_proof% float_sub.r_default.main
+@[kanon_arm] theorem Float.round.r_lit.main.proof : Float.round.r_lit.main.Stmt := by
+  first | (kanon_float; done) | kanon_auto
 
-@[kanon_arm] theorem float_div.r_lits.main.proof : float_div.r_lits.main.Stmt := kanon_proof% float_div.r_lits.main
+@[kanon_arm] theorem Float.round.r_default.main.proof : Float.round.r_default.main.Stmt := by
+  first | (kanon_float; done) | kanon_auto
 
-@[kanon_arm] theorem float_div.r_default.main.proof : float_div.r_default.main.Stmt := kanon_proof% float_div.r_default.main
+@[kanon_arm] theorem Ptr.loc.r_ptr.main.proof : Ptr.loc.r_ptr.main.Stmt := by
+  first | (kanon_ptr Ptr.loc.spec; done) | kanon_auto
 
-@[kanon_arm] theorem float_mul.r_lits.main.proof : float_mul.r_lits.main.Stmt := kanon_proof% float_mul.r_lits.main
+@[kanon_arm] theorem Ptr.loc.r_default.main.proof : Ptr.loc.r_default.main.Stmt := by
+  first | (kanon_ptr Ptr.loc.spec; done) | kanon_auto
 
-@[kanon_arm] theorem float_mul.r_default.main.proof : float_mul.r_default.main.Stmt := kanon_proof% float_mul.r_default.main
+@[kanon_arm] theorem Ptr.ofs.r_ptr.main.proof : Ptr.ofs.r_ptr.main.Stmt := by
+  first | (kanon_ptr Ptr.ofs.spec; done) | kanon_auto
 
-@[kanon_arm] theorem float_rem.r_lits.main.proof : float_rem.r_lits.main.Stmt := kanon_proof% float_rem.r_lits.main
-
-@[kanon_arm] theorem float_rem.r_default.main.proof : float_rem.r_default.main.Stmt := kanon_proof% float_rem.r_default.main
-
-@[kanon_arm] theorem float_abs.r_lit.main.proof : float_abs.r_lit.main.Stmt := kanon_proof% float_abs.r_lit.main
-
-end Kanon
+@[kanon_arm] theorem Ptr.ofs.r_default.main.proof : Ptr.ofs.r_default.main.Stmt := by
+  first | (kanon_ptr Ptr.ofs.spec; done) | kanon_auto

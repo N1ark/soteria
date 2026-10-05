@@ -13,21 +13,21 @@ namespace Kanon.Lib
 
 open Classical
 
-theorem min_for_true {n : Nat} (hn : 0 < n) : min_for true n = -2 ^ (n - 1) := by
-  simp [min_for, z_lsl]
+theorem min_for_true {n : Nat} (hn : 0 < n) : Bitvec.min_for true n = -2 ^ (n - 1) := by
+  simp [Bitvec.min_for, z_lsl]
 
-theorem max_for_true {n : Nat} (hn : 0 < n) : max_for true n = 2 ^ (n - 1) - 1 := by
-  simp [max_for, z_lsl]
+theorem max_for_true {n : Nat} (hn : 0 < n) : Bitvec.max_for true n = 2 ^ (n - 1) - 1 := by
+  simp [Bitvec.max_for, z_lsl]
 
-@[simp] theorem min_for_false (n : Int) : min_for false n = 0 := rfl
+@[simp] theorem min_for_false (n : Int) : Bitvec.min_for false n = 0 := rfl
 
-@[simp] theorem max_for_false (n : Nat) : max_for false n = 2 ^ n - 1 := by
-  simp [max_for, z_lsl]
+@[simp] theorem max_for_false (n : Nat) : Bitvec.max_for false n = 2 ^ n - 1 := by
+  simp [Bitvec.max_for, z_lsl]
 
 @[simp] theorem z_asr_zero (z : Int) : zasr z 0 = z := by simp [zasr]
 
 theorem bv_to_z_true {n : Nat} (hn : 0 < n) (z : Int) :
-    bv_to_z true (n : Int) z = (BitVec.ofInt n z).toInt := by
+    Bitvec.to_z true (n : Int) z = (BitVec.ofInt n z).toInt := by
   have h2 : ((2 : Int) ^ n + 1) / 2 = 2 ^ (n - 1) := by
     obtain ⟨k, rfl⟩ : ∃ k, n = k + 1 := ⟨n - 1, by omega⟩
     simp only [Nat.add_sub_cancel, Int.pow_succ]; omega
@@ -35,14 +35,14 @@ theorem bv_to_z_true {n : Nat} (hn : 0 < n) (z : Int) :
     obtain ⟨k, rfl⟩ : ∃ k, n = k + 1 := ⟨n - 1, by omega⟩
     simp only [Nat.add_sub_cancel, Int.pow_succ]; omega
   have e : ((2 ^ n : Nat) : Int) = (2 : Int) ^ n := by push_cast; rfl
-  simp only [bv_to_z, if_true, signed_extract, z_asr_zero, Int.toNat_natCast, BitVec.toInt_ofInt,
+  simp only [Bitvec.to_z, if_true, signed_extract, z_asr_zero, Int.toNat_natCast, BitVec.toInt_ofInt,
     Int.bmod, e, h2]
   split <;> split <;> omega
 
 theorem bv_to_z_false {n : Nat} {z : Int} (h0 : 0 ≤ z) (h1 : z < 2 ^ n) :
-    bv_to_z false (n : Int) z = ((BitVec.ofInt n z).toNat : Int) := by
+    Bitvec.to_z false (n : Int) z = ((BitVec.ofInt n z).toNat : Int) := by
   have e : ((2 ^ n : Nat) : Int) = (2 : Int) ^ n := by push_cast; rfl
-  simp only [bv_to_z, Bool.false_eq_true, if_false, BitVec.toNat_ofInt, e,
+  simp only [Bitvec.to_z, Bool.false_eq_true, if_false, BitVec.toNat_ofInt, e,
     Int.emod_eq_of_lt h0 h1]
   omega
 
@@ -50,7 +50,7 @@ theorem bv_to_z_false {n : Nat} {z : Int} (h0 : 0 ≤ z) (h1 : z < 2 ^ n) :
 abbrev iv (s : Bool) {w : Nat} (x : BitVec w) : Int := if s then x.toInt else x.toNat
 
 theorem bv_to_z_ofInt {n : Nat} (hn : 0 < n) (s : Bool) {z : Int} (h0 : 0 ≤ z) (h1 : z < 2 ^ n) :
-    bv_to_z s (n : Int) z = iv s (BitVec.ofInt n z) := by
+    Bitvec.to_z s (n : Int) z = iv s (BitVec.ofInt n z) := by
   cases s
   · exact bv_to_z_false h0 h1
   · exact bv_to_z_true hn z
@@ -61,39 +61,39 @@ include hn
 
 theorem overflows_add_ofInt (s : Bool) {l r : Int} (hl0 : 0 ≤ l) (hl1 : l < 2 ^ n) (hr0 : 0 ≤ r)
     (hr1 : r < 2 ^ n) :
-    overflows_add s n l r =
+    Bitvec.overflows_add s n l r =
       if s then (BitVec.ofInt n l).saddOverflow (BitVec.ofInt n r)
       else (BitVec.ofInt n l).uaddOverflow (BitVec.ofInt n r) := by
   cases s
-  · simp only [overflows_add, bv_to_z_false hl0 hl1, bv_to_z_false hr0 hr1, min_for_false,
+  · simp only [Bitvec.overflows_add, bv_to_z_false hl0 hl1, bv_to_z_false hr0 hr1, min_for_false,
       max_for_false, BitVec.uaddOverflow, BitVec.toNat_ofInt, Bool.false_eq_true, if_false]
     have e : ((2 ^ n : Nat) : Int) = (2 : Int) ^ n := by push_cast; rfl
     rw [Bool.eq_iff_iff]; simp [Int.emod_eq_of_lt hl0 hl1, Int.emod_eq_of_lt hr0 hr1]
     omega
   · have := BitVec.le_toInt (BitVec.ofInt n l); have := BitVec.toInt_lt (x := BitVec.ofInt n l)
-    simp only [overflows_add, bv_to_z_true hn, min_for_true hn, max_for_true hn,
+    simp only [Bitvec.overflows_add, bv_to_z_true hn, min_for_true hn, max_for_true hn,
       BitVec.saddOverflow, if_true]
     rw [Bool.eq_iff_iff]; simp; omega
 
 theorem overflows_sub_ofInt (s : Bool) {l r : Int} (hl0 : 0 ≤ l) (hl1 : l < 2 ^ n) (hr0 : 0 ≤ r)
     (hr1 : r < 2 ^ n) :
-    overflows_sub s n l r =
+    Bitvec.overflows_sub s n l r =
       if s then (BitVec.ofInt n l).ssubOverflow (BitVec.ofInt n r)
       else (BitVec.ofInt n l).usubOverflow (BitVec.ofInt n r) := by
   cases s
-  · simp only [overflows_sub, bv_to_z_false hl0 hl1, bv_to_z_false hr0 hr1, min_for_false,
+  · simp only [Bitvec.overflows_sub, bv_to_z_false hl0 hl1, bv_to_z_false hr0 hr1, min_for_false,
       max_for_false, BitVec.usubOverflow, BitVec.toNat_ofInt, Bool.false_eq_true, if_false]
     have e : ((2 ^ n : Nat) : Int) = (2 : Int) ^ n := by push_cast; rfl
     rw [Bool.eq_iff_iff]; simp [Int.emod_eq_of_lt hl0 hl1, Int.emod_eq_of_lt hr0 hr1]
     omega
   · have := BitVec.le_toInt (BitVec.ofInt n l); have := BitVec.toInt_lt (x := BitVec.ofInt n l)
-    simp only [overflows_sub, bv_to_z_true hn, min_for_true hn, max_for_true hn,
+    simp only [Bitvec.overflows_sub, bv_to_z_true hn, min_for_true hn, max_for_true hn,
       BitVec.ssubOverflow, if_true]
     rw [Bool.eq_iff_iff]; simp; omega
 
 theorem overflows_mul_ofInt (s : Bool) {l r : Int} (hl0 : 0 ≤ l) (hl1 : l < 2 ^ n) (hr0 : 0 ≤ r)
     (hr1 : r < 2 ^ n) :
-    overflows_mul s n l r =
+    Bitvec.overflows_mul s n l r =
       if s then (BitVec.ofInt n l).smulOverflow (BitVec.ofInt n r)
       else (BitVec.ofInt n l).umulOverflow (BitVec.ofInt n r) := by
   cases s
@@ -102,7 +102,7 @@ theorem overflows_mul_ofInt (s : Bool) {l r : Int} (hl0 : 0 ≤ l) (hl1 : l < 2 
     have e : ((2 ^ n : Nat) : Int) = (2 : Int) ^ n := by push_cast; rfl
     have hl : l < 2 ^ n := by exact_mod_cast hl1
     have hr : r < 2 ^ n := by exact_mod_cast hr1
-    simp only [overflows_mul, bv_to_z_false (Int.natCast_nonneg l) hl1,
+    simp only [Bitvec.overflows_mul, bv_to_z_false (Int.natCast_nonneg l) hl1,
       bv_to_z_false (Int.natCast_nonneg r) hr1, min_for_false, max_for_false, BitVec.umulOverflow,
       BitVec.toNat_ofInt, Bool.false_eq_true, if_false, e, Int.emod_eq_of_lt (Int.natCast_nonneg l) hl1,
       Int.emod_eq_of_lt (Int.natCast_nonneg r) hr1, Int.toNat_natCast]
@@ -112,12 +112,12 @@ theorem overflows_mul_ofInt (s : Bool) {l r : Int} (hl0 : 0 ≤ l) (hl1 : l < 2 
     have e2 : ((l * r : Nat) : Int) = (l : Int) * r := by push_cast; rfl
     rw [← e2] at *
     omega
-  · simp only [overflows_mul, bv_to_z_true hn, min_for_true hn, max_for_true hn,
+  · simp only [Bitvec.overflows_mul, bv_to_z_true hn, min_for_true hn, max_for_true hn,
       BitVec.smulOverflow, if_true]
     rw [Bool.eq_iff_iff]; simp; omega
 
-theorem is_int_min_ofInt (z : Int) : is_int_min n z = decide (BitVec.ofInt n z = BitVec.intMin n) := by
-  simp only [is_int_min, bv_to_z_true hn, min_for_true hn]
+theorem is_int_min_ofInt (z : Int) : Bitvec.is_int_min n z = decide (BitVec.ofInt n z = BitVec.intMin n) := by
+  simp only [Bitvec.is_int_min, bv_to_z_true hn, min_for_true hn]
   rw [← BitVec.toInt_intMin_of_pos hn]
   simp only [BitVec.toInt_inj]
 
@@ -125,42 +125,42 @@ end
 
 theorem udivides_ofInt {n : Nat} {d z : Int} (hd0 : 0 ≤ d) (hd1 : d < 2 ^ n) (hz0 : 0 ≤ z)
     (hz1 : z < 2 ^ n) :
-    udivides d z = decide ((BitVec.ofInt n d).toNat ∣ (BitVec.ofInt n z).toNat) := by
+    Bitvec.udivides d z = decide ((BitVec.ofInt n d).toNat ∣ (BitVec.ofInt n z).toNat) := by
   obtain ⟨d, rfl⟩ := Int.eq_ofNat_of_zero_le hd0
   obtain ⟨z, rfl⟩ := Int.eq_ofNat_of_zero_le hz0
   have e : ((2 ^ n : Nat) : Int) = (2 : Int) ^ n := by push_cast; rfl
-  simp only [udivides, divisible, BitVec.toNat_ofInt, e, Int.emod_eq_of_lt hd0 hd1,
+  simp only [Bitvec.udivides, divisible, BitVec.toNat_ofInt, e, Int.emod_eq_of_lt hd0 hd1,
     Int.emod_eq_of_lt hz0 hz1, Int.toNat_natCast, Int.natCast_dvd_natCast]
 
 theorem add_overflows_ofInt {n : Nat} (hn : 0 < n) (s : Bool) {s2 : Ty} {l r : Int} (hl0 : 0 ≤ l)
     (hl1 : l < 2 ^ n) (hr0 : 0 ≤ r) (hr1 : r < 2 ^ n) :
-    add_overflows s (.TBitVector (n : Int)) s2 l r =
+    Bitvec.lit_add_overflows s (.TBitVector (n : Int)) s2 l r =
       if s then (BitVec.ofInt n l).saddOverflow (BitVec.ofInt n r)
       else (BitVec.ofInt n l).uaddOverflow (BitVec.ofInt n r) :=
   overflows_add_ofInt hn s hl0 hl1 hr0 hr1
 
 theorem sub_overflows_ofInt {n : Nat} (hn : 0 < n) (s : Bool) {s2 : Ty} {l r : Int} (hl0 : 0 ≤ l)
     (hl1 : l < 2 ^ n) (hr0 : 0 ≤ r) (hr1 : r < 2 ^ n) :
-    sub_overflows s (.TBitVector (n : Int)) s2 l r =
+    Bitvec.lit_sub_overflows s (.TBitVector (n : Int)) s2 l r =
       if s then (BitVec.ofInt n l).ssubOverflow (BitVec.ofInt n r)
       else (BitVec.ofInt n l).usubOverflow (BitVec.ofInt n r) :=
   overflows_sub_ofInt hn s hl0 hl1 hr0 hr1
 
 theorem mul_overflows_ofInt {n : Nat} (hn : 0 < n) (s : Bool) {s2 : Ty} {l r : Int} (hl0 : 0 ≤ l)
     (hl1 : l < 2 ^ n) (hr0 : 0 ≤ r) (hr1 : r < 2 ^ n) :
-    mul_overflows s (.TBitVector (n : Int)) s2 l r =
+    Bitvec.lit_mul_overflows s (.TBitVector (n : Int)) s2 l r =
       if s then (BitVec.ofInt n l).smulOverflow (BitVec.ofInt n r)
       else (BitVec.ofInt n l).umulOverflow (BitVec.ofInt n r) :=
   overflows_mul_ofInt hn s hl0 hl1 hr0 hr1
 
 theorem fold_checked_ofInt {n : Nat} (hn : 0 < n) {a b : Int} (ha0 : 0 ≤ a) (ha1 : a < 2 ^ n)
     (hb0 : 0 ≤ b) (hb1 : b < 2 ^ n) (c : Checked) (add : Bool) :
-    fold_checked c n a b add =
+    Bitvec.fold_checked c n a b add =
       { signed := c.signed && !(if add then (BitVec.ofInt n a).saddOverflow (BitVec.ofInt n b)
           else (BitVec.ofInt n a).ssubOverflow (BitVec.ofInt n b)),
         unsigned := c.unsigned && !(if add then (BitVec.ofInt n a).uaddOverflow (BitVec.ofInt n b)
           else (BitVec.ofInt n a).usubOverflow (BitVec.ofInt n b)) } := by
-  cases add <;> simp [fold_checked, checked_has, overflows_add_ofInt hn _ ha0 ha1 hb0 hb1,
+  cases add <;> simp [Bitvec.fold_checked, Bitvec.checked_has, overflows_add_ofInt hn _ ha0 ha1 hb0 hb1,
     overflows_sub_ofInt hn _ ha0 ha1 hb0 hb1]
 
 /-! ## Overflow facts, through integers -/

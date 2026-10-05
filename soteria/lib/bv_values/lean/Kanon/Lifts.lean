@@ -14,348 +14,348 @@ namespace Lib
 
 variable {FS : FloatSem} {O : Ops}
 
-theorem lift_b_and (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
+theorem lift_bool_and_ (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
-  Refines FS (b_and.spec v1 v2) (O.b_and v1' v2') :=
-  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.b_and v1' v2')
+  Refines FS (Bool.and_.spec v1 v2) (O.bool_and_ v1' v2') :=
+  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bool_and_ v1' v2')
 
-theorem lift_b_or (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
+theorem lift_bool_or_ (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
-  Refines FS (b_or.spec v1 v2) (O.b_or v1' v2') :=
-  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.b_or v1' v2')
+  Refines FS (Bool.or_.spec v1 v2) (O.bool_or_ v1' v2') :=
+  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bool_or_ v1' v2')
 
-theorem lift_b_not (hO : O.Sound FS) {sv sv' : Term}
+theorem lift_bool_not_ (hO : O.Sound FS) {sv sv' : Term}
   (h_sv : Refines FS sv sv') :
-  Refines FS (b_not.spec sv) (O.b_not sv') :=
-  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.b_not sv')
+  Refines FS (Bool.not_.spec sv) (O.bool_not_ sv') :=
+  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bool_not_ sv')
 
-theorem lift_b_ite (hO : O.Sound FS) {guard guard' : Term} {if_ if_' : Term} {else_ else_' : Term}
+theorem lift_bool_ite (hO : O.Sound FS) {guard guard' : Term} {if_ if_' : Term} {else_ else_' : Term}
   (h_guard : Refines FS guard guard')
   (h_if_ : Refines FS if_ if_')
   (h_else_ : Refines FS else_ else_') :
-  Refines FS (b_ite.spec guard if_ else_) (O.b_ite guard' if_' else_') :=
-  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.b_ite guard' if_' else_')
+  Refines FS (Bool.ite.spec guard if_ else_) (O.bool_ite guard' if_' else_') :=
+  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bool_ite guard' if_' else_')
 
-theorem lift_sem_eq (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
+theorem lift_bool_eq (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
-  Refines FS (sem_eq.spec v1 v2) (O.sem_eq v1' v2') :=
-  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.sem_eq v1' v2')
+  Refines FS (Bool.eq.spec v1 v2) (O.bool_eq v1' v2') :=
+  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bool_eq v1' v2')
 
-theorem lift_sem_eq_untyped (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
+theorem lift_bool_eq_untyped (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
-  Refines FS (sem_eq_untyped.spec v1 v2) (O.sem_eq_untyped v1' v2') :=
-  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.sem_eq_untyped v1' v2')
+  Refines FS (Bool.eq_untyped.spec v1 v2) (O.bool_eq_untyped v1' v2') :=
+  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bool_eq_untyped v1' v2')
 
-theorem lift_b_distinct (hO : O.Sound FS) {l : (List Term)} :
-  Refines FS (b_distinct.spec l) (O.b_distinct l) :=
-  hO.b_distinct l
+theorem lift_bool_distinct (hO : O.Sound FS) {l : (List Term)} :
+  Refines FS (Bool.distinct.spec l) (O.bool_distinct l) :=
+  hO.bool_distinct l
 
-theorem lift_b_mk_exists (hO : O.Sound FS) {binders : (List (Int × Ty))} {body body' : Term}
+theorem lift_exists_mk (hO : O.Sound FS) {binders : (List (Int × Ty))} {body body' : Term}
   (h_body : Refines FS body body') :
-  Refines FS (b_mk_exists.spec binders body) (O.b_mk_exists binders body') :=
-  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.b_mk_exists binders body')
+  Refines FS (Exists.mk.spec binders body) (O.exists_mk binders body') :=
+  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.exists_mk binders body')
 
-theorem lift_bv_of_bool (hO : O.Sound FS) {n : Int} {b b' : Term}
+theorem lift_bitvec_of_bool (hO : O.Sound FS) {n : Int} {b b' : Term}
   (h_b : Refines FS b b') :
-  Refines FS (bv_of_bool.spec n b) (O.bv_of_bool n b') :=
-  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bv_of_bool n b')
+  Refines FS (Bitvec.of_bool.spec n b) (O.bitvec_of_bool n b') :=
+  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bitvec_of_bool n b')
 
-theorem lift_bv_to_bool (hO : O.Sound FS) {v v' : Term}
+theorem lift_bitvec_to_bool (hO : O.Sound FS) {v v' : Term}
   (h_v : Refines FS v v') :
-  Refines FS (bv_to_bool.spec v) (O.bv_to_bool v') :=
-  Refinement.trans (by simp only [kanon_spec, size]; kanon_congr) (hO.bv_to_bool v')
+  Refines FS (Bitvec.to_bool.spec v) (O.bitvec_to_bool v') :=
+  Refinement.trans (by simp only [kanon_spec, Bitvec.size]; kanon_congr) (hO.bitvec_to_bool v')
 
-theorem lift_bv_not_bool (hO : O.Sound FS) {v v' : Term}
+theorem lift_bitvec_not_bool (hO : O.Sound FS) {v v' : Term}
   (h_v : Refines FS v v') :
-  Refines FS (bv_not_bool.spec v) (O.bv_not_bool v') :=
-  Refinement.trans (by simp only [kanon_spec, size]; kanon_congr) (hO.bv_not_bool v')
+  Refines FS (Bitvec.not_bool.spec v) (O.bitvec_not_bool v') :=
+  Refinement.trans (by simp only [kanon_spec, Bitvec.size]; kanon_congr) (hO.bitvec_not_bool v')
 
-theorem lift_bv_add (hO : O.Sound FS) {checked : Checked} {v1 v1' : Term} {v2 v2' : Term}
+theorem lift_bitvec_add (hO : O.Sound FS) {checked : Checked} {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
-  Refines FS (bv_add.spec checked v1 v2) (O.bv_add checked v1' v2') :=
-  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bv_add checked v1' v2')
+  Refines FS (Bitvec.add.spec checked v1 v2) (O.bitvec_add checked v1' v2') :=
+  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bitvec_add checked v1' v2')
 
-theorem lift_bv_sub (hO : O.Sound FS) {checked : Checked} {v1 v1' : Term} {v2 v2' : Term}
+theorem lift_bitvec_sub (hO : O.Sound FS) {checked : Checked} {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
-  Refines FS (bv_sub.spec checked v1 v2) (O.bv_sub checked v1' v2') :=
-  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bv_sub checked v1' v2')
+  Refines FS (Bitvec.sub.spec checked v1 v2) (O.bitvec_sub checked v1' v2') :=
+  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bitvec_sub checked v1' v2')
 
-theorem lift_bv_neg (hO : O.Sound FS) {checked : Bool} {v v' : Term}
+theorem lift_bitvec_neg (hO : O.Sound FS) {checked : Bool} {v v' : Term}
   (h_v : Refines FS v v') :
-  Refines FS (bv_neg.spec checked v) (O.bv_neg checked v') :=
-  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bv_neg checked v')
+  Refines FS (Bitvec.neg.spec checked v) (O.bitvec_neg checked v') :=
+  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bitvec_neg checked v')
 
-theorem lift_bv_mod (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
+theorem lift_bitvec_mod_ (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
-  Refines FS (bv_mod.spec v1 v2) (O.bv_mod v1' v2') :=
-  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bv_mod v1' v2')
+  Refines FS (Bitvec.mod_.spec v1 v2) (O.bitvec_mod_ v1' v2') :=
+  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bitvec_mod_ v1' v2')
 
-theorem lift_bv_rem (hO : O.Sound FS) {signed : Bool} {v1 v1' : Term} {v2 v2' : Term}
+theorem lift_bitvec_rem (hO : O.Sound FS) {signed : Bool} {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') (hs_v2 : Nonzero v2') :
-  Refines FS (bv_rem.spec signed v1 v2) (O.bv_rem signed v1' v2') :=
-  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bv_rem signed v1' v2' hs_v2)
+  Refines FS (Bitvec.rem.spec signed v1 v2) (O.bitvec_rem signed v1' v2') :=
+  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bitvec_rem signed v1' v2' hs_v2)
 
-theorem lift_bv_not (hO : O.Sound FS) {v v' : Term}
+theorem lift_bitvec_not_ (hO : O.Sound FS) {v v' : Term}
   (h_v : Refines FS v v') :
-  Refines FS (bv_not.spec v) (O.bv_not v') :=
-  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bv_not v')
+  Refines FS (Bitvec.not_.spec v) (O.bitvec_not_ v') :=
+  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bitvec_not_ v')
 
-theorem lift_bv_and (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
+theorem lift_bitvec_and_ (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
-  Refines FS (bv_and.spec v1 v2) (O.bv_and v1' v2') :=
-  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bv_and v1' v2')
+  Refines FS (Bitvec.and_.spec v1 v2) (O.bitvec_and_ v1' v2') :=
+  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bitvec_and_ v1' v2')
 
-theorem lift_bv_or (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
+theorem lift_bitvec_or_ (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
-  Refines FS (bv_or.spec v1 v2) (O.bv_or v1' v2') :=
-  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bv_or v1' v2')
+  Refines FS (Bitvec.or_.spec v1 v2) (O.bitvec_or_ v1' v2') :=
+  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bitvec_or_ v1' v2')
 
-theorem lift_bv_xor (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
+theorem lift_bitvec_xor (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
-  Refines FS (bv_xor.spec v1 v2) (O.bv_xor v1' v2') :=
-  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bv_xor v1' v2')
+  Refines FS (Bitvec.xor.spec v1 v2) (O.bitvec_xor v1' v2') :=
+  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bitvec_xor v1' v2')
 
-theorem lift_bv_extract (hO : O.Sound FS) {from_ : Int} {to_ : Int} {v v' : Term}
+theorem lift_bitvec_extract (hO : O.Sound FS) {from_ : Int} {to_ : Int} {v v' : Term}
   (h_v : Refines FS v v') :
-  Refines FS (bv_extract.spec from_ to_ v) (O.bv_extract from_ to_ v') :=
-  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bv_extract from_ to_ v')
+  Refines FS (Bitvec.extract.spec from_ to_ v) (O.bitvec_extract from_ to_ v') :=
+  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bitvec_extract from_ to_ v')
 
-theorem lift_bv_extend (hO : O.Sound FS) {signed : Bool} {extend_by : Int} {v v' : Term}
+theorem lift_bitvec_extend_ (hO : O.Sound FS) {signed : Bool} {extend_by : Int} {v v' : Term}
   (h_v : Refines FS v v') :
-  Refines FS (bv_extend.spec signed extend_by v) (O.bv_extend signed extend_by v') :=
-  Refinement.trans (by simp only [kanon_spec, size]; kanon_congr) (hO.bv_extend signed extend_by v')
+  Refines FS (Bitvec.extend_.spec signed extend_by v) (O.bitvec_extend_ signed extend_by v') :=
+  Refinement.trans (by simp only [kanon_spec, Bitvec.size]; kanon_congr) (hO.bitvec_extend_ signed extend_by v')
 
-theorem lift_bv_concat (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
+theorem lift_bitvec_concat (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
-  Refines FS (bv_concat.spec v1 v2) (O.bv_concat v1' v2') :=
-  Refinement.trans (by simp only [kanon_spec, size]; kanon_congr) (hO.bv_concat v1' v2')
+  Refines FS (Bitvec.concat.spec v1 v2) (O.bitvec_concat v1' v2') :=
+  Refinement.trans (by simp only [kanon_spec, Bitvec.size]; kanon_congr) (hO.bitvec_concat v1' v2')
 
-theorem lift_bv_shl (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
+theorem lift_bitvec_shl (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
-  Refines FS (bv_shl.spec v1 v2) (O.bv_shl v1' v2') :=
-  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bv_shl v1' v2')
+  Refines FS (Bitvec.shl.spec v1 v2) (O.bitvec_shl v1' v2') :=
+  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bitvec_shl v1' v2')
 
-theorem lift_bv_lshr (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
+theorem lift_bitvec_lshr (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
-  Refines FS (bv_lshr.spec v1 v2) (O.bv_lshr v1' v2') :=
-  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bv_lshr v1' v2')
+  Refines FS (Bitvec.lshr.spec v1 v2) (O.bitvec_lshr v1' v2') :=
+  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bitvec_lshr v1' v2')
 
-theorem lift_bv_ashr (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
+theorem lift_bitvec_ashr (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
-  Refines FS (bv_ashr.spec v1 v2) (O.bv_ashr v1' v2') :=
-  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bv_ashr v1' v2')
+  Refines FS (Bitvec.ashr.spec v1 v2) (O.bitvec_ashr v1' v2') :=
+  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bitvec_ashr v1' v2')
 
-theorem lift_bv_mul (hO : O.Sound FS) {checked : Checked} {v1 v1' : Term} {v2 v2' : Term}
+theorem lift_bitvec_mul (hO : O.Sound FS) {checked : Checked} {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
-  Refines FS (bv_mul.spec checked v1 v2) (O.bv_mul checked v1' v2') :=
-  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bv_mul checked v1' v2')
+  Refines FS (Bitvec.mul.spec checked v1 v2) (O.bitvec_mul checked v1' v2') :=
+  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bitvec_mul checked v1' v2')
 
-theorem lift_bv_div (hO : O.Sound FS) {signed : Bool} {v1 v1' : Term} {v2 v2' : Term}
+theorem lift_bitvec_div (hO : O.Sound FS) {signed : Bool} {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') (hs_v2 : Nonzero v2') :
-  Refines FS (bv_div.spec signed v1 v2) (O.bv_div signed v1' v2') :=
-  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bv_div signed v1' v2' hs_v2)
+  Refines FS (Bitvec.div.spec signed v1 v2) (O.bitvec_div signed v1' v2') :=
+  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bitvec_div signed v1' v2' hs_v2)
 
-theorem lift_bv_lt_zero (hO : O.Sound FS) {v v' : Term}
+theorem lift_bitvec_lt_zero (hO : O.Sound FS) {v v' : Term}
   (h_v : Refines FS v v') :
-  Refines FS (bv_lt_zero.spec v) (O.bv_lt_zero v') :=
-  Refinement.trans (by simp only [kanon_spec, size]; kanon_congr) (hO.bv_lt_zero v')
+  Refines FS (Bitvec.lt_zero.spec v) (O.bitvec_lt_zero v') :=
+  Refinement.trans (by simp only [kanon_spec, Bitvec.size]; kanon_congr) (hO.bitvec_lt_zero v')
 
-theorem lift_bv_lt (hO : O.Sound FS) {signed : Bool} {v1 v1' : Term} {v2 v2' : Term}
+theorem lift_bitvec_lt (hO : O.Sound FS) {signed : Bool} {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
-  Refines FS (bv_lt.spec signed v1 v2) (O.bv_lt signed v1' v2') :=
-  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bv_lt signed v1' v2')
+  Refines FS (Bitvec.lt.spec signed v1 v2) (O.bitvec_lt signed v1' v2') :=
+  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bitvec_lt signed v1' v2')
 
-theorem lift_bv_leq (hO : O.Sound FS) {signed : Bool} {v1 v1' : Term} {v2 v2' : Term}
+theorem lift_bitvec_leq (hO : O.Sound FS) {signed : Bool} {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
-  Refines FS (bv_leq.spec signed v1 v2) (O.bv_leq signed v1' v2') :=
-  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bv_leq signed v1' v2')
+  Refines FS (Bitvec.leq.spec signed v1 v2) (O.bitvec_leq signed v1' v2') :=
+  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bitvec_leq signed v1' v2')
 
-theorem lift_bv_add_overflows (hO : O.Sound FS) {signed : Bool} {v1 v1' : Term} {v2 v2' : Term}
+theorem lift_bitvec_add_overflows (hO : O.Sound FS) {signed : Bool} {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
-  Refines FS (bv_add_overflows.spec signed v1 v2) (O.bv_add_overflows signed v1' v2') :=
-  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bv_add_overflows signed v1' v2')
+  Refines FS (Bitvec.add_overflows.spec signed v1 v2) (O.bitvec_add_overflows signed v1' v2') :=
+  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bitvec_add_overflows signed v1' v2')
 
-theorem lift_bv_mul_overflows (hO : O.Sound FS) {signed : Bool} {v1 v1' : Term} {v2 v2' : Term}
+theorem lift_bitvec_mul_overflows (hO : O.Sound FS) {signed : Bool} {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
-  Refines FS (bv_mul_overflows.spec signed v1 v2) (O.bv_mul_overflows signed v1' v2') :=
-  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bv_mul_overflows signed v1' v2')
+  Refines FS (Bitvec.mul_overflows.spec signed v1 v2) (O.bitvec_mul_overflows signed v1' v2') :=
+  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bitvec_mul_overflows signed v1' v2')
 
-theorem lift_bv_neg_overflows (hO : O.Sound FS) {v v' : Term}
+theorem lift_bitvec_neg_overflows (hO : O.Sound FS) {v v' : Term}
   (h_v : Refines FS v v') :
-  Refines FS (bv_neg_overflows.spec v) (O.bv_neg_overflows v') :=
-  Refinement.trans (by simp only [kanon_spec, min_for, size]; kanon_congr) (hO.bv_neg_overflows v')
+  Refines FS (Bitvec.neg_overflows.spec v) (O.bitvec_neg_overflows v') :=
+  Refinement.trans (by simp only [kanon_spec, Bitvec.min_for, Bitvec.size]; kanon_congr) (hO.bitvec_neg_overflows v')
 
-theorem lift_bv_sub_overflows (hO : O.Sound FS) {signed : Bool} {v1 v1' : Term} {v2 v2' : Term}
+theorem lift_bitvec_sub_overflows (hO : O.Sound FS) {signed : Bool} {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
-  Refines FS (bv_sub_overflows.spec signed v1 v2) (O.bv_sub_overflows signed v1' v2') :=
-  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bv_sub_overflows signed v1' v2')
+  Refines FS (Bitvec.sub_overflows.spec signed v1 v2) (O.bitvec_sub_overflows signed v1' v2') :=
+  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bitvec_sub_overflows signed v1' v2')
 
-theorem lift_bv_of_float (hO : O.Sound FS) {rounding : Rm} {signed : Bool} {sz : Int} {v v' : Term}
+theorem lift_bitvec_of_float (hO : O.Sound FS) {rounding : Rm} {signed : Bool} {sz : Int} {v v' : Term}
   (h_v : Refines FS v v') :
-  Refines FS (bv_of_float.spec rounding signed sz v) (O.bv_of_float rounding signed sz v') :=
-  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bv_of_float rounding signed sz v')
+  Refines FS (Bitvec.of_float.spec rounding signed sz v) (O.bitvec_of_float rounding signed sz v') :=
+  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bitvec_of_float rounding signed sz v')
 
-theorem lift_bv_to_float (hO : O.Sound FS) {rounding : Rm} {signed : Bool} {fp : Fp} {v v' : Term}
+theorem lift_bitvec_to_float (hO : O.Sound FS) {rounding : Rm} {signed : Bool} {fp : Fp} {v v' : Term}
   (h_v : Refines FS v v') :
-  Refines FS (bv_to_float.spec rounding signed fp v) (O.bv_to_float rounding signed fp v') :=
-  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bv_to_float rounding signed fp v')
+  Refines FS (Bitvec.to_float.spec rounding signed fp v) (O.bitvec_to_float rounding signed fp v') :=
+  Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.bitvec_to_float rounding signed fp v')
 
-theorem lift_bv_to_float_raw (hO : O.Sound FS) {v v' : Term}
+theorem lift_bitvec_to_float_raw (hO : O.Sound FS) {v v' : Term}
   (h_v : Refines FS v v') :
-  Refines FS (bv_to_float_raw.spec v) (O.bv_to_float_raw v') :=
-  Refinement.trans (by simp only [kanon_spec, size]; kanon_congr) (hO.bv_to_float_raw v')
+  Refines FS (Bitvec.to_float_raw.spec v) (O.bitvec_to_float_raw v') :=
+  Refinement.trans (by simp only [kanon_spec, Bitvec.size]; kanon_congr) (hO.bitvec_to_float_raw v')
 
 theorem lift_float_is_floatclass (hO : O.Sound FS) {fc : Fc} {sv sv' : Term}
   (h_sv : Refines FS sv sv') :
-  Refines FS (float_is_floatclass.spec fc sv) (O.float_is_floatclass fc sv') :=
+  Refines FS (Float.is_floatclass.spec fc sv) (O.float_is_floatclass fc sv') :=
   Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.float_is_floatclass fc sv')
 
 theorem lift_float_is_negative (hO : O.Sound FS) {v v' : Term}
   (h_v : Refines FS v v') :
-  Refines FS (float_is_negative.spec v) (O.float_is_negative v') :=
+  Refines FS (Float.is_negative.spec v) (O.float_is_negative v') :=
   Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.float_is_negative v')
 
 theorem lift_float_is_positive (hO : O.Sound FS) {v v' : Term}
   (h_v : Refines FS v v') :
-  Refines FS (float_is_positive.spec v) (O.float_is_positive v') :=
+  Refines FS (Float.is_positive.spec v) (O.float_is_positive v') :=
   Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.float_is_positive v')
 
 theorem lift_float_cast (hO : O.Sound FS) {rounding : Rm} {fp : Fp} {v v' : Term}
   (h_v : Refines FS v v') :
-  Refines FS (float_cast.spec rounding fp v) (O.float_cast rounding fp v') :=
+  Refines FS (Float.cast.spec rounding fp v) (O.float_cast rounding fp v') :=
   Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.float_cast rounding fp v')
 
 theorem lift_float_eq (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
-  Refines FS (float_eq.spec v1 v2) (O.float_eq v1' v2') :=
+  Refines FS (Float.eq.spec v1 v2) (O.float_eq v1' v2') :=
   Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.float_eq v1' v2')
 
 theorem lift_float_lt (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
-  Refines FS (float_lt.spec v1 v2) (O.float_lt v1' v2') :=
+  Refines FS (Float.lt.spec v1 v2) (O.float_lt v1' v2') :=
   Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.float_lt v1' v2')
 
 theorem lift_float_leq (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
-  Refines FS (float_leq.spec v1 v2) (O.float_leq v1' v2') :=
+  Refines FS (Float.leq.spec v1 v2) (O.float_leq v1' v2') :=
   Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.float_leq v1' v2')
 
 theorem lift_float_add (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
-  Refines FS (float_add.spec v1 v2) (O.float_add v1' v2') :=
+  Refines FS (Float.add.spec v1 v2) (O.float_add v1' v2') :=
   Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.float_add v1' v2')
 
 theorem lift_float_sub (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
-  Refines FS (float_sub.spec v1 v2) (O.float_sub v1' v2') :=
+  Refines FS (Float.sub.spec v1 v2) (O.float_sub v1' v2') :=
   Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.float_sub v1' v2')
 
 theorem lift_float_div (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
-  Refines FS (float_div.spec v1 v2) (O.float_div v1' v2') :=
+  Refines FS (Float.div.spec v1 v2) (O.float_div v1' v2') :=
   Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.float_div v1' v2')
 
 theorem lift_float_mul (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
-  Refines FS (float_mul.spec v1 v2) (O.float_mul v1' v2') :=
+  Refines FS (Float.mul.spec v1 v2) (O.float_mul v1' v2') :=
   Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.float_mul v1' v2')
 
 theorem lift_float_rem (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
-  Refines FS (float_rem.spec v1 v2) (O.float_rem v1' v2') :=
+  Refines FS (Float.rem.spec v1 v2) (O.float_rem v1' v2') :=
   Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.float_rem v1' v2')
 
 theorem lift_float_abs (hO : O.Sound FS) {v v' : Term}
   (h_v : Refines FS v v') :
-  Refines FS (float_abs.spec v) (O.float_abs v') :=
+  Refines FS (Float.abs.spec v) (O.float_abs v') :=
   Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.float_abs v')
 
 theorem lift_float_neg (hO : O.Sound FS) {v v' : Term}
   (h_v : Refines FS v v') :
-  Refines FS (float_neg.spec v) (O.float_neg v') :=
+  Refines FS (Float.neg.spec v) (O.float_neg v') :=
   Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.float_neg v')
 
 theorem lift_float_fma (hO : O.Sound FS) {a a' : Term} {b b' : Term} {c c' : Term}
   (h_a : Refines FS a a')
   (h_b : Refines FS b b')
   (h_c : Refines FS c c') :
-  Refines FS (float_fma.spec a b c) (O.float_fma a' b' c') :=
+  Refines FS (Float.fma.spec a b c) (O.float_fma a' b' c') :=
   Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.float_fma a' b' c')
 
 theorem lift_float_fmod_of_rem (hO : O.Sound FS) {r r' : Term} {v1 v1' : Term} {v2 v2' : Term}
   (h_r : Refines FS r r')
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
-  Refines FS (float_fmod_of_rem.spec r v1 v2) (O.float_fmod_of_rem r' v1' v2') :=
-  Refinement.trans (by simp only [kanon_spec, raw_fmod_of_rem]; kanon_congr) (hO.float_fmod_of_rem r' v1' v2')
+  Refines FS (Float.fmod_of_rem.spec r v1 v2) (O.float_fmod_of_rem r' v1' v2') :=
+  Refinement.trans (by simp only [kanon_spec, Float.raw_fmod_of_rem]; kanon_congr) (hO.float_fmod_of_rem r' v1' v2')
 
 theorem lift_float_fmod (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
-  Refines FS (float_fmod.spec v1 v2) (O.float_fmod v1' v2') :=
-  Refinement.trans (by simp only [kanon_spec, raw_fmod_of_rem]; kanon_congr) (hO.float_fmod v1' v2')
+  Refines FS (Float.fmod.spec v1 v2) (O.float_fmod v1' v2') :=
+  Refinement.trans (by simp only [kanon_spec, Float.raw_fmod_of_rem]; kanon_congr) (hO.float_fmod v1' v2')
 
 theorem lift_float_min (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
-  Refines FS (float_min.spec v1 v2) (O.float_min v1' v2') :=
+  Refines FS (Float.min.spec v1 v2) (O.float_min v1' v2') :=
   Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.float_min v1' v2')
 
 theorem lift_float_max (hO : O.Sound FS) {v1 v1' : Term} {v2 v2' : Term}
   (h_v1 : Refines FS v1 v1')
   (h_v2 : Refines FS v2 v2') :
-  Refines FS (float_max.spec v1 v2) (O.float_max v1' v2') :=
+  Refines FS (Float.max.spec v1 v2) (O.float_max v1' v2') :=
   Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.float_max v1' v2')
 
 theorem lift_float_sqrt (hO : O.Sound FS) {v v' : Term}
   (h_v : Refines FS v v') :
-  Refines FS (float_sqrt.spec v) (O.float_sqrt v') :=
+  Refines FS (Float.sqrt.spec v) (O.float_sqrt v') :=
   Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.float_sqrt v')
 
 theorem lift_float_round (hO : O.Sound FS) {rm : Rm} {sv sv' : Term}
   (h_sv : Refines FS sv sv') :
-  Refines FS (float_round.spec rm sv) (O.float_round rm sv') :=
+  Refines FS (Float.round.spec rm sv) (O.float_round rm sv') :=
   Refinement.trans (by simp only [kanon_spec]; kanon_congr) (hO.float_round rm sv')
 
 theorem lift_ptr_loc (hO : O.Sound FS) {p p' : Term}
   (h_p : Refines FS p p') :
-  Refines FS (ptr_loc.spec p) (O.ptr_loc p') :=
-  Refinement.trans (by simp only [kanon_spec, size]; kanon_congr) (hO.ptr_loc p')
+  Refines FS (Ptr.loc.spec p) (O.ptr_loc p') :=
+  Refinement.trans (by simp only [kanon_spec, Bitvec.size]; kanon_congr) (hO.ptr_loc p')
 
 theorem lift_ptr_ofs (hO : O.Sound FS) {p p' : Term}
   (h_p : Refines FS p p') :
-  Refines FS (ptr_ofs.spec p) (O.ptr_ofs p') :=
-  Refinement.trans (by simp only [kanon_spec, size]; kanon_congr) (hO.ptr_ofs p')
+  Refines FS (Ptr.ofs.spec p) (O.ptr_ofs p') :=
+  Refinement.trans (by simp only [kanon_spec, Bitvec.size]; kanon_congr) (hO.ptr_ofs p')
 
 end Lib
 

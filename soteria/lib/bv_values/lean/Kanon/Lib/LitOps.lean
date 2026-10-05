@@ -537,7 +537,7 @@ theorem lit_concat_lt' {m : Int} {a b : Int} (hw : 0 < w) (hm : 0 < m) (ha : 0 �
 
 end
 
-theorem nonzero_extract_pow2 {m to_ n : Int} {T : Ty} (hp : is_pow2 n = true) (hl : log2 n < to_)
+theorem nonzero_extract_pow2 {m to_ n : Int} {T : Ty} (hp : Bitvec.is_pow2 n = true) (hl : log2 n < to_)
     (hm : m = to_ + 1) : Nonzero (mk_masked m (lit_extract 0 to_ T n)) := by
   subst hm
   have h0 := (is_pow2_eq hp).2
@@ -551,10 +551,10 @@ theorem nonzero_extract_pow2 {m to_ n : Int} {T : Ty} (hp : is_pow2 n = true) (h
 theorem nonzero_udiv_core {FS : FloatSem} {N : Nat} {t10 T : Ty} {d n : Int}
     (ht : t10 = .TBitVector N) (hN : 0 < N) (hd0 : 0 ≤ d) (hd1 : d < 2 ^ N) (hn0 : 0 ≤ n)
     (hn1 : n < 2 ^ N) (hs : Nonzero (.mk (.BitVec d) t10)) (hn : n ≠ 0)
-    (hdv : udivides n d = true) : Nonzero (mk_masked N (lit_udiv t10 T d n)) := by
+    (hdv : Bitvec.udivides n d = true) : Nonzero (mk_masked N (lit_udiv t10 T d n)) := by
   have hz := ne_zero_of_nonzero_bitVec (FS := FS) ht hN hd0 hd1 hs
   have hnp : 0 < n := by omega
-  simp only [udivides, divisible, decide_eq_true_eq] at hdv
+  simp only [Bitvec.udivides, divisible, decide_eq_true_eq] at hdv
   obtain ⟨q, rfl⟩ := hdv
   have hq : 0 < q := by
     by_cases h : 0 < q
@@ -572,11 +572,11 @@ theorem nonzero_udiv_core {FS : FloatSem} {N : Nat} {t10 T : Ty} {d n : Int}
   omega
 
 theorem nonzero_div_mul {FS : FloatSem} {s2 : Bool} {x : Term} {n d : Int} {t5 t7 t10 : Ty}
-    (kw : (sem FS).WT (bv_div.spec false (.mk (.Op2 (.Mul ⟨s2, true⟩) (.mk (.BitVec n) t5) x) t7)
+    (kw : (sem FS).WT (Bitvec.div.spec false (.mk (.Op2 (.Mul ⟨s2, true⟩) (.mk (.BitVec n) t5) x) t7)
       (.mk (.BitVec d) t10)))
-    (hs : Nonzero (.mk (.BitVec d) t10)) (hn : n ≠ 0) (hdv : udivides n d = true) :
-    Nonzero (mk_bv (size (.mk (.Op2 (.Mul ⟨s2, true⟩) (.mk (.BitVec n) t5) x) t7)) (lit_udiv t10 t7 d n)) := by
-  simp only [sem, bv_div.spec, WT_op2, WT_bitVec, Op2.WT, Term.ty_mk] at kw
+    (hs : Nonzero (.mk (.BitVec d) t10)) (hn : n ≠ 0) (hdv : Bitvec.udivides n d = true) :
+    Nonzero (mk_bv (Bitvec.size (.mk (.Op2 (.Mul ⟨s2, true⟩) (.mk (.BitVec n) t5) x) t7)) (lit_udiv t10 t7 d n)) := by
+  simp only [sem, Bitvec.div.spec, WT_op2, WT_bitVec, Op2.WT, Term.ty_mk] at kw
   obtain ⟨⟨_, h107, _⟩, ⟨⟨_, _, h75⟩, ⟨m, hm, h5, hn0, hn1⟩, _⟩, ⟨k, hk, h10, hd0, hd1⟩⟩ := kw
   have e : t7 = .TBitVector k := h107.symm.trans h10
   have hmk : m = k := by
@@ -588,11 +588,11 @@ theorem nonzero_div_mul {FS : FloatSem} {s2 : Bool} {x : Term} {n d : Int} {t5 t
   exact nonzero_udiv_core (FS := FS) h10 hk hd0 hd1 hn0 hn1 hs hn hdv
 
 theorem nonzero_div_mul' {FS : FloatSem} {s2 : Bool} {x : Term} {n d : Int} {t5 t7 t10 : Ty}
-    (kw : (sem FS).WT (bv_div.spec false (.mk (.Op2 (.Mul ⟨s2, true⟩) x (.mk (.BitVec n) t5)) t7)
+    (kw : (sem FS).WT (Bitvec.div.spec false (.mk (.Op2 (.Mul ⟨s2, true⟩) x (.mk (.BitVec n) t5)) t7)
       (.mk (.BitVec d) t10)))
-    (hs : Nonzero (.mk (.BitVec d) t10)) (hn : n ≠ 0) (hdv : udivides n d = true) :
-    Nonzero (mk_bv (size (.mk (.Op2 (.Mul ⟨s2, true⟩) x (.mk (.BitVec n) t5)) t7)) (lit_udiv t10 t7 d n)) := by
-  simp only [sem, bv_div.spec, WT_op2, WT_bitVec, Op2.WT, Term.ty_mk] at kw
+    (hs : Nonzero (.mk (.BitVec d) t10)) (hn : n ≠ 0) (hdv : Bitvec.udivides n d = true) :
+    Nonzero (mk_bv (Bitvec.size (.mk (.Op2 (.Mul ⟨s2, true⟩) x (.mk (.BitVec n) t5)) t7)) (lit_udiv t10 t7 d n)) := by
+  simp only [sem, Bitvec.div.spec, WT_op2, WT_bitVec, Op2.WT, Term.ty_mk] at kw
   obtain ⟨⟨_, h107, _⟩, ⟨⟨_, h5x, h7x⟩, _, ⟨m, hm, h5, hn0, hn1⟩⟩, ⟨k, hk, h10, hd0, hd1⟩⟩ := kw
   have e : t7 = .TBitVector k := h107.symm.trans h10
   have hmk : m = k := by
@@ -604,12 +604,12 @@ theorem nonzero_div_mul' {FS : FloatSem} {s2 : Bool} {x : Term} {n d : Int} {t5 
   exact nonzero_udiv_core (FS := FS) h10 hk hd0 hd1 hn0 hn1 hs hn hdv
 
 theorem nonzero_div_div {FS : FloatSem} {x : Term} {n d : Int} {t5 t6 t8 : Ty}
-    (kw : (sem FS).WT (bv_div.spec false (.mk (.Op2 (.Div false) x (.mk (.BitVec n) t5)) t6)
+    (kw : (sem FS).WT (Bitvec.div.spec false (.mk (.Op2 (.Div false) x (.mk (.BitVec n) t5)) t6)
       (.mk (.BitVec d) t8)))
     (hs : Nonzero (.mk (.BitVec d) t8)) (hn : n ≠ 0)
-    (hov : overflows_mul false (size (.mk (.Op2 (.Div false) x (.mk (.BitVec n) t5)) t6)) n d = false) :
-    Nonzero (mk_bv (size (.mk (.Op2 (.Div false) x (.mk (.BitVec n) t5)) t6)) (lit_mul t6 t8 n d)) := by
-  simp only [sem, bv_div.spec, WT_op2, WT_bitVec, Op2.WT, Term.ty_mk] at kw
+    (hov : Bitvec.overflows_mul false (Bitvec.size (.mk (.Op2 (.Div false) x (.mk (.BitVec n) t5)) t6)) n d = false) :
+    Nonzero (mk_bv (Bitvec.size (.mk (.Op2 (.Div false) x (.mk (.BitVec n) t5)) t6)) (lit_mul t6 t8 n d)) := by
+  simp only [sem, Bitvec.div.spec, WT_op2, WT_bitVec, Op2.WT, Term.ty_mk] at kw
   obtain ⟨⟨_, h86, _⟩, ⟨⟨_, h5x, h6x⟩, _, ⟨m, hm, h5, hn0, hn1⟩⟩, ⟨k, hk, h8, hd0, hd1⟩⟩ := kw
   have e : t6 = .TBitVector k := h86.symm.trans h8
   have hmk : m = k := by
@@ -619,7 +619,7 @@ theorem nonzero_div_div {FS : FloatSem} {x : Term} {n d : Int} {t5 t6 t8 : Ty}
   subst hmk
   have hz := ne_zero_of_nonzero_bitVec (FS := FS) h8 hk hd0 hd1 hs
   simp only [size_eq, Term.ty_mk, e, size_of_ty_bitVector] at hov ⊢
-  rw [overflows_mul, bv_to_z_false hn0 hn1, bv_to_z_false hd0 hd1, toNat_ofInt_of_lt hn0 hn1,
+  rw [Bitvec.overflows_mul, bv_to_z_false hn0 hn1, bv_to_z_false hd0 hd1, toNat_ofInt_of_lt hn0 hn1,
     toNat_ofInt_of_lt hd0 hd1, Int.toNat_of_nonneg hn0, Int.toNat_of_nonneg hd0] at hov
   simp only [Bool.or_eq_false_iff, decide_eq_false_iff_not, max_for_false, min_for_false] at hov
   try simp only [decide_eq_false_iff_not] at hov

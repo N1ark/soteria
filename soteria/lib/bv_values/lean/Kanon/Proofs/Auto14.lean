@@ -19,24 +19,22 @@ namespace Kanon
 
 open Classical Kanon
 
-@[kanon_arm] theorem bv_and.r_default.main.proof : bv_and.r_default.main.Stmt := kanon_proof% bv_and.r_default.main
+@[kanon_arm] theorem Bitvec.xor.r_of_bools.main.proof : Bitvec.xor.r_of_bools.main.Stmt := kanon_proof% Bitvec.xor.r_of_bools.main
 
-@[kanon_arm] theorem bv_or.r_lits.main.proof : bv_or.r_lits.main.Stmt := kanon_proof% bv_or.r_lits.main
+@[kanon_arm] theorem Bitvec.xor.r_default.main.proof : Bitvec.xor.r_default.main.Stmt := kanon_proof% Bitvec.xor.r_default.main
 
-@[kanon_arm] theorem bv_or.r_zero.main.proof : bv_or.r_zero.main.Stmt := kanon_proof% bv_or.r_zero.main
+@[kanon_arm] theorem Bitvec.extract.r_lit.main.proof : Bitvec.extract.r_lit.main.Stmt := kanon_proof% Bitvec.extract.r_lit.main
 
-@[kanon_arm] theorem bv_or.r_same.main.proof : bv_or.r_same.main.Stmt := kanon_proof% bv_or.r_same.main
+@[kanon_arm] theorem Bitvec.extract.r_full.main.proof : Bitvec.extract.r_full.main.Stmt := kanon_proof% Bitvec.extract.r_full.main
 
-@[kanon_arm] theorem bv_or.r_mask_and.main.proof : bv_or.r_mask_and.main.Stmt := kanon_proof% bv_or.r_mask_and.main
+@[kanon_arm] theorem Bitvec.extract.r_and_.main.proof : Bitvec.extract.r_and_.main.Stmt := kanon_proof% Bitvec.extract.r_and_.main
 
-@[kanon_arm] theorem bv_or.r_masks.main.proof : bv_or.r_masks.main.Stmt := kanon_proof% bv_or.r_masks.main
+@[kanon_arm] theorem Bitvec.extract.r_or_.main.proof : Bitvec.extract.r_or_.main.Stmt := kanon_proof% Bitvec.extract.r_or_.main
 
-@[kanon_arm] theorem bv_or.r_masks.swap2.proof : bv_or.r_masks.swap2.Stmt := kanon_proof% bv_or.r_masks.swap2
+@[kanon_arm] theorem Bitvec.extract.r_xor.main.proof : Bitvec.extract.r_xor.main.Stmt := kanon_proof% Bitvec.extract.r_xor.main
 
-@[kanon_arm] theorem bv_or.r_masks.swap1_swap2.proof : bv_or.r_masks.swap1_swap2.Stmt := kanon_proof% bv_or.r_masks.swap1_swap2
+@[kanon_arm] theorem Bitvec.extract.r_shl.main.proof : Bitvec.extract.r_shl.main.Stmt := kanon_proof% Bitvec.extract.r_shl.main
 
-@[kanon_arm] theorem bv_or.r_of_bools.main.proof : bv_or.r_of_bools.main.Stmt := kanon_proof% bv_or.r_of_bools.main
+@[kanon_arm] theorem Bitvec.extract.r_lshr.main.proof : Bitvec.extract.r_lshr.main.Stmt := kanon_proof% Bitvec.extract.r_lshr.main
 
-@[kanon_arm] theorem bv_or.r_default.main.proof : bv_or.r_default.main.Stmt := kanon_proof% bv_or.r_default.main
-
-end Kanon
+@[kanon_arm] theorem Bitvec.extract.r_ite.main.proof : Bitvec.extract.r_ite.main.Stmt := kanon_proof% Bitvec.extract.r_ite.main

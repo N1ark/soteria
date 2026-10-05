@@ -19,24 +19,31 @@ namespace Kanon
 
 open Classical Kanon
 
-@[kanon_arm] theorem sem_eq.r_or_zero.swap.proof : sem_eq.r_or_zero.swap.Stmt := kanon_proof% sem_eq.r_or_zero.swap
+@[kanon_arm] theorem Bool.eq.r_concat_const.main.proof : Bool.eq.r_concat_const.main.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem sem_eq.r_concat_const.main.proof : sem_eq.r_concat_const.main.Stmt := kanon_proof% sem_eq.r_concat_const.main
+@[kanon_arm] theorem Bool.eq.r_concat_concat.main.proof : Bool.eq.r_concat_concat.main.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem sem_eq.r_concat_concat.main.proof : sem_eq.r_concat_concat.main.Stmt := kanon_proof% sem_eq.r_concat_concat.main
+@[kanon_arm] theorem Bool.eq.r_ite_const.bitVec.proof : Bool.eq.r_ite_const.bitVec.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem sem_eq.r_ite_const.bitVec.proof : sem_eq.r_ite_const.bitVec.Stmt := kanon_proof% sem_eq.r_ite_const.bitVec
+@[kanon_arm] theorem Bool.eq.r_ite_const.locLit.proof : Bool.eq.r_ite_const.locLit.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem sem_eq.r_ite_const.locLit.proof : sem_eq.r_ite_const.locLit.Stmt := kanon_proof% sem_eq.r_ite_const.locLit
+@[kanon_arm] theorem Bool.eq.r_of_bools.main.proof : Bool.eq.r_of_bools.main.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem sem_eq.r_of_bools.main.proof : sem_eq.r_of_bools.main.Stmt := kanon_proof% sem_eq.r_of_bools.main
+@[kanon_arm] theorem Bool.eq.r_of_bool_const.main.proof : Bool.eq.r_of_bool_const.main.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem sem_eq.r_of_bool_const.main.proof : sem_eq.r_of_bool_const.main.Stmt := kanon_proof% sem_eq.r_of_bool_const.main
+@[kanon_arm] theorem Bool.eq.r_msb.main.proof : Bool.eq.r_msb.main.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem sem_eq.r_msb.main.proof : sem_eq.r_msb.main.Stmt := kanon_proof% sem_eq.r_msb.main
+@[kanon_arm] theorem Bool.eq.r_floats.main.proof : Bool.eq.r_floats.main.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem sem_eq.r_floats.main.proof : sem_eq.r_floats.main.Stmt := kanon_proof% sem_eq.r_floats.main
+@[kanon_arm] theorem Bool.eq.r_ptrs.main.proof : Bool.eq.r_ptrs.main.Stmt := by
+  first | (kanon_rule_b; done) | kanon_auto
 
-@[kanon_arm] theorem sem_eq.r_ptrs.main.proof : sem_eq.r_ptrs.main.Stmt := kanon_proof% sem_eq.r_ptrs.main
-
-end Kanon
+@[kanon_arm] theorem Bitvec.of_bool.r_true_.main.proof : Bitvec.of_bool.r_true_.main.Stmt := kanon_proof% Bitvec.of_bool.r_true_.main

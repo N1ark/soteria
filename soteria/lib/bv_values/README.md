@@ -90,56 +90,50 @@ deleted with the first generation of the value language.
 
 ## Proofs
 
-> **NOTE: the proofs do not cover the rules of the language that soteria-c
-> uses (`rules/`), until the Lean project is ported (stage S6 of the migration).**
-> `soteria/lib/bv_values/lean/` is FROZEN on the OLD rules, in `legacy_rules/`
-> (the old Kanon syntax), and on the old Kanon (`KANON_LEAN_COMMIT_HASH` in
-> `scripts/versions.json`, which `lakefile.toml` requires: it is not the
-> `KANON_COMMIT_HASH` that generates the OCaml). The rules of `rules/` were
-> ported to the new Kanon, checked equal to the old ones by a differential test
-> (`soteria/tests/bv_diff`, deleted in S7 with the old OCaml: see the message of
-> commit `f1e29af`) and by Z3 against raw terms (`soteria/tests/bv_fuzz`),
-> but their statements and proofs were not regenerated, nor the hand-written Lean
-> (`Kanon/Lib`, `Kanon/Proofs`, `Semantics.lean`) ported to the new generated
-> types. Nothing in this directory was checked by Lean after this change.
-> `dune test` no longer checks that the generated Lean files are up to date (the
-> pinned Kanon does not read `legacy_rules/`); to check it, with the old Kanon
-> first in the `PATH`: `dune build @soteria/lib/bv_values/lean/Kanon/lean-legacy`.
-
-The Lean project of the old rules is as follows (its generated files come from
-`kanon lean-all legacy_rules/lang.knl`):
+`lean/` is a Lean project that proves that the simplifications of the rules of
+`rules/` are sound. It requires the Lean library of Kanon at
+`KANON_LEAN_COMMIT_HASH` (`scripts/versions.json`), and its generated files come
+from `kanon lean-all rules/lang.knl` (`dune test` checks that they are up to
+date, `dune promote` updates them). What the Lean model contains is what the
+rules define; the view functions and the primitives marked `[@no_lean]`
+(`view.kn`, `bv_prims.ml`) are infrastructure that it does not model.
 
 - `Types.lean` and `Syntax.lean` define the types of the language, around
-  `Abstract.lean` (written by hand), and which operators commute
-  (`Binop.Comm`, from `[@comm]`; `Lib/Cases.lean` proves that they do), and
-  `Typing.lean` the typing of the operators.
+  `Abstract.lean` (written by hand), `Typing.lean` the typing of the operators,
+  and `Types.lean` which operators commute (`Op2.Comm`, from `[@comm]`).
 - `Model.lean` is a Lean model of the rule functions, over the primitives of
-  `Prims.lean`, and `Semantics.lean` gives terms their meaning (written by
-  hand), parameterised by a semantics of floats `FS`.
-- `Statements.lean` states that every alternative of every rule is sound: its
-  result *refines* its spec (the raw term it simplifies): it has the same sort,
-  and the same value wherever the raw term has one.
-- `Soundness.lean` proves each rule from its alternatives, and every function
+  `Prims.lean` (written by hand), and `Semantics.lean` gives terms their meaning
+  (written by hand), parameterised by a semantics of floats `FS`.
+- `Statements.lean` states that every alternative (arm) of every rule is sound:
+  its result *refines* its spec (the raw term it simplifies): it has the same
+  sort, and the same value wherever the raw term has one; and that the operands
+  of every `[@comm]` operator commute.
+- `Soundness.lean` proves each arm, each rule from its arms and every function
   from its rules, up to `Kanon.opsN_sound`: the whole simplifier is sound.
 
+The subsorts are in the statements: `TNonzero` is `Nonzero` and `TZero` is
+`Zero` (`Semantics.lean`: the term never has a bit-vector value that is zero,
+resp. always has zero). The rules of `Div` and `Rem` (`bv_div`, `bv_rem`) are
+sound for a divisor that is `Nonzero`, which is the contract of the typed
+interface that the OCaml side trusts, and `Ops.Sound` assumes it of `bv_div` and
+`bv_rem`. The rules that call them prove `Nonzero` of the divisor they pass
+(`Lib/Lit.lean`, `kanon_nonzero`).
+
 The proof of an arm is the theorem tagged `@[kanon_arm]` that proves
-`f.r_name.arm.Stmt` in `Kanon/Proofs/`, if there is one; otherwise the
-tactic given to its function by `attribute [kanon_tactic tac] f.spec`, in the
-library that defines `tac` (`Kanon/Lib/`); otherwise `kanon_auto`
-(`Kanon/Lib/Rule.lean`). `kanon_arm` rejects a theorem that proves no arm,
-or an arm that already has a proof.
-
+`f.r_name.arm.Stmt` in `Kanon/Proofs/`, if there is one; otherwise the tactic
+given to its function by `attribute [kanon_tactic tac] f.spec`, in the library
+that defines `tac` (`Kanon/Lib/`); otherwise `kanon_auto` (`Kanon/Lib/Rule.lean`).
 The arms of the bool module are proved once, in Kanon's library
-(`KanonCore.BoolMod`), for any language that gives its `boolLang`: that of
-Bv_values is in `Kanon/Lib/Bool.lean`, and `Soundness.lean` applies them. The
-arms that the other modules add to its rule functions are proved as the others.
+(`KanonCore.BoolMod`), for the language `boolLang` of `Kanon/Lib/Bool.lean`. The
+integers of the bit-vector literals are related to Lean's `BitVec` by
+`Lib/LitOps.lean` (the primitives `lit_add`, ..., are defined as the OCaml
+ones, on integers) and `Lib/Ovf.lean`.
 
-The proofs build on the Lean library of Kanon (`KanonCore`, required by
-the `lakefile.toml`s at `KANON_LEAN_COMMIT_HASH`), which gives `kanon_arm`,
-`kanon_proof%`, the semantics that languages share (`Kanon.Sem`: evaluation
-and refinement) and the rule tactics (`kanon_rule`, `kanon_sem`,
-`kanon_cases`, ...), which each language extends by tagging its lemmas
-(`kanon_lits`, `kanon_close_lemma`, ...).
+To check it, in `lean/` (needs Lean through `elan`):
 
-`lake build` checks every proof, and CI checks that the soundness theorem
-depends on no `sorry` (`check_axioms.lean`).
+```
+lake build
+lake env lean check_axioms.lean   # must not mention sorryAx
+```
+
+CI does the same (`.github/workflows/lean.yml`).

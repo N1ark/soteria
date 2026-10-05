@@ -1,6 +1,5 @@
-# The Lean project is FROZEN on the old rules (soteria/lib/bv_values/legacy_rules,
-# old Kanon: KANON_LEAN_COMMIT_HASH): it does not cover the rules of the language
-# that soteria-c uses (soteria/lib/bv_values/rules) until it is ported.
+# Builds the Lean proofs of the rules of Bv_values (soteria/lib/bv_values/rules) and checks
+# that the soundness theorem depends on no `sorry`.
 name: Lean verification of Bv_values
 
 on:
@@ -40,6 +39,6 @@ jobs:
         run: |
           lake env lean check_axioms.lean | tee axioms.txt
           if grep -q sorryAx axioms.txt; then
-            echo "::error::Some rules of soteria/lib/bv_values/legacy_rules are not proved"
+            echo "::error::Some rules of soteria/lib/bv_values/rules are not proved"
             exit 1
           fi

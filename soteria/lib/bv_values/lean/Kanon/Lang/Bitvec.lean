@@ -3,6 +3,7 @@ import Kanon.Lang.Bool
 import Kanon.Lang.Core
 import Kanon.Lib.Den
 import Kanon.Lib.Lit
+import Kanon.Lib.Msb
 import BitvecMod.Sem
 
 /-!
@@ -230,6 +231,9 @@ noncomputable instance bitvecSem : BitvecMod.Sem (S := sem FS) (bitvecSyntax FS)
     obtain ⟨rfl, e⟩ := e
     cases e
     exact h k (by simp [ht])
+  den_msb ρ v n x w ht e := Kanon.Lib.den_msb w ht e
+  asLt_Leq _ _ _ _ := rfl
+  asLeq_Lt _ _ _ _ := rfl
 
 @[simp] theorem bitvecSem_vbv (n : Nat) (x : BitVec n) :
     BitvecMod.Sem.vbv (bitvecSyntax FS) n x = Val.bv n x := rfl

@@ -22,7 +22,8 @@ interface `L` (generated, in `Syntax.lean`) and what they need of the semantics
 - the primitives of the module (`Prim`), the literals and the terms that the
   helpers build;
 - the invariant of the literals (`bv_wf`), and what the subsorts
-  `Nonzero` and `Zero` mean.
+  `Nonzero` and `Zero` mean;
+- the bound of the values of terms by `msb_of` (`den_msb`).
 -/
 
 namespace BitvecMod
@@ -213,5 +214,12 @@ class Sem {S : Kanon.Sem} [DecidableEq S.Term] [DecidableEq S.Ty] {B : Kanon.Bas
   zero_ev : ∀ ρ t n (x : BitVec n), L.Zero t → S.WT t → S.ev ρ t = some (vbv n x) → x = 0
   nonzero_BitVec : ∀ z t, (∀ n : Nat, L.bitvec_size_of_ty t = n → BitVec.ofInt n z ≠ 0) →
     L.Nonzero (B.node (L.BitVecK z) t)
+  /-- The values of a term are below `2 ^ (msb_of v + 1)` (`msb_of` recurses on the
+  terms, whose induction the interface does not give). -/
+  den_msb : ∀ ρ v (n : Nat) x, S.WT v → S.ty v = L.TBitVector n → den ρ n v = some x →
+    x.toNat < 2 ^ (L.bitvec_msb_of v + 1).toNat
+  -- temporary, until Kanon gives the matchers on the other kinds: `Lt` and `Leq` differ
+  asLt_Leq : ∀ s a b t, L.asLt (B.node (L.LeqK s a b) t) = none
+  asLeq_Lt : ∀ s a b t, L.asLeq (B.node (L.LtK s a b) t) = none
 
 end BitvecMod

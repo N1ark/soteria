@@ -3,9 +3,8 @@ import Kanon.Statements
 import Kanon.Lifts
 import Kanon.Nodes
 import Kanon.Lib.Rule
-import Kanon.Model.Bool.at_most_one
-import Kanon.Model.Bool.distinct_check
-import Kanon.Model.Bool.distinct_check_one
+import Kanon.Instance
+import KanonBool.Soundness.Laws
 import Kanon.Proofs.Laws
 
 set_option linter.unusedVariables false
@@ -17,45 +16,14 @@ namespace Kanon
 
 open Classical Kanon
 
-/-- The rule functions, oracles and helpers of the bool module in the model, for the proofs
-of its arms by Kanon's library (`Kanon.BoolMod`). -/
-def Ops.bool (FS : FloatSem) (O : Ops) : BoolMod.Ops (boolLang FS) where
-  b_and := O.bool_and_
-  b_or := O.bool_or_
-  b_not := O.bool_not_
-  b_ite := O.bool_ite
-  sem_eq := O.bool_eq
-  tag_le := O.orc.tag_le
-  sort_by_tag := O.orc.sort_by_tag
-  at_most_one := Bool.at_most_one
-  distinct_check_one := Bool.distinct_check_one
-  distinct_check := Bool.distinct_check
-
-theorem Ops.Sound.bool {FS : FloatSem} {O : Ops} (hO : O.Sound FS) : (O.bool FS).Sound where
-  b_and := hO.bool_and_
-  b_or := hO.bool_or_
-  b_not := hO.bool_not_
-  b_ite := hO.bool_ite
-  sem_eq := hO.bool_eq
-  sort_by_tag := hO.orc.sort_by_tag
-  at_most_one _ _ _ := rfl
-  distinct_check_one_nil _ := by
-    dsimp only [Ops.bool]; rw [Bool.distinct_check_one]; rfl
-  distinct_check_one_cons _ _ _ := by
-    dsimp only [Ops.bool]; rw [Bool.distinct_check_one]; rfl
-  distinct_check_nil := by
-    dsimp only [Ops.bool]; rw [Bool.distinct_check]; rfl
-  distinct_check_cons _ _ := by
-    dsimp only [Ops.bool]; rw [Bool.distinct_check]; split <;> simp_all [firstSome]
-
 @[kanon_comm_lemma] theorem Op2.And.comm.ok : Op2.And.comm.Stmt :=
-  fun FS _ _ _ => BoolMod.Lang.refines_and_comm (L := (boolLang FS))
+  fun FS a b t => KanonBool.And.comm.ok (S := (sem FS)) (boolSyntax FS) a b t
 
 @[kanon_comm_lemma] theorem Op2.Or.comm.ok : Op2.Or.comm.Stmt :=
-  fun FS _ _ _ => BoolMod.Lang.refines_or_comm (L := (boolLang FS))
+  fun FS a b t => KanonBool.Or.comm.ok (S := (sem FS)) (boolSyntax FS) a b t
 
 @[kanon_comm_lemma] theorem Op2.Eq.comm.ok : Op2.Eq.comm.Stmt :=
-  fun FS _ _ _ => BoolMod.Lang.refines_eq_comm (L := (boolLang FS))
+  fun FS a b t => KanonBool.Eq.comm.ok (S := (sem FS)) (boolSyntax FS) a b t
 
 set_option maxHeartbeats 400000 in
 @[kanon_comm_lemma] theorem Op2.Add.comm.ok : Op2.Add.comm.Stmt := kanon_proof% Op2.Add.comm

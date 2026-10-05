@@ -1,6 +1,8 @@
 (* The exists module: existential quantification over terms. *)
 
+[@@@lean_module "ExistsMod"]
+
 use "core"
 use builtin "bool"
 
-node Exists of (var * ty) list * t : TBool
+node Exists of (var * ty) list * t : TBool [@lean_inv "exists_wf"]

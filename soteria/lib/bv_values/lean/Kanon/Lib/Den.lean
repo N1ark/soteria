@@ -199,7 +199,7 @@ theorem evalB_not (w : (Term.mk (.Op1 .Not a) t).WT) :
   simp only [Op1.WT] at w1
   apply evalB_of_eval
   rw [eval_op1 w, eval_bool' w1.1]
-  rcases evalB FS ρ a with _ | _ | _ <;> simp [evOp1, BoolMod.pnot]
+  rcases evalB FS ρ a with _ | _ | _ <;> simp [evOp1, KanonBool.pnot]
 
 theorem evalB_and (w : (Term.mk (.Op2 .And a b) t).WT) :
     evalB FS ρ (.mk (.Op2 .And a b) t) = andB (evalB FS ρ a) (evalB FS ρ b) := by
@@ -208,7 +208,7 @@ theorem evalB_and (w : (Term.mk (.Op2 .And a b) t).WT) :
   apply evalB_of_eval
   rw [eval_op2 w, eval_bool' w1.1, eval_bool' w1.2.1]
   rcases evalB FS ρ a with _ | _ | _ <;> rcases evalB FS ρ b with _ | _ | _ <;>
-    simp [evOp2, BoolMod.pand, andB]
+    simp [evOp2, KanonBool.pand, andB]
 
 theorem evalB_or (w : (Term.mk (.Op2 .Or a b) t).WT) :
     evalB FS ρ (.mk (.Op2 .Or a b) t) = orB (evalB FS ρ a) (evalB FS ρ b) := by
@@ -217,7 +217,7 @@ theorem evalB_or (w : (Term.mk (.Op2 .Or a b) t).WT) :
   apply evalB_of_eval
   rw [eval_op2 w, eval_bool' w1.1, eval_bool' w1.2.1]
   rcases evalB FS ρ a with _ | _ | _ <;> rcases evalB FS ρ b with _ | _ | _ <;>
-    simp [evOp2, BoolMod.por, orB]
+    simp [evOp2, KanonBool.por, orB]
 
 theorem evalB_ite (w : (Term.mk (.Op3 .Ite g a b) t).WT) (ht : t = .TBool) :
     evalB FS ρ (.mk (.Op3 .Ite g a b) t) =
@@ -240,7 +240,7 @@ theorem evalB_eq_bool (w : (Term.mk (.Op2 .Eq a b) t).WT) (ha : a.ty = .TBool) :
   simp only [Op2.WT] at w1
   apply evalB_of_eval
   rw [eval_op2 w, eval_bool' ha, eval_bool' (by rw [w1.1, ha])]
-  cases evalB FS ρ a <;> cases evalB FS ρ b <;> simp [evOp2, BoolMod.peq]
+  cases evalB FS ρ a <;> cases evalB FS ρ b <;> simp [evOp2, KanonBool.peq]
 
 theorem evalB_eq_bv {m : Int} (w : (Term.mk (.Op2 .Eq a b) t).WT) (ha : a.ty = .TBitVector m) :
     evalB FS ρ (.mk (.Op2 .Eq a b) t) =
@@ -249,7 +249,7 @@ theorem evalB_eq_bv {m : Int} (w : (Term.mk (.Op2 .Eq a b) t).WT) (ha : a.ty = .
   simp only [Op2.WT] at w1
   apply evalB_of_eval
   rw [eval_op2 w, eval_bv_int ha, eval_bv_int (by rw [w1.1, ha])]
-  cases evalBV FS ρ m.toNat a <;> cases evalBV FS ρ m.toNat b <;> simp [evOp2, BoolMod.peq]
+  cases evalBV FS ρ m.toNat a <;> cases evalBV FS ρ m.toNat b <;> simp [evOp2, KanonBool.peq]
 
 /-- The predicates on bit-vectors. -/
 def bvPred : Op2 → Option (∀ {n : Nat}, BitVec n → BitVec n → Bool)

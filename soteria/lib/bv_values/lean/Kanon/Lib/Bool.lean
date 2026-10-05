@@ -1,4 +1,3 @@
-import KanonCore.BoolMod
 import Kanon.Lib.Float
 import Kanon.Lib.Tactic
 import Kanon.Model.Bitvec.lower_bound
@@ -9,10 +8,10 @@ import Kanon.Model.Bool.sure_neq
 /-!
 # Lemmas and tactics for the boolean rules
 
-Kanon's library proves the rules of the bool module once (`Kanon.BoolMod`), for
-any language that gives the terms of its nodes, its booleans and its primitives,
-with their laws: here `boolLang`. The only law that is more than the typing and
-evaluation of the nodes is that of `Bool.sure_neq`, which the other modules extend.
+Kanon's library proves the rules of the bool module once (`KanonBool`), for
+any language that gives its interface and an instance of `KanonBool.Sem` (in
+`Lang.lean`). The only law that is more than the typing and evaluation of the
+nodes is that of `Bool.sure_neq`, which the other modules extend.
 The arms that they add to the rule functions of the bool module are proved
 here and in `Proofs/Bool/and_.lean`.
 -/
@@ -186,10 +185,6 @@ theorem sure_neq_sound_aux {FS : FloatSem} (k : Nat) : ∀ {a b : Term} {ρ : En
 theorem sure_neq_sound {FS : FloatSem} {a b : Term} {ρ : Env} {u : Val} (h : Bool.sure_neq a b = true)
     (ht : a.ty = b.ty) (ea : eval FS ρ a = some u) (eb : eval FS ρ b = some u) : False :=
   sure_neq_sound_aux (sizeOf a + 1) (Nat.lt_succ_self _) h ht ea eb
-
-theorem WTList_iff {e : Ty} : ∀ {l : List Term}, Term.WTList e l ↔ ∀ t ∈ l, t.ty = e ∧ t.WT
-  | [] => by simp [Term.WTList]
-  | t :: ts => by simp [Term.WTList, WTList_iff (l := ts), and_assoc]
 
 theorem evList_eq {FS : FloatSem} {ρ : Env} : ∀ l, evList FS ρ l = l.mapM (ev FS ρ)
   | [] => by simp [evList]
@@ -382,20 +377,16 @@ theorem extends_nil {ρ ρ' : Env} : ρ'.Extends ρ [] ↔ ρ' = ρ := by
     exact funext fun a => hv a (by simp)
   · rintro rfl; exact ⟨fun _ _ => rfl, by simp⟩
 
-theorem WT_exists {bs body T} : (Term.mk (.Exists bs body) T).WT ↔
-    T = .TBool ∧ (bs.map Prod.fst).Nodup ∧ (∀ b ∈ bs, b.2.WF) ∧ body.ty = .TBool ∧ body.WT := by
-  simp [Term.WT]
-
 /-! ## Rules that hold at any type, by evaluation -/
 
 theorem evUnop_not_eq_bool {FS a b} : evOp1 FS .Not a = some (.bool b) ↔ a = some (.bool !b) := by
-  simp only [evOp1, BoolMod.pnot_eq_some]; cases b <;> simp
-theorem pand_eq_true {a b} : BoolMod.pand Val.bool a b = some (.bool true) ↔
+  simp only [evOp1, KanonBool.pnot_eq_some]; cases b <;> simp
+theorem pand_eq_true {a b} : KanonBool.pand Val.bool a b = some (.bool true) ↔
     a = some (.bool true) ∧ b = some (.bool true) := by
-  simp [BoolMod.pand_eq_some]
-theorem por_eq_false {a b} : BoolMod.por Val.bool a b = some (.bool false) ↔
+  simp [KanonBool.pand_eq_some]
+theorem por_eq_false {a b} : KanonBool.por Val.bool a b = some (.bool false) ↔
     a = some (.bool false) ∧ b = some (.bool false) := by
-  simp [BoolMod.por_eq_some]
+  simp [KanonBool.por_eq_some]
 
 /-- `kanon_rule_bv` for the rules that hold at any type: the value half is proved
 by evaluation (`ev`), splitting on the guards of the `ite`s. -/
@@ -404,9 +395,9 @@ macro "kanon_rule_ev" : tactic => `(tactic| (
   all_goals refine Sem.Refines.intro ?_ (fun ρ v w w' e => ?_)
   case' refine_1 => dsimp only; kanon_wt_bv
   case' refine_2 =>
-    simp only [ev, BoolMod.pite] at e ⊢
+    simp only [ev, KanonBool.pite] at e ⊢
     repeat' split at e
-    all_goals simp_all [evOp2, BoolMod.peq, evUnop_not_eq_bool, pand_eq_true, por_eq_false]))
+    all_goals simp_all [evOp2, KanonBool.peq, evUnop_not_eq_bool, pand_eq_true, por_eq_false]))
 
 /-- `kanon_rule_bv`, for the rules whose spec is a boolean (resp. bit-vector) at a
 type that its typing determines. -/
@@ -424,47 +415,3 @@ macro "kanon_rule_typed" : tactic => `(tactic| (
     | skip))
 
 end Kanon.Lib
-
-namespace Kanon
-
-open Classical BoolMod Lib
-
-/-- The language, for the bool module. -/
-noncomputable def boolLang (FS : FloatSem) : BoolMod.Lang (sem FS) where
-  Kind := Kind
-  mk := Term.mk
-  tbool := .TBool
-  litK := .Bool
-  notK a := .Op1 .Not a
-  andK a b := .Op2 .And a b
-  orK a b := .Op2 .Or a b
-  eqK a b := .Op2 .Eq a b
-  iteK g a b := .Op3 .Ite g a b
-  distinctK l := .OpN .Distinct l
-  vbool := .bool
-  sure_neq := Bool.sure_neq
-  ty_mk _ _ := rfl
-  WT_lit _ _ := by simp [Term.WT]
-  WT_not _ _ := by simp [Term.WT, Op1.WT, and_assoc]
-  WT_and _ _ _ := by simp [Term.WT, Op2.WT, and_assoc]
-  WT_or _ _ _ := by simp [Term.WT, Op2.WT, and_assoc]
-  WT_eq _ _ _ := by simp only [Term.WT, Op2.WT]; grind
-  WT_ite _ _ _ _ := by simp [Term.WT, Op3.WT]; grind
-  WT_distinct _ _ := by simp [Term.WT, OpN.WT, WTList_iff]
-  ev_lit _ _ _ := by simp only [ev] <;> rfl
-  ev_not _ _ _ := by simp only [ev] <;> rfl
-  ev_and _ _ _ _ := by simp only [ev] <;> rfl
-  ev_or _ _ _ _ := by simp only [ev] <;> rfl
-  ev_eq _ _ _ _ := by simp only [ev] <;> rfl
-  ev_ite _ _ _ _ _ := by simp only [ev] <;> rfl
-  ev_distinct _ _ _ := by simp [ev, evOpN, evList_eq]
-  ev_bool _ t v w ht e := by
-    have := ev_hasSort t w v e
-    simp only at ht
-    rw [ht] at this
-    rcases v with b | _ | _ | _ | _ | _ <;> simp_all [Val.hasSort]
-  vbool_inj _ _ h := Val.bool.inj h
-  sure_neq_sound _ _ _ _ h ht wa wb ea eb :=
-    sure_neq_sound h ht (by rw [eval_eq_ev wa]; exact ea) (by rw [eval_eq_ev wb]; exact eb)
-
-end Kanon

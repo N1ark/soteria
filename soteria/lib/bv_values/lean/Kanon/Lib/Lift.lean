@@ -21,12 +21,11 @@ variable {FS : FloatSem}
     Refines FS (.mk (.Exists bs body) t) (.mk (.Exists bs body') t) := by
   refine Sem.Refines.intro (fun w => ?_) (fun ρ v w w' e => ?_)
   · dsimp only at w ⊢
-    simp only [Term.WT] at w ⊢
-    obtain ⟨ht, hn, hwf, hb, wb⟩ := w
+    obtain ⟨ht, hn, hwf, hb, wb⟩ := WT_exists.1 w
     obtain ⟨wb', sb⟩ : body'.WT ∧ body'.ty = body.ty := h.syn wb
-    refine ⟨⟨ht, hn, hwf, ?_, wb'⟩, rfl⟩
+    refine ⟨WT_exists.2 ⟨ht, hn, hwf, ?_, wb'⟩, rfl⟩
     rw [sb, hb]
-  · have wb := (by dsimp only at w; simp only [Term.WT] at w; exact w.2.2.2.2 : body.WT)
+  · have wb := (by dsimp only at w; exact (WT_exists.1 w).2.2.2.2 : body.WT)
     have hev : ∀ ρ', (∃ b, ev FS ρ' body = some (.bool b)) → ev FS ρ' body' = ev FS ρ' body :=
       fun ρ' ⟨_, hb⟩ => (h.ev wb ρ' _ hb).trans hb.symm
     simp only [ev] at e ⊢

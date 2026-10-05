@@ -130,8 +130,16 @@ given to its function by `attribute [kanon_tactic tac] M.f.spec`, in the library
 that defines `tac` (`Kanon/Lib/`), or else by `kanon_auto`
 (`Kanon/Lib/Rule.lean`). The arms of `Bitvec.lt` and `Bitvec.leq` have a larger
 bound on heartbeats (`[@lean_heartbeats]` in `rules/bitvec.kn`).
-The arms of the bool module are proved once, in Kanon's library
-(`KanonCore.BoolMod`), for the language `boolLang` of `Kanon/Lib/Bool.lean`. The
+The modules marked `[@@@lean_module "M"]` are proved once, over their
+interface, for any language that uses them: the bool module in Kanon's library
+(`KanonBool`), the core and exists modules in `CoreMod/` and `ExistsMod/` (their
+`Sem.lean`, written by hand, states what their proofs need of the semantics of a
+language, with the proofs of their arms in `ExistsMod/Proofs/`). The language
+gives their interfaces (`Interface.lean`, generated) and the instances of their
+`Sem` classes (`Lang.lean`), and `Instance.lean` applies their proofs to it. The
+bitvec, float and ptr modules are proved with the language: their nodes take
+the types `checked`, `fp`, `rm`, `fc` and `float` of `core.knl`, which the
+interface of a module proved once cannot name yet. The
 integers of the bit-vector literals are related to Lean's `BitVec` by
 `Lib/LitOps.lean` (the primitives `lit_add`, ..., are defined as the OCaml
 ones, on integers) and `Lib/Ovf.lean`.

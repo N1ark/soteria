@@ -1,5 +1,5 @@
 import KanonCore.Sem
-import KanonCore.BoolMod.Val
+import KanonBool.Sem
 import Kanon.Ops
 import Kanon.Typing
 
@@ -13,7 +13,7 @@ the SMT-LIB encoding of `encoding.ml`, with `none` standing for *poison*:
 - checked operations (`Add {signed}`, `Neg true`, ...) whose no-overflow flag
   does not hold are poison, like LLVM's `nsw`;
 - the nodes of the bool module are evaluated by the operations of Kanon's
-  library (`Kanon.BoolMod.Val`): `ite` only evaluates the branch it selects,
+  library (`KanonBool.Val`): `ite` only evaluates the branch it selects,
   and `&&` / `||` are "parallel": a `false` (resp. `true`) operand wins over a
   poisoned one.
 
@@ -34,7 +34,7 @@ noncomputable section
 
 namespace Kanon
 
-open Classical BoolMod
+open Classical KanonBool
 
 /-! ## Types and values -/
 
@@ -94,6 +94,18 @@ structure FloatSem where
 the type of all the operands of an n-ary operator), is generated from the
 declarations of the nodes in `Typing.lean`. -/
 
+/-- The invariant of `Seq` (`[@lean_inv "seq_wt"]`): its elements have the sort
+of the elements of its sort. -/
+def seq_wt : Term → Prop
+  | .mk (.Seq l) t => ∃ e, t = .TSeq e ∧ ∀ x ∈ l, x.ty = e
+  | _ => True
+
+/-- The invariant of `Exists` (`[@lean_inv "exists_wf"]`): its binders are
+distinct, their sorts have values, and its body is a boolean. -/
+def exists_wf : Term → Prop
+  | .mk (.Exists bs body) _ => (bs.map Prod.fst).Nodup ∧ (∀ b ∈ bs, b.2.WF) ∧ body.ty = .TBool
+  | _ => True
+
 mutual
 /-- Syntactic well-typedness. -/
 def Term.WT : Term → Prop
@@ -102,28 +114,50 @@ def Term.WT : Term → Prop
   | .mk (.Float f) t => t = .TFloat f.prec ∧ f.bits < 2 ^ f.prec.size
   | .mk (.BitVec z) t => ∃ n : Nat, 0 < n ∧ t = .TBitVector n ∧ 0 ≤ z ∧ z < 2 ^ n
   | .mk (.LocLit z) t => ∃ n : Nat, 0 < n ∧ t = .TLoc n ∧ 0 ≤ z ∧ z < 2 ^ n
-  | .mk (.Seq l) t => ∃ e, t = .TSeq e ∧ Term.WTList e l
+  | .mk (.Seq l) t => Term.WTAll l ∧ seq_wt (.mk (.Seq l) t)
   | .mk (.Op1 op a) t => op.WT a.ty t ∧ a.WT
   | .mk (.Op2 op a b) t => op.WT a.ty b.ty t ∧ a.WT ∧ b.WT
   | .mk (.Op3 op a b c) t => op.WT a.ty b.ty c.ty t ∧ a.WT ∧ b.WT ∧ c.WT
   | .mk (.OpN op l) t => ∃ e, op.WT e t ∧ Term.WTList e l
-  | .mk (.Exists bs body) t =>
-      t = .TBool ∧ (bs.map Prod.fst).Nodup ∧ (∀ b ∈ bs, b.2.WF) ∧ body.ty = .TBool ∧ body.WT
+  | .mk (.Exists bs body) t => t = .TBool ∧ body.WT ∧ exists_wf (.mk (.Exists bs body) t)
 
 /-- All the terms are well-typed, of the sort of [e]. -/
 def Term.WTList (e : Ty) : List Term → Prop
   | [] => True
   | x :: xs => x.ty = e ∧ x.WT ∧ Term.WTList e xs
+
+/-- All the terms are well-typed. -/
+def Term.WTAll : List Term → Prop
+  | [] => True
+  | x :: xs => x.WT ∧ Term.WTAll xs
 end
 
 -- Unfolded by their equations only (generated first): a failed unification of two terms
 -- (a commutativity lemma that `kanon_comm` tries on another operator) would otherwise
 -- evaluate both.
 open Lean Meta in
-run_meta for n in [``Term.WT, ``Term.WTList] do
+run_meta for n in [``Term.WT, ``Term.WTList, ``Term.WTAll] do
   let _ ← getEqnsFor? n
   let _ ← getUnfoldEqnFor? n (nonRec := true)
-attribute [irreducible] Term.WT Term.WTList
+attribute [irreducible] Term.WT Term.WTList Term.WTAll
+
+@[kanon_law] theorem WTList_iff {e : Ty} :
+    ∀ {l : List Term}, Term.WTList e l ↔ ∀ t ∈ l, t.ty = e ∧ t.WT
+  | [] => by simp [Term.WTList]
+  | t :: ts => by simp [Term.WTList, WTList_iff (l := ts), and_assoc]
+
+@[kanon_law] theorem WTAll_iff : ∀ {l : List Term}, Term.WTAll l ↔ ∀ t ∈ l, t.WT
+  | [] => by simp [Term.WTAll]
+  | t :: ts => by simp [Term.WTAll, WTAll_iff (l := ts)]
+
+theorem WT_seq {l t} : (Term.mk (.Seq l) t).WT ↔ ∃ e, t = .TSeq e ∧ Term.WTList e l := by
+  simp only [Term.WT, seq_wt, WTAll_iff, WTList_iff]
+  grind
+
+theorem WT_exists {bs body T} : (Term.mk (.Exists bs body) T).WT ↔
+    T = .TBool ∧ (bs.map Prod.fst).Nodup ∧ (∀ b ∈ bs, b.2.WF) ∧ body.ty = .TBool ∧ body.WT := by
+  simp only [Term.WT, exists_wf]
+  grind
 
 /-! ## Evaluation -/
 
@@ -320,7 +354,7 @@ def Float.term (f : Float) : Term := .mk (.Float f) (.TFloat f.prec)
 and that Floatml computes, on literals, the same values (bit patterns) as the
 float operations (of the same precision). -/
 structure Oracle.Compat (orc : Oracle) (FS : FloatSem) : Prop where
-  sort_by_tag : ∀ l, (orc.sort_by_tag l).Perm l
+  bool : KanonBool.Oracle.Compat orc.sort_by_tag
   bin : ∀ (op : Op2) (lit : Float → Float → Float),
     (op, lit) ∈ [(.FAdd, orc.f_add), (.FSub, orc.f_sub), (.FMul, orc.f_mul),
       (.FDiv, orc.f_div), (.FRem, orc.f_rem), (.FMin, orc.f_min), (.FMax, orc.f_max)] →

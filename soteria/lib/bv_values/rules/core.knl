@@ -7,6 +7,8 @@
    against the declaration. The paths are relative to [Bv_values], which both
    languages open. *)
 
+[@@@lean_module "CoreMod"]
+
 type var [@ocaml "Bv_base.Var.t"] [@lean "Int"]
     [@equal "Bv_base.Var.equal"] [@hash "Bv_base.Var.hash"]
 
@@ -18,7 +20,7 @@ type checked [@ocaml "Bv_base.checked"] =
   { signed : bool; unsigned : bool }
 
 node Var of var
-node Seq of t list
+node Seq of t list [@lean_inv "seq_wt"]
 
 sort TSeq of ty
 

@@ -48,9 +48,9 @@ theorem ovf_comm {n : Nat} (x y : BitVec n) : (x.saddOverflow y = y.saddOverflow
 theorem evOp2_comm {FS : FloatSem} {op : Op2} (hc : op.Comm) (a b : Option Val) :
     evOp2 FS op a b = evOp2 FS op b a := by
   cases op <;> simp only [Op2.Comm] at hc
-  case And => exact BoolMod.pand_comm a b
-  case Or => exact BoolMod.por_comm a b
-  case Eq => exact BoolMod.peq_comm a b
+  case And => exact KanonBool.pand_comm a b
+  case Or => exact KanonBool.por_comm a b
+  case Eq => exact KanonBool.peq_comm a b
   case FEq =>
     simp only [evOp2]
     exact fBin_comm (fun p x y => by simp only [FBits.eq]; grind) a b

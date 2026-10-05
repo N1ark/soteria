@@ -18,7 +18,7 @@ theorem WT_eq {a b t} : (Term.mk (.Op2 .Eq a b) t).WT ↔
 theorem eval_eq_of {FS ρ a b t x y} (w : (Term.mk (.Op2 .Eq a b) t).WT)
     (ha : eval FS ρ a = some x) (hb : eval FS ρ b = some y) :
     eval FS ρ (.mk (.Op2 .Eq a b) t) = some (.bool (decide (x = y))) := by
-  rw [eval_op2 w, ha, hb]; simp [evOp2, BoolMod.peq]
+  rw [eval_op2 w, ha, hb]; simp [evOp2, KanonBool.peq]
 
 theorem WT_sem_eq {a b} : (Bool.eq.spec a b).WT ↔ a.ty = b.ty ∧ a.WT ∧ b.WT := by
   simp [Bool.eq.spec, WT_eq]
@@ -396,7 +396,7 @@ theorem Refines.eq_ptrs {l1 o1 l2 o2 : Term} {T T' t : Ty} :
     simp only [Term.ty_mk] at hT s1 s2; subst hT e
     obtain rfl : m = n := by cases T <;> simp_all [Val.hasSort]; omega
     rw [eval_op2 w', eval_eq wa, eval_eq wb, a1, a2, b1, b2]
-    by_cases hx : x1 = x2 <;> by_cases hy : y1 = y2 <;> simp [evOp2, BoolMod.pand, hx, hy]
+    by_cases hx : x1 = x2 <;> by_cases hy : y1 = y2 <;> simp [evOp2, KanonBool.pand, hx, hy]
 
 end
 

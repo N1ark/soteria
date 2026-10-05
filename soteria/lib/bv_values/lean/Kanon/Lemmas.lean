@@ -30,7 +30,7 @@ end Kanon
 
 namespace Kanon
 
-open Classical BoolMod
+open Classical KanonBool
 open Kanon.Sem (OLe)
 
 /-! ## Evaluation of well-typed nodes -/

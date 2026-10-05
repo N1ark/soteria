@@ -8,6 +8,8 @@
  (alias runtest)
  (deps
   (source_tree .)
+  (source_tree ../CoreMod)
+  (source_tree ../ExistsMod)
   (glob_files %{project_root}/soteria/lib/bv_values/rules/*.{kn,knl}))
  (action
   (run

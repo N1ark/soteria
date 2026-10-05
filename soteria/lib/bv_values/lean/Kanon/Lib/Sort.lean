@@ -5,7 +5,7 @@ import Kanon.Lemmas
 namespace Kanon.Lib
 
 
-open Classical BoolMod
+open Classical KanonBool
 
 theorem unop_hasSort {FS op a t v v'} (w : op.WT a t) (ha : ∀ va, v' = some va → va.hasSort a)
     (h : evOp1 FS op v' = some v) : v.hasSort t := by
@@ -105,8 +105,7 @@ theorem ev_hasSort {FS : FloatSem} {ρ : Env} :
       simp [ev] at h; subst h
       simpa [Val.hasSort, Ty.width, size_of_ty] using hn
   | .mk (.Seq l) T, w, v, h => by
-      simp only [Term.WT] at w
-      obtain ⟨e, rfl, wl⟩ := w
+      obtain ⟨e, rfl, wl⟩ := WT_seq.1 w
       simp only [ev, Option.map_eq_some_iff] at h
       obtain ⟨vs, hvs, rfl⟩ := h
       simpa [Val.hasSort] using evList_hasSort e l wl vs hvs
@@ -145,7 +144,7 @@ theorem ev_hasSort {FS : FloatSem} {ρ : Env} :
       simp only [ev, evOpN, pdistinct, Option.map_eq_some_iff] at h
       obtain ⟨vs, _, rfl⟩ := h; simp [Val.hasSort]
   | .mk (.Exists bs body) T, w, v, h => by
-      simp only [Term.WT] at w; obtain ⟨rfl, _⟩ := w
+      obtain ⟨rfl, _⟩ := WT_exists.1 w
       simp only [ev] at h; split at h
       · simp at h; subst h; simp [Val.hasSort]
       · simp at h

@@ -3,12 +3,20 @@ defaultTargets = ["Kanon"]
 
 # The Lean library of Kanon, which the generated proofs build on
 # (run `lake update kanon` after changing the revision).
-# [versionsync: KANON_LEAN_COMMIT_HASH=b611222ed7978617a2e19f74123bc7bb3c1bfd70]
+# [versionsync: KANON_LEAN_COMMIT_HASH=06982a6b12107e5112977b2d2942ffe15de909d7]
 [[require]]
 name = "kanon"
 git = "https://github.com/N1ark/kanon"
-rev = "b611222ed7978617a2e19f74123bc7bb3c1bfd70"
+rev = "06982a6b12107e5112977b2d2942ffe15de909d7"
 subDir = "lean"
 
 [[lean_lib]]
 name = "Kanon"
+
+# The core module (../rules/core.knl), proved once, for every language that uses it.
+[[lean_lib]]
+name = "CoreMod"
+
+# The exists module (../rules/exists.knl), proved once.
+[[lean_lib]]
+name = "ExistsMod"

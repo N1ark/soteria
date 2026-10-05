@@ -26,14 +26,44 @@ jobs:
       - name: Checkout soteria
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 #[actionpin: v6]
 
+      - name: Restore the Lean toolchain cache
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae #[actionpin: v5]
+        id: restore-elan-cache
+        with:
+          path: ~/.elan
+          key: ${{ runner.os }}-${{ runner.arch }}-elan-${{ hashFiles('soteria/lib/bv_values/lean/lean-toolchain') }}
+
       - name: Install elan
+        if: ${{ !steps.restore-elan-cache.outputs.cache-hit }}
         run: |
           curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -o elan-init.sh
           sh elan-init.sh -y --default-toolchain none
-          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      - name: Add elan to the PATH
+        run: echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      # Lake decides what to rebuild from the hashes in its trace files, so restoring the
+      # outputs of an older source tree only rebuilds the modules whose inputs changed.
+      - name: Restore the lake build cache
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae #[actionpin: v5]
+        id: restore-lake-cache
+        with:
+          path: soteria/lib/bv_values/lean/.lake
+          key: ${{ runner.os }}-${{ runner.arch }}-lake-${{ hashFiles('soteria/lib/bv_values/lean/lean-toolchain') }}-${{ hashFiles('soteria/lib/bv_values/lean/lakefile.toml', 'soteria/lib/bv_values/lean/lake-manifest.json') }}-${{ hashFiles('soteria/lib/bv_values/lean/**/*.lean') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-lake-${{ hashFiles('soteria/lib/bv_values/lean/lean-toolchain') }}-${{ hashFiles('soteria/lib/bv_values/lean/lakefile.toml', 'soteria/lib/bv_values/lean/lake-manifest.json') }}-
+            ${{ runner.os }}-${{ runner.arch }}-lake-${{ hashFiles('soteria/lib/bv_values/lean/lean-toolchain') }}-
 
       - name: Build the proofs
         run: lake build
+
+      # Saved even when a proof fails, so that the next run only rebuilds what is left.
+      - name: Save the lake build cache
+        if: ${{ !cancelled() && steps.restore-lake-cache.outcome == 'success' && steps.restore-lake-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae #[actionpin: v5]
+        with:
+          path: soteria/lib/bv_values/lean/.lake
+          key: ${{ steps.restore-lake-cache.outputs.cache-primary-key }}
 
       - name: Check that no proof is missing
         run: |

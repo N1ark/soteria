@@ -1,8 +1,8 @@
 (** The "sugar" of the untyped layer: the [Bool], [BitVec], [Float], [Ptr],
     [SSeq] and [Infix] modules, sorts, [iter_vars], [pp_ty]... over any language
-    {!Value_lang.S}: the [Svalue] member of {!Typed_intf.S} ([Typed.Svalue]). It
-    was written as a port of [svalue.ml:50-900] of the first generation of the
-    value language, with these differences, none of them behavioural:
+    {!Value_lang.S}: the [Svalue] of the typed layers ([Typed.Svalue]). It was
+    written as a port of [svalue.ml:50-900] of the first generation of the value
+    language, with these differences, none of them behavioural:
     - no [kind], [t_kind], [t_node], [node], [( <| )], [Unop]/[Binop]/[Triop]/
       [Nop], [R], [Ext], [Prims]: the generic code does not see constructors.
       The two sites of soteria-c use {!Value_lang.Base.as_eq} and [as_bitvec]

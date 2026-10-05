@@ -52,10 +52,12 @@ Files (see `INTERFACES.md` for the contracts):
   the generic code instantiated on it: `Lang.Svalue`, `Lang.Eval`, `Lang.Expr`,
   `Lang.V` (the language as `Solver_lang.S`, for `Bv_solver`).
 - `typed.ml(i)` is `Bv_values.Typed`, the typed layer that soteria-c uses
-  (`include Soteria.Bv_values.Typed`). It is not a functor: it is `Bv_typed.Derived` (the typed smart constructors that
-  Kanon generates), the groups of tags (`T.cval`, `T.any`), and thin wrappers that give them the public API
-  (`Typed_intf.S`: nested modules, labelled and optional arguments, `int` sizes: `BitVec.add ?checked` is
-  `Bv_typed.Derived.Bitvec.add`). The leaves and the operations that the rules do not type come from `Lang.Svalue`.
+  (`include Soteria.Bv_values.Typed`). It is not a functor: it is `Bv_typed.Derived` (the typed interface
+  that Kanon generates, with the rules and typed fns of each Kanon module: `Bitvec.add checked`,
+  `Bitvec.wrapping_add`), whose modules `Bool`, `Bitvec`, `Float` and `Ptr` it extends with the leaves and
+  helpers that Kanon does not generate (`typed_extras.ml`, shared with soteria-rust), and `sem_eq`, `not`
+  and `Infix`. Its signature is the generated `Bv_typed.S` extended by inclusion with those of
+  `typed_intf.ml`.
   The terms live in one global table, which is initialised, with the constants
   and the literal cache, when `Lang` is.
 - the generic code: `Value_lang`, `Eval`, `Expr`, `Svalue_sugar`,

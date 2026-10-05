@@ -26,11 +26,11 @@ module M (StateM : State.StateM.S) = struct
       | [ size ] -> Typed.cast_i Usize size
       | _ -> failwith "malloc: invalid arguments"
     in
-    let max_size = Typed.BitVec.usize (Layout.max_value_z (TInt Isize)) in
+    let max_size = Typed.Bitvec.usize (Layout.max_value_z (TInt Isize)) in
     let* () = assert_ (size <=@ max_size) `InvalidAlloc in
     (* UX: the alignment can be smaller (its min size is the first power of 2
        greater than or equal to the requested size) *)
-    let align = Typed.BitVec.usizeinz (2 * Crate.pointer_size ()) in
+    let align = Typed.Bitvec.usizeinz (2 * Crate.pointer_size ()) in
     State.alloc_untyped ~zeroed:false ~size ~align ()
 
   let free args =
@@ -49,7 +49,7 @@ module M (StateM : State.StateM.S) = struct
     (* https://man7.org/linux/man-pages/man3/sysconf.3.html
      * It is basically ok to always return the i64 `-1` saying "I don't know"
      *)
-    ok (Typed.BitVec.u64i (-1))
+    ok (Typed.Bitvec.u64i (-1))
 
   let[@inline] fn_to_stub = function
     | Exit -> exit

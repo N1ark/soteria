@@ -10,7 +10,7 @@
     [t] and [ty] are type parameters of {!smt_op}. *)
 
 (** The SMT operator of the encoding of a term, built by [encode_head] (see
-    {!Kanon_fns.Kanon_fns.encode_head}). [op ~sort_of_ty ~encode_child operands]
+    [Kanon_fns.Kanon_fns.encode_head]). [op ~sort_of_ty ~encode_child operands]
     returns the SMT term, given the encoder of sorts, the (memoised) encoder of
     terms and the operands of the term, left to right. The operator decides
     when, and in which order, the sorts and the operands are encoded: this order

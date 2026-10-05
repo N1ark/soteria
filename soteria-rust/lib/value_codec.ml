@@ -616,7 +616,7 @@ let cast_literal ~(from_ty : Types.literal_type) ~(to_ty : Types.literal_type)
       Typed.ite (Typed.Float.is_nan sv) (BV.mk_masked size Z.zero)
       @@ Typed.ite (sv <=.@ min_f) (BV.mk_masked size min_z)
       @@ Typed.ite (sv >=.@ max_f) (BV.mk_masked size max_z)
-      @@ BV.of_float ~rounding:Truncate ~signed ~size sv
+      @@ BV.of_float Truncate signed (Z.of_int size) sv
   | (TInt _ | TUInt _), TFloat fp ->
       let sv = Typed.cast_lit from_ty v in
       let signed = Layout.is_signed from_ty in
@@ -636,8 +636,8 @@ let cast_literal ~(from_ty : Types.literal_type) ~(to_ty : Types.literal_type)
       let v = Typed.cast_lit from_ty v in
       if from_bits = to_bits then v
       else if from_bits < to_bits then
-        BV.extend ~signed:from_signed (to_bits - from_bits) v
-      else BV.extract 0 (to_bits - 1) v
+        BV.extend_ from_signed (Z.of_int (to_bits - from_bits)) v
+      else BV.extract Z.zero (Z.of_int (to_bits - 1)) v
 
 (** Converts a floating value to a bitvector, preserving it's bit
     representation. This is a symbolic process, because SMT-Lib has no operation
@@ -653,7 +653,7 @@ let float_to_bv_bits (f : Typed.([< T.sfloat ] t)) :
   | None ->
       let fp = Typed.Float.fp_of f in
       let size = Typed.FloatPrecision.size fp in
-      let* bv = nondet (Typed.t_int size) in
+      let* bv = nondet (Typed.Bitvec.t_bitvector size) in
       let bv_f = BV.to_float_raw bv in
       (* here we use structural equality rather than float equality; this is
          intended. *)
@@ -786,7 +786,7 @@ let rec nondet_raw :
               | Some s -> return (Z.to_int s)
               | None -> vanish ()
             in
-            let+ bytes = nondet (Typed.t_int (sizei * 8)) in
+            let+ bytes = nondet (Typed.Bitvec.t_bitvector (sizei * 8)) in
             Ok
               (Typed.Adt.mk_union adt
                  [

@@ -11,7 +11,7 @@ type ('sc, 'ag, 'ofs, 'sz) block_raw = {
 (* The extended ghost-typed interface, sharing [Solver_value]'s [t]/[ty] so
    values flow between the interpreter and the symex monad. *)
 include
-  Iface.Typed_intf.S
+  Typed_sig.S
     with module Svalue = Rust_stack.L.Svalue
      and module Eval = Rust_stack.L.Eval
 
@@ -99,8 +99,8 @@ val cast_nonzero : [< T.sint ] t -> [> T.nonzero ] t
     checked coercion: it cannot change the underlying value's kind. *)
 val as_any : [< T.any ] t -> [> T.any ] t
 
-module BitVec : sig
-  include module type of BitVec
+module Bitvec : sig
+  include module type of Bitvec
 
   (* constructors *)
 
@@ -144,7 +144,7 @@ module BitVec : sig
     [> T.sfloat ] t
 end
 
-module BV = BitVec
+module BV = Bitvec
 
 module FloatPrecision : sig
   include module type of FloatPrecision

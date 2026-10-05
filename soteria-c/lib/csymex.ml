@@ -39,7 +39,7 @@ let check_nonzero (t : Typed.T.sint Typed.t) :
     ([> Typed.T.nonzero ] Typed.t, [> `NonZeroIsZero ], 'fix) Result.t =
   let open Syntax in
   let open Typed.Infix in
-  if%sat t ==@ Typed.BitVec.zero (Typed.size_of_int t) then
+  if%sat t ==@ Typed.Bitvec.zero (Typed.size_of_int t) then
     Result.error `NonZeroIsZero
   else Result.ok (Typed.cast t)
 

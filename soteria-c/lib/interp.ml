@@ -6,7 +6,7 @@ open Ail_tys
 module Ctype = Cerb_frontend.Ctype
 module AilSyntax = Cerb_frontend.AilSyntax
 module T = Typed.T
-module BV = Typed.BitVec
+module BV = Typed.Bitvec
 module Agv = Aggregate_val
 
 module InterpM (State : State_intf.S) = struct
@@ -394,24 +394,23 @@ module Make (State : State_intf.S) = struct
           let+ v = cast_to_int v in
           let fp = Layout.precision fty in
           let signed = Layout.is_int_ty_signed ity in
-          BV.to_float ~rounding:NearestTiesToEven ~signed ~fp v
+          BV.to_float NearestTiesToEven signed fp v
       | Basic (Floating from_fty), Basic (Floating to_fty) ->
           let from_fp = Layout.precision from_fty in
           let+ v =
             of_opt_not_impl ~msg:"Non-float in float cast"
-            @@ Typed.cast_checked v (Typed.t_float from_fp)
+            @@ Typed.cast_checked v (Typed.Float.t_float from_fp)
           in
-          Typed.Float.cast ~rounding:NearestTiesToEven
-            ~fp:(Layout.precision to_fty) v
+          Typed.Float.cast NearestTiesToEven (Layout.precision to_fty) v
       | Basic (Floating fty), Basic (Integer ity) ->
           let fp = Layout.precision fty in
           let* size = Layout.size_of_int_ty_unsupported ity in
           let+ v =
             of_opt_not_impl ~msg:"Non-float in float cast"
-            @@ Typed.cast_checked v (Typed.t_float fp)
+            @@ Typed.cast_checked v (Typed.Float.t_float fp)
           in
           let signed = Layout.is_int_ty_signed ity in
-          BV.of_float ~rounding:Truncate ~signed ~size:(size * 8) v
+          BV.of_float Truncate signed (Z.of_int (size * 8)) v
       | _, Ctype.Void -> return U8.(0s)
       | _ ->
           Fmt.kstr Csymex.not_impl "Cast %a -> %a" Fmt_ail.pp_ty old_ty
@@ -541,7 +540,7 @@ module Make (State : State_intf.S) = struct
         let*^ v2 = cast_basic ~old_ty:t2 ~new_ty v2 in
         let*^ v2 = Csymex.bind Csymex.check_nonzero @@ cast_to_int v2 in
         match v2 with
-        | Ok v2 -> ok (Typed.cast @@ BV.div ~signed v1 v2)
+        | Ok v2 -> ok (Typed.cast @@ BV.div signed v1 v2)
         | Error `NonZeroIsZero -> error `DivisionByZero
         | Missing _ -> L.failwith "Unreachable: check_nonzero returned miss")
     | Mod, Basic (Integer inty) -> (
@@ -550,7 +549,7 @@ module Make (State : State_intf.S) = struct
         let*^ v2 = cast_basic ~old_ty:t2 ~new_ty v2 in
         let*^ v2 = Csymex.bind Csymex.check_nonzero @@ cast_to_int v2 in
         match v2 with
-        | Ok v2 -> ok (Typed.cast @@ BV.rem ~signed v1 v2)
+        | Ok v2 -> ok (Typed.cast @@ BV.rem signed v1 v2)
         | Error `NonZeroIsZero -> error `DivisionByZero
         | Missing _ -> L.failwith "Unreachable: check_nonzero returned miss")
     | Mul, Basic (Integer inty) ->
@@ -626,11 +625,11 @@ module Make (State : State_intf.S) = struct
         let*^ v2 = cast_basic ~old_ty:t2 ~new_ty v2 in
         let op =
           match a_op with
-          | Band -> Typed.BitVec.and_
-          | Bxor -> Typed.BitVec.xor
-          | Bor -> Typed.BitVec.or_
-          | Shl -> Typed.BitVec.shl
-          | Shr -> if signed then Typed.BitVec.ashr else Typed.BitVec.lshr
+          | Band -> Typed.Bitvec.and_
+          | Bxor -> Typed.Bitvec.xor
+          | Bor -> Typed.Bitvec.or_
+          | Shl -> Typed.Bitvec.shl
+          | Shr -> if signed then Typed.Bitvec.ashr else Typed.Bitvec.lshr
           | _ -> L.failwith "unreachable: bit operator is not bit operator?"
         in
         ok (op v1 v2)
@@ -833,7 +832,7 @@ module Make (State : State_intf.S) = struct
             | Basic (Integer _) ->
                 let ovf = BV.neg_overflows v in
                 let+ () = assert_or_error (Typed.not ovf) `Overflow in
-                Agv.Basic (Typed.cast @@ BV.neg v)
+                Agv.Basic (Typed.cast @@ BV.wrapping_neg v)
             | Basic (Floating _) ->
                 let res = Typed.Float.neg (Typed.cast v) in
                 ok (Agv.Basic res)
@@ -841,7 +840,7 @@ module Make (State : State_intf.S) = struct
         | AilSyntax.Bnot ->
             let*^ v = cast ~old_ty:(type_of e) ~new_ty:(type_of aexpr) v in
             let*^ v = cast_aggregate_to_int v in
-            let res = Typed.BitVec.not v in
+            let res = Typed.Bitvec.not_ v in
             ok (Agv.Basic res)
         | AilSyntax.Plus | AilSyntax.PostfixIncr | AilSyntax.PostfixDecr ->
             Fmt.kstr not_impl "Unsupported unary operator %a" Fmt_ail.pp_unop op
@@ -907,16 +906,16 @@ module Make (State : State_intf.S) = struct
         in
         match op with
         | Ge ->
-            ineq_comparison ~int_cmp_op:(BV.geq ~signed) ~float_cmp_op:( >=.@ )
+            ineq_comparison ~int_cmp_op:(BV.geq signed) ~float_cmp_op:( >=.@ )
               v1 v2
         | Gt ->
-            ineq_comparison ~int_cmp_op:(BV.gt ~signed) ~float_cmp_op:( >.@ ) v1
+            ineq_comparison ~int_cmp_op:(BV.gt signed) ~float_cmp_op:( >.@ ) v1
               v2
         | Lt ->
-            ineq_comparison ~int_cmp_op:(BV.lt ~signed) ~float_cmp_op:( <.@ ) v1
+            ineq_comparison ~int_cmp_op:(BV.lt signed) ~float_cmp_op:( <.@ ) v1
               v2
         | Le ->
-            ineq_comparison ~int_cmp_op:(BV.leq ~signed) ~float_cmp_op:( <=.@ )
+            ineq_comparison ~int_cmp_op:(BV.leq signed) ~float_cmp_op:( <=.@ )
               v1 v2
         | Eq | Ne ->
             let new_ty = Layout.type_conversion_arith ty_v1 ty_v2 in

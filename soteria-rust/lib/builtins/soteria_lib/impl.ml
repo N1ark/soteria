@@ -11,7 +11,7 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).S = struct
       | [ t; msg ] -> (Typed.cast_lit TBool t, Typed.cast_ptr_f msg)
       | _ -> L.failwith "to_assert with non-one arguments"
     in
-    if%sat Typed.not (Typed.BitVec.to_bool to_assert) then
+    if%sat Typed.not (Typed.Bitvec.to_bool to_assert) then
       let* str = Core.parse_string msg in
       error (`FailedAssert str)
     else ok Typed.Adt.unit
@@ -23,7 +23,7 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).S = struct
       | _ -> L.failwith "assume with non-one arguments"
     in
     [%l.debug "Assuming: %a\n" Typed.ppa to_assume];
-    let+ () = assume [ Typed.BitVec.to_bool to_assume ] in
+    let+ () = assume [ Typed.Bitvec.to_bool to_assume ] in
     Typed.Adt.unit
 
   let nondet_bytes ~types ~args:_ =

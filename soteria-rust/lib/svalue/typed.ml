@@ -113,18 +113,19 @@ let of_float_precision :
 
 (* The raw pointer type; only used to materialise a fully-symbolic nondet
    pointer in [Value_codec] (see {!Ptr.of_raw}). *)
-let t_ptr () = t_ptr (8 * size_of_uint_ty Usize)
+let t_ptr () = Ptr.t_pointer (8 * size_of_uint_ty Usize)
 let t_ptr_f () : _ ty = R.TFullPtr
 let t_ptr_t () : _ ty = R.TThinPtr
-let t_loc () = t_loc (8 * size_of_uint_ty Usize)
-let t_usize () = t_int (8 * size_of_uint_ty Usize)
+let t_loc () = Ptr.t_loc (8 * size_of_uint_ty Usize)
+let t_usize () = Bitvec.t_bitvector (8 * size_of_uint_ty Usize)
 
 let t_lit : Types.literal_type -> [> T.sint ] ty = function
-  | (TInt _ | TUInt _ | TBool | TChar) as ty -> t_int (size_of_literal_ty ty * 8)
+  | (TInt _ | TUInt _ | TBool | TChar) as ty ->
+      Bitvec.t_bitvector (size_of_literal_ty ty * 8)
   | TFloat _ -> failwith "t_lit: unexpected float literal type"
 
 let t_float (ty : Types.float_type) : [< T.sfloat ] ty =
-  t_float (float_precision ty)
+  Float.t_float (float_precision ty)
 
 let t_tuple tys : [> T.tuple ] ty = R.TTuple tys
 let t_array ty n : [> T.tuple ] ty = R.TArray (ty, n)
@@ -145,7 +146,7 @@ let cast_nonzero (x : [< T.sint ] t) : [> T.nonzero ] t = x
 
 let cast_lit ty (v : 'a t) : [> T.sint ] t =
   let size = 8 * size_of_literal_ty ty in
-  cast_checked ~ty:(t_int size) v
+  cast_checked ~ty:(Bitvec.t_bitvector size) v
 
 let cast_i uty = cast_lit (TUInt uty)
 let cast_f fty v = cast_checked ~ty:(t_float fty) v
@@ -161,7 +162,7 @@ let cast_tuple v =
 
 let cast_array v =
   if K.Rust.is_tarray (get_ty v) then v
-  else cast_error v (t_array (t_int 1) Z.zero)
+  else cast_error v (t_array (Bitvec.t_bitvector 1) Z.zero)
 
 (* The [adt] ref, when given, additionally checks the value is that precise
    enum/union; callers that only know the kind (e.g. the generic store
@@ -185,17 +186,17 @@ let cast_union ?adt v =
   | R.TUnion adt', Some adt when Types.equal_type_decl_ref adt adt' -> v
   | _ -> cast_error v (t_union (Option.value adt ~default:dummy_decl_ref))
 
-module BitVec = struct
-  include BitVec
+module Bitvec = struct
+  include Bitvec
 
   let bv_to_z (ity : Types.integer_type) =
     let signed = match ity with Signed _ -> true | Unsigned _ -> false in
-    BitVec.bv_to_z signed (size_of_literal_ty (lit_of_int_ty ity) * 8)
+    Bitvec.bv_to_z signed (size_of_literal_ty (lit_of_int_ty ity) * 8)
 
-  let mk_lit ty = BitVec.mk_masked (size_of_literal_ty ty * 8)
-  let mk_lit_nz ty = BitVec.mk_nz (size_of_literal_ty ty * 8)
-  let mki_lit ty = BitVec.mki_masked (size_of_literal_ty ty * 8)
-  let mki_lit_nz ty = BitVec.mki_nz (size_of_literal_ty ty * 8)
+  let mk_lit ty = Bitvec.mk_masked (size_of_literal_ty ty * 8)
+  let mk_lit_nz ty = Bitvec.mk_nz (size_of_literal_ty ty * 8)
+  let mki_lit ty = Bitvec.mki_masked (size_of_literal_ty ty * 8)
+  let mki_lit_nz ty = Bitvec.mki_nz (size_of_literal_ty ty * 8)
   let u8 = mk_lit (TUInt U8)
   let u8i = mki_lit (TUInt U8)
   let u8nz = mk_lit_nz (TUInt U8)
@@ -215,7 +216,7 @@ module BitVec = struct
   let usizeinz z = mki_lit_nz (TUInt Usize) z
 
   let of_bool : T.sbool t -> [> T.sint ] t =
-    of_bool (size_of_literal_ty TBool * 8)
+    of_bool (Z.of_int (size_of_literal_ty TBool * 8))
 
   let of_scalar : Values.scalar_value -> [> T.sint ] t = function
     | UnsignedScalar (Usize, v) | SignedScalar (Isize, v) -> usize v
@@ -244,15 +245,15 @@ module BitVec = struct
     | { kind = CLiteral lit; _ } -> Some (of_literal lit)
     | _ -> None
 
-  let max ~signed l r = ite (gt ~signed l r) l r
-  let min ~signed l r = ite (lt ~signed l r) l r
+  let max ~signed l r = ite (gt signed l r) l r
+  let min ~signed l r = ite (lt signed l r) l r
   let sure_is_zero v = Option.is_some_and Z.(equal zero) (to_z v)
 
   let to_float ~rounding ~signed ~fp v =
-    to_float ~rounding ~signed ~fp:(float_precision fp) v
+    to_float rounding signed (float_precision fp) v
 end
 
-module BV = BitVec
+module BV = Bitvec
 
 module FloatPrecision = struct
   include FloatPrecision
@@ -274,7 +275,7 @@ module Float = struct
   let nan fp = nan (float_precision fp)
   let of_z fty = of_z (float_precision fty)
   let fp_of v = of_float_precision (fp_of v)
-  let cast ~rounding ~fp v = cast ~rounding ~fp:(float_precision fp) v
+  let cast ~rounding ~fp v = cast rounding (float_precision fp) v
 
   let rem_warning =
     let warn =
@@ -377,7 +378,7 @@ module Ptr = struct
        have the same type, internally. *)
     let loc = cast (loc ptr) in
     let size = size_of_int loc in
-    if size < 64 then BV.extend ~signed:false (64 - size) loc
+    if size < 64 then BV.extend_ false (Z.of_int (64 - size)) loc
     else (
       (* should basically always be the case but let's be cautious *)
       assert (size = 64);
@@ -428,17 +429,19 @@ module Adt = struct
   let as_tuple v = K.Rust.tuple_fields v
 
   let as_tuple1 v =
-    match as_tuple v with [ a ] -> a | _ -> cast_error v (t_tuple [ t_int 1 ])
+    match as_tuple v with
+    | [ a ] -> a
+    | _ -> cast_error v (t_tuple [ Bitvec.t_bitvector 1 ])
 
   let as_tuple2 v =
     match as_tuple v with
     | [ a; b ] -> (a, b)
-    | _ -> cast_error v (t_tuple [ t_int 2 ])
+    | _ -> cast_error v (t_tuple [ Bitvec.t_bitvector 2 ])
 
   let as_tuple3 v =
     match as_tuple v with
     | [ a; b; c ] -> (a, b, c)
-    | _ -> cast_error v (t_tuple [ t_int 3 ])
+    | _ -> cast_error v (t_tuple [ Bitvec.t_bitvector 3 ])
 
   let field_of idx v = K.Rust.field_of (Z.of_int idx) v
   let set_field idx f v = K.Rust.set_field (Z.of_int idx) f v
@@ -502,25 +505,25 @@ end
 module Syntax = struct
   module U8 = struct
     module Sym_int_syntax = struct
-      let mk_nonzero = BitVec.u8inz
-      let zero () = BitVec.u8 Z.zero
-      let one () = BitVec.u8nz Z.one
+      let mk_nonzero = Bitvec.u8inz
+      let zero () = Bitvec.u8 Z.zero
+      let one () = Bitvec.u8nz Z.one
     end
   end
 
   module U32 = struct
     module Sym_int_syntax = struct
-      let mk_nonzero = BitVec.u32inz
-      let zero () = BitVec.u32 Z.zero
-      let one () = BitVec.u32nz Z.one
+      let mk_nonzero = Bitvec.u32inz
+      let zero () = Bitvec.u32 Z.zero
+      let one () = Bitvec.u32nz Z.one
     end
   end
 
   module Usize = struct
     module Sym_int_syntax = struct
-      let mk_nonzero = BitVec.usizeinz
-      let zero () = BitVec.usize Z.zero
-      let one () = BitVec.usizenz Z.one
+      let mk_nonzero = Bitvec.usizeinz
+      let zero () = Bitvec.usize Z.zero
+      let one () = Bitvec.usizenz Z.one
     end
   end
 end

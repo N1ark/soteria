@@ -52,7 +52,7 @@ let decay_fn_sym sym t =
 
 let get_sym sv t =
   let res =
-    match Typed.BitVec.to_z sv with
+    match Typed.Bitvec.to_z sv with
     | Some z -> Bidirectional_map.get_sym z t.bmap
     | None -> None
   in

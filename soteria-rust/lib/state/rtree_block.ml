@@ -12,7 +12,14 @@ open Syntax
 module Make (Borrows : Tree_borrows.M(DecayMap.SM).S) = struct
   module MemVal = struct
     module TB = Soteria.Sym_states.Tree_block
-    module S_bool = Typed.Bool
+
+    module S_bool = struct
+      include Typed.Bool
+
+      type t = Typed.sbool
+
+      let not = Typed.not
+    end
 
     module S_int = struct
       include Typed
@@ -20,7 +27,7 @@ module Make (Borrows : Tree_borrows.M(DecayMap.SM).S) = struct
 
       type t = Typed.T.sint Typed.t [@@deriving show { with_path = false }]
 
-      let of_z = Typed.BitVec.usize
+      let of_z = Typed.Bitvec.usize
       let zero () = of_z Z.zero
       let one () = of_z Z.one
       let lt = Typed.Infix.( <$@ )
@@ -34,7 +41,7 @@ module Make (Borrows : Tree_borrows.M(DecayMap.SM).S) = struct
 
       let is_in_bound (v : t) : sbool Typed.t =
         let max = Layout.max_value_z (TInt Isize) in
-        let max = Typed.BitVec.usize max in
+        let max = Typed.Bitvec.usize max in
         v <=@ max
 
       type syn = Typed.Expr.t [@@deriving show { with_path = false }]
@@ -118,8 +125,10 @@ module Make (Borrows : Tree_borrows.M(DecayMap.SM).S) = struct
             in
             match res with Some i -> return i | None -> vanish ())
       in
-      let mask_l = BV.extract 0 ((at * 8) - 1) v in
-      let mask_r = BV.extract (at * 8) ((size * 8) - 1) v in
+      let mask_l = BV.extract Z.zero (Z.of_int ((at * 8) - 1)) v in
+      let mask_r =
+        BV.extract (Z.of_int (at * 8)) (Z.of_int ((size * 8) - 1)) v
+      in
       (mask_l, mask_r)
 
     (** Builds a right-leaning split tree out of subtrees paired with the offset

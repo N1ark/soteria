@@ -2,7 +2,7 @@ module Ctype = Cerb_frontend.Ctype
 open Csymex
 open Typed.Infix
 open Typed.Syntax
-module BV = Typed.BitVec
+module BV = Typed.Bitvec
 module T = Typed.T
 module Agv = Aggregate_val
 open Agv
@@ -127,7 +127,7 @@ module M (State : State_intf.S) = struct
           |> SM.lift
       | _ -> not_impl "to_assert with non-one arguments"
     in
-    if%sat to_assert ==@ Typed.BitVec.zero size then error `FailedAssert
+    if%sat to_assert ==@ Typed.Bitvec.zero size then error `FailedAssert
     else Result.ok Agv.void
 
   let assert_fail ~args:_ = error `FailedAssert
@@ -141,7 +141,7 @@ module M (State : State_intf.S) = struct
           |> SM.lift
       | _ -> not_impl "to_assume with non-one arguments"
     in
-    let* () = SM.assume [ Typed.BitVec.to_bool to_assume ] in
+    let* () = SM.assume [ Typed.Bitvec.to_bool to_assume ] in
     Result.ok Agv.void
 
   let nondet ty ~args:_ =
@@ -200,7 +200,7 @@ module M (State : State_intf.S) = struct
           in
           let sizeofint = Layout.c_int_size * 8 in
           let* char_int =
-            Typed.cast_checked s2 (Typed.t_int sizeofint)
+            Typed.cast_checked s2 (Typed.Bitvec.t_bitvector sizeofint)
             |> of_opt_not_impl ~msg:"memset with non-pointer s2"
           in
           let+ count =
@@ -213,7 +213,7 @@ module M (State : State_intf.S) = struct
     let char = BV.fit_to ~signed:false 8 char_int in
     if%sat count ==@ Usize.(0s) then Result.ok Agv.void
     else
-      let count = Typed.BitVec.cast_nonzero count in
+      let count = Typed.Bitvec.cast_nonzero count in
       if%sure char ==@ U8.(0s) then
         let++ () = State.zero_range dest count in
         Agv.void

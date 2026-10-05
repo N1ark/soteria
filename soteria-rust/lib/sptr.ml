@@ -131,7 +131,9 @@ module DecayMap : DecayMapS = struct
         assert (Z.popcount z = 1);
         let ptr_bits = 8 * Layout.size_of_uint_ty Usize in
         let low_bits = Z.trailing_zeros z in
-        let+ high_bits = nondet (Typed.t_int (ptr_bits - low_bits)) in
+        let+ high_bits =
+          nondet (Typed.Bitvec.t_bitvector (ptr_bits - low_bits))
+        in
         Typed.BV.concat high_bits (Typed.BV.zero low_bits)
     | _ -> nondet (Typed.t_usize ())
 
@@ -167,7 +169,7 @@ module DecayMap : DecayMapS = struct
                  [
                    (address %@ align ==@ Usize.(0s));
                    align <=@ address;
-                   address <@ Typed.BitVec.usize isize_max -!@ size;
+                   address <@ Typed.Bitvec.usize isize_max -!@ size;
                    disctinct;
                  ]
              in

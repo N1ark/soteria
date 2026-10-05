@@ -121,7 +121,7 @@ module M (StateM : State.StateM.S) = struct
     with
     | AllocAllocGlobalAllocImpl, [], [], [ self; layout; zeroed ] ->
         let self = Typed.cast_ptr_f self in
-        let zeroed = Typed.BitVec.to_bool (Typed.cast_lit TBool zeroed) in
+        let zeroed = Typed.Bitvec.to_bool (Typed.cast_lit TBool zeroed) in
         alloc_impl ~fun_sig:_fun_sig ~self ~layout ~zeroed
     | AllocAllocHandleAllocError, [], [], [ layout ] ->
         let+ () = handle_alloc_error ~layout in
@@ -133,115 +133,115 @@ module M (StateM : State.StateM.S) = struct
     | CoreF128IsFinite, [], [], [ arg ] ->
         let arg = Typed.cast_f F128 arg in
         let+ ret = f128_is_finite ~arg in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | CoreF128IsInfinite, [], [], [ arg ] ->
         let arg = Typed.cast_f F128 arg in
         let+ ret = f128_is_infinite ~arg in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | CoreF128IsNan, [], [], [ arg ] ->
         let arg = Typed.cast_f F128 arg in
         let+ ret = f128_is_nan ~arg in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | CoreF128IsNormal, [], [], [ arg ] ->
         let arg = Typed.cast_f F128 arg in
         let+ ret = f128_is_normal ~arg in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | CoreF128IsSignNegative, [], [], [ arg ] ->
         let arg = Typed.cast_f F128 arg in
         let+ ret = f128_is_sign_negative ~arg in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | CoreF128IsSignPositive, [], [], [ arg ] ->
         let arg = Typed.cast_f F128 arg in
         let+ ret = f128_is_sign_positive ~arg in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | CoreF128IsSubnormal, [], [], [ arg ] ->
         let arg = Typed.cast_f F128 arg in
         let+ ret = f128_is_subnormal ~arg in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | CoreF16IsFinite, [], [], [ arg ] ->
         let arg = Typed.cast_f F16 arg in
         let+ ret = f16_is_finite ~arg in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | CoreF16IsInfinite, [], [], [ arg ] ->
         let arg = Typed.cast_f F16 arg in
         let+ ret = f16_is_infinite ~arg in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | CoreF16IsNan, [], [], [ arg ] ->
         let arg = Typed.cast_f F16 arg in
         let+ ret = f16_is_nan ~arg in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | CoreF16IsNormal, [], [], [ arg ] ->
         let arg = Typed.cast_f F16 arg in
         let+ ret = f16_is_normal ~arg in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | CoreF16IsSignNegative, [], [], [ arg ] ->
         let arg = Typed.cast_f F16 arg in
         let+ ret = f16_is_sign_negative ~arg in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | CoreF16IsSignPositive, [], [], [ arg ] ->
         let arg = Typed.cast_f F16 arg in
         let+ ret = f16_is_sign_positive ~arg in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | CoreF16IsSubnormal, [], [], [ arg ] ->
         let arg = Typed.cast_f F16 arg in
         let+ ret = f16_is_subnormal ~arg in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | CoreF32IsFinite, [], [], [ arg ] ->
         let arg = Typed.cast_f F32 arg in
         let+ ret = f32_is_finite ~arg in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | CoreF32IsInfinite, [], [], [ arg ] ->
         let arg = Typed.cast_f F32 arg in
         let+ ret = f32_is_infinite ~arg in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | CoreF32IsNan, [], [], [ arg ] ->
         let arg = Typed.cast_f F32 arg in
         let+ ret = f32_is_nan ~arg in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | CoreF32IsNormal, [], [], [ arg ] ->
         let arg = Typed.cast_f F32 arg in
         let+ ret = f32_is_normal ~arg in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | CoreF32IsSignNegative, [], [], [ arg ] ->
         let arg = Typed.cast_f F32 arg in
         let+ ret = f32_is_sign_negative ~arg in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | CoreF32IsSignPositive, [], [], [ arg ] ->
         let arg = Typed.cast_f F32 arg in
         let+ ret = f32_is_sign_positive ~arg in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | CoreF32IsSubnormal, [], [], [ arg ] ->
         let arg = Typed.cast_f F32 arg in
         let+ ret = f32_is_subnormal ~arg in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | CoreF64IsFinite, [], [], [ arg ] ->
         let arg = Typed.cast_f F64 arg in
         let+ ret = f64_is_finite ~arg in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | CoreF64IsInfinite, [], [], [ arg ] ->
         let arg = Typed.cast_f F64 arg in
         let+ ret = f64_is_infinite ~arg in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | CoreF64IsNan, [], [], [ arg ] ->
         let arg = Typed.cast_f F64 arg in
         let+ ret = f64_is_nan ~arg in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | CoreF64IsNormal, [], [], [ arg ] ->
         let arg = Typed.cast_f F64 arg in
         let+ ret = f64_is_normal ~arg in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | CoreF64IsSignNegative, [], [], [ arg ] ->
         let arg = Typed.cast_f F64 arg in
         let+ ret = f64_is_sign_negative ~arg in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | CoreF64IsSignPositive, [], [], [ arg ] ->
         let arg = Typed.cast_f F64 arg in
         let+ ret = f64_is_sign_positive ~arg in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | CoreF64IsSubnormal, [], [], [ arg ] ->
         let arg = Typed.cast_f F64 arg in
         let+ ret = f64_is_subnormal ~arg in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | CoreHashBuildHasherHashOne, [ t_self; t ], [], [ self; x ] ->
         let self = Typed.cast_ptr_f self in
         hash_one ~types:generics.types ~t_self ~t ~self ~x
@@ -262,7 +262,7 @@ module M (StateM : State.StateM.S) = struct
         Typed.Adt.unit
     | CorePanickingPanicNounwindFmt, [], [], [ fmt; force_no_backtrace ] ->
         let force_no_backtrace =
-          Typed.BitVec.to_bool (Typed.cast_lit TBool force_no_backtrace)
+          Typed.Bitvec.to_bool (Typed.cast_lit TBool force_no_backtrace)
         in
         let+ () = panic_nounwind_fmt ~fmt ~force_no_backtrace in
         Typed.Adt.unit
@@ -288,7 +288,7 @@ module M (StateM : State.StateM.S) = struct
         Typed.Adt.unit
     | StdIoStdioPrintToBufferIfCaptureUsed, [], [], [ args ] ->
         let+ ret = print_to_buffer_if_capture_used ~args in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | StdPanickingBeginPanic, [ m ], [], [ msg ] ->
         let+ () = begin_panic ~m ~msg in
         Typed.Adt.unit

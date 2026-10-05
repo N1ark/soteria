@@ -10,12 +10,12 @@ let c_int_bits =
        (Signed Int_))
   * 8
 
-let t_loc = t_loc ptr_bits
-let t_ptr = t_ptr ptr_bits
-let t_usize = t_int ptr_bits
+let t_loc = Ptr.t_loc ptr_bits
+let t_ptr = Ptr.t_pointer ptr_bits
+let t_usize = Bitvec.t_bitvector ptr_bits
 
-module BitVec = struct
-  include BitVec
+module Bitvec = struct
+  include Bitvec
 
   let of_bool x =
     let byte_size =
@@ -24,7 +24,7 @@ module BitVec = struct
            (Signed Int_))
     in
     let bit_size = byte_size * 8 in
-    of_bool bit_size x
+    of_bool (Z.of_int bit_size) x
 
   let usize z = mk ptr_bits z
   let usizenz z = mk_nz ptr_bits z
@@ -38,8 +38,8 @@ module BitVec = struct
   let fit_to ?(signed = false) size (bv : [< T.sint ] t) : [> T.sint ] t =
     let cur = size_of_int bv in
     if cur = size then bv
-    else if cur < size then extend ~signed (size - cur) bv
-    else extract 0 (size - 1) bv
+    else if cur < size then extend_ signed (Z.of_int (size - cur)) bv
+    else extract Z.zero (Z.of_int (size - 1)) bv
 
   let cast_to_size_t bv =
     Option.map (fun (v, _) -> fit_to ~signed:false ptr_bits v) (cast_int bv)
@@ -57,25 +57,25 @@ end
 module Syntax = struct
   module U8 = struct
     module Sym_int_syntax = struct
-      let mk_nonzero = BitVec.mki_nz 8
-      let zero () = BitVec.zero 8
-      let one () = BitVec.mki_nz 8 1
+      let mk_nonzero = Bitvec.mki_nz 8
+      let zero () = Bitvec.zero 8
+      let one () = Bitvec.mki_nz 8 1
     end
   end
 
   module CInt = struct
     module Sym_int_syntax = struct
-      let mk_nonzero = BitVec.mki_nz c_int_bits
-      let zero () = BitVec.zero c_int_bits
-      let one () = BitVec.mki_nz c_int_bits 1
+      let mk_nonzero = Bitvec.mki_nz c_int_bits
+      let zero () = Bitvec.zero c_int_bits
+      let one () = Bitvec.mki_nz c_int_bits 1
     end
   end
 
   module Usize = struct
     module Sym_int_syntax = struct
-      let mk_nonzero = BitVec.mki_nz ptr_bits
-      let zero () = BitVec.zero ptr_bits
-      let one () = BitVec.one ptr_bits
+      let mk_nonzero = Bitvec.mki_nz ptr_bits
+      let zero () = Bitvec.zero ptr_bits
+      let one () = Bitvec.one ptr_bits
     end
   end
 end

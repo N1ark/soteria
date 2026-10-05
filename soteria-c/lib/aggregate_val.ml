@@ -24,8 +24,8 @@ let rec pp_agv pp_v ft =
 
 let pp ft v = (pp_agv Typed.ppa) ft v
 let pp_syn ft v = (pp_agv Typed.Expr.pp) ft v
-let int_z size z = Basic (Typed.BitVec.mk_masked size z)
-let int size i = Basic (Typed.BitVec.mki_masked size i)
+let int_z size z = Basic (Typed.Bitvec.mk_masked size z)
+let int size i = Basic (Typed.Bitvec.mki_masked size i)
 
 let c_int i =
   let c_int_size =
@@ -35,7 +35,7 @@ let c_int i =
   in
   int (c_int_size * 8) i
 
-let void = Basic (Typed.BitVec.zero 8)
+let void = Basic (Typed.Bitvec.zero 8)
 let null = Basic Typed.Ptr.null
 
 let basic_or_unsupported ~msg v =

@@ -36,7 +36,7 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).S = struct
         let+ () = assert_zero_valid ~t in
         Typed.Adt.unit
     | "assume", [], [], [ b ] ->
-        let b = Typed.BitVec.to_bool (Typed.cast_lit TBool b) in
+        let b = Typed.Bitvec.to_bool (Typed.cast_lit TBool b) in
         let+ () = assume ~b in
         Typed.Adt.unit
     | "atomic_and", [ t; u ], [ ord ], [ dst; src ] ->
@@ -111,7 +111,7 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).S = struct
         let data = Typed.cast_ptr_f data in
         let catch_fn = Typed.cast_ptr_f catch_fn in
         let+ ret = catch_unwind ~fun_exec ~t_data ~try_fn ~data ~catch_fn in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | "ceilf128", [], [], [ x ] ->
         let x = Typed.cast_f F128 x in
         ceilf128 ~x
@@ -306,7 +306,7 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).S = struct
     | "fsub_fast", [ t ], [], [ a; b ] -> fsub_fast ~t ~a ~b
     | "is_val_statically_known", [ t ], [], [ arg ] ->
         let+ ret = is_val_statically_known ~t ~arg in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | "log10f128", [], [], [ x ] ->
         let x = Typed.cast_f F128 x in
         log10f128 ~x
@@ -410,11 +410,11 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).S = struct
     | "mul_with_overflow", [ t ], [], [ x; y ] -> mul_with_overflow ~t ~x ~y
     | "needs_drop", [ t ], [], [] ->
         let+ ret = needs_drop ~t in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | "non_exhaustive", [], [], [ id ] ->
         let id = Typed.cast_tuple id in
         let+ ret = non_exhaustive ~id in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | "nontemporal_store", [ t ], [], [ ptr; val_ ] ->
         let ptr = Typed.cast_ptr_f ptr in
         let+ () = nontemporal_store ~t ~ptr ~val_ in
@@ -435,7 +435,7 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).S = struct
         offset_of ~t ~variant ~field
     | "overflow_checks", [], [], [] ->
         let+ ret = overflow_checks () in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | "powf128", [], [], [ a; x ] ->
         let a = Typed.cast_f F128 a in
         let x = Typed.cast_f F128 x in
@@ -507,7 +507,7 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).S = struct
         let a = Typed.cast_ptr_f a in
         let b = Typed.cast_ptr_f b in
         let+ ret = raw_eq ~t ~a ~b in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | "read_via_copy", [ t ], [], [ ptr ] ->
         let ptr = Typed.cast_ptr_f ptr in
         read_via_copy ~t ~ptr
@@ -546,7 +546,7 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).S = struct
     | "saturating_add", [ t ], [], [ a; b ] -> saturating_add ~t ~a ~b
     | "saturating_sub", [ t ], [], [ a; b ] -> saturating_sub ~t ~a ~b
     | "select_unpredictable", [ t ], [], [ b; true_val; false_val ] ->
-        let b = Typed.BitVec.to_bool (Typed.cast_lit TBool b) in
+        let b = Typed.Bitvec.to_bool (Typed.cast_lit TBool b) in
         select_unpredictable ~t ~b ~true_val ~false_val
     | "simd_add", [ t ], [], [ x; y ] -> simd_add ~t ~x ~y
     | "simd_and", [ t ], [], [ x; y ] -> simd_and ~t ~x ~y
@@ -619,11 +619,11 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).S = struct
         simd_reduce_add_unordered ~t ~u ~x
     | "simd_reduce_all", [ t ], [], [ x ] ->
         let+ ret = simd_reduce_all ~t ~x in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | "simd_reduce_and", [ t; u ], [], [ x ] -> simd_reduce_and ~t ~u ~x
     | "simd_reduce_any", [ t ], [], [ x ] ->
         let+ ret = simd_reduce_any ~t ~x in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | "simd_reduce_max", [ t; u ], [], [ x ] -> simd_reduce_max ~t ~u ~x
     | "simd_reduce_min", [ t; u ], [], [ x ] -> simd_reduce_min ~t ~u ~x
     | "simd_reduce_mul_ordered", [ t; u ], [], [ x; y ] ->
@@ -723,7 +723,7 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).S = struct
         let a = Typed.cast_tuple a in
         let b = Typed.cast_tuple b in
         let+ ret = type_id_eq ~a ~b in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | ( "type_id_field_representing_type",
         [],
         [],
@@ -742,7 +742,7 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).S = struct
     | "type_id_is_signed", [], [], [ id ] ->
         let id = Typed.cast_tuple id in
         let+ ret = type_id_is_signed ~id in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | "type_id_variants", [], [], [ id ] ->
         let id = Typed.cast_tuple id in
         type_id_variants ~id
@@ -761,7 +761,7 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).S = struct
         Typed.Adt.unit
     | "ub_checks", [], [], [] ->
         let+ ret = ub_checks () in
-        Typed.BitVec.of_bool ret
+        Typed.Bitvec.of_bool ret
     | "unaligned_volatile_load", [ t ], [], [ src ] ->
         let src = Typed.cast_ptr_f src in
         unaligned_volatile_load ~t ~src

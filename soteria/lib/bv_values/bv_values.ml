@@ -51,6 +51,7 @@ module Save_counter = Save_counter
 module Solver_lang = Solver_lang
 module Svalue_sugar = Svalue_sugar
 module Typed = Typed
+module Typed_extras = Typed_extras
 module Typed_intf = Typed_intf
 module Value_lang = Value_lang
 module View_host = View_host

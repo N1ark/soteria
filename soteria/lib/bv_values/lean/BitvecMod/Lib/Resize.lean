@@ -1,4 +1,4 @@
-import BitvecMod.Lib.Tactic
+import BitvecMod.Lib.Ovf
 
 /-!
 # Resizing
@@ -32,12 +32,6 @@ namespace Lib
 open Prim
 
 /-! ## Literals -/
-
-theorem rs_emod_two_pow_nonneg (z : Int) (k : Nat) : 0 ≤ z % 2 ^ k :=
-  Int.emod_nonneg _ (Int.ne_of_gt (Int.pow_pos (by decide)))
-
-theorem rs_emod_two_pow_lt (z : Int) (k : Nat) : z % 2 ^ k < 2 ^ k :=
-  Int.emod_lt_of_pos _ (Int.pow_pos (by decide))
 
 theorem rs_ofInt_emod {n : Nat} {k : Int} (hk : k = n) (z : Int) :
     BitVec.ofInt n (z % 2 ^ k.toNat) = BitVec.ofInt n z := by
@@ -128,35 +122,13 @@ theorem rs_extractLsb'_ofInt {w f n p : Nat} (hp : (p : Int) < 2 ^ w) :
   apply BitVec.eq_of_toNat_eq
   rw [BitVec.extractLsb'_toNat, rs_toNat_ofInt_nat hp, BitVec.ofInt_natCast, BitVec.toNat_ofNat]
 
-theorem rs_two_pow_pos (k : Nat) : (0 : Int) < 2 ^ k := Int.pow_pos (by decide)
-
 theorem rs_ofInt_zero (n : Nat) : BitVec.ofInt n 0 = 0#n := by
   apply BitVec.eq_of_toNat_eq; simp
 
 theorem rs_toNat_natCast_add (a b : Nat) : ((a : Int) + (b : Int)).toNat = a + b := by
   omega
 
-
 /-! ## Lowest set bits and powers of two -/
-
-theorem rs_popcountNat_eq_zero : ∀ {m : Nat}, popcountNat m = 0 → m = 0
-  | 0, _ => rfl
-  | k + 1, h => by
-      rw [popcountNat] at h
-      have : (k + 1) / 2 < k + 1 := by omega
-      have := rs_popcountNat_eq_zero (m := (k + 1) / 2) (by omega)
-      omega
-
-theorem rs_popcountNat_eq_one : ∀ {m : Nat}, popcountNat m = 1 → ∃ j, m = 2 ^ j
-  | 0, h => by simp [popcountNat] at h
-  | k + 1, h => by
-      rw [popcountNat] at h
-      have : (k + 1) / 2 < k + 1 := by omega
-      by_cases hm : (k + 1) % 2 = 1
-      · have := rs_popcountNat_eq_zero (m := (k + 1) / 2) (by omega)
-        exact ⟨0, by omega⟩
-      · obtain ⟨j, hj⟩ := rs_popcountNat_eq_one (m := (k + 1) / 2) (by omega)
-        exact ⟨j + 1, by rw [Nat.pow_succ]; omega⟩
 
 theorem rs_lowbit_spec : ∀ m : Nat, 0 < m →
     ∃ t, Nat.bitwise (fun a b => a && !b) m (m - 1) = 2 ^ t ∧ 2 ^ t ∣ m
@@ -213,8 +185,6 @@ theorem rs_getLsbD_add_of_dvd {w : Nat} (a b : BitVec w) {q : Nat} (h : 2 ^ q �
     rw [e1, e2, Nat.add_mod, (Nat.dvd_iff_mod_eq_zero ..).1 h, Nat.zero_add, Nat.mod_mod]
   · rw [BitVec.getLsbD_of_ge _ _ (by omega), BitVec.getLsbD_of_ge _ _ (by omega)]
 
-theorem rs_zasr_zero (z : Int) : Prim.zasr z 0 = z := by simp [Prim.zasr]
-
 theorem rs_log2_nat (p : Nat) : Prim.log2 (p : Int) = (Nat.log2 p : Int) := by
   simp [Prim.log2]
 
@@ -245,7 +215,7 @@ theorem rs_extractLsb'_add_lsb' {w i n p : Nat} (x : BitVec w) (h1 : (p : Int) <
 theorem rs_pow2 {p : Nat} (h : rs_is_pow2 (p : Int) = true) : p = 2 ^ Nat.log2 p := by
   simp only [rs_is_pow2, Bool.and_eq_true, Prim.popcount, Int.toNat_natCast] at h
   have h2 : popcountNat p = 1 := by exact_mod_cast of_decide_eq_true h.2
-  obtain ⟨j, hj⟩ := rs_popcountNat_eq_one h2
+  obtain ⟨j, hj⟩ := popcountNat_eq_one h2
   rw [hj, Nat.log2_two_pow]
 
 /-- Multiplying by a power of two above the extracted bits. -/
@@ -312,7 +282,7 @@ theorem rs_nonzero_extract_pow2 {to z : Int} {t : S.Ty} (hp : L.bitvec_is_pow2 z
   have hpm : p < 2 ^ m := by
     rw [e]; exact Nat.pow_lt_pow_right (by decide) (by omega)
   have hpm' : ((p : Int) : Int) < 2 ^ m := by exact_mod_cast hpm
-  rw [Prim.lit_extract, rs_zasr_zero, rs_ofInt_emod (by omega), ofInt_masked (by omega)]
+  rw [Prim.lit_extract, zasr_zero, rs_ofInt_emod (by omega), ofInt_masked (by omega)]
   intro h0
   have := congrArg BitVec.toNat h0
   rw [rs_toNat_ofInt_nat hpm'] at this
@@ -495,7 +465,6 @@ macro "bv_rs_nat_eqs" : tactic => `(tactic| (
     Int.sub_zero, Int.add_zero, Int.sub_add_cancel] at *)
   (try subst_vars)))
 
-
 /-- Proves an equality of bit-vectors bit by bit, the indices being linear. -/
 macro "bv_rs_bits" : tactic => `(tactic| (
   ext i hi
@@ -556,7 +525,7 @@ macro "bv_rs_lits" : tactic => `(tactic| (
   (try simp only [rs_bitvec_lsb_eq, rs_bitvec_is_pow2_eq, rs_log2_nat, Int.toNat_zero] at *)
   (try simp (disch := first | assumption | omega) only [rs_ofInt_emod, rs_ofInt_emod_nat,
     rs_ofInt_lit_sext, rs_ofInt_lit_zext, rs_lit_concat_nat, rs_ofInt_append, Prim.lit_extract,
-    rs_zasr_nat, rs_zasr_zero, ofInt_masked, rs_toNat_ofInt_nat, rs_extractLsb'_ofInt,
+    rs_zasr_nat, zasr_zero, ofInt_masked, rs_toNat_ofInt_nat, rs_extractLsb'_ofInt,
     BitVec.shiftLeft_eq',
     BitVec.ushiftRight_eq', rs_ofInt_zero, BitVec.extractLsb'_add, BitVec.extractLsb'_mul,
     rs_extractLsb'_add_lsb, rs_extractLsb'_add_lsb', rs_extractLsb'_mul_pow2,
@@ -568,8 +537,8 @@ macro "bv_rs_wt" : tactic => `(tactic| (
   bv_rs_facts
   (try bv_rs_nat)
   bv_rs_nat_eqs
-  (try simp_all [bv_range, Prim.lit_extract, rs_two_pow_pos, rs_emod_two_pow_nonneg,
-    rs_emod_two_pow_lt, rs_lit_concat_nat, rs_concat_lt, rs_exists_pos_eq, rs_exists_pos_eq₂])
+  (try simp_all [bv_range, Prim.lit_extract, two_pow_pos, emod_two_pow_nonneg,
+    emod_two_pow_lt, rs_lit_concat_nat, rs_concat_lt, rs_exists_pos_eq, rs_exists_pos_eq₂])
   all_goals first | done | omega | grind))
 
 /-- The value half: `bv_rs_sem_core`, the literals, then `simp_all`, `omega` or
@@ -604,7 +573,6 @@ macro "bv_rs_rule_lift" : tactic => `(tactic| (
   intro _
   intros
   bv_rs_rule_lift_core))
-
 
 /-- Proves an arm of `Bitvec.extract`, `Bitvec.extend_` or `Bitvec.concat`. -/
 macro "bv_rs" : tactic => `(tactic| (

@@ -138,17 +138,9 @@ theorem Refines.cmp_lits {K : S.Term → S.Term → B.Kind} {c : ∀ {p}, FBits 
     rw [KanonBool.Sem.ev_Bool, ← e]
     simp [CoreMod.Float.cmp]
 
-theorem vbv_sigma_inj : ∀ n m (x : BitVec n) (y : BitVec m),
-    BitvecMod.Sem.vbv LBitvec n x = BitvecMod.Sem.vbv LBitvec m y →
-      (⟨n, x⟩ : Σ n, BitVec n) = ⟨m, y⟩ := by
-  intro n m x y h
-  by_cases hn : n = m
-  · subst hn; rw [BitvecMod.Sem.vbv_inj _ _ _ h]
-  · exact absurd h (BitvecMod.Sem.vbv_ne _ _ _ _ hn)
-
 theorem bvUn_some {f : (n : Nat) → BitVec n → Option S.Val} (n : Nat) (x : BitVec n) :
     BitvecMod.bvUn (BitvecMod.Sem.vbv LBitvec) f (some (BitvecMod.Sem.vbv LBitvec n x)) = f n x := by
-  rw [BitvecMod.bvUn, BitvecMod.decBV_some vbv_sigma_inj]
+  rw [BitvecMod.bvUn, BitvecMod.decBV_some BitvecMod.Lib.vbv_sigma_inj]
 
 end Lib
 

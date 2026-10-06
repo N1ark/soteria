@@ -1,4 +1,4 @@
-import BitvecMod.Lib.Den
+import BitvecMod.Lib.Ovf
 
 /-! The commutativity of the commutative operators of the bitvec module, by
 their structural values. -/
@@ -52,12 +52,6 @@ theorem refines_pred_swap {K : S.Term → S.Term → B.Kind}
   · simp only [hden, hm, hb, L.asTBitVector_sort, hm0, ite_true] at e ⊢
     revert e
     cases Sem.den L ρ m.toNat a <;> cases Sem.den L ρ m.toNat b <;> simp [hf]
-
-theorem ovf_comm {n : Nat} (x y : BitVec n) : (x.saddOverflow y = y.saddOverflow x) ∧
-    (x.uaddOverflow y = y.uaddOverflow x) ∧ (x.smulOverflow y = y.smulOverflow x) ∧
-    (x.umulOverflow y = y.umulOverflow x) := by
-  simp [BitVec.saddOverflow, BitVec.uaddOverflow, BitVec.smulOverflow,
-    BitVec.umulOverflow, Int.add_comm, Nat.add_comm, Int.mul_comm, Nat.mul_comm]
 
 end Lib
 

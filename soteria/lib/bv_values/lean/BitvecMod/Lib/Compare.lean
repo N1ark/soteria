@@ -113,9 +113,6 @@ open Prim
 
 /-! ## The helpers on literals -/
 
-/-- The integer that a bit-vector stands for, in a signedness. -/
-abbrev cmp_iv (s : Bool) {w : Nat} (x : BitVec w) : Int := if s then x.toInt else x.toNat
-
 theorem cmp_toNat_lit {n p : Nat} (hp : (p : Int) < 2 ^ n) :
     ((BitVec.ofInt n (p : Int)).toNat : Int) = p := by
   rw [rs_toNat_ofInt_nat hp]
@@ -124,36 +121,17 @@ theorem cmp_signed_extract_lit {n p : Nat} (hn : 0 < n) :
     Prim.signed_extract (p : Int) 0 (n : Int) = (BitVec.ofInt n (p : Int)).toInt :=
   rs_sext_of hn _
 
-theorem cmp_z_lsl_one (k : Int) : Prim.z_lsl 1 k = 2 ^ k.toNat := by simp [Prim.z_lsl]
-
 section
 variable {S : Kanon.Sem} [DecidableEq S.Term] [DecidableEq S.Ty] {B : Kanon.Base S}
   {LBool : KanonBool.Syntax B} {LCore : CoreMod.Syntax B} {L : Syntax B LBool LCore}
   [KanonBool.Sem LBool] [CoreMod.Sem LCore] [Sem L]
 
 theorem cmp_to_z {n p : Nat} (hn : 0 < n) (hp : (p : Int) < 2 ^ n) (s : Bool) :
-    L.bitvec_to_z s (n : Int) (p : Int) = cmp_iv s (BitVec.ofInt n (p : Int)) := by
+    L.bitvec_to_z s (n : Int) (p : Int) = iv s (BitVec.ofInt n (p : Int)) := by
   rw [Syntax.bitvec_to_z_eq, Sem.signed_extract_eq]
   cases s
   · show (p : Int) = ((BitVec.ofInt n (p : Int)).toNat : Int); rw [rs_toNat_ofInt_nat hp]
   · simp [cmp_signed_extract_lit hn]
-
-theorem cmp_min_for_true {n : Nat} (hn : 0 < n) :
-    L.bitvec_min_for true (n : Int) = -2 ^ (n - 1) := by
-  simp only [Syntax.bitvec_min_for_eq, Sem.z_lsl_eq, cmp_z_lsl_one, ite_true]
-  congr 2; omega
-
-theorem cmp_max_for_true {n : Nat} (hn : 0 < n) :
-    L.bitvec_max_for true (n : Int) = 2 ^ (n - 1) - 1 := by
-  simp only [Syntax.bitvec_max_for_eq, Sem.z_lsl_eq, cmp_z_lsl_one, ite_true]
-  congr 2; omega
-
-theorem cmp_min_for_false (n : Int) : L.bitvec_min_for false n = 0 := by
-  rw [Syntax.bitvec_min_for_eq]; rfl
-
-theorem cmp_max_for_false (n : Nat) : L.bitvec_max_for false (n : Int) = 2 ^ n - 1 := by
-  simp only [Syntax.bitvec_max_for_eq, Sem.z_lsl_eq, cmp_z_lsl_one, Bool.false_eq_true,
-    ite_false, Int.toNat_natCast]
 
 section
 variable {n : Nat} (hn : 0 < n) {l r : Nat} (hl : (l : Int) < 2 ^ n) (hr : (r : Int) < 2 ^ n)
@@ -165,7 +143,7 @@ theorem cmp_overflows_add (s : Bool) :
       else (BitVec.ofInt n (l : Int)).uaddOverflow (BitVec.ofInt n (r : Int)) := by
   rw [Syntax.bitvec_overflows_add_eq, cmp_to_z hn hl, cmp_to_z hn hr]
   cases s
-  · simp only [cmp_min_for_false, cmp_max_for_false, BitVec.uaddOverflow, cmp_iv,
+  · simp only [min_for_false, max_for_false, BitVec.uaddOverflow, iv,
       rs_toNat_ofInt_nat hl, rs_toNat_ofInt_nat hr, Bool.false_eq_true, ite_false]
     have e3 : ((2 ^ n : Nat) : Int) = (2 : Int) ^ n := by push_cast; rfl
     rw [Bool.eq_iff_iff]
@@ -173,7 +151,7 @@ theorem cmp_overflows_add (s : Bool) :
     omega
   · have := BitVec.le_toInt (BitVec.ofInt n (l : Int))
     have := BitVec.toInt_lt (x := BitVec.ofInt n (l : Int))
-    simp only [cmp_min_for_true hn, cmp_max_for_true hn, BitVec.saddOverflow, cmp_iv]
+    simp only [min_for_true hn, max_for_true hn, BitVec.saddOverflow, iv]
     rw [Bool.eq_iff_iff]; simp; omega
 
 theorem cmp_overflows_sub (s : Bool) :
@@ -182,7 +160,7 @@ theorem cmp_overflows_sub (s : Bool) :
       else (BitVec.ofInt n (l : Int)).usubOverflow (BitVec.ofInt n (r : Int)) := by
   rw [Syntax.bitvec_overflows_sub_eq, cmp_to_z hn hl, cmp_to_z hn hr]
   cases s
-  · simp only [cmp_min_for_false, cmp_max_for_false, BitVec.usubOverflow, cmp_iv,
+  · simp only [min_for_false, max_for_false, BitVec.usubOverflow, iv,
       rs_toNat_ofInt_nat hl, rs_toNat_ofInt_nat hr, Bool.false_eq_true, ite_false]
     have e3 : ((2 ^ n : Nat) : Int) = (2 : Int) ^ n := by push_cast; rfl
     rw [Bool.eq_iff_iff]
@@ -190,7 +168,7 @@ theorem cmp_overflows_sub (s : Bool) :
     omega
   · have := BitVec.le_toInt (BitVec.ofInt n (l : Int))
     have := BitVec.toInt_lt (x := BitVec.ofInt n (l : Int))
-    simp only [cmp_min_for_true hn, cmp_max_for_true hn, BitVec.ssubOverflow, cmp_iv]
+    simp only [min_for_true hn, max_for_true hn, BitVec.ssubOverflow, iv]
     rw [Bool.eq_iff_iff]; simp; omega
 
 theorem cmp_overflows_mul (s : Bool) :
@@ -199,7 +177,7 @@ theorem cmp_overflows_mul (s : Bool) :
       else (BitVec.ofInt n (l : Int)).umulOverflow (BitVec.ofInt n (r : Int)) := by
   rw [Syntax.bitvec_overflows_mul_eq, cmp_to_z hn hl, cmp_to_z hn hr]
   cases s
-  · simp only [cmp_min_for_false, cmp_max_for_false, BitVec.umulOverflow, cmp_iv,
+  · simp only [min_for_false, max_for_false, BitVec.umulOverflow, iv,
       rs_toNat_ofInt_nat hl, rs_toNat_ofInt_nat hr, Bool.false_eq_true, ite_false]
     rw [Bool.eq_iff_iff]
     simp only [Bool.or_eq_true, decide_eq_true_eq, ge_iff_le]
@@ -214,7 +192,7 @@ theorem cmp_overflows_mul (s : Bool) :
     · intro h; right
       have : ((2 ^ n : Nat) : Int) ≤ ((l * r : Nat) : Int) := by exact_mod_cast h
       omega
-  · simp only [cmp_min_for_true hn, cmp_max_for_true hn, BitVec.smulOverflow, cmp_iv]
+  · simp only [min_for_true hn, max_for_true hn, BitVec.smulOverflow, iv]
     rw [Bool.eq_iff_iff]; simp; omega
 
 end
@@ -222,9 +200,9 @@ end
 theorem cmp_is_int_min {n p : Nat} (hn : 0 < n) (hp : (p : Int) < 2 ^ n) :
     L.bitvec_is_int_min (n : Int) (p : Int) =
       decide (BitVec.ofInt n (p : Int) = BitVec.intMin n) := by
-  rw [Syntax.bitvec_is_int_min_eq, cmp_to_z hn hp, cmp_min_for_true hn,
+  rw [Syntax.bitvec_is_int_min_eq, cmp_to_z hn hp, min_for_true hn,
     ← BitVec.toInt_intMin_of_pos hn]
-  simp only [cmp_iv, ite_true, BitVec.toInt_inj]
+  simp only [iv, ite_true, BitVec.toInt_inj]
 
 theorem cmp_is_min_of {n p : Nat} (hn : 0 < n) (hp : (p : Int) < 2 ^ n) (s : Bool) :
     L.bitvec_is_min_of s (n : Int) (p : Int) =
@@ -232,8 +210,8 @@ theorem cmp_is_min_of {n p : Nat} (hn : 0 < n) (hp : (p : Int) < 2 ^ n) (s : Boo
         else (BitVec.ofInt n (p : Int)).toNat = 0) := by
   rw [Syntax.bitvec_is_min_of_eq, cmp_to_z hn hp]
   cases s
-  · simp only [cmp_min_for_false, cmp_iv, Bool.false_eq_true, ite_false, decide_eq_decide]; omega
-  · simp [cmp_min_for_true hn, cmp_iv]
+  · simp only [min_for_false, iv, Bool.false_eq_true, ite_false, decide_eq_decide]; omega
+  · simp [min_for_true hn, iv]
 
 theorem cmp_is_max_of {n p : Nat} (hn : 0 < n) (hp : (p : Int) < 2 ^ n) (s : Bool) :
     L.bitvec_is_max_of s (n : Int) (p : Int) =
@@ -241,24 +219,24 @@ theorem cmp_is_max_of {n p : Nat} (hn : 0 < n) (hp : (p : Int) < 2 ^ n) (s : Boo
         else ((BitVec.ofInt n (p : Int)).toNat : Int) = 2 ^ n - 1) := by
   rw [Syntax.bitvec_is_max_of_eq, cmp_to_z hn hp]
   cases s
-  · simp [cmp_max_for_false, cmp_iv]
-  · simp [cmp_max_for_true hn, cmp_iv]
+  · simp [max_for_false, iv]
+  · simp [max_for_true hn, iv]
 
 theorem cmp_const_keeps_in_range {n x y : Nat} (hn : 0 < n) (hx : (x : Int) < 2 ^ n)
     (hy : (y : Int) < 2 ^ n) (s : Bool) :
     L.bitvec_const_keeps_in_range s (n : Int) (x : Int) (y : Int) =
-      decide ((0 ≤ cmp_iv s (BitVec.ofInt n (x : Int)) ∧
-          0 ≤ cmp_iv s (BitVec.ofInt n (x : Int)) - cmp_iv s (BitVec.ofInt n (y : Int)) ∧
-          cmp_iv s (BitVec.ofInt n (x : Int)) - cmp_iv s (BitVec.ofInt n (y : Int)) ≤
-            cmp_iv s (BitVec.ofInt n (x : Int))) ∨
-        (cmp_iv s (BitVec.ofInt n (x : Int)) ≤ 0 ∧
-          cmp_iv s (BitVec.ofInt n (x : Int)) ≤
-            cmp_iv s (BitVec.ofInt n (x : Int)) - cmp_iv s (BitVec.ofInt n (y : Int)) ∧
-          cmp_iv s (BitVec.ofInt n (x : Int)) - cmp_iv s (BitVec.ofInt n (y : Int)) ≤ 0)) := by
+      decide ((0 ≤ iv s (BitVec.ofInt n (x : Int)) ∧
+          0 ≤ iv s (BitVec.ofInt n (x : Int)) - iv s (BitVec.ofInt n (y : Int)) ∧
+          iv s (BitVec.ofInt n (x : Int)) - iv s (BitVec.ofInt n (y : Int)) ≤
+            iv s (BitVec.ofInt n (x : Int))) ∨
+        (iv s (BitVec.ofInt n (x : Int)) ≤ 0 ∧
+          iv s (BitVec.ofInt n (x : Int)) ≤
+            iv s (BitVec.ofInt n (x : Int)) - iv s (BitVec.ofInt n (y : Int)) ∧
+          iv s (BitVec.ofInt n (x : Int)) - iv s (BitVec.ofInt n (y : Int)) ≤ 0)) := by
   simp only [Syntax.bitvec_const_keeps_in_range_eq, Syntax.bitvec_zmin_eq, Syntax.bitvec_zmax_eq,
     cmp_to_z hn hx, cmp_to_z hn hy]
-  generalize cmp_iv s (BitVec.ofInt n (x : Int)) = a
-  generalize cmp_iv s (BitVec.ofInt n (y : Int)) = b
+  generalize iv s (BitVec.ofInt n (x : Int)) = a
+  generalize iv s (BitVec.ofInt n (y : Int)) = b
   rw [Bool.eq_iff_iff]
   simp only [Bool.and_eq_true, decide_eq_true_eq]
   split <;> split <;> omega
@@ -324,7 +302,6 @@ theorem cmp_cancellable_den {ρ : S.Env} {s : Bool} {a : S.Term} {n : Nat} (w : 
 
 end
 
-
 /-- The sign bit of `signed_to_unsigned_cmp`. -/
 theorem cmp_sign_bit {n : Nat} (hn : 0 < n) :
     BitVec.ofInt n (2 ^ ((n : Int) - 1).toNat) = BitVec.intMin n := by
@@ -349,80 +326,13 @@ theorem cmp_eq_intMin_iff {n : Nat} (hn : 0 < n) (x : BitVec n) :
 
 /-! ## Facts for `omega` -/
 
-theorem cmp_smtUDiv_toNat {n : Nat} {a b : BitVec n} (hb : b.toNat ≠ 0) :
-    (a.smtUDiv b).toNat = a.toNat / b.toNat := by
-  simp [BitVec.smtUDiv_eq, ← BitVec.toNat_inj, hb]
-
-theorem cmp_toNat_ofInt_of_lt {n : Nat} {k : Int} (h0 : 0 ≤ k) (h1 : k < 2 ^ n) :
-    (BitVec.ofInt n k).toNat = k.toNat := by
-  have e : ((2 ^ n : Nat) : Int) = (2 : Int) ^ n := by push_cast; rfl
-  rw [BitVec.toNat_ofInt, e, Int.emod_eq_of_lt h0 h1]
-
-section
-variable {w : Nat} {x y : BitVec w}
-
-theorem cmp_sadd_ok : x.saddOverflow y = false ↔
-    -2 ^ (w - 1) ≤ x.toInt + y.toInt ∧ x.toInt + y.toInt < 2 ^ (w - 1) := by
-  simp [BitVec.saddOverflow]; omega
-theorem cmp_ssub_ok : x.ssubOverflow y = false ↔
-    -2 ^ (w - 1) ≤ x.toInt - y.toInt ∧ x.toInt - y.toInt < 2 ^ (w - 1) := by
-  simp [BitVec.ssubOverflow]; omega
-theorem cmp_smul_ok : x.smulOverflow y = false ↔
-    -2 ^ (w - 1) ≤ x.toInt * y.toInt ∧ x.toInt * y.toInt < 2 ^ (w - 1) := by
-  simp [BitVec.smulOverflow]; omega
-theorem cmp_uadd_ok : x.uaddOverflow y = false ↔ x.toNat + y.toNat < 2 ^ w := by
-  simp [BitVec.uaddOverflow]
-theorem cmp_usub_ok : x.usubOverflow y = false ↔ y.toNat ≤ x.toNat := by
-  simp [BitVec.usubOverflow]
-theorem cmp_umul_ok : x.umulOverflow y = false ↔ x.toNat * y.toNat < 2 ^ w := by
-  simp [BitVec.umulOverflow]
-
-theorem cmp_toInt_add_ok (h : x.saddOverflow y = false) : (x + y).toInt = x.toInt + y.toInt :=
-  BitVec.toInt_add_of_not_saddOverflow (by simp [h])
-theorem cmp_toInt_sub_ok (h : x.ssubOverflow y = false) : (x - y).toInt = x.toInt - y.toInt :=
-  BitVec.toInt_sub_of_not_ssubOverflow (by simp [h])
-theorem cmp_toInt_mul_ok (h : x.smulOverflow y = false) : (x * y).toInt = x.toInt * y.toInt :=
-  BitVec.toInt_mul_of_not_smulOverflow (by simp [h])
-theorem cmp_toNat_add_ok (h : x.uaddOverflow y = false) : (x + y).toNat = x.toNat + y.toNat :=
-  BitVec.toNat_add_of_not_uaddOverflow (by simp [h])
-theorem cmp_toNat_sub_ok (h : x.usubOverflow y = false) : (x - y).toNat = x.toNat - y.toNat :=
-  BitVec.toNat_sub_of_not_usubOverflow (by simp [h])
-theorem cmp_toNat_mul_ok (h : x.umulOverflow y = false) : (x * y).toNat = x.toNat * y.toNat :=
-  BitVec.toNat_mul_of_not_umulOverflow (by simp [h])
-
-end
-
-theorem cmp_toInt_bounds {w : Nat} (x : BitVec w) :
-    -2 ^ (w - 1) ≤ x.toInt ∧ x.toInt < 2 ^ (w - 1) :=
-  ⟨BitVec.le_toInt x, BitVec.toInt_lt⟩
-
-open Lean Meta Elab Tactic in
-/-- Adds the integer meaning of the non-overflow hypotheses. -/
-def cmp_ovfEqs (g : MVarId) : MetaM MVarId := g.withContext do
-  let mut g := g
-  for d in (← getLCtx) do
-    if d.isImplementationDetail then continue
-    let ty ← instantiateMVars d.type
-    let some (_, lhs, rhs) := ty.eq? | continue
-    unless rhs.isConstOf ``Bool.false do continue
-    let lems := [(``BitVec.saddOverflow, ``cmp_toInt_add_ok),
-      (``BitVec.ssubOverflow, ``cmp_toInt_sub_ok),
-      (``BitVec.smulOverflow, ``cmp_toInt_mul_ok), (``BitVec.uaddOverflow, ``cmp_toNat_add_ok),
-      (``BitVec.usubOverflow, ``cmp_toNat_sub_ok), (``BitVec.umulOverflow, ``cmp_toNat_mul_ok)]
-    for (f, lem) in lems do
-      if lhs.isAppOfArity f 3 then
-        let pf ← mkAppM lem #[d.toExpr]
-        let (_, g') ← (← g.assert `hovf (← inferType pf) pf).intro1P
-        g := g'
-  return g
-
 /-- A quotient by `d` is at most `n` when `n * d` overflows. -/
 theorem cmp_smtUDiv_ule_of_umulOverflow {w : Nat} {x n d : BitVec w} (h : n.umulOverflow d = true) :
     (x.smtUDiv d).ule n = true := by
   simp only [BitVec.umulOverflow, decide_eq_true_eq] at h
   have hd : d.toNat ≠ 0 := by intro e; rw [e] at h; have := Nat.two_pow_pos w; omega
   have := x.isLt
-  simp only [BitVec.ule, decide_eq_true_eq, cmp_smtUDiv_toNat hd]
+  simp only [BitVec.ule, decide_eq_true_eq, smtUDiv_toNat hd]
   have : x.toNat < (n.toNat + 1) * d.toNat := by rw [Nat.add_mul]; omega
   have := (Nat.div_lt_iff_lt_mul (by omega)).2 this
   omega
@@ -560,7 +470,7 @@ theorem cmp_toInt_smtSDiv_facts {w : Nat} (a b : BitVec w) : b.toInt ≠ 0 →
   · exact .inl ha
 
 theorem cmp_toNat_smtUDiv_facts {w : Nat} (a b : BitVec w) : b.toNat ≠ 0 →
-    (a.smtUDiv b).toNat = a.toNat / b.toNat := cmp_smtUDiv_toNat
+    (a.smtUDiv b).toNat = a.toNat / b.toNat := smtUDiv_toNat
 
 /-! ## Adding the facts -/
 
@@ -618,7 +528,7 @@ def cmp_addFacts2 (g : MVarId) (lem : Name) (xys : Array (Expr × Expr)) : MetaM
 
 theorem cmp_toNat_ofInt_fact {n : Nat} {z : Int} (h0 : 0 ≤ z) (h1 : z < 2 ^ n) :
     ((BitVec.ofInt n z).toNat : Int) = z := by
-  rw [cmp_toNat_ofInt_of_lt h0 h1]; omega
+  rw [toNat_ofInt_of_lt h0 h1]; omega
 
 theorem cmp_toInt_ofInt_fact {n : Nat} {z : Int} (h0 : 0 ≤ z) (h1 : z < 2 ^ n) :
     ((BitVec.ofInt n z).toInt = z ∧ 2 * z < 2 ^ n) ∨
@@ -726,7 +636,7 @@ elab "bv_cmp_cmp_bounds" : tactic => liftMetaTactic fun g => do
       if ← acc.anyM (isDefEq x ·) then return acc else return acc.push x
   let is ← dedup (← cmp_collectArgs g (arg ``BitVec.toInt))
   let ns ← dedup (← cmp_collectArgs g (arg ``BitVec.toNat))
-  let g ← cmp_addFacts g [``cmp_toInt_bounds] is
+  let g ← cmp_addFacts g [``toInt_bounds] is
   let g ← cmp_addFacts g [``cmp_toNat_bounds] ns
   return [← cmp_addFacts g [``cmp_toInt_toNat_cases] (is.filter ns.contains)]
 
@@ -846,8 +756,7 @@ elab "bv_cmp_clear_flags" : tactic => liftMetaTactic fun g => g.withContext do
   return [g]
 
 open Lean Meta Elab Tactic in
-elab "bv_cmp_ovf_eqs" : tactic => liftMetaTactic fun g => return [← cmp_ovfEqs g]
-
+elab "bv_cmp_ovf_eqs" : tactic => liftMetaTactic fun g => return [← ovfEqs g]
 
 /-! ## Facts on the terms -/
 
@@ -943,7 +852,7 @@ macro "bv_cmp_sem" : tactic => `(tactic| (
     BitvecMod.Lib.cmp_overflows_add, BitvecMod.Lib.cmp_overflows_sub,
     BitvecMod.Lib.cmp_overflows_mul, BitvecMod.Lib.cmp_is_int_min, BitvecMod.Lib.cmp_is_min_of,
     BitvecMod.Lib.cmp_is_max_of, BitvecMod.Lib.cmp_const_keeps_in_range,
-    BitvecMod.Syntax.bitvec_unsigned_ub_eq, BitvecMod.Sem.z_lsl_eq, BitvecMod.Lib.cmp_z_lsl_one,
+    BitvecMod.Syntax.bitvec_unsigned_ub_eq, BitvecMod.Sem.z_lsl_eq, BitvecMod.Lib.z_lsl_one,
     BitvecMod.Sem.divisible_eq, BitvecMod.Prim.divisible] at *)
   (try simp (disch := first | assumption | omega) only [BitvecMod.Lib.rs_ofInt_emod,
     BitvecMod.Lib.rs_ofInt_emod_nat, BitvecMod.Lib.ofInt_masked, BitvecMod.Lib.cmp_sign_bit] at *)
@@ -965,7 +874,7 @@ macro "bv_cmp_pre" : tactic => `(tactic| (
   (try bv_rs_clear_tys)
   (try simp (disch := first | assumption | omega) only [BitvecMod.negOp_some,
     cmp_eq_intMin_iff] at *)
-  all_goals simp_all [cmp_iv, BitVec.slt_eq_decide, BitVec.ult_eq_decide, BitVec.sle_eq_decide,
+  all_goals simp_all [iv, BitVec.slt_eq_decide, BitVec.ult_eq_decide, BitVec.sle_eq_decide,
     BitVec.ule_eq_decide, ← BitVec.toNat_inj, cmp_binB_ite_l, cmp_binB_ite_r,
     -BitVec.ofInt_natCast, -BitVec.toInt_ofInt, -BitVec.toNat_ofInt, -BitVec.toNat_neg,
     -BitVec.toNat_add,
@@ -977,8 +886,8 @@ macro "bv_cmp_pre" : tactic => `(tactic| (
     BitVec.toInt_intMin_of_pos] at *)
   all_goals kanon_split
   all_goals bv_cmp_ovf_eqs
-  all_goals (try simp only [cmp_sadd_ok, cmp_ssub_ok, cmp_smul_ok, cmp_uadd_ok, cmp_usub_ok,
-    cmp_umul_ok] at *)
+  all_goals (try simp only [sadd_ok, ssub_ok, smul_ok, uadd_ok, usub_ok,
+    umul_ok] at *)
   all_goals (try simp only [BitVec.saddOverflow, BitVec.ssubOverflow, BitVec.smulOverflow,
     BitVec.uaddOverflow, BitVec.usubOverflow, BitVec.umulOverflow, decide_eq_true_eq,
     Bool.or_eq_true] at *)

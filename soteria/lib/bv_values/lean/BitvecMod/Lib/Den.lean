@@ -56,6 +56,14 @@ variable {S : Kanon.Sem} [DecidableEq S.Term] [DecidableEq S.Ty] {B : Kanon.Base
 
 /-! ## Values -/
 
+/-- The values of bit-vectors determine their widths and bits. -/
+theorem vbv_sigma_inj : ∀ n m (x : BitVec n) (y : BitVec m),
+    Sem.vbv L n x = Sem.vbv L m y → (⟨n, x⟩ : Σ n, BitVec n) = ⟨m, y⟩ := by
+  intro n m x y h
+  by_cases hn : n = m
+  · subst hn; rw [Sem.vbv_inj n x y h]
+  · exact absurd h (Sem.vbv_ne n m x y hn)
+
 /-- A term of a non-positive width has no value. -/
 theorem ev_bv_none {ρ : S.Env} {t : S.Term} {m : Int} (w : S.WT t)
     (hty : S.ty t = L.TBitVector m) (hm : ¬ 0 < m) : S.ev ρ t = none := by

@@ -21,14 +21,6 @@ variable {S : Kanon.Sem} [DecidableEq S.Term] [DecidableEq S.Ty] {B : Kanon.Base
   {LBitvec : BitvecMod.Syntax B LBool LCore} {L : Syntax B LBool LCore LBitvec}
   [KanonBool.Sem LBool] [CoreMod.Sem LCore] [BitvecMod.Sem LBitvec] [Sem L]
 
-theorem vbv_inj' : ∀ n m (x : BitVec n) (y : BitVec m),
-    BitvecMod.Sem.vbv LBitvec n x = BitvecMod.Sem.vbv LBitvec m y →
-    (⟨n, x⟩ : Σ n, BitVec n) = ⟨m, y⟩ := by
-  intro n m x y h
-  by_cases hn : n = m
-  · subst hn; rw [BitvecMod.Sem.vbv_inj n x y h]
-  · exact absurd h (BitvecMod.Sem.vbv_ne n m x y hn)
-
 /-- The value of a well-typed pointer whose location and offset have values. -/
 theorem ev_Ptr_of {ρ : S.Env} {l o : S.Term} {t : S.Ty} (w : S.WT (B.node (L.PtrK l o) t))
     {v : S.Val} (e : S.ev ρ (B.node (L.PtrK l o) t) = some v) :
@@ -43,12 +35,12 @@ theorem ev_Ptr_of {ρ : S.Env} {l o : S.Term} {t : S.Ty} (w : S.WT (B.node (L.Pt
   | none =>
     rw [el, eo] at e
     obtain ⟨-, x, rfl⟩ := BitvecMod.Sem.ev_loc ρ l vl m wl hl el
-    simp [BitvecMod.bvUn, BitvecMod.decBV_some vbv_inj', BitvecMod.decBV_none] at e
+    simp [BitvecMod.bvUn, BitvecMod.decBV_some BitvecMod.Lib.vbv_sigma_inj, BitvecMod.decBV_none] at e
   | some vo =>
     rw [el, eo] at e
     obtain ⟨-, x, rfl⟩ := BitvecMod.Sem.ev_loc ρ l vl m wl hl el
     obtain ⟨-, y, rfl⟩ := BitvecMod.Sem.ev_bv ρ o vo m wo ho eo
-    simp only [BitvecMod.bvUn, BitvecMod.decBV_some vbv_inj', dite_true,
+    simp only [BitvecMod.bvUn, BitvecMod.decBV_some BitvecMod.Lib.vbv_sigma_inj, dite_true,
       Option.some.injEq] at e
     exact ⟨_, x, y, rfl, rfl, e.symm⟩
 

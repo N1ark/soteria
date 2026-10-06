@@ -42,7 +42,7 @@ open Classical Kanon Kanon.Sem Lib
       cases h
       simp [KanonBool.pand, KanonBool.Sem.vbool_inj.eq_iff]
     · by_cases h1 : BitvecMod.Sem.vbv LBitvec n x1 = BitvecMod.Sem.vbv LBitvec m x2
-      · have h := vbv_inj' _ _ _ _ h1
+      · have h := BitvecMod.Lib.vbv_sigma_inj _ _ _ _ h1
         cases h
         by_cases h2 : BitvecMod.Sem.vbv LBitvec n y1 = BitvecMod.Sem.vbv LBitvec n y2
         · have := BitvecMod.Sem.vbv_inj _ _ _ h2

@@ -1,4 +1,4 @@
-import BitvecMod.Lib.Tactic
+import BitvecMod.Lib.Ovf
 
 /-!
 # Arithmetic, bitwise operations and shifts
@@ -37,8 +37,6 @@ theorem arith_bool_of_bool_node (b : Bool) :
   · exact KanonBool.Sem.v_false_eq
   · exact KanonBool.Sem.v_true_eq
 
-@[simp] theorem arith_two_pow_pos (n : Nat) : (0 : Int) < 2 ^ n := Int.pow_pos (by decide)
-
 @[simp] theorem arith_one_lt_two_pow {k : Nat} : (1 : Int) < 2 ^ k ↔ 0 < k := by
   norm_cast; exact Nat.one_lt_two_pow_iff.trans Nat.pos_iff_ne_zero.symm
 
@@ -54,7 +52,8 @@ theorem arith_bool_of_bool_node (b : Bool) :
 attribute [bv_range] arith_exists_concat_width arith_exists_extend_width
 
 attribute [bv_lits] arith_bool_of_bool_node
-attribute [bv_range] arith_two_pow_pos arith_one_lt_two_pow
+attribute [simp] two_pow_pos
+attribute [bv_range] two_pow_pos arith_one_lt_two_pow
 
 /-! ## Overflows -/
 
@@ -70,33 +69,12 @@ theorem arith_smulOverflow_comm : x.smulOverflow y = y.smulOverflow x := by
 theorem arith_umulOverflow_comm : x.umulOverflow y = y.umulOverflow x := by
   simp [BitVec.umulOverflow, Nat.mul_comm]
 
-theorem arith_ssubOverflow_zero_left (hn : 0 < n) :
-    (0#n).ssubOverflow x = decide (x = BitVec.intMin n) := by
-  have := BitVec.le_toInt x; have := BitVec.toInt_lt (x := x)
-  rw [Bool.eq_iff_iff]
-  simp [BitVec.ssubOverflow, ← BitVec.toInt_inj, BitVec.toInt_intMin_of_pos hn]; omega
-
 end
 
 /-! ## The helpers of the rules on literals in range -/
 
-theorem arith_emod_two_pow_nonneg (z : Int) (w : Nat) : 0 ≤ z % 2 ^ w :=
-  Int.emod_nonneg _ (Int.ne_of_gt (Int.pow_pos (by decide)))
-
-theorem arith_emod_two_pow_lt (z : Int) (w : Nat) : z % 2 ^ w < 2 ^ w :=
-  Int.emod_lt_of_pos _ (Int.pow_pos (by decide))
-
-theorem arith_ofInt_emod_two_pow {n : Nat} (z : Int) : BitVec.ofInt n (z % 2 ^ n) = BitVec.ofInt n z := by
-  simpa [Prim.masked] using ofInt_masked (w := (n : Int)) rfl z
-
-theorem arith_emod_two_pow_of_lt {z : Int} {n : Nat} (h0 : 0 ≤ z) (h1 : z < 2 ^ n) : z % 2 ^ n = z :=
-  Int.emod_eq_of_lt h0 h1
-
-attribute [bv_range] arith_emod_two_pow_nonneg arith_emod_two_pow_lt
-attribute [bv_ofInt] arith_ofInt_emod_two_pow
-
-theorem arith_z_lsl_one (k : Int) : Prim.z_lsl 1 k = 2 ^ k.toNat := by
-  simp [Prim.z_lsl]
+attribute [bv_range] emod_two_pow_nonneg emod_two_pow_lt
+attribute [bv_ofInt] ofInt_emod_two_pow
 
 theorem arith_to_z_true {n : Nat} (hn : 0 < n) (z : Int) :
     L.bitvec_to_z true n z = (BitVec.ofInt n z).toInt := by
@@ -106,86 +84,13 @@ theorem arith_to_z_true {n : Nat} (hn : 0 < n) (z : Int) :
 theorem arith_to_z_false (n z : Int) : L.bitvec_to_z false n z = z := by
   rw [L.bitvec_to_z_eq]; rfl
 
-theorem arith_min_for_true {n : Nat} (hn : 0 < n) : L.bitvec_min_for true n = -2 ^ (n - 1) := by
-  rw [L.bitvec_min_for_eq]; simp only [↓reduceIte, Sem.z_lsl_eq, arith_z_lsl_one]
-  congr 2; omega
-
-theorem arith_max_for_true {n : Nat} (hn : 0 < n) : L.bitvec_max_for true n = 2 ^ (n - 1) - 1 := by
-  rw [L.bitvec_max_for_eq]; simp only [↓reduceIte, Sem.z_lsl_eq, arith_z_lsl_one]
-  congr 2; omega
-
-theorem arith_min_for_false (n : Int) : L.bitvec_min_for false n = 0 := by
-  rw [L.bitvec_min_for_eq]; rfl
-
-theorem arith_max_for_false (n : Nat) : L.bitvec_max_for false n = 2 ^ n - 1 := by
-  rw [L.bitvec_max_for_eq]; simp only [Bool.false_eq_true, ↓reduceIte, Sem.z_lsl_eq, arith_z_lsl_one]
-  simp
-
 section
 variable {n : Nat} (hn : 0 < n)
 include hn
 
-theorem arith_overflows_add_ofInt (s : Bool) {l r : Int} (hl0 : 0 ≤ l) (hl1 : l < 2 ^ n)
-    (hr0 : 0 ≤ r) (hr1 : r < 2 ^ n) :
-    L.bitvec_overflows_add s n l r =
-      if s then (BitVec.ofInt n l).saddOverflow (BitVec.ofInt n r)
-      else (BitVec.ofInt n l).uaddOverflow (BitVec.ofInt n r) := by
-  rw [L.bitvec_overflows_add_eq]
-  cases s
-  · simp only [arith_to_z_false, arith_min_for_false, arith_max_for_false, BitVec.uaddOverflow,
-      BitVec.toNat_ofInt, Bool.false_eq_true, ↓reduceIte]
-    have e : ((2 ^ n : Nat) : Int) = (2 : Int) ^ n := by push_cast; rfl
-    rw [Bool.eq_iff_iff]; simp [e, Int.emod_eq_of_lt hl0 hl1, Int.emod_eq_of_lt hr0 hr1]
-    omega
-  · have := BitVec.le_toInt (BitVec.ofInt n l); have := BitVec.toInt_lt (x := BitVec.ofInt n l)
-    simp only [arith_to_z_true hn, arith_min_for_true hn, arith_max_for_true hn,
-      BitVec.saddOverflow, ↓reduceIte]
-    rw [Bool.eq_iff_iff]; simp; omega
-
-theorem arith_overflows_sub_ofInt (s : Bool) {l r : Int} (hl0 : 0 ≤ l) (hl1 : l < 2 ^ n)
-    (hr0 : 0 ≤ r) (hr1 : r < 2 ^ n) :
-    L.bitvec_overflows_sub s n l r =
-      if s then (BitVec.ofInt n l).ssubOverflow (BitVec.ofInt n r)
-      else (BitVec.ofInt n l).usubOverflow (BitVec.ofInt n r) := by
-  rw [L.bitvec_overflows_sub_eq]
-  cases s
-  · simp only [arith_to_z_false, arith_min_for_false, arith_max_for_false, BitVec.usubOverflow,
-      BitVec.toNat_ofInt, Bool.false_eq_true, ↓reduceIte]
-    have e : ((2 ^ n : Nat) : Int) = (2 : Int) ^ n := by push_cast; rfl
-    rw [Bool.eq_iff_iff]; simp [e, Int.emod_eq_of_lt hl0 hl1, Int.emod_eq_of_lt hr0 hr1]
-    omega
-  · have := BitVec.le_toInt (BitVec.ofInt n l); have := BitVec.toInt_lt (x := BitVec.ofInt n l)
-    simp only [arith_to_z_true hn, arith_min_for_true hn, arith_max_for_true hn,
-      BitVec.ssubOverflow, ↓reduceIte]
-    rw [Bool.eq_iff_iff]; simp; omega
-
-theorem arith_overflows_mul_ofInt (s : Bool) {l r : Int} (hl0 : 0 ≤ l) (hl1 : l < 2 ^ n)
-    (hr0 : 0 ≤ r) (hr1 : r < 2 ^ n) :
-    L.bitvec_overflows_mul s n l r =
-      if s then (BitVec.ofInt n l).smulOverflow (BitVec.ofInt n r)
-      else (BitVec.ofInt n l).umulOverflow (BitVec.ofInt n r) := by
-  rw [L.bitvec_overflows_mul_eq]
-  cases s
-  · obtain ⟨l, rfl⟩ := Int.eq_ofNat_of_zero_le hl0
-    obtain ⟨r, rfl⟩ := Int.eq_ofNat_of_zero_le hr0
-    have e : ((2 ^ n : Nat) : Int) = (2 : Int) ^ n := by push_cast; rfl
-    simp only [arith_to_z_false, arith_min_for_false, arith_max_for_false, BitVec.umulOverflow,
-      BitVec.toNat_ofInt, Bool.false_eq_true, ↓reduceIte, e,
-      Int.emod_eq_of_lt (Int.natCast_nonneg l) hl1, Int.emod_eq_of_lt (Int.natCast_nonneg r) hr1,
-      Int.toNat_natCast]
-    rw [Bool.eq_iff_iff]
-    simp only [Bool.or_eq_true, decide_eq_true_eq]
-    have : (0 : Int) ≤ l * r := Int.mul_nonneg (Int.natCast_nonneg l) (Int.natCast_nonneg r)
-    have e2 : ((l * r : Nat) : Int) = (l : Int) * r := by push_cast; rfl
-    rw [← e2] at *
-    omega
-  · simp only [arith_to_z_true hn, arith_min_for_true hn, arith_max_for_true hn,
-      BitVec.smulOverflow, ↓reduceIte]
-    rw [Bool.eq_iff_iff]; simp; omega
-
 theorem arith_is_int_min_ofInt (z : Int) :
     L.bitvec_is_int_min n z = decide (BitVec.ofInt n z = BitVec.intMin n) := by
-  rw [L.bitvec_is_int_min_eq, arith_to_z_true hn, arith_min_for_true hn,
+  rw [L.bitvec_is_int_min_eq, arith_to_z_true hn, min_for_true hn,
     ← BitVec.toInt_intMin_of_pos hn]
   simp only [BitVec.toInt_inj]
 
@@ -197,12 +102,12 @@ theorem arith_fold_checked_ofInt {a b : Int} (ha0 : 0 ≤ a) (ha1 : a < 2 ^ n) (
         unsigned := c.unsigned && !(if add then (BitVec.ofInt n a).uaddOverflow (BitVec.ofInt n b)
           else (BitVec.ofInt n a).usubOverflow (BitVec.ofInt n b)) } := by
   rw [L.bitvec_fold_checked_eq]
-  cases add <;> simp [L.bitvec_checked_has_eq, arith_overflows_add_ofInt hn _ ha0 ha1 hb0 hb1,
-    arith_overflows_sub_ofInt hn _ ha0 ha1 hb0 hb1]
+  cases add <;> simp [L.bitvec_checked_has_eq, overflows_add_ofInt hn _ ha0 ha1 hb0 hb1,
+    overflows_sub_ofInt hn _ ha0 ha1 hb0 hb1]
 
 end
 
-attribute [bv_ofInt] arith_overflows_add_ofInt arith_overflows_sub_ofInt arith_overflows_mul_ofInt
+attribute [bv_ofInt] overflows_add_ofInt overflows_sub_ofInt overflows_mul_ofInt
   arith_is_int_min_ofInt arith_fold_checked_ofInt
 
 /-! ## Bitwise helpers -/
@@ -228,7 +133,7 @@ theorem arith_zero_eq_ofInt_iff {n : Nat} {a : Int} (ha0 : 0 ≤ a) (ha1 : a < 2
   rw [eq_comm, arith_ofInt_eq_zero_iff ha0 ha1]
 
 theorem arith_ones_nat (n : Nat) : L.bitvec_ones (n : Int) = 2 ^ n - 1 := by
-  rw [L.bitvec_ones_eq, Sem.z_lsl_eq, arith_z_lsl_one, Int.toNat_natCast]
+  rw [L.bitvec_ones_eq, Sem.z_lsl_eq, z_lsl_one, Int.toNat_natCast]
 
 theorem arith_ofInt_ones (n : Nat) : BitVec.ofInt n (L.bitvec_ones (n : Int)) = BitVec.allOnes n := by
   have e : ((2 ^ n - 1 : Nat) : Int) = 2 ^ n - 1 := by
@@ -239,7 +144,7 @@ theorem arith_ofInt_ones (n : Nat) : BitVec.ofInt n (L.bitvec_ones (n : Int)) = 
 
 theorem arith_is_ones_ofInt {n : Nat} {z : Int} (h0 : 0 ≤ z) (h1 : z < 2 ^ n) :
     L.bitvec_is_ones n z = decide (BitVec.ofInt n z = BitVec.allOnes n) := by
-  have := arith_two_pow_pos n
+  have := two_pow_pos n
   rw [L.bitvec_is_ones_eq, ← arith_ofInt_ones (L := L), decide_eq_decide,
     arith_ofInt_eq_ofInt_iff h0 h1 (by rw [arith_ones_nat]; omega)
       (by rw [arith_ones_nat]; omega)]
@@ -297,7 +202,7 @@ theorem arith_ite_nonneg {c : Prop} [Decidable c] {a b : Int} (ha : c → 0 ≤ 
   split <;> simp_all
 
 theorem arith_ones_nonneg (n : Nat) : 0 ≤ L.bitvec_ones (n : Int) := by
-  have := arith_two_pow_pos n
+  have := two_pow_pos n
   rw [arith_ones_nat]; omega
 
 theorem arith_ones_lt (n : Nat) : L.bitvec_ones (n : Int) < 2 ^ n := by
@@ -305,36 +210,15 @@ theorem arith_ones_lt (n : Nat) : L.bitvec_ones (n : Int) < 2 ^ n := by
 
 attribute [bv_range] arith_ones_nonneg arith_ones_lt
 
-attribute [bv_ofInt] arith_emod_two_pow_of_lt arith_toNat_ofInt arith_toNat_ofInt_sub arith_ofInt_eq_ofInt_iff arith_ofInt_eq_zero_iff arith_zero_eq_ofInt_iff arith_ofInt_ones arith_is_ones_ofInt
+attribute [bv_ofInt] emod_two_pow_of_lt arith_toNat_ofInt arith_toNat_ofInt_sub arith_ofInt_eq_ofInt_iff arith_ofInt_eq_zero_iff arith_zero_eq_ofInt_iff arith_ofInt_ones arith_is_ones_ofInt
   arith_bits_in_ofInt arith_disjoint_ofInt
 
-theorem arith_asTBitVector_TBool : L.asTBitVector LBool.TBool = none := by
-  cases h : L.asTBitVector LBool.TBool with
-  | none => rfl
-  | some m => exact absurd (L.asTBitVector_sound _ _ h).symm (L.TBitVector_ne_TBool m)
-
-attribute [bv_lits] arith_asTBitVector_TBool
+attribute [bv_lits] asTBitVector_TBool
 
 /-! ## Overflow facts, through integers -/
 
 section
 variable {w : Nat} {x y : BitVec w}
-
-theorem arith_sadd_ok : x.saddOverflow y = false ↔
-    -2 ^ (w - 1) ≤ x.toInt + y.toInt ∧ x.toInt + y.toInt < 2 ^ (w - 1) := by
-  simp [BitVec.saddOverflow]; omega
-theorem arith_ssub_ok : x.ssubOverflow y = false ↔
-    -2 ^ (w - 1) ≤ x.toInt - y.toInt ∧ x.toInt - y.toInt < 2 ^ (w - 1) := by
-  simp [BitVec.ssubOverflow]; omega
-theorem arith_smul_ok : x.smulOverflow y = false ↔
-    -2 ^ (w - 1) ≤ x.toInt * y.toInt ∧ x.toInt * y.toInt < 2 ^ (w - 1) := by
-  simp [BitVec.smulOverflow]; omega
-theorem arith_uadd_ok : x.uaddOverflow y = false ↔ x.toNat + y.toNat < 2 ^ w := by
-  simp [BitVec.uaddOverflow]
-theorem arith_usub_ok : x.usubOverflow y = false ↔ y.toNat ≤ x.toNat := by
-  simp [BitVec.usubOverflow]
-theorem arith_umul_ok : x.umulOverflow y = false ↔ x.toNat * y.toNat < 2 ^ w := by
-  simp [BitVec.umulOverflow]
 
 theorem arith_sadd_ovf : x.saddOverflow y = true ↔
     x.toInt + y.toInt < -2 ^ (w - 1) ∨ 2 ^ (w - 1) ≤ x.toInt + y.toInt := by
@@ -352,75 +236,19 @@ theorem arith_usub_ovf : x.usubOverflow y = true ↔ x.toNat < y.toNat := by
 theorem arith_umul_ovf : x.umulOverflow y = true ↔ 2 ^ w ≤ x.toNat * y.toNat := by
   simp [BitVec.umulOverflow]
 
-theorem arith_toInt_add_ok (h : x.saddOverflow y = false) : (x + y).toInt = x.toInt + y.toInt :=
-  BitVec.toInt_add_of_not_saddOverflow (by simp [h])
-theorem arith_toInt_sub_ok (h : x.ssubOverflow y = false) : (x - y).toInt = x.toInt - y.toInt :=
-  BitVec.toInt_sub_of_not_ssubOverflow (by simp [h])
-theorem arith_toInt_mul_ok (h : x.smulOverflow y = false) : (x * y).toInt = x.toInt * y.toInt :=
-  BitVec.toInt_mul_of_not_smulOverflow (by simp [h])
-theorem arith_toNat_add_ok (h : x.uaddOverflow y = false) : (x + y).toNat = x.toNat + y.toNat :=
-  BitVec.toNat_add_of_not_uaddOverflow (by simp [h])
-theorem arith_toNat_sub_ok (h : x.usubOverflow y = false) : (x - y).toNat = x.toNat - y.toNat :=
-  BitVec.toNat_sub_of_not_usubOverflow (by simp [h])
-theorem arith_toNat_mul_ok (h : x.umulOverflow y = false) : (x * y).toNat = x.toNat * y.toNat :=
-  BitVec.toNat_mul_of_not_umulOverflow (by simp [h])
-
-theorem arith_toInt_bounds (x : BitVec w) : -2 ^ (w - 1) ≤ x.toInt ∧ x.toInt < 2 ^ (w - 1) :=
-  ⟨BitVec.le_toInt x, BitVec.toInt_lt⟩
-
 end
-
-open Lean Meta Elab Tactic in
-/-- Adds the integer meaning of the non-overflow hypotheses. -/
-def arithOvfEqs (g : MVarId) : MetaM MVarId := g.withContext do
-  let mut g := g
-  for d in (← getLCtx) do
-    if d.isImplementationDetail then continue
-    let ty ← instantiateMVars d.type
-    let some (_, lhs, rhs) := ty.eq? | continue
-    unless rhs.isConstOf ``Bool.false do continue
-    let lems := [(``BitVec.saddOverflow, ``arith_toInt_add_ok),
-      (``BitVec.ssubOverflow, ``arith_toInt_sub_ok), (``BitVec.smulOverflow, ``arith_toInt_mul_ok),
-      (``BitVec.uaddOverflow, ``arith_toNat_add_ok), (``BitVec.usubOverflow, ``arith_toNat_sub_ok),
-      (``BitVec.umulOverflow, ``arith_toNat_mul_ok)]
-    for (f, lem) in lems do
-      if lhs.isAppOfArity f 3 then
-        let pf ← mkAppM lem #[d.toExpr]
-        let (_, g') ← (← g.assert `hovf (← inferType pf) pf).intro1P
-        g := g'
-  return g
-
-theorem arith_smulOverflow_neg_swap {n : Nat} {c v : BitVec n} (hc : c ≠ BitVec.intMin n)
-    (hv : v ≠ BitVec.intMin n) : (-c).smulOverflow v = c.smulOverflow (-v) := by
-  simp only [BitVec.smulOverflow, BitVec.toInt_neg_of_ne_intMin hc,
-    BitVec.toInt_neg_of_ne_intMin hv, Int.neg_mul, Int.mul_neg]
-
-theorem arith_umul_assoc_ok {n : Nat} {x y z : BitVec n} (h1 : x.umulOverflow y = false)
-    (h2 : (x * y).umulOverflow z = false) : x.umulOverflow (y * z) = false := by
-  have e := arith_toNat_mul_ok h1
-  rw [arith_umul_ok] at *
-  rw [e] at h2
-  have : (y * z).toNat ≤ y.toNat * z.toNat := by rw [BitVec.toNat_mul]; exact Nat.mod_le _ _
-  calc x.toNat * (y * z).toNat ≤ x.toNat * (y.toNat * z.toNat) := Nat.mul_le_mul_left _ this
-    _ = x.toNat * y.toNat * z.toNat := (Nat.mul_assoc ..).symm
-    _ < 2 ^ n := h2
-
-theorem arith_smul_assoc_ok {n : Nat} {x y z : BitVec n} (h1 : x.smulOverflow y = false)
-    (h2 : (x * y).smulOverflow z = false) (h3 : y.smulOverflow z = false) :
-    x.smulOverflow (y * z) = false := by
-  rwa [← BitVec.smulOverflow_assoc (by simp [h1]) (by simp [h3])]
 
 theorem arith_smulOverflow_neg_swap' {n : Nat} {c v : BitVec n} (hc : c ≠ BitVec.intMin n)
     (hv : v ≠ BitVec.intMin n) : (-c).smulOverflow v = (-v).smulOverflow c := by
-  rw [arith_smulOverflow_neg_swap hc hv, arith_smulOverflow_comm]
+  rw [smulOverflow_neg_swap hc hv, arith_smulOverflow_comm]
 
 theorem arith_umul_assoc_ok₂ {n : Nat} {x y z : BitVec n} (h1 : y.umulOverflow x = false)
     (h2 : (y * x).umulOverflow z = false) : x.umulOverflow (y * z) = false :=
-  arith_umul_assoc_ok (by rwa [arith_umulOverflow_comm]) (by rwa [BitVec.mul_comm])
+  umul_assoc_ok (by rwa [arith_umulOverflow_comm]) (by rwa [BitVec.mul_comm])
 
 theorem arith_umul_assoc_ok₃ {n : Nat} {x y z : BitVec n} (h1 : x.umulOverflow y = false)
     (h2 : z.umulOverflow (x * y) = false) : x.umulOverflow (y * z) = false :=
-  arith_umul_assoc_ok h1 (by rwa [arith_umulOverflow_comm])
+  umul_assoc_ok h1 (by rwa [arith_umulOverflow_comm])
 
 theorem arith_umul_assoc_ok₄ {n : Nat} {x y z : BitVec n} (h1 : y.umulOverflow x = false)
     (h2 : z.umulOverflow (y * x) = false) : x.umulOverflow (y * z) = false :=
@@ -429,12 +257,12 @@ theorem arith_umul_assoc_ok₄ {n : Nat} {x y z : BitVec n} (h1 : y.umulOverflow
 theorem arith_smul_assoc_ok₂ {n : Nat} {x y z : BitVec n} (h1 : y.smulOverflow x = false)
     (h2 : (y * x).smulOverflow z = false) (h3 : y.smulOverflow z = false) :
     x.smulOverflow (y * z) = false :=
-  arith_smul_assoc_ok (by rwa [arith_smulOverflow_comm]) (by rwa [BitVec.mul_comm]) h3
+  smul_assoc_ok (by rwa [arith_smulOverflow_comm]) (by rwa [BitVec.mul_comm]) h3
 
 theorem arith_smul_assoc_ok₃ {n : Nat} {x y z : BitVec n} (h1 : x.smulOverflow y = false)
     (h2 : z.smulOverflow (x * y) = false) (h3 : y.smulOverflow z = false) :
     x.smulOverflow (y * z) = false :=
-  arith_smul_assoc_ok h1 (by rwa [arith_smulOverflow_comm]) h3
+  smul_assoc_ok h1 (by rwa [arith_smulOverflow_comm]) h3
 
 theorem arith_smul_assoc_ok₄ {n : Nat} {x y z : BitVec n} (h1 : y.smulOverflow x = false)
     (h2 : z.smulOverflow (y * x) = false) (h3 : y.smulOverflow z = false) :
@@ -444,8 +272,8 @@ theorem arith_smul_assoc_ok₄ {n : Nat} {x y z : BitVec n} (h1 : y.smulOverflow
 theorem arith_umul_add_ok {n : Nat} {a x y : BitVec n} (h1 : a.umulOverflow x = false)
     (h2 : a.umulOverflow y = false) (h3 : (a * x).uaddOverflow (a * y) = false) :
     a.umulOverflow (x + y) = false := by
-  rw [arith_uadd_ok, arith_toNat_mul_ok h1, arith_toNat_mul_ok h2, ← Nat.mul_add] at h3
-  rw [arith_umul_ok, BitVec.toNat_add]
+  rw [uadd_ok, toNat_mul_ok h1, toNat_mul_ok h2, ← Nat.mul_add] at h3
+  rw [umul_ok, BitVec.toNat_add]
   exact Nat.lt_of_le_of_lt (Nat.mul_le_mul_left _ (Nat.mod_le _ _)) h3
 
 theorem arith_udivides_eq {d z : Int} (hd0 : 0 ≤ d) (hz0 : 0 ≤ z) :
@@ -456,10 +284,6 @@ theorem arith_udivides_eq {d z : Int} (hd0 : 0 ≤ d) (hz0 : 0 ≤ z) :
   simp only [Prim.divisible, Int.toNat_natCast, Int.natCast_dvd_natCast]
 
 attribute [bv_ofInt] arith_udivides_eq
-
-theorem arith_smtUDiv_toNat {n : Nat} {a b : BitVec n} (hb : b.toNat ≠ 0) :
-    (a.smtUDiv b).toNat = a.toNat / b.toNat := by
-  simp [BitVec.smtUDiv_eq, ← BitVec.toNat_inj, hb]
 
 theorem arith_factor_ok {n : Nat} {a b x y : BitVec n} (hab : a.toNat ≠ 0 ∨ b.toNat ≠ 0)
     (hd : a.toNat ∣ b.toNat) (h1 : a.umulOverflow x = false) (h2 : b.umulOverflow y = false)
@@ -472,28 +296,28 @@ theorem arith_factor_ok {n : Nat} {a b x y : BitVec n} (hab : a.toNat ≠ 0 ∨ 
     rw [h] at hd; have := Nat.eq_zero_of_zero_dvd hd; omega
   obtain ⟨q, hq⟩ := hd
   have hc : (b.smtUDiv a).toNat = q := by
-    rw [arith_smtUDiv_toNat ha, hq, Nat.mul_div_cancel_left _ (by omega)]
-  have e1 := arith_toNat_mul_ok h1
-  have e2 := arith_toNat_mul_ok h2
-  rw [arith_uadd_ok, e1, e2] at h3
-  rw [arith_umul_ok] at h1 h2
+    rw [smtUDiv_toNat ha, hq, Nat.mul_div_cancel_left _ (by omega)]
+  have e1 := toNat_mul_ok h1
+  have e2 := toNat_mul_ok h2
+  rw [uadd_ok, e1, e2] at h3
+  rw [umul_ok] at h1 h2
   have hA : 1 ≤ a.toNat := by omega
   have l1 : q * y.toNat ≤ b.toNat * y.toNat := by
     rw [hq, Nat.mul_assoc]; exact Nat.le_mul_of_pos_left _ hA
   have l2 : x.toNat ≤ a.toNat * x.toNat := Nat.le_mul_of_pos_left _ hA
-  have o1 : (b.smtUDiv a).umulOverflow y = false := by rw [arith_umul_ok, hc]; omega
-  have e3 := arith_toNat_mul_ok o1
-  have o2 : x.uaddOverflow (b.smtUDiv a * y) = false := by rw [arith_uadd_ok, e3, hc]; omega
-  have e4 := arith_toNat_add_ok o2
+  have o1 : (b.smtUDiv a).umulOverflow y = false := by rw [umul_ok, hc]; omega
+  have e3 := toNat_mul_ok o1
+  have o2 : x.uaddOverflow (b.smtUDiv a * y) = false := by rw [uadd_ok, e3, hc]; omega
+  have e4 := toNat_add_ok o2
   have hs : a.toNat * (x.toNat + q * y.toNat) = a.toNat * x.toNat + b.toNat * y.toNat := by
     rw [hq, Nat.mul_add, Nat.mul_assoc]
   have o3 : a.umulOverflow (x + b.smtUDiv a * y) = false := by
-    rw [arith_umul_ok, e4, e3, hc, hs]; omega
+    rw [umul_ok, e4, e3, hc, hs]; omega
   simp only [o1, o2, o3, ckOp, Bool.false_eq_true, ite_false, Bool.false_and, Bool.true_and,
     Bool.false_or, Option.some.injEq]
   apply BitVec.eq_of_toNat_eq
-  rw [arith_toNat_mul_ok o3, e4, e3, hc, hs,
-    arith_toNat_add_ok (by rw [arith_uadd_ok, e1, e2]; omega), e1, e2]
+  rw [toNat_mul_ok o3, e4, e3, hc, hs,
+    toNat_add_ok (by rw [uadd_ok, e1, e2]; omega), e1, e2]
 
 theorem arith_factor_ok' {n : Nat} {a b x y : BitVec n} (ha : a.toNat ≠ 0 ∨ b.toNat ≠ 0)
     (hd : a.toNat ∣ b.toNat)
@@ -504,7 +328,7 @@ theorem arith_factor_ok' {n : Nat} {a b x y : BitVec n} (ha : a.toNat ≠ 0 ∨ 
         (if (b.smtUDiv a).umulOverflow y = true then none else some (b.smtUDiv a * y))) =
       some (b * y + a * x) := by
   rw [BitVec.add_comm]
-  exact arith_factor_ok ha hd h1 h2 (by rw [arith_uadd_ok] at *; omega)
+  exact arith_factor_ok ha hd h1 h2 (by rw [uadd_ok] at *; omega)
 
 /-- An addition that cannot wrap around, by the bounds of its operands
 (`unsigned_ub`, from `msb_of`), may be checked unsigned. -/
@@ -531,14 +355,14 @@ theorem arith_refines_add_no_wrap {c : CoreMod.Checked} {a b : S.Term} {t : S.Ty
       have la := Sem.den_msb ρ a n xa wa han ea
       have lb := Sem.den_msb ρ b n xb wb hbn eb
       simp only [L.bitvec_unsigned_ub_eq, L.bitvec_size_eq, han, Sem.size_of_ty_TBitVector,
-        Sem.z_lsl_eq, arith_z_lsl_one, Int.toNat_natCast] at h
+        Sem.z_lsl_eq, z_lsl_one, Int.toNat_natCast] at h
       have e1 : (((2 : Nat) ^ (L.bitvec_msb_of a + 1).toNat : Nat) : Int) =
           (2 : Int) ^ (L.bitvec_msb_of a + 1).toNat := by push_cast; rfl
       have e2 : (((2 : Nat) ^ (L.bitvec_msb_of b + 1).toNat : Nat) : Int) =
           (2 : Int) ^ (L.bitvec_msb_of b + 1).toNat := by push_cast; rfl
       have e3 : (((2 : Nat) ^ n : Nat) : Int) = (2 : Int) ^ n := by push_cast; rfl
       have hov : xa.uaddOverflow xb = false := by
-        rw [arith_uadd_ok]; omega
+        rw [uadd_ok]; omega
       rw [BitvecMod.ckOp_some] at e ⊢
       simp only [hov, Bool.and_false, Bool.or_false, Bool.and_true] at e ⊢
       exact e
@@ -569,7 +393,7 @@ def arithOvfBounds (g : MVarId) : MetaM MVarId := g.withContext do
       (fun sub => sub.isAppOfArity ``BitVec.toInt 2 || sub.isAppOfArity ``BitVec.toNat 2) e
     atoms := atoms ++ (subs.map (·.appArg!)).filter (!atoms.contains ·)
   for x in atoms do
-    for lem in [``arith_toInt_bounds, ``BitVec.isLt] do
+    for lem in [``toInt_bounds, ``BitVec.isLt] do
       let pf ← mkAppM lem #[x]
       let (_, g') ← (← g.assert `hbd (← inferType pf) pf).intro1P
       g := g'
@@ -636,7 +460,7 @@ elab "bv_arith_bit_hyps " i:ident : tactic => withMainContext do
     evalTactic (← `(tactic| have := congrArg (fun v => BitVec.getLsbD v $i) $h))
 
 open Lean Meta Elab Tactic in
-elab "bv_arith_ovf_eqs" : tactic => liftMetaTactic fun g => return [← arithOvfEqs g]
+elab "bv_arith_ovf_eqs" : tactic => liftMetaTactic fun g => return [← ovfEqs g]
 
 open Lean Meta Elab Tactic in
 elab "bv_arith_bounds" : tactic => liftMetaTactic fun g => return [← arithOvfBounds g]
@@ -722,9 +546,9 @@ macro "bv_arith_ovf" : tactic => `(tactic| (
   all_goals (repeat' (first | apply And.intro | intro))
   all_goals (try bv_arith_split)
   all_goals bv_arith_ovf_eqs
-  all_goals (try simp only [BitvecMod.Lib.arith_sadd_ok, BitvecMod.Lib.arith_ssub_ok,
-    BitvecMod.Lib.arith_smul_ok, BitvecMod.Lib.arith_uadd_ok, BitvecMod.Lib.arith_usub_ok,
-    BitvecMod.Lib.arith_umul_ok, BitvecMod.Lib.arith_sadd_ovf, BitvecMod.Lib.arith_ssub_ovf,
+  all_goals (try simp only [BitvecMod.Lib.sadd_ok, BitvecMod.Lib.ssub_ok,
+    BitvecMod.Lib.smul_ok, BitvecMod.Lib.uadd_ok, BitvecMod.Lib.usub_ok,
+    BitvecMod.Lib.umul_ok, BitvecMod.Lib.arith_sadd_ovf, BitvecMod.Lib.arith_ssub_ovf,
     BitvecMod.Lib.arith_smul_ovf, BitvecMod.Lib.arith_uadd_ovf, BitvecMod.Lib.arith_usub_ovf,
     BitvecMod.Lib.arith_umul_ovf] at *)
   all_goals (try bv_arith_split)
@@ -758,8 +582,8 @@ macro "bv_arith_close" : tactic => `(tactic| (
   all_goals (try bv_arith_lit_ops)
   all_goals first
     | (bv_arith_bools
-       all_goals simp_all [BitVec.mul_assoc, BitvecMod.Lib.arith_smulOverflow_neg_swap,
-        BitvecMod.Lib.arith_umul_assoc_ok, BitvecMod.Lib.arith_smul_assoc_ok,
+       all_goals simp_all [BitVec.mul_assoc, BitvecMod.Lib.smulOverflow_neg_swap,
+        BitvecMod.Lib.umul_assoc_ok, BitvecMod.Lib.smul_assoc_ok,
         BitvecMod.Lib.arith_umul_add_ok, BitVec.mul_add]
        done)
     | (bv_arith_bools
@@ -770,7 +594,7 @@ macro "bv_arith_close" : tactic => `(tactic| (
        all_goals simp_all [BitVec.mul_assoc, BitVec.mul_comm, BitvecMod.Lib.arith_mul_left_comm]
        done)
     | skip
-  all_goals (try simp_all [BitvecMod.Lib.arith_ssubOverflow_zero_left])
+  all_goals (try simp_all [BitvecMod.Lib.ssubOverflow_zero_left])
   all_goals (try bv_arith_lit_ops)
   all_goals (try simp_all)
   all_goals first

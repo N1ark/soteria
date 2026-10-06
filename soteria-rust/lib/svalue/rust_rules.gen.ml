@@ -194,19 +194,20 @@ module Kanon_flat = struct
       (if b then Rust_prims.v_true else Rust_prims.v_false)
   
   let rec bool_sure_neq (a : t) (b : t) : bool =
-      ((not ((equal_ty a.ty b.ty))) || (match a, b with
-                                       | ({ kind = Bool (a); _ }, { kind = Bool (b); _ }) ->
-                                         (not ((Stdlib.Bool.equal a b)))
-                                       | ({ kind = BitVec (a); _ }, { kind = BitVec (b); _ }) ->
-                                         (not ((Z.equal a b)))
-                                       | ({ kind = LocLit (a); _ }, { kind = LocLit (b); _ }) ->
-                                         (not ((Z.equal a b)))
-                                       | ({ kind = Float (a); _ }, { kind = Float (b); _ }) ->
-                                         (not (Rust_prims.f_equal a b))
-                                       | ({ kind = Op2 ((Ptr), la, oa); _ }, { kind = Op2 ((Ptr), lb, ob); _ }) ->
-                                         ((bool_sure_neq la lb) || (bool_sure_neq oa ob))
-                                       | _ -> false
-                                       ))
+      (match a, b with
+      | _ when ((not ((equal_ty a.ty b.ty)))) -> true
+      | ({ kind = Bool (a); _ }, { kind = Bool (b); _ }) ->
+        (not ((Stdlib.Bool.equal a b)))
+      | ({ kind = BitVec (a); _ }, { kind = BitVec (b); _ }) ->
+        (not ((Z.equal a b)))
+      | ({ kind = LocLit (a); _ }, { kind = LocLit (b); _ }) ->
+        (not ((Z.equal a b)))
+      | ({ kind = Float (a); _ }, { kind = Float (b); _ }) ->
+        (not (Rust_prims.f_equal a b))
+      | ({ kind = Op2 ((Ptr), la, oa); _ }, { kind = Op2 ((Ptr), lb, ob); _ }) ->
+        ((bool_sure_neq la lb) || (bool_sure_neq oa ob))
+      | _ -> false
+      )
   
   let[@inline] bool_at_most_one (l : (t list)) : bool =
       (match l with
@@ -4218,37 +4219,59 @@ end
 (** The traversals of the terms and sorts, which are not in a module. *)
 open Kanon_flat
 
+let rec kanon__list_map f l =
+  match l with
+  | [] -> l
+  | x :: r ->
+      let y = f x in
+      let s = kanon__list_map f r in
+      if y == x && s == r then l else y :: s
+
+let rec kanon__iarray_map_from f a i =
+  if i = Stdlib.Iarray.length a then a
+  else
+    let x = Stdlib.Iarray.get a i in
+    let y = f x in
+    if y == x then kanon__iarray_map_from f a (i + 1)
+    else
+      Stdlib.Iarray.init (Stdlib.Iarray.length a) (fun j ->
+          if j < i then Stdlib.Iarray.get a j
+          else if j = i then y
+          else f (Stdlib.Iarray.get a j))
+
+let kanon__iarray_map f a = kanon__iarray_map_from f a 0
+
 let rec kanon__map_thin f (x : thin) : thin =
   let y_x_ptr = f x.ptr in
   let y_x_psize = f x.psize in
   let y_x_palign = f x.palign in
-  { x with ptr = y_x_ptr; psize = y_x_psize; palign = y_x_palign }
+  if y_x_ptr == x.ptr && y_x_psize == x.psize && y_x_palign == x.palign then x else { x with ptr = y_x_ptr; psize = y_x_psize; palign = y_x_palign }
 
 and kanon__map_block_value f (x : block_value) : block_value =
   match x with
   | Scalar (a1) ->
       let y_a1 = f a1 in
-      Scalar (y_a1)
+      if y_a1 == a1 then x else Scalar (y_a1)
   | Aggregate (a1, a2) ->
       let y_a1 = f a1 in
-      Aggregate (y_a1, a2)
+      if y_a1 == a1 then x else Aggregate (y_a1, a2)
 
 and kanon__map_block f (x : block) : block =
   let y_x_bvalue = (kanon__map_block_value f) x.bvalue in
   let y_x_boffset = f x.boffset in
   let y_x_bsize = f x.bsize in
-  { x with bvalue = y_x_bvalue; boffset = y_x_boffset; bsize = y_x_bsize }
+  if y_x_bvalue == x.bvalue && y_x_boffset == x.boffset && y_x_bsize == x.bsize then x else { x with bvalue = y_x_bvalue; boffset = y_x_boffset; bsize = y_x_bsize }
 
 and kanon__map_ptr_meta f (x : ptr_meta) : ptr_meta =
   match x with
   | MetaLen (a1) ->
       let y_a1 = f a1 in
-      MetaLen (y_a1)
+      if y_a1 == a1 then x else MetaLen (y_a1)
   | MetaVTable (a1) ->
       let y_a1 = f a1 in
-      MetaVTable (y_a1)
+      if y_a1 == a1 then x else MetaVTable (y_a1)
   | MetaUnit ->
-      MetaUnit
+      x
 
 let rec kanon__iter_thin f (x : thin) : unit =
   f x.ptr; f x.psize; f x.palign
@@ -4294,260 +4317,262 @@ and kanon__exists_ptr_meta f (x : ptr_meta) : bool =
   | MetaUnit ->
       false
 
+(** One level: [f] on each direct child, in order; does not recurse. [v] itself if [f] returns every child unchanged ([==]), else [v] rebuilt. *)
 let map_children (f : t -> t) (v : t) : t =
   match v with
   | { kind = Seq (p1); _ } ->
-      let y_p1 = (List.map f) p1 in
-      kanon__rebuild_Seq v.ty y_p1
+      let y_p1 = (kanon__list_map f) p1 in
+      if y_p1 == p1 then v else kanon__rebuild_Seq v.ty y_p1
   | { kind = Exists (p1, p2); _ } ->
       let y_p2 = f p2 in
-      kanon__rebuild_Exists p1 y_p2
+      if y_p2 == p2 then v else kanon__rebuild_Exists p1 y_p2
   | { kind = ThinPtr (p1); _ } ->
       let y_p1 = (kanon__map_thin f) p1 in
-      kanon__rebuild_ThinPtr v.ty y_p1
+      if y_p1 == p1 then v else kanon__rebuild_ThinPtr v.ty y_p1
   | { kind = FullPtr (p1, p2); _ } ->
       let y_p1 = f p1 in
       let y_p2 = f p2 in
-      kanon__rebuild_FullPtr v.ty y_p1 y_p2
+      if y_p1 == p1 && y_p2 == p2 then v else kanon__rebuild_FullPtr v.ty y_p1 y_p2
   | { kind = PtrMeta (p1); _ } ->
       let y_p1 = (kanon__map_ptr_meta f) p1 in
-      kanon__rebuild_PtrMeta v.ty y_p1
+      if y_p1 == p1 then v else kanon__rebuild_PtrMeta v.ty y_p1
   | { kind = Enum (p1, p2); _ } ->
-      let y_p2 = (List.map f) p2 in
-      kanon__rebuild_Enum v.ty p1 y_p2
+      let y_p2 = (kanon__list_map f) p2 in
+      if y_p2 == p2 then v else kanon__rebuild_Enum v.ty p1 y_p2
   | { kind = Tuple (p1); _ } ->
-      let y_p1 = (List.map f) p1 in
-      kanon__rebuild_Tuple y_p1
+      let y_p1 = (kanon__list_map f) p1 in
+      if y_p1 == p1 then v else kanon__rebuild_Tuple y_p1
   | { kind = Array (p1); _ } ->
-      let y_p1 = (Iarray.map f) p1 in
-      kanon__rebuild_Array v.ty y_p1
+      let y_p1 = (kanon__iarray_map f) p1 in
+      if y_p1 == p1 then v else kanon__rebuild_Array v.ty y_p1
   | { kind = Union (p1); _ } ->
-      let y_p1 = (List.map (kanon__map_block f)) p1 in
-      kanon__rebuild_Union v.ty y_p1
+      let y_p1 = (kanon__list_map (kanon__map_block f)) p1 in
+      if y_p1 == p1 then v else kanon__rebuild_Union v.ty y_p1
   | { kind = Op1 (Not, x1); _ } ->
       let y_x1 = f x1 in
-      kanon__rebuild_Not y_x1
+      if y_x1 == x1 then v else kanon__rebuild_Not y_x1
   | { kind = Op2 (And, x1, x2); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
-      kanon__rebuild_And y_x1 y_x2
+      if y_x1 == x1 && y_x2 == x2 then v else kanon__rebuild_And y_x1 y_x2
   | { kind = Op2 (Or, x1, x2); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
-      kanon__rebuild_Or y_x1 y_x2
+      if y_x1 == x1 && y_x2 == x2 then v else kanon__rebuild_Or y_x1 y_x2
   | { kind = Op2 (Eq, x1, x2); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
-      kanon__rebuild_Eq y_x1 y_x2
+      if y_x1 == x1 && y_x2 == x2 then v else kanon__rebuild_Eq y_x1 y_x2
   | { kind = Op3 (Ite, x1, x2, x3); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
       let y_x3 = f x3 in
-      kanon__rebuild_Ite y_x1 y_x2 y_x3
+      if y_x1 == x1 && y_x2 == x2 && y_x3 == x3 then v else kanon__rebuild_Ite y_x1 y_x2 y_x3
   | { kind = OpN (Distinct, x1); _ } ->
-      let y_x1 = (List.map f) x1 in
-      kanon__rebuild_Distinct y_x1
+      let y_x1 = (kanon__list_map f) x1 in
+      if y_x1 == x1 then v else kanon__rebuild_Distinct y_x1
   | { kind = Op1 (BvOfBool (p1), x1); _ } ->
       let y_x1 = f x1 in
-      kanon__rebuild_BvOfBool (Z.of_int p1) y_x1
+      if y_x1 == x1 then v else kanon__rebuild_BvOfBool (Z.of_int p1) y_x1
   | { kind = Op1 (BvExtract (p1, p2), x1); _ } ->
       let y_x1 = f x1 in
-      kanon__rebuild_BvExtract (Z.of_int p1) (Z.of_int p2) y_x1
+      if y_x1 == x1 then v else kanon__rebuild_BvExtract (Z.of_int p1) (Z.of_int p2) y_x1
   | { kind = Op1 (BvExtend (p1, p2), x1); _ } ->
       let y_x1 = f x1 in
-      kanon__rebuild_BvExtend p1 (Z.of_int p2) y_x1
+      if y_x1 == x1 then v else kanon__rebuild_BvExtend p1 (Z.of_int p2) y_x1
   | { kind = Op1 (BvNot, x1); _ } ->
       let y_x1 = f x1 in
-      kanon__rebuild_BvNot y_x1
+      if y_x1 == x1 then v else kanon__rebuild_BvNot y_x1
   | { kind = Op1 (Neg (p1), x1); _ } ->
       let y_x1 = f x1 in
-      kanon__rebuild_Neg p1 y_x1
+      if y_x1 == x1 then v else kanon__rebuild_Neg p1 y_x1
   | { kind = Op2 (Add (p1), x1, x2); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
-      kanon__rebuild_Add p1 y_x1 y_x2
+      if y_x1 == x1 && y_x2 == x2 then v else kanon__rebuild_Add p1 y_x1 y_x2
   | { kind = Op2 (Sub (p1), x1, x2); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
-      kanon__rebuild_Sub p1 y_x1 y_x2
+      if y_x1 == x1 && y_x2 == x2 then v else kanon__rebuild_Sub p1 y_x1 y_x2
   | { kind = Op2 (Mul (p1), x1, x2); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
-      kanon__rebuild_Mul p1 y_x1 y_x2
+      if y_x1 == x1 && y_x2 == x2 then v else kanon__rebuild_Mul p1 y_x1 y_x2
   | { kind = Op2 (Div (p1), x1, x2); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
-      kanon__rebuild_Div p1 y_x1 y_x2
+      if y_x1 == x1 && y_x2 == x2 then v else kanon__rebuild_Div p1 y_x1 y_x2
   | { kind = Op2 (Rem (p1), x1, x2); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
-      kanon__rebuild_Rem p1 y_x1 y_x2
+      if y_x1 == x1 && y_x2 == x2 then v else kanon__rebuild_Rem p1 y_x1 y_x2
   | { kind = Op2 (Mod, x1, x2); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
-      kanon__rebuild_Mod y_x1 y_x2
+      if y_x1 == x1 && y_x2 == x2 then v else kanon__rebuild_Mod y_x1 y_x2
   | { kind = Op2 (AddOvf (p1), x1, x2); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
-      kanon__rebuild_AddOvf p1 y_x1 y_x2
+      if y_x1 == x1 && y_x2 == x2 then v else kanon__rebuild_AddOvf p1 y_x1 y_x2
   | { kind = Op2 (SubOvf (p1), x1, x2); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
-      kanon__rebuild_SubOvf p1 y_x1 y_x2
+      if y_x1 == x1 && y_x2 == x2 then v else kanon__rebuild_SubOvf p1 y_x1 y_x2
   | { kind = Op2 (MulOvf (p1), x1, x2); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
-      kanon__rebuild_MulOvf p1 y_x1 y_x2
+      if y_x1 == x1 && y_x2 == x2 then v else kanon__rebuild_MulOvf p1 y_x1 y_x2
   | { kind = Op2 (Lt (p1), x1, x2); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
-      kanon__rebuild_Lt p1 y_x1 y_x2
+      if y_x1 == x1 && y_x2 == x2 then v else kanon__rebuild_Lt p1 y_x1 y_x2
   | { kind = Op2 (Leq (p1), x1, x2); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
-      kanon__rebuild_Leq p1 y_x1 y_x2
+      if y_x1 == x1 && y_x2 == x2 then v else kanon__rebuild_Leq p1 y_x1 y_x2
   | { kind = Op2 (BvConcat, x1, x2); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
-      kanon__rebuild_BvConcat y_x1 y_x2
+      if y_x1 == x1 && y_x2 == x2 then v else kanon__rebuild_BvConcat y_x1 y_x2
   | { kind = Op2 (BitAnd, x1, x2); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
-      kanon__rebuild_BitAnd y_x1 y_x2
+      if y_x1 == x1 && y_x2 == x2 then v else kanon__rebuild_BitAnd y_x1 y_x2
   | { kind = Op2 (BitOr, x1, x2); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
-      kanon__rebuild_BitOr y_x1 y_x2
+      if y_x1 == x1 && y_x2 == x2 then v else kanon__rebuild_BitOr y_x1 y_x2
   | { kind = Op2 (BitXor, x1, x2); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
-      kanon__rebuild_BitXor y_x1 y_x2
+      if y_x1 == x1 && y_x2 == x2 then v else kanon__rebuild_BitXor y_x1 y_x2
   | { kind = Op2 (Shl, x1, x2); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
-      kanon__rebuild_Shl y_x1 y_x2
+      if y_x1 == x1 && y_x2 == x2 then v else kanon__rebuild_Shl y_x1 y_x2
   | { kind = Op2 (LShr, x1, x2); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
-      kanon__rebuild_LShr y_x1 y_x2
+      if y_x1 == x1 && y_x2 == x2 then v else kanon__rebuild_LShr y_x1 y_x2
   | { kind = Op2 (AShr, x1, x2); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
-      kanon__rebuild_AShr y_x1 y_x2
+      if y_x1 == x1 && y_x2 == x2 then v else kanon__rebuild_AShr y_x1 y_x2
   | { kind = Op1 (BvOfFloat (p1, p2, p3), x1); _ } ->
       let y_x1 = f x1 in
-      kanon__rebuild_BvOfFloat p1 p2 (Z.of_int p3) y_x1
+      if y_x1 == x1 then v else kanon__rebuild_BvOfFloat p1 p2 (Z.of_int p3) y_x1
   | { kind = Op1 (FloatOfBv (p1, p2, p3), x1); _ } ->
       let y_x1 = f x1 in
-      kanon__rebuild_FloatOfBv p1 p2 p3 y_x1
+      if y_x1 == x1 then v else kanon__rebuild_FloatOfBv p1 p2 p3 y_x1
   | { kind = Op1 (FloatOfBvRaw (p1), x1); _ } ->
       let y_x1 = f x1 in
-      kanon__rebuild_FloatOfBvRaw p1 y_x1
+      if y_x1 == x1 then v else kanon__rebuild_FloatOfBvRaw p1 y_x1
   | { kind = Op1 (FloatOfFloat (p1, p2), x1); _ } ->
       let y_x1 = f x1 in
-      kanon__rebuild_FloatOfFloat p1 p2 y_x1
+      if y_x1 == x1 then v else kanon__rebuild_FloatOfFloat p1 p2 y_x1
   | { kind = Op1 (FAbs, x1); _ } ->
       let y_x1 = f x1 in
-      kanon__rebuild_FAbs y_x1
+      if y_x1 == x1 then v else kanon__rebuild_FAbs y_x1
   | { kind = Op1 (FNeg, x1); _ } ->
       let y_x1 = f x1 in
-      kanon__rebuild_FNeg y_x1
+      if y_x1 == x1 then v else kanon__rebuild_FNeg y_x1
   | { kind = Op1 (FSqrt, x1); _ } ->
       let y_x1 = f x1 in
-      kanon__rebuild_FSqrt y_x1
+      if y_x1 == x1 then v else kanon__rebuild_FSqrt y_x1
   | { kind = Op1 (FIs (p1), x1); _ } ->
       let y_x1 = f x1 in
-      kanon__rebuild_FIs p1 y_x1
+      if y_x1 == x1 then v else kanon__rebuild_FIs p1 y_x1
   | { kind = Op1 (FIsNeg, x1); _ } ->
       let y_x1 = f x1 in
-      kanon__rebuild_FIsNeg y_x1
+      if y_x1 == x1 then v else kanon__rebuild_FIsNeg y_x1
   | { kind = Op1 (FIsPos, x1); _ } ->
       let y_x1 = f x1 in
-      kanon__rebuild_FIsPos y_x1
+      if y_x1 == x1 then v else kanon__rebuild_FIsPos y_x1
   | { kind = Op1 (FRound (p1), x1); _ } ->
       let y_x1 = f x1 in
-      kanon__rebuild_FRound p1 y_x1
+      if y_x1 == x1 then v else kanon__rebuild_FRound p1 y_x1
   | { kind = Op2 (FEq, x1, x2); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
-      kanon__rebuild_FEq y_x1 y_x2
+      if y_x1 == x1 && y_x2 == x2 then v else kanon__rebuild_FEq y_x1 y_x2
   | { kind = Op2 (FLeq, x1, x2); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
-      kanon__rebuild_FLeq y_x1 y_x2
+      if y_x1 == x1 && y_x2 == x2 then v else kanon__rebuild_FLeq y_x1 y_x2
   | { kind = Op2 (FLt, x1, x2); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
-      kanon__rebuild_FLt y_x1 y_x2
+      if y_x1 == x1 && y_x2 == x2 then v else kanon__rebuild_FLt y_x1 y_x2
   | { kind = Op2 (FAdd, x1, x2); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
-      kanon__rebuild_FAdd y_x1 y_x2
+      if y_x1 == x1 && y_x2 == x2 then v else kanon__rebuild_FAdd y_x1 y_x2
   | { kind = Op2 (FSub, x1, x2); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
-      kanon__rebuild_FSub y_x1 y_x2
+      if y_x1 == x1 && y_x2 == x2 then v else kanon__rebuild_FSub y_x1 y_x2
   | { kind = Op2 (FMul, x1, x2); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
-      kanon__rebuild_FMul y_x1 y_x2
+      if y_x1 == x1 && y_x2 == x2 then v else kanon__rebuild_FMul y_x1 y_x2
   | { kind = Op2 (FDiv, x1, x2); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
-      kanon__rebuild_FDiv y_x1 y_x2
+      if y_x1 == x1 && y_x2 == x2 then v else kanon__rebuild_FDiv y_x1 y_x2
   | { kind = Op2 (FRem, x1, x2); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
-      kanon__rebuild_FRem y_x1 y_x2
+      if y_x1 == x1 && y_x2 == x2 then v else kanon__rebuild_FRem y_x1 y_x2
   | { kind = Op2 (FMin, x1, x2); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
-      kanon__rebuild_FMin y_x1 y_x2
+      if y_x1 == x1 && y_x2 == x2 then v else kanon__rebuild_FMin y_x1 y_x2
   | { kind = Op2 (FMax, x1, x2); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
-      kanon__rebuild_FMax y_x1 y_x2
+      if y_x1 == x1 && y_x2 == x2 then v else kanon__rebuild_FMax y_x1 y_x2
   | { kind = Op3 (Fma, x1, x2, x3); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
       let y_x3 = f x3 in
-      kanon__rebuild_Fma y_x1 y_x2 y_x3
+      if y_x1 == x1 && y_x2 == x2 && y_x3 == x3 then v else kanon__rebuild_Fma y_x1 y_x2 y_x3
   | { kind = Op2 (Ptr, x1, x2); _ } ->
       let y_x1 = f x1 in
       let y_x2 = f x2 in
-      kanon__rebuild_Ptr y_x1 y_x2
+      if y_x1 == x1 && y_x2 == x2 then v else kanon__rebuild_Ptr y_x1 y_x2
   | { kind = Op1 (GetPtrLoc, x1); _ } ->
       let y_x1 = f x1 in
-      kanon__rebuild_GetPtrLoc y_x1
+      if y_x1 == x1 then v else kanon__rebuild_GetPtrLoc y_x1
   | { kind = Op1 (GetPtrOfs, x1); _ } ->
       let y_x1 = f x1 in
-      kanon__rebuild_GetPtrOfs y_x1
+      if y_x1 == x1 then v else kanon__rebuild_GetPtrOfs y_x1
   | { kind = Op1 (ThinPtrPart (p1), x1); _ } ->
       let y_x1 = f x1 in
-      kanon__rebuild_ThinPtrPart p1 y_x1
+      if y_x1 == x1 then v else kanon__rebuild_ThinPtrPart p1 y_x1
   | { kind = Op1 (FullPtrInner, x1); _ } ->
       let y_x1 = f x1 in
-      kanon__rebuild_FullPtrInner y_x1
+      if y_x1 == x1 then v else kanon__rebuild_FullPtrInner y_x1
   | { kind = Op1 (FullPtrMeta, x1); _ } ->
       let y_x1 = f x1 in
-      kanon__rebuild_FullPtrMeta y_x1
+      if y_x1 == x1 then v else kanon__rebuild_FullPtrMeta y_x1
   | { kind = Op1 (PtrMetaAs (p1), x1); _ } ->
       let y_x1 = f x1 in
-      kanon__rebuild_PtrMetaAs p1 y_x1
+      if y_x1 == x1 then v else kanon__rebuild_PtrMetaAs p1 y_x1
   | { kind = Op1 (Field (p1), x1); _ } ->
       let y_x1 = f x1 in
-      kanon__rebuild_Field (Z.of_int p1) y_x1
+      if y_x1 == x1 then v else kanon__rebuild_Field (Z.of_int p1) y_x1
   | { kind = Op1 (VariantField (p1, p2), x1); _ } ->
       let y_x1 = f x1 in
-      kanon__rebuild_VariantField p1 (Z.of_int p2) y_x1
+      if y_x1 == x1 then v else kanon__rebuild_VariantField p1 (Z.of_int p2) y_x1
   | { kind = Op1 (IsVariant (p1), x1); _ } ->
       let y_x1 = f x1 in
-      kanon__rebuild_IsVariant p1 y_x1
+      if y_x1 == x1 then v else kanon__rebuild_IsVariant p1 y_x1
   | { kind = Op1 (ArrayField (p1), x1); _ } ->
       let y_x1 = f x1 in
-      kanon__rebuild_ArrayField (Z.of_int p1) y_x1
+      if y_x1 == x1 then v else kanon__rebuild_ArrayField (Z.of_int p1) y_x1
   | _ -> v
 
+(** One level: [f] on each direct child, in order; does not recurse. *)
 let iter_children (f : t -> unit) (v : t) : unit =
   match v with
   | { kind = Seq (p1); _ } ->
@@ -4694,6 +4719,7 @@ let iter_children (f : t -> unit) (v : t) : unit =
       f x1
   | _ -> ()
 
+(** One level: whether [f] holds for a direct child, from the left; does not recurse. *)
 let exists_child (f : t -> bool) (v : t) : bool =
   match v with
   | { kind = Seq (p1); _ } ->
@@ -4840,22 +4866,25 @@ let exists_child (f : t -> bool) (v : t) : bool =
       f x1
   | _ -> false
 
+(** One level: whether [f] holds for every direct child, from the left; does not recurse. *)
 let for_all_child (f : t -> bool) (v : t) : bool =
   not (exists_child (fun c -> not (f c)) v)
 
+(** One level: [f] on each direct child, in order; does not recurse. [v] itself if [f] returns every child unchanged ([==]), else [v] rebuilt. *)
 let map_ty_children (f : ty -> ty) (v : ty) : ty =
   match v with
   | TSeq (p1) ->
       let y_p1 = f p1 in
-      TSeq (y_p1)
+      if y_p1 == p1 then v else TSeq (y_p1)
   | TTuple (p1) ->
-      let y_p1 = (List.map f) p1 in
-      TTuple (y_p1)
+      let y_p1 = (kanon__list_map f) p1 in
+      if y_p1 == p1 then v else TTuple (y_p1)
   | TArray (p1, p2) ->
       let y_p1 = f p1 in
-      TArray (y_p1, p2)
+      if y_p1 == p1 then v else TArray (y_p1, p2)
   | _ -> v
 
+(** One level: [f] on each direct child, in order; does not recurse. *)
 let iter_ty_children (f : ty -> unit) (v : ty) : unit =
   match v with
   | TSeq (p1) ->
@@ -4866,6 +4895,7 @@ let iter_ty_children (f : ty -> unit) (v : ty) : unit =
       f p1
   | _ -> ()
 
+(** One level: whether [f] holds for a direct child, from the left; does not recurse. *)
 let exists_ty_child (f : ty -> bool) (v : ty) : bool =
   match v with
   | TSeq (p1) ->
@@ -4876,6 +4906,7 @@ let exists_ty_child (f : ty -> bool) (v : ty) : bool =
       f p1
   | _ -> false
 
+(** One level: whether [f] holds for every direct child, from the left; does not recurse. *)
 let for_all_ty_child (f : ty -> bool) (v : ty) : bool =
   not (exists_ty_child (fun c -> not (f c)) v)
 

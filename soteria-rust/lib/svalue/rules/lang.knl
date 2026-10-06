@@ -10,7 +10,6 @@
    are those of the shared [core] module, which the other shared modules use. *)
 
 [@@@lean_root "Kanon"]
-[@@@lean_param "FS" "FloatSem"]
 [@@@ocaml_prims "Rust_prims"]
 [@@@ocaml_types "Rust_types"]
 [@@@ocaml_rules "Rust_rules"]

@@ -1,70 +1,78 @@
+import PtrMod.Node
 import BitvecMod.Sem
-import PtrMod.Syntax
 
 /-!
-# What the ptr module needs of the semantics of a language
+# The meaning of the nodes of the ptr module
 
-A pointer is a location and an offset, bit-vectors of the same width. The
-module needs, of the semantics `S` of a language, the pointers among the
-values (`vptr`), which are different from each other and from the booleans and
-bit-vectors, which the well-typed pointer terms evaluate to (`ev_ptr`), and the
-evaluation of its nodes (`ev_Ptr`, …), by the operations below on the values of
-their operands.
+A pointer is a location and an offset, bit-vectors of the same width
+(`Values.vptr`).
 -/
+
+noncomputable section
 
 namespace PtrMod
 
 open Classical Kanon
+open Kanon.Sem (OLe FLe)
+open BitvecMod (bv asBV withW)
+
+/-- What the ptr module needs of the values of a language: its pointers. -/
+class Values (D : Kanon.Dom) where
+  vptr : Embed ((n : Nat) × BitVec n × BitVec n) D.Val
 
 section
-variable {V : Type} (vptr : (n : Nat) → BitVec n → BitVec n → V)
+variable {D : Kanon.Dom} [KanonBool.Values D] [BitvecMod.Values D] [Values D]
 
-/-- The pointer that a value is (its width, location and offset), if it is
-one. -/
-noncomputable def decPtr (o : Option V) : Option (Σ n, BitVec n × BitVec n) :=
-  if h : ∃ n l o', o = some (vptr n l o') then
-    some ⟨h.choose, h.choose_spec.choose, h.choose_spec.choose_spec.choose⟩
-  else none
+/-- The value of a pointer. -/
+abbrev vp (n : Nat) (l o : BitVec n) : D.Val := Values.vptr.inj ⟨n, l, o⟩
 
-variable {vptr}
+/-- `k` at the location and offset of the value `a`, if it is a pointer. -/
+def withP (a : Option D.Val) (k : (n : Nat) → BitVec n → BitVec n → Option D.Val) :
+    Option D.Val :=
+  a.bind fun v => (Values.vptr.proj v).bind fun p => k p.1 p.2.1 p.2.2
 
-theorem decPtr_some (inj : ∀ n m (l o : BitVec n) (l' o' : BitVec m),
-      vptr n l o = vptr m l' o' → (⟨n, l, o⟩ : Σ n, BitVec n × BitVec n) = ⟨m, l', o'⟩)
-    (n : Nat) (l o : BitVec n) : decPtr vptr (some (vptr n l o)) = some ⟨n, l, o⟩ := by
-  have h : ∃ m l' o', some (vptr n l o) = some (vptr m l' o') := ⟨n, l, o, rfl⟩
-  rw [decPtr, dif_pos h]
-  have := h.choose_spec.choose_spec.choose_spec
-  exact congrArg some (inj _ _ _ _ _ _ (Option.some.inj this)).symm
+@[simp] theorem withP_none (k : (n : Nat) → BitVec n → BitVec n → Option D.Val) :
+    withP none k = none := rfl
 
-@[simp] theorem decPtr_none : decPtr vptr none = none := by
-  rw [decPtr, dif_neg]; rintro ⟨_, _, _, h⟩; cases h
+@[simp, kanon_val] theorem withP_vp (n : Nat) (l o : BitVec n)
+    (k : (n : Nat) → BitVec n → BitVec n → Option D.Val) :
+    withP (some (vp n l o)) k = k n l o := by
+  simp [withP]
 
+@[kanon_val] theorem withP_eq_some {a : Option D.Val}
+    {k : (n : Nat) → BitVec n → BitVec n → Option D.Val} {v : D.Val} :
+    withP a k = some v ↔ ∃ n l o, a = some (vp n l o) ∧ k n l o = some v := by
+  constructor
+  · intro h
+    simp only [withP, Option.bind_eq_some_iff] at h
+    obtain ⟨u, rfl, ⟨n, l, o⟩, hp, h⟩ := h
+    exact ⟨n, l, o, by rw [Embed.proj_eq_some_iff] at hp; rw [hp], h⟩
+  · rintro ⟨n, l, o, rfl, h⟩; rw [withP_vp]; exact h
 end
 
-/-- What the ptr module needs of the semantics `S` of a language, for its
-interface `L`. -/
-class Sem {S : Kanon.Sem} [DecidableEq S.Term] [DecidableEq S.Ty] {B : Kanon.Base S}
-    {LBool : KanonBool.Syntax B} {LCore : CoreMod.Syntax B}
-    {LBitvec : BitvecMod.Syntax B LBool LCore} (L : Syntax B LBool LCore LBitvec)
-    [KanonBool.Sem LBool] [CoreMod.Sem LCore] [BitvecMod.Sem LBitvec] where
-  /-- The pointer values. -/
-  vptr : (n : Nat) → BitVec n → BitVec n → S.Val
-  vptr_inj : ∀ n m (l o : BitVec n) (l' o' : BitVec m), vptr n l o = vptr m l' o' →
-    (⟨n, l, o⟩ : Σ n, BitVec n × BitVec n) = ⟨m, l', o'⟩
-  vptr_ne_vbool : ∀ n (l o : BitVec n) b, vptr n l o ≠ KanonBool.Sem.vbool LBool b
-  vptr_ne_vbv : ∀ n (l o : BitVec n) m (x : BitVec m), vptr n l o ≠ BitvecMod.Sem.vbv LBitvec m x
-  /-- Well-typed pointers evaluate to pointers of their width. -/
-  ev_ptr : ∀ ρ t v m, S.WT t → S.ty t = L.TPointer m → S.ev ρ t = some v →
-    0 < m ∧ ∃ l o, v = vptr m.toNat l o
-  ev_Ptr : ∀ ρ a b t, S.ev ρ (B.node (L.PtrK a b) t) =
-    BitvecMod.bvUn (BitvecMod.Sem.vbv LBitvec)
-      (fun n l => BitvecMod.bvUn (BitvecMod.Sem.vbv LBitvec)
-        (fun m o => if h : m = n then some (vptr n l (h ▸ o)) else none) (S.ev ρ b))
-      (S.ev ρ a)
-  ev_GetPtrLoc : ∀ ρ a t, S.ev ρ (B.node (L.GetPtrLocK a) t) =
-    (decPtr vptr (S.ev ρ a)).map fun p => BitvecMod.Sem.vbv LBitvec p.1 p.2.1
-  ev_GetPtrOfs : ∀ ρ a t, S.ev ρ (B.node (L.GetPtrOfsK a) t) =
-    (decPtr vptr (S.ev ρ a)).map fun p => BitvecMod.Sem.vbv LBitvec p.1 p.2.2
-  size_of_ty_TPointer : ∀ n, LBitvec.bitvec_size_of_ty (L.TPointer n) = n
+/-- The evaluation of a node in the environment `ρ`, given the values of its
+children in every environment. -/
+def Node.eval {D : Kanon.Dom} [KanonBool.Values D] [BitvecMod.Values D] [Values D] (ρ : D.Env)
+    (t : D.Ty) : Node (D.Env → Option D.Val) → Option D.Val
+  | .Ptr l o => withW (l ρ) fun n => (asBV n (l ρ)).bind fun x => (asBV n (o ρ)).map (vp n x)
+  | .GetPtrLoc p => withP (p ρ) fun n l _ => some (bv n l)
+  | .GetPtrOfs p => withP (p ρ) fun n _ o => some (bv n o)
+
+/-- The evaluation of the nodes is monotone in poison: it is strict in each
+child. -/
+theorem Node.eval_mono {D : Kanon.Dom} [KanonBool.Values D] [BitvecMod.Values D] [Values D]
+    (ρ : D.Env) (t : D.Ty) {n n' : Node (D.Env → Option D.Val)} (h : n.Rel FLe n') :
+    OLe (n.eval ρ t) (n'.eval ρ t) := by
+  cases n <;> cases n' <;> simp only [Node.Rel] at h <;> (try contradiction)
+  all_goals simp only [Node.eval]
+  · obtain ⟨h1, h2⟩ := h
+    rcases (h1 ρ).cases with h1 | h1 <;> rcases (h2 ρ).cases with h2 | h2 <;> simp [h1, h2]
+  · rcases (h ρ).cases with h1 | h1 <;> simp [h1]
+  · rcases (h ρ).cases with h1 | h1 <;> simp [h1]
+
+/-- The values of the sorts of the module: pointers of their width, which is
+positive. -/
+def Srt.val {D : Kanon.Dom} [Values D] : Srt → D.Val → Prop
+  | .TPointer n, v => 0 < n ∧ ∃ l o : BitVec n.toNat, v = Values.vptr.inj ⟨_, l, o⟩
 
 end PtrMod

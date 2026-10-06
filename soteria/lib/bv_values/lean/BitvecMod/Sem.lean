@@ -1,222 +1,261 @@
-import KanonBool.Sem
+import BitvecMod.Node
+import BitvecMod.Ints
 import CoreMod.Sem
-import BitvecMod.Syntax
-import BitvecMod.Prim
-import BitvecMod.Val
+import KanonBool.Sem
 
 /-!
-# What the bitvec module needs of the semantics of a language
+# The meaning of the nodes of the bitvec module
 
-The rules of the bitvec module (`../rules/bitvec.kn`) are proved once, over its
-interface `L` (generated, in `Syntax.lean`) and what they need of the semantics
-`S` of the language, the class `BitvecMod.Sem L`:
+A language has bit-vectors among its values (`Values.vbv`), which are those of
+the sorts `TBitVector n` and `TLoc n`, and gives the width of a sort
+(`Values.width`), which the literals and the nodes whose result is of the width
+of their operands take; the others take the widths of the values of their
+operands. Checked operations (`Add {signed}`, `Neg true`, ...) whose
+no-overflow flag does not hold are poison, like LLVM's `nsw`. The operations
+follow the SMT-LIB encoding of `encoding.ml`.
 
-- the bit-vectors among the values (`vbv`), which are different from each other
-  and from the booleans, and which the well-typed bit-vector (and location)
-  terms evaluate to (`ev_bv`, `ev_loc`);
-- the values of the terms by their structure (`den`, `denB`): the value of a
-  term as a bit-vector of width `n`, or as a boolean, computed from those of its
-  operands on the nodes whose value is a function of them (`den_Add`, …), which
-  is its value on well-typed terms (`den_iff`, `denB_iff`). A language defines
-  them by recursion on its terms;
-- the primitives of the module (`Prim`), the literals and the terms that the
-  helpers build;
-- the invariant of the literals (`bv_wf`), and what the subsorts
-  `Nonzero` and `Zero` mean;
-- the bound of the values of terms by `msb_of` (`den_msb`).
+The invariant of the literals (`bv_wf`, part of their typing) is that their
+integer is in the range of their width.
 -/
+
+noncomputable section
 
 namespace BitvecMod
 
 open Classical Kanon
+open Kanon.Sem (OLe FLe)
 
-/-- What the bitvec module needs of the semantics `S` of a language, for its
-interface `L`. -/
-class Sem {S : Kanon.Sem} [DecidableEq S.Term] [DecidableEq S.Ty] {B : Kanon.Base S}
-    {LBool : KanonBool.Syntax B} {LCore : CoreMod.Syntax B} (L : Syntax B LBool LCore)
-    [KanonBool.Sem LBool] [CoreMod.Sem LCore] where
-  /-- The bit-vector values. -/
-  vbv : (n : Nat) → BitVec n → S.Val
-  vbv_inj : ∀ n (x y : BitVec n), vbv n x = vbv n y → x = y
-  vbv_ne : ∀ n m (x : BitVec n) (y : BitVec m), n ≠ m → vbv n x ≠ vbv m y
-  vbv_ne_vbool : ∀ n (x : BitVec n) b, vbv n x ≠ KanonBool.Sem.vbool LBool b
-  /-- Well-typed bit-vectors (and locations) evaluate to bit-vectors of their
-  width, which is positive. -/
-  ev_bv : ∀ ρ t v m, S.WT t → S.ty t = L.TBitVector m → S.ev ρ t = some v →
-    0 < m ∧ ∃ x, v = vbv m.toNat x
-  ev_loc : ∀ ρ t v m, S.WT t → S.ty t = L.TLoc m → S.ev ρ t = some v →
-    0 < m ∧ ∃ x, v = vbv m.toNat x
-  /-- The literals. -/
-  ev_BitVec : ∀ ρ z t, S.ev ρ (B.node (L.BitVecK z) t) =
-    some (vbv (L.bitvec_size_of_ty t).toNat (BitVec.ofInt _ z))
-  ev_LocLit : ∀ ρ z t, S.ev ρ (B.node (L.LocLitK z) t) =
-    some (vbv (L.bitvec_size_of_ty t).toNat (BitVec.ofInt _ z))
-  bv_wf_BitVec : ∀ z t, L.bv_wf (B.node (L.BitVecK z) t) ↔
-    0 ≤ z ∧ z < 2 ^ (L.bitvec_size_of_ty t).toNat
-  bv_wf_LocLit : ∀ z t, L.bv_wf (B.node (L.LocLitK z) t) ↔
-    0 ≤ z ∧ z < 2 ^ (L.bitvec_size_of_ty t).toNat
-  -- the values by the structure of the terms
-  den : S.Env → (n : Nat) → S.Term → Option (BitVec n)
-  denB : S.Env → S.Term → Option Bool
-  den_iff : ∀ ρ (n : Nat) t x, S.WT t → S.ty t = L.TBitVector n →
-    (den ρ n t = some x ↔ S.ev ρ t = some (vbv n x))
-  denB_iff : ∀ ρ t b, S.WT t → S.ty t = LBool.TBool →
-    (denB ρ t = some b ↔ S.ev ρ t = some (KanonBool.Sem.vbool LBool b))
-  den_BitVec : ∀ ρ n z t, den ρ n (B.node (L.BitVecK z) t) = some (BitVec.ofInt n z)
-  den_Add : ∀ ρ n c a b t, den ρ n (B.node (L.AddK c a b) t) =
-    ckOp c BitVec.saddOverflow BitVec.uaddOverflow (· + ·) (den ρ n a) (den ρ n b)
-  den_Sub : ∀ ρ n c a b t, den ρ n (B.node (L.SubK c a b) t) =
-    ckOp c BitVec.ssubOverflow BitVec.usubOverflow (· - ·) (den ρ n a) (den ρ n b)
-  den_Mul : ∀ ρ n c a b t, den ρ n (B.node (L.MulK c a b) t) =
-    ckOp c BitVec.smulOverflow BitVec.umulOverflow (· * ·) (den ρ n a) (den ρ n b)
-  den_Div : ∀ ρ n s a b t, den ρ n (B.node (L.DivK s a b) t) =
-    binOp (fun x y => if s then x.smtSDiv y else x.smtUDiv y) (den ρ n a) (den ρ n b)
-  den_Rem : ∀ ρ n s a b t, den ρ n (B.node (L.RemK s a b) t) =
-    binOp (fun x y => if s then x.srem y else x.umod y) (den ρ n a) (den ρ n b)
-  den_Mod : ∀ ρ n a b t, den ρ n (B.node (L.ModK a b) t) =
-    binOp (·.smod ·) (den ρ n a) (den ρ n b)
-  den_BitAnd : ∀ ρ n a b t, den ρ n (B.node (L.BitAndK a b) t) =
-    binOp (· &&& ·) (den ρ n a) (den ρ n b)
-  den_BitOr : ∀ ρ n a b t, den ρ n (B.node (L.BitOrK a b) t) =
-    binOp (· ||| ·) (den ρ n a) (den ρ n b)
-  den_BitXor : ∀ ρ n a b t, den ρ n (B.node (L.BitXorK a b) t) =
-    binOp (· ^^^ ·) (den ρ n a) (den ρ n b)
-  den_Shl : ∀ ρ n a b t, den ρ n (B.node (L.ShlK a b) t) =
-    binOp (· <<< ·) (den ρ n a) (den ρ n b)
-  den_LShr : ∀ ρ n a b t, den ρ n (B.node (L.LShrK a b) t) =
-    binOp (· >>> ·) (den ρ n a) (den ρ n b)
-  den_AShr : ∀ ρ n a b t, den ρ n (B.node (L.AShrK a b) t) =
-    binOp (·.sshiftRight' ·) (den ρ n a) (den ρ n b)
-  den_BvConcat : ∀ ρ n a b t, den ρ n (B.node (L.BvConcatK a b) t) =
-    match L.asTBitVector (S.ty a), L.asTBitVector (S.ty b) with
-    | some m1, some m2 =>
-      match den ρ m1.toNat a, den ρ m2.toNat b with
-      | some x, some y => some ((x ++ y).setWidth n)
-      | _, _ => none
-    | _, _ => none
-  den_Neg : ∀ ρ n c a t, den ρ n (B.node (L.NegK c a) t) = negOp c (den ρ n a)
-  den_BvNot : ∀ ρ n a t, den ρ n (B.node (L.BvNotK a) t) = (den ρ n a).map (~~~·)
-  den_BvOfBool : ∀ ρ n k a t, den ρ n (B.node (L.BvOfBoolK k a) t) =
-    (denB ρ a).map (fun b => if b then 1 else 0)
-  den_BvExtend : ∀ ρ n s k a t, den ρ n (B.node (L.BvExtendK s k a) t) =
-    match L.asTBitVector (S.ty a) with
-    | some m => (den ρ m.toNat a).map (fun x => if s then x.signExtend n else x.setWidth n)
-    | none => none
-  den_BvExtract : ∀ ρ n i j a t, den ρ n (B.node (L.BvExtractK i j a) t) =
-    match L.asTBitVector (S.ty a) with
-    | some m => (den ρ m.toNat a).map (fun x => x.extractLsb' i.toNat n)
-    | none => none
-  den_Ite : ∀ ρ n g a b t, den ρ n (B.node (LBool.IteK g a b) t) =
-    match denB ρ g with
-    | some true => den ρ n a
-    | some false => den ρ n b
-    | none => none
-  denB_Bool : ∀ ρ c t, denB ρ (B.node (LBool.BoolK c) t) = some c
-  denB_Not : ∀ ρ a t, denB ρ (B.node (LBool.NotK a) t) = (denB ρ a).map (!·)
-  denB_And : ∀ ρ a b t, denB ρ (B.node (LBool.AndK a b) t) = andB (denB ρ a) (denB ρ b)
-  denB_Or : ∀ ρ a b t, denB ρ (B.node (LBool.OrK a b) t) = orB (denB ρ a) (denB ρ b)
-  denB_Ite : ∀ ρ g a b t, denB ρ (B.node (LBool.IteK g a b) t) =
-    match denB ρ g with
-    | some true => denB ρ a
-    | some false => denB ρ b
-    | none => none
-  denB_Eq : ∀ ρ a b t, denB ρ (B.node (LBool.EqK a b) t) =
-    match L.asTBitVector (S.ty a) with
-    | some m =>
-      if 0 < m then binB (fun x y => decide (x = y)) (den ρ m.toNat a) (den ρ m.toNat b)
-      else none
-    | none =>
-      if S.ty a = LBool.TBool then binB (fun x y => decide (x = y)) (denB ρ a) (denB ρ b)
-      else evB LBool ρ (B.node (LBool.EqK a b) t)
-  denB_Lt : ∀ ρ s a b t, denB ρ (B.node (L.LtK s a b) t) =
-    match L.asTBitVector (S.ty a) with
-    | some m =>
-      if 0 < m then binB (fun x y => if s then x.slt y else x.ult y)
-        (den ρ m.toNat a) (den ρ m.toNat b)
-      else none
-    | none => evB LBool ρ (B.node (L.LtK s a b) t)
-  denB_Leq : ∀ ρ s a b t, denB ρ (B.node (L.LeqK s a b) t) =
-    match L.asTBitVector (S.ty a) with
-    | some m =>
-      if 0 < m then binB (fun x y => if s then x.sle y else x.ule y)
-        (den ρ m.toNat a) (den ρ m.toNat b)
-      else none
-    | none => evB LBool ρ (B.node (L.LeqK s a b) t)
-  denB_AddOvf : ∀ ρ s a b t, denB ρ (B.node (L.AddOvfK s a b) t) =
-    match L.asTBitVector (S.ty a) with
-    | some m =>
-      if 0 < m then binB (fun x y => if s then x.saddOverflow y else x.uaddOverflow y)
-        (den ρ m.toNat a) (den ρ m.toNat b)
-      else none
-    | none => evB LBool ρ (B.node (L.AddOvfK s a b) t)
-  denB_SubOvf : ∀ ρ s a b t, denB ρ (B.node (L.SubOvfK s a b) t) =
-    match L.asTBitVector (S.ty a) with
-    | some m =>
-      if 0 < m then binB (fun x y => if s then x.ssubOverflow y else x.usubOverflow y)
-        (den ρ m.toNat a) (den ρ m.toNat b)
-      else none
-    | none => evB LBool ρ (B.node (L.SubOvfK s a b) t)
-  denB_MulOvf : ∀ ρ s a b t, denB ρ (B.node (L.MulOvfK s a b) t) =
-    match L.asTBitVector (S.ty a) with
-    | some m =>
-      if 0 < m then binB (fun x y => if s then x.smulOverflow y else x.umulOverflow y)
-        (den ρ m.toNat a) (den ρ m.toNat b)
-      else none
-    | none => evB LBool ρ (B.node (L.MulOvfK s a b) t)
-  -- the primitives (`Prim`) and the terms that the helpers build
-  size_of_ty_TBitVector : ∀ n, L.bitvec_size_of_ty (L.TBitVector n) = n
-  size_of_ty_TLoc : ∀ n, L.bitvec_size_of_ty (L.TLoc n) = n
-  mk_masked_eq : ∀ n z, L.bitvec_mk_masked n z =
-    B.node (L.BitVecK (z % 2 ^ n.toNat)) (L.TBitVector n)
-  mk_bv_eq : ∀ n z, L.bitvec_mk_bv n z = L.bitvec_mk_masked n z
-  bv_zero_eq : ∀ n, L.bitvec_bv_zero n = B.node (L.BitVecK 0) (L.TBitVector n)
-  bv_one_eq : ∀ n, L.bitvec_bv_one n = B.node (L.BitVecK 1) (L.TBitVector n)
-  lit_add_eq : ∀ s s' a b, L.bitvec_lit_add s s' a b = Prim.lit_add (L.bitvec_size_of_ty s) a b
-  lit_sub_eq : ∀ s s' a b, L.bitvec_lit_sub s s' a b = Prim.lit_sub (L.bitvec_size_of_ty s) a b
-  lit_mul_eq : ∀ s s' a b, L.bitvec_lit_mul s s' a b = Prim.lit_mul (L.bitvec_size_of_ty s) a b
-  lit_neg_eq : ∀ s a, L.bitvec_lit_neg s a = Prim.lit_neg (L.bitvec_size_of_ty s) a
-  lit_udiv_eq : ∀ s s' a b, L.bitvec_lit_udiv s s' a b =
-    Prim.lit_udiv (L.bitvec_size_of_ty s) a b
-  lit_sdiv_eq : ∀ s s' a b, L.bitvec_lit_sdiv s s' a b =
-    Prim.lit_sdiv (L.bitvec_size_of_ty s) a b
-  lit_and_eq : ∀ s s' a b, L.bitvec_lit_and s s' a b = Prim.lit_and (L.bitvec_size_of_ty s) a b
-  lit_or_eq : ∀ s s' a b, L.bitvec_lit_or s s' a b = Prim.lit_or (L.bitvec_size_of_ty s) a b
-  lit_xor_eq : ∀ s s' a b, L.bitvec_lit_xor s s' a b = Prim.lit_xor (L.bitvec_size_of_ty s) a b
-  lit_not_eq : ∀ s a, L.bitvec_lit_not s a = Prim.lit_not (L.bitvec_size_of_ty s) a
-  lit_shl_eq : ∀ s s' a b, L.bitvec_lit_shl s s' a b = Prim.lit_shl (L.bitvec_size_of_ty s) a b
-  lit_lshr_eq : ∀ s s' a b, L.bitvec_lit_lshr s s' a b =
-    Prim.lit_lshr (L.bitvec_size_of_ty s) a b
-  lit_ashr_eq : ∀ s s' a b, L.bitvec_lit_ashr s s' a b =
-    Prim.lit_ashr (L.bitvec_size_of_ty s) a b
-  lit_urem_eq : ∀ s s' a b, L.bitvec_lit_urem s s' a b =
-    Prim.lit_urem (L.bitvec_size_of_ty s) a b
-  lit_srem_eq : ∀ s s' a b, L.bitvec_lit_srem s s' a b =
-    Prim.lit_srem (L.bitvec_size_of_ty s) a b
-  lit_smod_eq : ∀ s s' a b, L.bitvec_lit_smod s s' a b =
-    Prim.lit_smod (L.bitvec_size_of_ty s) a b
-  lit_extract_eq : ∀ i j s a, L.bitvec_lit_extract i j s a = Prim.lit_extract i j a
-  lit_zext_eq : ∀ k s a, L.bitvec_lit_zext k s a = Prim.lit_zext a
-  lit_sext_eq : ∀ k s a, L.bitvec_lit_sext k s a = Prim.lit_sext k (L.bitvec_size_of_ty s) a
-  lit_concat_eq : ∀ s s' a b, L.bitvec_lit_concat s s' a b =
-    Prim.lit_concat (L.bitvec_size_of_ty s') a b
-  signed_extract_eq : ∀ z o l, L.bitvec_signed_extract z o l = Prim.signed_extract z o l
-  popcount_eq : ∀ z, L.bitvec_popcount z = Prim.popcount z
-  log2_eq : ∀ z, L.bitvec_log2 z = Prim.log2 z
-  tdiv_eq : ∀ a b, L.bitvec_tdiv a b = Prim.tdiv a b
-  trem_eq : ∀ a b, L.bitvec_trem a b = Prim.trem a b
-  divisible_eq : ∀ a b, L.bitvec_divisible a b = Prim.divisible a b
-  z_land_eq : ∀ a b, L.bitvec_z_land a b = Prim.z_land a b
-  z_lsl_eq : ∀ a b, L.bitvec_z_lsl a b = Prim.z_lsl a b
-  -- the subsorts: a term of `TNonzero` (resp. `TZero`) is not zero (resp. is
-  -- zero) when it has a value; literals are in them by their value
-  nonzero_ev : ∀ ρ t n (x : BitVec n), L.Nonzero t → S.WT t → S.ev ρ t = some (vbv n x) →
-    x ≠ 0
-  zero_ev : ∀ ρ t n (x : BitVec n), L.Zero t → S.WT t → S.ev ρ t = some (vbv n x) → x = 0
-  nonzero_BitVec : ∀ z t, (∀ n : Nat, L.bitvec_size_of_ty t = n → BitVec.ofInt n z ≠ 0) →
-    L.Nonzero (B.node (L.BitVecK z) t)
-  /-- The values of a term are below `2 ^ (msb_of v + 1)` (`msb_of` recurses on the
-  terms, whose induction the interface does not give). -/
-  den_msb : ∀ ρ v (n : Nat) x, S.WT v → S.ty v = L.TBitVector n → den ρ n v = some x →
-    x.toNat < 2 ^ (L.bitvec_msb_of v + 1).toNat
+/-- What the bitvec module needs of the values of a language: its bit-vectors,
+and the width of a sort of bit-vectors. -/
+class Values (D : Kanon.Dom) where
+  vbv : Embed ((n : Nat) × BitVec n) D.Val
+  width : D.Ty → Nat
+
+/-! ## The primitives on integers -/
+
+abbrev z_land := Prim.z_land
+abbrev z_lsl := Prim.z_lsl
+abbrev popcount := Prim.popcount
+abbrev log2 := Prim.log2
+abbrev tdiv := Prim.tdiv
+abbrev trem := Prim.trem
+abbrev divisible := Prim.divisible
+abbrev signed_extract := Prim.signed_extract
+
+/-- The invariant of the literals: their integer is in the range of their
+width. -/
+@[kanon_wt] def bv_wf {T Ty : Type} (sBool : KanonBool.Srt → Ty) (sCore : CoreMod.Srt Ty → Ty)
+    (sBitvec : Srt → Ty) (ty : T → Ty) : Node T → Ty → Prop
+  | .BitVec z, t | .LocLit z, t =>
+    ∀ n, (t = sBitvec (.TBitVector n) ∨ t = sBitvec (.TLoc n)) → 0 ≤ z ∧ z < 2 ^ n.toNat
+  | _, _ => True
+
+/-! ## The operations on values -/
+
+section
+variable {D : Kanon.Dom} [KanonBool.Values D] [Values D]
+
+/-- The value of a bit-vector. -/
+abbrev bv (n : Nat) (x : BitVec n) : D.Val := Values.vbv.inj ⟨n, x⟩
+
+/-- A value as a bit-vector of width `n`; `none` for poison or another value. -/
+def asBV (n : Nat) (a : Option D.Val) : Option (BitVec n) :=
+  a.bind fun v => (Values.vbv.proj v).bind fun p => if h : p.1 = n then some (h ▸ p.2) else none
+
+/-- A value as a boolean. -/
+def asB (a : Option D.Val) : Option Bool := a.bind KanonBool.Values.vbool.proj
+
+/-- `k` at the width of the value `a`, if it is a bit-vector. -/
+def withW (a : Option D.Val) (k : Nat → Option D.Val) : Option D.Val :=
+  a.bind fun v => (Values.vbv.proj v).bind fun p => k p.1
+
+/-- A bit-vector result. -/
+def ofBV (n : Nat) (r : Option (BitVec n)) : Option D.Val := r.map (bv n)
+
+/-- A boolean result. -/
+def ofB (r : Option Bool) : Option D.Val := r.map KanonBool.Values.vbool.inj
+
+@[simp] theorem asBV_none (n : Nat) : asBV (D := D) n none = none := rfl
+@[simp] theorem asB_none : asB (D := D) none = none := rfl
+@[simp] theorem withW_none (k : Nat → Option D.Val) : withW none k = none := rfl
+@[simp] theorem withW_none_k (a : Option D.Val) : withW a (fun _ => none) = none := by
+  simp [withW]
+@[simp] theorem ofBV_none (n : Nat) : ofBV (D := D) n none = none := rfl
+@[simp] theorem ofB_none : ofB (D := D) none = none := rfl
+
+@[simp, kanon_val] theorem asBV_bv (n : Nat) (x : BitVec n) :
+    asBV n (some (bv (D := D) n x)) = some x := by
+  simp [asBV]
+
+@[kanon_val] theorem asBV_eq_some {n : Nat} {a : Option D.Val} {x : BitVec n} :
+    asBV n a = some x ↔ a = some (bv n x) := by
+  constructor
+  · intro h
+    simp only [asBV, Option.bind_eq_some_iff] at h
+    obtain ⟨v, rfl, ⟨m, y⟩, hp, h⟩ := h
+    split at h
+    · rename_i hm; simp only at hm; subst hm; cases h
+      rw [Embed.proj_eq_some_iff] at hp; rw [hp]
+    · cases h
+  · rintro rfl; exact asBV_bv n x
+
+@[simp, kanon_val] theorem asB_vbool (b : Bool) :
+    asB (some (KanonBool.Values.vbool.inj b : D.Val)) = some b := by
+  simp [asB]
+
+@[kanon_val] theorem asB_eq_some {a : Option D.Val} {b : Bool} :
+    asB a = some b ↔ a = some (KanonBool.Values.vbool.inj b) := by
+  simp only [asB, Option.bind_eq_some_iff, Embed.proj_eq_some_iff]
+  constructor
+  · rintro ⟨v, rfl, rfl⟩; rfl
+  · rintro rfl; exact ⟨_, rfl, rfl⟩
+
+@[simp, kanon_val] theorem withW_bv (n : Nat) (x : BitVec n) (k : Nat → Option D.Val) :
+    withW (some (bv n x)) k = k n := by
+  simp [withW]
+
+@[kanon_val] theorem withW_eq_some {a : Option D.Val} {k : Nat → Option D.Val} {v : D.Val} :
+    withW a k = some v ↔ ∃ n x, a = some (bv n x) ∧ k n = some v := by
+  constructor
+  · intro h
+    simp only [withW, Option.bind_eq_some_iff] at h
+    obtain ⟨u, rfl, ⟨n, x⟩, hp, h⟩ := h
+    exact ⟨n, x, by rw [Embed.proj_eq_some_iff] at hp; rw [hp], h⟩
+  · rintro ⟨n, x, rfl, h⟩; rw [withW_bv]; exact h
+
+@[simp, kanon_val] theorem ofBV_some (n : Nat) (x : BitVec n) :
+    ofBV n (some x) = some (bv (D := D) n x) := rfl
+@[simp, kanon_val] theorem ofB_some (b : Bool) :
+    ofB (some b) = some (KanonBool.Values.vbool.inj b : D.Val) := rfl
+
+/-! The operations on bit-vectors of option B (`ckOp` and the others), poisoned
+by their operands. -/
+
+/-- Checked arithmetic: poison when a checked flag overflows. -/
+def ckOp {n : Nat} (c : CoreMod.Checked) (sovf uovf : BitVec n → BitVec n → Bool)
+    (f : BitVec n → BitVec n → BitVec n) :
+    Option (BitVec n) → Option (BitVec n) → Option (BitVec n)
+  | some x, some y =>
+    if (c.signed && sovf x y) || (c.unsigned && uovf x y) then none else some (f x y)
+  | _, _ => none
+
+/-- Plain binary operations. -/
+def binOp {n : Nat} (f : BitVec n → BitVec n → BitVec n) :
+    Option (BitVec n) → Option (BitVec n) → Option (BitVec n)
+  | some x, some y => some (f x y)
+  | _, _ => none
+
+/-- Negation, checked against `INT_MIN`. -/
+def negOp {n : Nat} (c : Bool) : Option (BitVec n) → Option (BitVec n)
+  | some x => if c && x = BitVec.intMin n then none else some (-x)
+  | none => none
+
+/-- A binary predicate. -/
+def binB {α : Type} (f : α → α → Bool) : Option α → Option α → Option Bool
+  | some x, some y => some (f x y)
+  | _, _ => none
+
+@[simp] theorem ckOp_none_l {n c sovf uovf f} (b : Option (BitVec n)) :
+    ckOp c sovf uovf f none b = none := rfl
+@[simp] theorem ckOp_none_r {n c sovf uovf f} (a : Option (BitVec n)) :
+    ckOp c sovf uovf f a none = none := by cases a <;> rfl
+@[simp, kanon_val] theorem ckOp_some {n c sovf uovf f} (x y : BitVec n) :
+    ckOp c sovf uovf f (some x) (some y) =
+      if (c.signed && sovf x y) || (c.unsigned && uovf x y) then none else some (f x y) := rfl
+@[simp] theorem binOp_none_l {n f} (b : Option (BitVec n)) : binOp f none b = none := rfl
+@[simp] theorem binOp_none_r {n f} (a : Option (BitVec n)) : binOp f a none = none := by
+  cases a <;> rfl
+@[simp, kanon_val] theorem binOp_some {n f} (x y : BitVec n) :
+    binOp f (some x) (some y) = some (f x y) := rfl
+@[simp] theorem negOp_none {n c} : negOp (n := n) c none = none := rfl
+@[simp, kanon_val] theorem negOp_some {n c} (x : BitVec n) :
+    negOp c (some x) = if c && x = BitVec.intMin n then none else some (-x) := rfl
+@[simp, kanon_val] theorem binB_some {α f} (x y : α) : binB f (some x) (some y) = some (f x y) :=
+  rfl
+@[simp] theorem binB_none_l {α f} (y : Option α) : binB f none y = none := rfl
+@[simp] theorem binB_none_r {α f} (x : Option α) : binB f x none = none := by cases x <;> rfl
+
+end
+
+/-! ## The evaluation of the nodes -/
+
+/-- The evaluation of a node in the environment `ρ`, at the sort `t`, given the
+values of its children in every environment. -/
+def Node.eval {D : Kanon.Dom} [KanonBool.Values D] [Values D] (ρ : D.Env) (t : D.Ty) :
+    Node (D.Env → Option D.Val) → Option D.Val
+  | .BitVec z | .LocLit z => ofBV (Values.width t) (some (BitVec.ofInt _ z))
+  | .BvOfBool n a => ofBV n.toNat ((asB (a ρ)).map fun b => if b then 1 else 0)
+  | .BvExtract i j a =>
+    withW (a ρ) fun n => ofBV (j - i + 1).toNat ((asBV n (a ρ)).map fun x => x.extractLsb' i.toNat _)
+  | .BvExtend s k a =>
+    withW (a ρ) fun n =>
+      ofBV (n + k.toNat) ((asBV n (a ρ)).map fun x => if s then x.signExtend _ else x.setWidth _)
+  | .BvNot a => ofBV (Values.width t) ((asBV _ (a ρ)).map (~~~·))
+  | .Neg c a => ofBV (Values.width t) (negOp c (asBV _ (a ρ)))
+  | .Add c a b =>
+    ofBV (Values.width t)
+      (ckOp c BitVec.saddOverflow BitVec.uaddOverflow (· + ·) (asBV _ (a ρ)) (asBV _ (b ρ)))
+  | .Sub c a b =>
+    ofBV (Values.width t)
+      (ckOp c BitVec.ssubOverflow BitVec.usubOverflow (· - ·) (asBV _ (a ρ)) (asBV _ (b ρ)))
+  | .Mul c a b =>
+    ofBV (Values.width t)
+      (ckOp c BitVec.smulOverflow BitVec.umulOverflow (· * ·) (asBV _ (a ρ)) (asBV _ (b ρ)))
+  | .Div s a b =>
+    ofBV (Values.width t)
+      (binOp (fun x y => if s then x.smtSDiv y else x.smtUDiv y) (asBV _ (a ρ)) (asBV _ (b ρ)))
+  | .Rem s a b =>
+    ofBV (Values.width t)
+      (binOp (fun x y => if s then x.srem y else x.umod y) (asBV _ (a ρ)) (asBV _ (b ρ)))
+  | .Mod a b => ofBV (Values.width t) (binOp (·.smod ·) (asBV _ (a ρ)) (asBV _ (b ρ)))
+  | .AddOvf s a b =>
+    withW (a ρ) fun n => ofB (binB (fun x y => if s then x.saddOverflow y else x.uaddOverflow y)
+      (asBV n (a ρ)) (asBV n (b ρ)))
+  | .SubOvf s a b =>
+    withW (a ρ) fun n => ofB (binB (fun x y => if s then x.ssubOverflow y else x.usubOverflow y)
+      (asBV n (a ρ)) (asBV n (b ρ)))
+  | .MulOvf s a b =>
+    withW (a ρ) fun n => ofB (binB (fun x y => if s then x.smulOverflow y else x.umulOverflow y)
+      (asBV n (a ρ)) (asBV n (b ρ)))
+  | .Lt s a b =>
+    withW (a ρ) fun n => ofB (binB (fun x y => if s then x.slt y else x.ult y)
+      (asBV n (a ρ)) (asBV n (b ρ)))
+  | .Leq s a b =>
+    withW (a ρ) fun n => ofB (binB (fun x y => if s then x.sle y else x.ule y)
+      (asBV n (a ρ)) (asBV n (b ρ)))
+  | .BvConcat a b =>
+    withW (a ρ) fun n => withW (b ρ) fun m =>
+      ofBV (n + m) ((asBV n (a ρ)).bind fun x => (asBV m (b ρ)).map fun y => x ++ y)
+  | .BitAnd a b => ofBV (Values.width t) (binOp (· &&& ·) (asBV _ (a ρ)) (asBV _ (b ρ)))
+  | .BitOr a b => ofBV (Values.width t) (binOp (· ||| ·) (asBV _ (a ρ)) (asBV _ (b ρ)))
+  | .BitXor a b => ofBV (Values.width t) (binOp (· ^^^ ·) (asBV _ (a ρ)) (asBV _ (b ρ)))
+  | .Shl a b => ofBV (Values.width t) (binOp (· <<< ·) (asBV _ (a ρ)) (asBV _ (b ρ)))
+  | .LShr a b => ofBV (Values.width t) (binOp (· >>> ·) (asBV _ (a ρ)) (asBV _ (b ρ)))
+  | .AShr a b =>
+    ofBV (Values.width t) (binOp (·.sshiftRight' ·) (asBV _ (a ρ)) (asBV _ (b ρ)))
+
+attribute [kanon_close_simp] ckOp binOp negOp binB
+
+/-- The evaluation of the nodes is monotone in poison: it is strict in each
+child. -/
+theorem Node.eval_mono {D : Kanon.Dom} [KanonBool.Values D] [Values D] (ρ : D.Env) (t : D.Ty)
+    {n n' : Node (D.Env → Option D.Val)} (h : n.Rel FLe n') :
+    OLe (n.eval ρ t) (n'.eval ρ t) := by
+  cases n <;> cases n' <;> simp only [Node.Rel] at h <;> (try contradiction)
+  all_goals simp only [Node.eval]
+  all_goals first
+    | (subst h; exact OLe.refl _)
+    | (obtain ⟨rfl, h⟩ := h; rcases (h ρ).cases with h1 | h1 <;> simp [h1])
+    | (obtain ⟨rfl, rfl, h⟩ := h; rcases (h ρ).cases with h1 | h1 <;> simp [h1])
+    | (obtain ⟨rfl, h1, h2⟩ := h; rcases (h1 ρ).cases with h1 | h1 <;>
+        rcases (h2 ρ).cases with h2 | h2 <;> simp [h1, h2])
+    | (rcases (h ρ).cases with h1 | h1 <;> simp [h1])
+    | (obtain ⟨h1, h2⟩ := h; rcases (h1 ρ).cases with h1 | h1 <;>
+        rcases (h2 ρ).cases with h2 | h2 <;> simp [h1, h2])
+
+/-- The values of the sorts of the module: bit-vectors of their width, which is
+positive. -/
+def Srt.val {D : Kanon.Dom} [Values D] : Srt → D.Val → Prop
+  | .TBitVector n, v | .TLoc n, v => 0 < n ∧ ∃ x : BitVec n.toNat, v = Values.vbv.inj ⟨_, x⟩
 
 end BitvecMod

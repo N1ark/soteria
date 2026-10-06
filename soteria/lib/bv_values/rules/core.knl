@@ -7,7 +7,7 @@
    against the declaration. The paths are relative to [Bv_values], which both
    languages open. *)
 
-[@@@lean_module "CoreMod"]
+[@@@lean_root "CoreMod"]
 
 type var [@ocaml "Bv_base.Var.t"] [@lean "Int"]
     [@equal "Bv_base.Var.equal"] [@hash "Bv_base.Var.hash"]

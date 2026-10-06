@@ -1,1 +1,1 @@
-import Kanon.Soundness
+import Kanon.Rules

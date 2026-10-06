@@ -1,6 +1,7 @@
 (* The exists module: existential quantification over terms. *)
 
-[@@@lean_module "ExistsMod"]
+[@@@lean_root "ExistsMod"]
+[@@@lean_laws]
 
 use "core"
 use builtin "bool"

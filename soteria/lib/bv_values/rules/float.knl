@@ -1,6 +1,6 @@
 (* The float module: floating-point numbers. *)
 
-[@@@lean_module "FloatMod"]
+[@@@lean_root "FloatMod"]
 
 use "core"
 use builtin "bool"

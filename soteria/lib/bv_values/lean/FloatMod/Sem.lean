@@ -1,189 +1,217 @@
+import FloatMod.Node
 import BitvecMod.Sem
-import FloatMod.Syntax
-import FloatMod.Prim
-import FloatMod.Val
 
 /-!
-# What the float module needs of the semantics of a language
+# The meaning of the nodes of the float module
 
-The rules of the float module (`../rules/float.kn`) are proved once, over its
-interface `L` and what they need of the semantics `S`, the class
-`FloatMod.Sem L`:
-
-- the floats among the values (`vfloat`, by their precision and bit pattern),
-  which are different from each other and from the booleans and bit-vectors,
-  and which the well-typed float terms evaluate to (`ev_float`);
-- the floating-point arithmetic of the language (`fadd`, …, which the module
-  leaves abstract), and the evaluation of the nodes with it (`ev_FAdd`, …), by
-  the operations of `Val.lean`;
-- the primitives of the module (`Prim`), and the invariant of the literals
-  (`float_wf`).
-
-`Oracle.Compat` is what the rules assume of the oracles (Floatml's
-operations): that they compute, on literals, what the arithmetic of the
-language does.
+Floats are exact IEEE bit patterns (`CoreMod.FBits`): unlike in SMT-LIB, NaNs
+with different payloads are different values (SMT-LIB's single NaN is an
+approximation made by the solver encoding, not something the simplifications may
+rely on). The arithmetic of a language is its own (`Values.add`, …): each
+language gives it (as opaque operations, so that the proofs hold of any), and
+`Oracle.Compat` (`Prims.lean`) states that Floatml computes it on literals.
+Classification, comparisons, `abs` and `neg`, which only read or flip bits, are
+defined here. The invariant of the literals (`float_wf`) is that their bits fit
+their precision.
 -/
+
+noncomputable section
 
 namespace FloatMod
 
 open Classical Kanon CoreMod
+open Kanon.Sem (OLe FLe)
+open BitvecMod (bv asBV withW ofB)
 
-/-- What the float module needs of the semantics `S` of a language, for its
-interface `L`. -/
-class Sem {S : Kanon.Sem} [DecidableEq S.Term] [DecidableEq S.Ty] {B : Kanon.Base S}
-    {LBool : KanonBool.Syntax B} {LCore : CoreMod.Syntax B}
-    {LBitvec : BitvecMod.Syntax B LBool LCore} (L : Syntax B LBool LCore LBitvec)
-    [KanonBool.Sem LBool] [CoreMod.Sem LCore] [BitvecMod.Sem LBitvec] where
-  /-- The float values. -/
-  vfloat : (p : Fp) → FBits p → S.Val
-  vfloat_inj : ∀ p q (x : FBits p) (y : FBits q), vfloat p x = vfloat q y →
-    (⟨p, x⟩ : Σ p, FBits p) = ⟨q, y⟩
-  vfloat_ne_vbool : ∀ p (x : FBits p) b, vfloat p x ≠ KanonBool.Sem.vbool LBool b
-  vfloat_ne_vbv : ∀ p (x : FBits p) n (y : BitVec n), vfloat p x ≠ BitvecMod.Sem.vbv LBitvec n y
-  /-- Well-typed floats evaluate to floats of their precision. -/
-  ev_float : ∀ ρ t v p, S.WT t → S.ty t = L.TFloat p → S.ev ρ t = some v →
-    ∃ x, v = vfloat p x
-  /-- The floating-point arithmetic of the language, on bit patterns. -/
-  fadd : (p : Fp) → FBits p → FBits p → FBits p
-  fsub : (p : Fp) → FBits p → FBits p → FBits p
-  fmul : (p : Fp) → FBits p → FBits p → FBits p
-  fdiv : (p : Fp) → FBits p → FBits p → FBits p
-  frem : (p : Fp) → FBits p → FBits p → FBits p
-  fmin : (p : Fp) → FBits p → FBits p → FBits p
-  fmax : (p : Fp) → FBits p → FBits p → FBits p
-  ffma : (p : Fp) → FBits p → FBits p → FBits p → FBits p
-  fsqrt : (p : Fp) → FBits p → FBits p
-  fround : Rm → (p : Fp) → FBits p → FBits p
-  fconvert : Rm → (p q : Fp) → FBits p → FBits q
-  ftoBv : Rm → Bool → (n : Nat) → (p : Fp) → FBits p → BitVec n
-  fofBv : Rm → Bool → (p : Fp) → (n : Nat) → BitVec n → FBits p
-  -- the evaluation of the nodes
-  ev_Float : ∀ ρ f t, S.ev ρ (B.node (L.FloatK f) t) = some (vfloat f.prec f.val)
-  ev_BvOfFloat : ∀ ρ rm s n a t, S.ev ρ (B.node (L.BvOfFloatK rm s n a) t) =
-    fUn vfloat (fun p x => some (BitvecMod.Sem.vbv LBitvec n.toNat (ftoBv rm s n.toNat p x)))
-      (S.ev ρ a)
-  ev_FloatOfBv : ∀ ρ rm s p a t, S.ev ρ (B.node (L.FloatOfBvK rm s p a) t) =
-    BitvecMod.bvUn (BitvecMod.Sem.vbv LBitvec) (fun n x => some (vfloat p (fofBv rm s p n x)))
-      (S.ev ρ a)
-  ev_FloatOfBvRaw : ∀ ρ p a t, S.ev ρ (B.node (L.FloatOfBvRawK p a) t) =
-    BitvecMod.bvUn (BitvecMod.Sem.vbv LBitvec)
-      (fun n x => if h : n = p.size then some (vfloat p (x.cast h)) else none) (S.ev ρ a)
-  ev_FloatOfFloat : ∀ ρ rm p a t, S.ev ρ (B.node (L.FloatOfFloatK rm p a) t) =
-    fUn vfloat (fun q x => some (vfloat p (fconvert rm q p x))) (S.ev ρ a)
-  ev_FAbs : ∀ ρ a t, S.ev ρ (B.node (L.FAbsK a) t) =
-    fUn vfloat (fun p x => some (vfloat p x.abs)) (S.ev ρ a)
-  ev_FNeg : ∀ ρ a t, S.ev ρ (B.node (L.FNegK a) t) =
-    fUn vfloat (fun p x => some (vfloat p x.neg)) (S.ev ρ a)
-  ev_FSqrt : ∀ ρ a t, S.ev ρ (B.node (L.FSqrtK a) t) =
-    fUn vfloat (fun p x => some (vfloat p (fsqrt p x))) (S.ev ρ a)
-  ev_FRound : ∀ ρ rm a t, S.ev ρ (B.node (L.FRoundK rm a) t) =
-    fUn vfloat (fun p x => some (vfloat p (fround rm p x))) (S.ev ρ a)
-  ev_FIs : ∀ ρ fc a t, S.ev ρ (B.node (L.FIsK fc a) t) =
-    fUn vfloat (fun _ x => some (KanonBool.Sem.vbool LBool (x.isClass fc))) (S.ev ρ a)
-  ev_FIsNeg : ∀ ρ a t, S.ev ρ (B.node (L.FIsNegK a) t) =
-    fUn vfloat (fun _ x => some (KanonBool.Sem.vbool LBool x.isNeg)) (S.ev ρ a)
-  ev_FIsPos : ∀ ρ a t, S.ev ρ (B.node (L.FIsPosK a) t) =
-    fUn vfloat (fun _ x => some (KanonBool.Sem.vbool LBool x.isPos)) (S.ev ρ a)
-  ev_FEq : ∀ ρ a b t, S.ev ρ (B.node (L.FEqK a b) t) =
-    fBin vfloat (fun _ x y => some (KanonBool.Sem.vbool LBool (x.eq y))) (S.ev ρ a) (S.ev ρ b)
-  ev_FLeq : ∀ ρ a b t, S.ev ρ (B.node (L.FLeqK a b) t) =
-    fBin vfloat (fun _ x y => some (KanonBool.Sem.vbool LBool (x.le y))) (S.ev ρ a) (S.ev ρ b)
-  ev_FLt : ∀ ρ a b t, S.ev ρ (B.node (L.FLtK a b) t) =
-    fBin vfloat (fun _ x y => some (KanonBool.Sem.vbool LBool (x.lt y))) (S.ev ρ a) (S.ev ρ b)
-  ev_FAdd : ∀ ρ a b t, S.ev ρ (B.node (L.FAddK a b) t) =
-    fBin vfloat (fun p x y => some (vfloat p (fadd p x y))) (S.ev ρ a) (S.ev ρ b)
-  ev_FSub : ∀ ρ a b t, S.ev ρ (B.node (L.FSubK a b) t) =
-    fBin vfloat (fun p x y => some (vfloat p (fsub p x y))) (S.ev ρ a) (S.ev ρ b)
-  ev_FMul : ∀ ρ a b t, S.ev ρ (B.node (L.FMulK a b) t) =
-    fBin vfloat (fun p x y => some (vfloat p (fmul p x y))) (S.ev ρ a) (S.ev ρ b)
-  ev_FDiv : ∀ ρ a b t, S.ev ρ (B.node (L.FDivK a b) t) =
-    fBin vfloat (fun p x y => some (vfloat p (fdiv p x y))) (S.ev ρ a) (S.ev ρ b)
-  ev_FRem : ∀ ρ a b t, S.ev ρ (B.node (L.FRemK a b) t) =
-    fBin vfloat (fun p x y => some (vfloat p (frem p x y))) (S.ev ρ a) (S.ev ρ b)
-  ev_FMin : ∀ ρ a b t, S.ev ρ (B.node (L.FMinK a b) t) =
-    fBin vfloat (fun p x y => some (vfloat p (fmin p x y))) (S.ev ρ a) (S.ev ρ b)
-  ev_FMax : ∀ ρ a b t, S.ev ρ (B.node (L.FMaxK a b) t) =
-    fBin vfloat (fun p x y => some (vfloat p (fmax p x y))) (S.ev ρ a) (S.ev ρ b)
-  ev_Fma : ∀ ρ a b c t, S.ev ρ (B.node (L.FmaK a b c) t) =
-    fTern vfloat (fun p x y z => some (vfloat p (ffma p x y z))) (S.ev ρ a) (S.ev ρ b)
-      (S.ev ρ c)
-  -- the invariant of the literals, and the primitives (`Prim`)
-  float_wf_Float : ∀ f t, L.float_wf (B.node (L.FloatK f) t) ↔ f.WF
-  fp_of_ty_TFloat : ∀ p, L.float_fp_of_ty (L.TFloat p) = p
-  fp_size_eq : ∀ p, L.float_fp_size p = Prim.fp_size p
-  f_prec_eq : ∀ f, L.float_f_prec f = Prim.f_prec f
-  fp_of_size_eq : ∀ n, L.float_fp_of_size n = Prim.fp_of_size n
-  f_equal_eq : ∀ a b, L.float_f_equal a b = Prim.f_equal a b
-  f_bits_equal_eq : ∀ a b, L.float_f_bits_equal a b = Prim.f_bits_equal a b
-  f_to_bits_eq : ∀ f, L.float_f_to_bits f = Prim.f_to_bits f
-  f_of_bits_eq : ∀ p z, L.float_f_of_bits p z = Prim.f_of_bits p z
-  f_nan_eq : ∀ p, L.float_f_nan p = Prim.f_nan p
-  f_is_class_eq : ∀ fc f, L.float_f_is_class fc f = Prim.f_is_class fc f
-  f_is_nan_eq : ∀ f, L.float_f_is_nan f = Prim.f_is_nan f
-  f_is_zero_eq : ∀ f, L.float_f_is_zero f = Prim.f_is_zero f
-  f_is_negative_eq : ∀ f, L.float_f_is_negative f = Prim.f_is_negative f
-  f_is_positive_eq : ∀ f, L.float_f_is_positive f = Prim.f_is_positive f
-  f_eq_eq : ∀ a b, L.float_f_eq a b = Prim.f_eq a b
-  f_lt_eq : ∀ a b, L.float_f_lt a b = Prim.f_lt a b
-  f_le_eq : ∀ a b, L.float_f_le a b = Prim.f_le a b
-  f_abs_eq : ∀ f, L.float_f_abs f = Prim.f_abs f
-  f_neg_eq : ∀ f, L.float_f_neg f = Prim.f_neg f
+/-- What the float module needs of the values of a language: its floats, and
+its floating-point arithmetic, on bit patterns. -/
+class Values (D : Kanon.Dom) where
+  vfloat : Embed ((p : Fp) × FBits p) D.Val
+  add : (p : Fp) → FBits p → FBits p → FBits p
+  sub : (p : Fp) → FBits p → FBits p → FBits p
+  mul : (p : Fp) → FBits p → FBits p → FBits p
+  div : (p : Fp) → FBits p → FBits p → FBits p
+  rem : (p : Fp) → FBits p → FBits p → FBits p
+  min : (p : Fp) → FBits p → FBits p → FBits p
+  max : (p : Fp) → FBits p → FBits p → FBits p
+  fma : (p : Fp) → FBits p → FBits p → FBits p → FBits p
+  sqrt : (p : Fp) → FBits p → FBits p
+  round : Rm → (p : Fp) → FBits p → FBits p
+  convert : Rm → (p q : Fp) → FBits p → FBits q
+  toBv : Rm → Bool → (n : Nat) → (p : Fp) → FBits p → BitVec n
+  ofBv : Rm → Bool → (p : Fp) → (n : Nat) → BitVec n → FBits p
 
-/-- The literal term of a float. -/
-def Syntax.lit {S : Kanon.Sem} [DecidableEq S.Term] [DecidableEq S.Ty] {B : Kanon.Base S}
-    {LBool : KanonBool.Syntax B} {LCore : CoreMod.Syntax B}
-    {LBitvec : BitvecMod.Syntax B LBool LCore} (L : Syntax B LBool LCore LBitvec)
-    (f : CoreMod.Float) : S.Term :=
-  B.node (L.FloatK f) (L.TFloat f.prec)
+/-! ## The primitives on floats, as Floatml's `AnyFloat` -/
 
-/-- What the rules assume of the oracles, for the interface `L`: on literals of
-the same precision, which fit it, they compute what the arithmetic of the
-language does (a float of that precision, which fits it); `f_to_int` and
-`f_of_int` the conversions, where they return; and `f_fmod` the emulation of
-C's `fmod` (`raw_fmod_of_rem`), in any environment. -/
-structure Oracle.Compat {S : Kanon.Sem} [DecidableEq S.Term] [DecidableEq S.Ty]
-    {B : Kanon.Base S} {LBool : KanonBool.Syntax B} {LCore : CoreMod.Syntax B}
-    {LBitvec : BitvecMod.Syntax B LBool LCore} (L : Syntax B LBool LCore LBitvec)
-    [KanonBool.Sem LBool] [CoreMod.Sem LCore] [BitvecMod.Sem LBitvec] [Sem L]
-    (f_add f_sub f_mul f_div f_rem f_fmod f_min f_max : CoreMod.Float → CoreMod.Float → CoreMod.Float)
-    (f_fma : CoreMod.Float → CoreMod.Float → CoreMod.Float → CoreMod.Float)
-    (f_sqrt : CoreMod.Float → CoreMod.Float) (f_round : Rm → CoreMod.Float → CoreMod.Float)
-    (f_convert : Rm → Fp → CoreMod.Float → CoreMod.Float)
-    (f_to_int : Rm → Bool → Int → CoreMod.Float → Option Int)
-    (f_of_int : Rm → Bool → Fp → Int → Int → Option CoreMod.Float) : Prop where
-  bin : ∀ (op : (p : Fp) → FBits p → FBits p → FBits p)
-    (lit : CoreMod.Float → CoreMod.Float → CoreMod.Float),
-    (op, lit) ∈ [(Sem.fadd L, f_add), (Sem.fsub L, f_sub), (Sem.fmul L, f_mul),
-      (Sem.fdiv L, f_div), (Sem.frem L, f_rem), (Sem.fmin L, f_min), (Sem.fmax L, f_max)] →
-    ∀ (f1 f2 : CoreMod.Float), f1.WF → f2.WF → f1.prec = f2.prec →
-      (lit f1 f2).prec = f1.prec ∧ (lit f1 f2).WF ∧
-        fBin (Sem.vfloat L) (fun p x y => some (Sem.vfloat L p (op p x y)))
-          (some (Sem.vfloat L f1.prec f1.val)) (some (Sem.vfloat L f2.prec f2.val)) =
-          some (Sem.vfloat L (lit f1 f2).prec (lit f1 f2).val)
-  fma : ∀ (f1 f2 f3 : CoreMod.Float), f1.WF → f2.WF → f3.WF → f1.prec = f2.prec →
-    f1.prec = f3.prec →
-    (f_fma f1 f2 f3).prec = f1.prec ∧ (f_fma f1 f2 f3).WF ∧
-      fTern (Sem.vfloat L) (fun p x y z => some (Sem.vfloat L p (Sem.ffma L p x y z)))
-        (some (Sem.vfloat L f1.prec f1.val)) (some (Sem.vfloat L f2.prec f2.val))
-        (some (Sem.vfloat L f3.prec f3.val)) =
-        some (Sem.vfloat L (f_fma f1 f2 f3).prec (f_fma f1 f2 f3).val)
-  sqrt : ∀ f, f.WF → (f_sqrt f).prec = f.prec ∧ (f_sqrt f).WF ∧
-    Sem.vfloat L _ (Sem.fsqrt L f.prec f.val) = Sem.vfloat L (f_sqrt f).prec (f_sqrt f).val
-  round : ∀ rm f, f.WF → (f_round rm f).prec = f.prec ∧ (f_round rm f).WF ∧
-    Sem.vfloat L _ (Sem.fround L rm f.prec f.val) =
-      Sem.vfloat L (f_round rm f).prec (f_round rm f).val
-  convert : ∀ rm p f, f.WF → (f_convert rm p f).prec = p ∧ (f_convert rm p f).WF ∧
-    Sem.vfloat L _ (Sem.fconvert L rm f.prec p f.val) =
-      Sem.vfloat L (f_convert rm p f).prec (f_convert rm p f).val
-  to_int : ∀ rm s n f z, f.WF → 0 < n → f_to_int rm s n f = some z →
-    Sem.ftoBv L rm s n.toNat f.prec f.val = BitVec.ofInt _ z
-  of_int : ∀ rm s p n z f, 0 < n → 0 ≤ z → z < 2 ^ n.toNat → f_of_int rm s p n z = some f →
-    f.prec = p ∧ f.WF ∧
-      Sem.vfloat L p (Sem.fofBv L rm s p n.toNat (BitVec.ofInt _ z)) = Sem.vfloat L f.prec f.val
-  /-- C's `fmod` agrees with its emulation from the IEEE remainder. -/
-  fmod : ∀ f1 f2, f1.WF → f2.WF → f1.prec = f2.prec →
-    (f_fmod f1 f2).prec = f1.prec ∧ (f_fmod f1 f2).WF ∧ ∀ ρ,
-      S.eval ρ (L.float_raw_fmod_of_rem (B.node (L.FRemK (L.lit f1) (L.lit f2)) (L.TFloat f1.prec))
-        (L.lit f1) (L.lit f2)) = some (Sem.vfloat L (f_fmod f1 f2).prec (f_fmod f1 f2).val)
+def fp_size (p : Fp) : Int := p.size
+
+def fp_of_size (n : Int) : Fp :=
+  if n = 16 then .F16 else if n = 64 then .F64 else if n = 128 then .F128 else .F32
+
+@[simp] def f_prec (f : CoreMod.Float) : Fp := f.prec
+def f_equal (a b : CoreMod.Float) : Bool := decide (a = b)
+def f_bits_equal (a b : CoreMod.Float) : Bool := decide (a = b)
+def f_to_bits (f : CoreMod.Float) : Int := f.bits
+def f_of_bits (p : Fp) (z : Int) : CoreMod.Float := ⟨p, (z % 2 ^ p.size).toNat⟩
+def f_nan (p : Fp) : CoreMod.Float := ⟨p, (FBits.nan p).toNat⟩
+def f_is_class (fc : Fc) (f : CoreMod.Float) : Bool := f.val.isClass fc
+def f_is_nan (f : CoreMod.Float) : Bool := f.val.isNaN
+def f_is_zero (f : CoreMod.Float) : Bool := f.val.isZero
+def f_is_negative (f : CoreMod.Float) : Bool := f.val.isNeg
+def f_is_positive (f : CoreMod.Float) : Bool := f.val.isPos
+def f_eq : CoreMod.Float → CoreMod.Float → Bool := Float.cmp FBits.eq
+def f_lt : CoreMod.Float → CoreMod.Float → Bool := Float.cmp FBits.lt
+def f_le : CoreMod.Float → CoreMod.Float → Bool := Float.cmp FBits.le
+def f_abs (f : CoreMod.Float) : CoreMod.Float := ⟨f.prec, (FBits.abs f.val).toNat⟩
+def f_neg (f : CoreMod.Float) : CoreMod.Float := ⟨f.prec, (FBits.neg f.val).toNat⟩
+
+/-- The invariant of the literals: their bits fit their precision. -/
+@[kanon_wt] def float_wf {T Ty : Type} (sBool : KanonBool.Srt → Ty) (sCore : CoreMod.Srt Ty → Ty)
+    (sBitvec : BitvecMod.Srt → Ty) (sFloat : Srt → Ty) (ty : T → Ty) : Node T → Ty → Prop
+  | .Float f, _ => f.WF
+  | _, _ => True
+
+/-! ## The operations on values -/
+
+section
+variable {D : Kanon.Dom} [KanonBool.Values D] [BitvecMod.Values D] [Values D]
+
+/-- The value of a float. -/
+abbrev vf (p : Fp) (x : FBits p) : D.Val := Values.vfloat.inj ⟨p, x⟩
+
+/-- The value of a concrete float. -/
+abbrev vlit (f : CoreMod.Float) : D.Val := vf f.prec f.val
+
+/-- A value as a float of precision `p`. -/
+def asF (p : Fp) (a : Option D.Val) : Option (FBits p) :=
+  a.bind fun v => (Values.vfloat.proj v).bind fun q => if h : q.1 = p then some (h ▸ q.2) else none
+
+/-- `k` at the precision and bits of the value `a`, if it is a float. -/
+def withF (a : Option D.Val) (k : (p : Fp) → FBits p → Option D.Val) : Option D.Val :=
+  a.bind fun v => (Values.vfloat.proj v).bind fun q => k q.1 q.2
+
+/-- A binary operation on floats of the same precision. -/
+def fBin (f : (p : Fp) → FBits p → FBits p → Option D.Val) (a b : Option D.Val) :
+    Option D.Val :=
+  withF a fun p x => (asF p b).bind (f p x)
+
+@[simp] theorem asF_none (p : Fp) : asF (D := D) p none = none := rfl
+@[simp] theorem withF_none (k : (p : Fp) → FBits p → Option D.Val) : withF none k = none := rfl
+@[simp] theorem withF_none_k (a : Option D.Val) : withF a (fun _ _ => none) = none := by
+  simp [withF]
+@[simp] theorem fBin_none_l (f : (p : Fp) → FBits p → FBits p → Option D.Val) (b : Option D.Val) :
+    fBin f none b = none := rfl
+@[simp] theorem fBin_none_r (f : (p : Fp) → FBits p → FBits p → Option D.Val) (a : Option D.Val) :
+    fBin f a none = none := by simp [fBin]
+
+@[simp, kanon_val] theorem asF_vf (p : Fp) (x : FBits p) :
+    asF p (some (vf (D := D) p x)) = some x := by
+  simp [asF]
+
+@[kanon_val] theorem asF_eq_some {p : Fp} {a : Option D.Val} {x : FBits p} :
+    asF p a = some x ↔ a = some (vf p x) := by
+  constructor
+  · intro h
+    simp only [asF, Option.bind_eq_some_iff] at h
+    obtain ⟨v, rfl, ⟨q, y⟩, hp, h⟩ := h
+    split at h
+    · rename_i hq; simp only at hq; subst hq; cases h
+      rw [Embed.proj_eq_some_iff] at hp; rw [hp]
+    · cases h
+  · rintro rfl; exact asF_vf p x
+
+@[simp, kanon_val] theorem withF_vf (p : Fp) (x : FBits p) (k : (p : Fp) → FBits p → Option D.Val) :
+    withF (some (vf p x)) k = k p x := by
+  simp [withF]
+
+@[kanon_val] theorem withF_eq_some {a : Option D.Val} {k : (p : Fp) → FBits p → Option D.Val}
+    {v : D.Val} : withF a k = some v ↔ ∃ p x, a = some (vf p x) ∧ k p x = some v := by
+  constructor
+  · intro h
+    simp only [withF, Option.bind_eq_some_iff] at h
+    obtain ⟨u, rfl, ⟨p, x⟩, hp, h⟩ := h
+    exact ⟨p, x, by rw [Embed.proj_eq_some_iff] at hp; rw [hp], h⟩
+  · rintro ⟨p, x, rfl, h⟩; rw [withF_vf]; exact h
+
+@[simp, kanon_val] theorem fBin_vf (f : (p : Fp) → FBits p → FBits p → Option D.Val) (p : Fp)
+    (x y : FBits p) : fBin f (some (vf p x)) (some (vf p y)) = f p x y := by
+  simp [fBin]
+
+/-- An arithmetic operation on floats of the same precision. -/
+def fArith (f : (p : Fp) → FBits p → FBits p → FBits p) : Option D.Val → Option D.Val → Option D.Val :=
+  fBin fun p x y => some (vf p (f p x y))
+
+/-- A comparison of floats of the same precision. -/
+def fCmp (f : ∀ {p : Fp}, FBits p → FBits p → Bool) : Option D.Val → Option D.Val → Option D.Val :=
+  fBin fun _ x y => some (KanonBool.Values.vbool.inj (f x y))
+
+/-- A unary operation on floats, of the same precision. -/
+def fUn (f : (p : Fp) → FBits p → FBits p) (a : Option D.Val) : Option D.Val :=
+  withF a fun p x => some (vf p (f p x))
+
+/-- A predicate on floats. -/
+def fPred (f : ∀ {p : Fp}, FBits p → Bool) (a : Option D.Val) : Option D.Val :=
+  withF a fun _ x => some (KanonBool.Values.vbool.inj (f x))
+
+end
+
+/-! ## The evaluation of the nodes -/
+
+/-- The evaluation of a node in the environment `ρ`, at the sort `t`, given the
+values of its children in every environment. -/
+def Node.eval {D : Kanon.Dom} [KanonBool.Values D] [BitvecMod.Values D] [Values D] (ρ : D.Env)
+    (t : D.Ty) : Node (D.Env → Option D.Val) → Option D.Val
+  | .Float f => some (vlit f)
+  | .BvOfFloat rm s n a =>
+    withF (a ρ) fun p x => some (bv n.toNat ((Values.toBv (D := D)) rm s n.toNat p x))
+  | .FloatOfBv rm s p a =>
+    withW (a ρ) fun n => (asBV n (a ρ)).map fun x => vf p ((Values.ofBv (D := D)) rm s p n x)
+  | .FloatOfBvRaw p a => (asBV p.size (a ρ)).map (vf p)
+  | .FloatOfFloat rm p a => withF (a ρ) fun q x => some (vf p ((Values.convert (D := D)) rm q p x))
+  | .FAbs a => fUn (fun _ x => x.abs) (a ρ)
+  | .FNeg a => fUn (fun _ x => x.neg) (a ρ)
+  | .FSqrt a => fUn (Values.sqrt (D := D)) (a ρ)
+  | .FRound rm a => fUn ((Values.round (D := D)) rm) (a ρ)
+  | .FIs fc a => fPred (fun x => x.isClass fc) (a ρ)
+  | .FIsNeg a => fPred (fun x => x.isNeg) (a ρ)
+  | .FIsPos a => fPred (fun x => x.isPos) (a ρ)
+  | .FEq a b => fCmp (fun x y => x.eq y) (a ρ) (b ρ)
+  | .FLeq a b => fCmp (fun x y => x.le y) (a ρ) (b ρ)
+  | .FLt a b => fCmp (fun x y => x.lt y) (a ρ) (b ρ)
+  | .FAdd a b => fArith (Values.add (D := D)) (a ρ) (b ρ)
+  | .FSub a b => fArith (Values.sub (D := D)) (a ρ) (b ρ)
+  | .FMul a b => fArith (Values.mul (D := D)) (a ρ) (b ρ)
+  | .FDiv a b => fArith (Values.div (D := D)) (a ρ) (b ρ)
+  | .FRem a b => fArith (Values.rem (D := D)) (a ρ) (b ρ)
+  | .FMin a b => fArith (Values.min (D := D)) (a ρ) (b ρ)
+  | .FMax a b => fArith (Values.max (D := D)) (a ρ) (b ρ)
+  | .Fma a b c =>
+    withF (a ρ) fun p x => (asF p (b ρ)).bind fun y => (asF p (c ρ)).map fun z =>
+      vf p ((Values.fma (D := D)) p x y z)
+
+attribute [kanon_close_simp] fArith fCmp fUn fPred
+
+/-- The evaluation of the nodes is monotone in poison: it is strict in each
+child. -/
+theorem Node.eval_mono {D : Kanon.Dom} [KanonBool.Values D] [BitvecMod.Values D] [Values D]
+    (ρ : D.Env) (t : D.Ty) {n n' : Node (D.Env → Option D.Val)} (h : n.Rel FLe n') :
+    OLe (n.eval ρ t) (n'.eval ρ t) := by
+  cases n <;> cases n' <;> simp only [Node.Rel] at h <;> (try contradiction)
+  all_goals simp only [Node.eval, fArith, fCmp, fUn, fPred]
+  all_goals first
+    | (subst h; exact OLe.refl _)
+    | (obtain ⟨rfl, rfl, rfl, h⟩ := h; rcases (h ρ).cases with h1 | h1 <;> simp [h1])
+    | (obtain ⟨rfl, rfl, h⟩ := h; rcases (h ρ).cases with h1 | h1 <;> simp [h1])
+    | (obtain ⟨rfl, h⟩ := h; rcases (h ρ).cases with h1 | h1 <;> simp [h1])
+    | (rcases (h ρ).cases with h1 | h1 <;> simp [h1])
+    | (obtain ⟨h1, h2, h3⟩ := h; rcases (h1 ρ).cases with h1 | h1 <;>
+        rcases (h2 ρ).cases with h2 | h2 <;> rcases (h3 ρ).cases with h3 | h3 <;>
+        simp [h1, h2, h3])
+    | (obtain ⟨h1, h2⟩ := h; rcases (h1 ρ).cases with h1 | h1 <;>
+        rcases (h2 ρ).cases with h2 | h2 <;> simp [h1, h2])
+
+/-- The values of the sorts of the module: floats of their precision. -/
+def Srt.val {D : Kanon.Dom} [Values D] : Srt → D.Val → Prop
+  | .TFloat p, v => ∃ x : FBits p, v = Values.vfloat.inj ⟨p, x⟩
 
 end FloatMod

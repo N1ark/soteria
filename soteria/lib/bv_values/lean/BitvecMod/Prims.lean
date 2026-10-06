@@ -3,9 +3,9 @@ import BitvecMod.Lang
 /-!
 # The primitives of the bitvec module over sorts and terms
 
-The width of a sort (`size_of_ty`) is the language's (`Values.width`): it is
-that of the sorts of bit-vectors, locations and pointers, which the bitvec
-module cannot all see. The operations on literals take the width of the sort of
+The width of a sort (`size_of_ty`) is `n` for the sorts `TBitVector n` and
+`TLoc n`, and otherwise the language's (`Values.width`): e.g. that of the sorts
+of pointers, which the bitvec module cannot see. The operations on literals take the width of the sort of
 their first operand (see `Ints.lean`). The subsorts `TNonzero` and `TZero` are
 the terms whose bit-vector values are not zero, or are zero.
 
@@ -22,8 +22,20 @@ open Classical Kanon
 
 variable {S : Kanon.Sem} [KanonBool.Lang S] [CoreMod.Lang S] [Lang S]
 
-/-- The width of a sort. -/
-def size_of_ty (s : S.Ty) : Int := (Values.width (D := S.toDom) s : Int)
+/-- The width of a sort: `n` for the sorts `TBitVector n` and `TLoc n` of the module, which
+does not depend on the values of the language (in particular in the typing of the terms),
+and the language's for the others. -/
+def size_of_ty (s : S.Ty) : Int :=
+  match sortProj s with
+  | some (.TBitVector n) | some (.TLoc n) => n
+  | _ => (Values.width (D := S.toDom) s : Int)
+
+@[simp, kanon_lits] theorem size_of_ty_TBitVector (n : Int) :
+    size_of_ty (S := S) (sort (.TBitVector n)) = n := by
+  simp [size_of_ty]
+
+@[simp, kanon_lits] theorem size_of_ty_TLoc (n : Int) : size_of_ty (S := S) (sort (.TLoc n)) = n := by
+  simp [size_of_ty]
 
 def lit_add (s _ : S.Ty) (a b : Int) : Int := Prim.lit_add (size_of_ty s) a b
 def lit_sub (s _ : S.Ty) (a b : Int) : Int := Prim.lit_sub (size_of_ty s) a b
@@ -86,5 +98,11 @@ theorem width_sort [Typed S] (ρ : S.Env) {s : Srt} {n : Int}
   rcases hs with rfl | rfl <;>
     obtain ⟨-, x, hx⟩ := hv <;>
     exact congrArg Sigma.fst ((Embed.inj_eq_iff _).1 hx)
+
+/-- `width_sort`, for a sort `τ` that is one of bit-vectors or locations. -/
+theorem width_eq [Typed S] (ρ : S.Env) {τ : S.Ty} {s : Srt} {n : Int} (hτ : τ = sort s)
+    (hs : s = .TBitVector n ∨ s = .TLoc n) (h : 0 < n) :
+    Values.width (D := S.toDom) τ = n.toNat :=
+  hτ ▸ width_sort ρ hs h
 
 end BitvecMod

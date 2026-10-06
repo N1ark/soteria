@@ -121,28 +121,28 @@ resp. always has zero). The rules of `Div` and `Rem` (`Bitvec.div`, `Bitvec.rem`
 sound for a divisor that is `Nonzero`, which is the contract of the typed
 interface that the OCaml side trusts, and `Ops.Sound` assumes it of `Bitvec.div` and
 `Bitvec.rem`. The rules that call them prove `Nonzero` of the divisor they pass
-(`Lib/Lit.lean`, `kanon_nonzero`).
+(`BitvecMod/Lib/Eq.lean`, `bveq_nonzero`).
 
-An arm is proved by the theorem tagged `@[kanon_arm]` that proves
-`M.f.r_name.arm.Stmt` in `Kanon/Proofs/M/f.lean` (the commutativity of the
-operators in `Kanon/Proofs/Laws.lean`), if there is one; or else by the tactic
-given to its function by `attribute [kanon_tactic tac] M.f.spec`, in the library
-that defines `tac` (`Kanon/Lib/`), or else by `kanon_auto`
-(`Kanon/Lib/Rule.lean`). The arms of `Bitvec.lt` and `Bitvec.leq` have a larger
-bound on heartbeats (`[@lean_heartbeats]` in `rules/bitvec.kn`).
 The modules marked `[@@@lean_module "M"]` are proved once, over their
 interface, for any language that uses them: the bool module in Kanon's library
-(`KanonBool`), the core and exists modules in `CoreMod/` and `ExistsMod/` (their
+(`KanonBool`), and the core, exists, bitvec, float and ptr modules in
+`CoreMod/`, `ExistsMod/`, `BitvecMod/`, `FloatMod/` and `PtrMod/`. Their
 `Sem.lean`, written by hand, states what their proofs need of the semantics of a
-language, with the proofs of their arms in `ExistsMod/Proofs/`). The language
-gives their interfaces (`Interface.lean`, generated) and the instances of their
-`Sem` classes (`Lang.lean`), and `Instance.lean` applies their proofs to it. The
-bitvec, float and ptr modules are proved with the language: their nodes take
-the types `checked`, `fp`, `rm`, `fc` and `float` of `core.knl`, which the
-interface of a module proved once cannot name yet. The
+language; the language gives their interfaces (`Kanon/Interface/M.lean`,
+generated) and the instances of their `Sem` classes (`Kanon/Lang/M.lean`), and
+`Kanon/Instance/M.lean` applies their proofs to it, so `Kanon/Soundness/M/f.lean`
+only instantiates the module's `M/Soundness/M/f.lean`.
+
+An arm of a module is proved by the theorem tagged `@[kanon_arm]` that proves
+`M.f.r_name.arm.Stmt` in `M/Proofs/M/f.lean` (the commutativity of the
+operators in `M/Proofs/Laws.lean`), if there is one; or else by the tactic
+given to its function by `attribute [kanon_tactic tac] M.f.spec`, in the
+module's library (`M/Lib/`), or else by the default tactic of the module
+(`M/Lib/Rule.lean`, `bv_rule`). The arms of `Bitvec.lt` and `Bitvec.leq` have a
+larger bound on heartbeats (`[@lean_heartbeats]` in `rules/bitvec.kn`). The
 integers of the bit-vector literals are related to Lean's `BitVec` by
-`Lib/LitOps.lean` (the primitives `lit_add`, ..., are defined as the OCaml
-ones, on integers) and `Lib/Ovf.lean`.
+`BitvecMod/Lib/LitOps.lean` (the primitives `lit_add`, ..., are defined as the
+OCaml ones, on integers) and `BitvecMod/Lib/Ovf.lean`.
 
 To check it, in `lean/` (needs Lean through `elan`):
 

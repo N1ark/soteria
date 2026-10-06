@@ -5,8 +5,7 @@ import BitvecMod.Lib.Ovf
 
 The lemmas and tactics of the arms of `Bool.eq`, `and_`, `or_`, `not_` of the module,
 `Bitvec.add_overflows`, `sub_overflows`, `mul_overflows`, `div`, `rem`, `mod_`, over the
-interface: the counterparts of the language's `Kanon/Lib/{Eq,Ovf,Bool}.lean` (and of the parts
-of `Lit`, `LitOps` and `Arith` that they use).
+interface.
 
 - the helpers of the rules on literals in range (`lit_*_overflows`, `lit_urem`, ...) as the
   operations of `BitVec` (`ofInt_lit_urem`, ...; the shared ones are in `Lib/Ovf.lean` and

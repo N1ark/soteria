@@ -1,5 +1,7 @@
 (* The float module: floating-point numbers. *)
 
+[@@@lean_module "FloatMod"]
+
 use "core"
 use builtin "bool"
 use "bitvec"

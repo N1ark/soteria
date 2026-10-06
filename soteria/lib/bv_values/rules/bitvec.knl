@@ -1,6 +1,8 @@
 (* The bitvec module: bit-vectors, their arithmetic and bitwise operations, and
    their comparisons. *)
 
+[@@@lean_module "BitvecMod"]
+
 use "core"
 use builtin "bool"
 

@@ -1,4 +1,4 @@
-import Kanon.Staged.Interface.Float
+import Kanon.Interface.Float
 import Kanon.Lang.Bitvec
 import FloatMod.Sem
 

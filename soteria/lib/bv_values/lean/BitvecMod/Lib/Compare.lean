@@ -4,8 +4,7 @@ import BitvecMod.Lib.Resize
 # Comparisons
 
 The lemmas and tactics of the arms of `Bitvec.lt`, `leq`, `lt_zero`, over the
-interface: the counterparts of the language's `Kanon/Lib/Msb.lean` and
-`Compare.lean`. They build on the steps of `bv_rs` (`Lib/Resize.lean`): the
+interface. They build on the steps of `bv_rs` (`Lib/Resize.lean`): the
 lifting, the natural widths and the sorts of the operands.
 
 - `bv_cmp_sem_core` reduces the value half of a boolean refinement

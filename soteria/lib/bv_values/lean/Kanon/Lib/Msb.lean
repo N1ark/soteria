@@ -1,5 +1,4 @@
 import Kanon.Lib.Float
-import Kanon.Lib.Tactic
 import Kanon.Model.Bitvec.msb_of
 import Kanon.Model.Bitvec.zmax
 import Kanon.Model.Bitvec.zmin
@@ -13,6 +12,16 @@ open CoreMod
 open Classical
 
 variable {FS : FloatSem}
+
+@[simp] theorem WT_bitVec_bv {z m : Int} :
+    (Term.mk (.BitVec z) (.TBitVector m)).WT ↔ 0 < m ∧ 0 ≤ z ∧ z < 2 ^ m.toNat := by
+  rw [WT_bitVec]
+  constructor
+  · rintro ⟨k, hk, h, h1, h2⟩
+    simp at h
+    subst h; simp; omega
+  · rintro ⟨h0, h1, h2⟩
+    exact ⟨m.toNat, by omega, by simp; omega, h1, h2⟩
 
 theorem srem_le_of_msb {n : Nat} (x y : BitVec n) (hx : x.msb = false) : (x.srem y).toNat ≤ x.toNat := by
   rw [BitVec.toNat_srem, hx]; cases y.msb <;> exact Nat.mod_le _ _

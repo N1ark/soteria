@@ -1,4 +1,4 @@
-import Kanon.Staged.Interface.Ptr
+import Kanon.Interface.Ptr
 import Kanon.Lang.Bitvec
 import PtrMod.Sem
 

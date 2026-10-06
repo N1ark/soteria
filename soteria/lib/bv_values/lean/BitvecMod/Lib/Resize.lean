@@ -4,8 +4,7 @@ import BitvecMod.Lib.Ovf
 # Resizing
 
 The arms of `Bitvec.extract`, `Bitvec.extend_` and `Bitvec.concat`, over the
-interface: the counterpart of the bit-vector part of the language's
-`Kanon/Lib/Resize.lean`. Their tactic `bv_rs` is `bv_rule` with:
+interface. Their tactic `bv_rs` is `bv_rule` with:
 
 - the widths, bounds and amounts that `omega` proves nonnegative made natural
   numbers (`bv_rs_nat`), and the widths they determine substituted, so that

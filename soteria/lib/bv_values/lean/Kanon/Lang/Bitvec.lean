@@ -1,4 +1,4 @@
-import Kanon.Staged.Interface.Bitvec
+import Kanon.Interface.Bitvec
 import Kanon.Lang.Bool
 import Kanon.Lang.Core
 import Kanon.Lib.Den

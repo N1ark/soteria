@@ -1,5 +1,7 @@
 (* The ptr module: pointers, a location and an offset. *)
 
+[@@@lean_module "PtrMod"]
+
 use builtin "bool"
 use "bitvec"
 

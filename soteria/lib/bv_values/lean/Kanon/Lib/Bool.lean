@@ -1,19 +1,14 @@
 import Kanon.Lib.Float
-import Kanon.Lib.Tactic
-import Kanon.Model.Bitvec.lower_bound
-import Kanon.Model.Bitvec.to_z
-import Kanon.Model.Bitvec.upper_bound
 import Kanon.Model.Bool.sure_neq
 
 /-!
-# Lemmas and tactics for the boolean rules
+# The laws of the bool and exists modules
 
 Kanon's library proves the rules of the bool module once (`KanonBool`), for
 any language that gives its interface and an instance of `KanonBool.Sem` (in
 `Lang.lean`). The only law that is more than the typing and evaluation of the
-nodes is that of `Bool.sure_neq`, which the other modules extend.
-The arms that they add to the rule functions of the bool module are proved
-here and in `Proofs/Bool/and_.lean`.
+nodes is that of `Bool.sure_neq`, which the other modules extend; the exists
+module needs that the unused binders of an `Exists` do not matter.
 -/
 
 namespace Kanon.Lib
@@ -21,76 +16,6 @@ namespace Kanon.Lib
 open CoreMod
 
 open Classical
-
-/-! ## Bounds -/
-
-@[simp] theorem upper_bound_lt {s a z T T'} :
-    Bitvec.upper_bound (.mk (.Op2 (.Lt s) a (.mk (.BitVec z) T)) T') =
-      Bitvec.to_z s (Bitvec.size a) z - 1 := by
-  simp [Bitvec.upper_bound, firstSome]
-@[simp] theorem upper_bound_leq {s a z T T'} :
-    Bitvec.upper_bound (.mk (.Op2 (.Leq s) a (.mk (.BitVec z) T)) T') =
-      Bitvec.to_z s (Bitvec.size a) z := by
-  simp [Bitvec.upper_bound, firstSome]
-@[simp] theorem lower_bound_lt {s a z T T'} :
-    Bitvec.lower_bound (.mk (.Op2 (.Lt s) (.mk (.BitVec z) T) a) T') =
-      Bitvec.to_z s (Bitvec.size a) z + 1 := by
-  simp [Bitvec.lower_bound, firstSome]
-@[simp] theorem lower_bound_leq {s a z T T'} :
-    Bitvec.lower_bound (.mk (.Op2 (.Leq s) (.mk (.BitVec z) T) a) T') =
-      Bitvec.to_z s (Bitvec.size a) z := by
-  simp [Bitvec.lower_bound, firstSome]
-
-/-- Closes the comparisons of bit-vectors, as integers. -/
-macro "kanon_int_cmp" : tactic => `(tactic| (
-  (try kanon_split)
-  (try simp only [BitVec.ult, BitVec.ule, BitVec.slt, BitVec.sle, decide_eq_true_eq,
-    decide_eq_false_iff_not, Bool.not_eq_true, Bool.not_eq_false, Bool.or_eq_true,
-    Bool.and_eq_true] at *)
-  (try simp (disch := assumption) only [emod_two_pow_of_lt] at *)
-  (try simp (disch := assumption) only [bv_to_z_ofInt, iv, Bool.false_eq_true, eq_self, ite_true, ite_false] at *)
-  first
-    | ((try simp only [← BitVec.toNat_inj] at *)
-       (try simp (disch := assumption) only [toNat_ofInt_of_lt] at *)
-       omega)
-    | ((try simp only [← BitVec.toInt_inj, BitVec.toInt_ofInt] at *)
-       omega)))
-
-/-- `kanon_rule_bv` for the rules on bounds: reads the bounds, and closes the
-comparisons as integers. -/
-macro "kanon_rule_bounds" : tactic => `(tactic| (
-  kanon_rule_core
-  all_goals (try simp only [upper_bound_lt, upper_bound_leq, lower_bound_lt, lower_bound_leq] at *)
-  all_goals first | (kanon_wt_bv; done) | kanon_sem_core_bv
-  all_goals kanon_int_cmp))
-
-/-! ## Adjacent extractions -/
-
-/-- The concatenation of two adjacent extractions of `x` is their union. -/
-
-theorem concat_eq_extract {w p q n : Nat} {x : BitVec w} {a : BitVec p} {b : BitVec q}
-    {i j : Nat} (hn : n = q + p) (hj : j = i + p) :
-    (b ++ a).setWidth n = x.extractLsb' i n ↔ a = x.extractLsb' i p ∧ b = x.extractLsb' j q := by
-  subst hn
-  rw [BitVec.setWidth_eq, ← BitVec.extractLsb'_append_extractLsb'_eq_extractLsb' hj]
-  refine ⟨fun h => ⟨?_, ?_⟩, fun ⟨ha, hb⟩ => ha ▸ hb ▸ rfl⟩
-  · simpa [BitVec.extractLsb'_append_eq_right] using congrArg (·.extractLsb' 0 p) h
-  · simpa [BitVec.extractLsb'_append_eq_left] using congrArg (·.extractLsb' p q) h
-
-theorem concat_eq_extract_of {w p q n : Nat} {x : BitVec w} {a : BitVec p} {b : BitVec q}
-    {i j : Nat} (ha : a = x.extractLsb' i p) (hb : b = x.extractLsb' j q) (hn : n = q + p)
-    (hj : j = i + p) : (b ++ a).setWidth n = x.extractLsb' i n :=
-  (concat_eq_extract hn hj).2 ⟨ha, hb⟩
-
-theorem concat_ne_extract {w p q n : Nat} {x : BitVec w} {a : BitVec p} {b : BitVec q}
-    {i j : Nat} (h : a = x.extractLsb' i p → ¬ b = x.extractLsb' j q) (hn : n = q + p)
-    (hj : j = i + p) : ¬ (b ++ a).setWidth n = x.extractLsb' i n :=
-  fun e => h ((concat_eq_extract hn hj).1 e).1 ((concat_eq_extract hn hj).1 e).2
-
-theorem concat_ne_extract' {w p q n : Nat} {x : BitVec w} {a : BitVec p} {b : BitVec q}
-    {i j : Nat} (h : b = x.extractLsb' j q → ¬ a = x.extractLsb' i p) (hn : n = q + p)
-    (hj : j = i + p) : ¬ (b ++ a).setWidth n = x.extractLsb' i n :=
-  fun e => h ((concat_eq_extract hn hj).1 e).2 ((concat_eq_extract hn hj).1 e).1
 
 /-! ## `Bool.sure_neq` -/
 
@@ -378,42 +303,5 @@ theorem extends_nil {ρ ρ' : Env} : ρ'.Extends ρ [] ↔ ρ' = ρ := by
     simp only [Env.mk.injEq] at hv ⊢
     exact funext fun a => hv a (by simp)
   · rintro rfl; exact ⟨fun _ _ => rfl, by simp⟩
-
-/-! ## Rules that hold at any type, by evaluation -/
-
-theorem evUnop_not_eq_bool {FS a b} : evOp1 FS .Not a = some (.bool b) ↔ a = some (.bool !b) := by
-  simp only [evOp1, KanonBool.pnot_eq_some]; cases b <;> simp
-theorem pand_eq_true {a b} : KanonBool.pand Val.bool a b = some (.bool true) ↔
-    a = some (.bool true) ∧ b = some (.bool true) := by
-  simp [KanonBool.pand_eq_some]
-theorem por_eq_false {a b} : KanonBool.por Val.bool a b = some (.bool false) ↔
-    a = some (.bool false) ∧ b = some (.bool false) := by
-  simp [KanonBool.por_eq_some]
-
-/-- `kanon_rule_bv` for the rules that hold at any type: the value half is proved
-by evaluation (`ev`), splitting on the guards of the `ite`s. -/
-macro "kanon_rule_ev" : tactic => `(tactic| (
-  kanon_rule_lift_side
-  all_goals refine Sem.Refines.intro ?_ (fun ρ v w w' e => ?_)
-  case' refine_1 => dsimp only; kanon_wt_bv
-  case' refine_2 =>
-    simp only [ev, KanonBool.pite] at e ⊢
-    repeat' split at e
-    all_goals simp_all [evOp2, KanonBool.peq, evUnop_not_eq_bool, pand_eq_true, por_eq_false]))
-
-/-- `kanon_rule_bv`, for the rules whose spec is a boolean (resp. bit-vector) at a
-type that its typing determines. -/
-macro "kanon_rule_typed" : tactic => `(tactic| (
-  kanon_rule_lift_side
-  all_goals first
-    | (refine Refines.denB ?_ ?_ ?_
-       · intro w; kanon_facts; all_goals first | rfl | simp_all)
-    | (refine Refines.den ?_ ?_ ?_
-       · intro w; kanon_facts; all_goals first | exact ⟨_, rfl⟩ | simp_all)
-  all_goals first
-    | (kanon_wt_bv; done)
-    | (kanon_sem_core_bv; all_goals kanon_bool_vars; all_goals simp_all; done)
-    | kanon_sem_bv
-    | skip))
 
 end Kanon.Lib

@@ -1,4 +1,5 @@
 import FloatMod.Lib.Float
+import FloatMod.Lib.Lits
 import BitvecMod.Lib.Rule
 
 /-!

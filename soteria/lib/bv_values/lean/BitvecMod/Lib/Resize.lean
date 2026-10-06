@@ -18,8 +18,7 @@ interface: the counterpart of the bit-vector part of the language's
   integers (`rs_lsb`, `rs_is_pow2`);
 - equalities of bit-vectors proved bit by bit (`bv_rs_bits`), or by the lemmas
   on extractions of sums and products (`rs_extractLsb'_add_lsb`, …);
-- a workaround for the lifting of calls with a subsort hypothesis
-  (`bv_rs_lift_body`, `bv_rs_on_refines`).
+- the subsort hypotheses that the lifting leaves (`rs_nonzero_extract_pow2`).
 -/
 
 namespace BitvecMod
@@ -83,7 +82,8 @@ theorem rs_ofInt_lit_zext {n m : Nat} {a : Int} (ha0 : 0 ≤ a) (ha1 : a < 2 ^ n
 /-- The existentials of the typing of the resizing nodes, at known widths. -/
 theorem rs_exists_pos_eq {a : Int} {p : Int → Prop} :
     (∃ n, 0 < n ∧ a = n ∧ p n) ↔ 0 < a ∧ p a :=
-  ⟨fun ⟨_, h1, h2, h3⟩ => by subst h2; exact ⟨h1, h3⟩, fun ⟨h1, h2⟩ => ⟨_, h1, rfl, h2⟩⟩
+  ⟨fun ⟨_, h1, h2, h3⟩ => by subst h2; exact ⟨h1, h3⟩,
+    fun ⟨h1, h2⟩ => ⟨_, h1, rfl, h2⟩⟩
 
 theorem rs_exists_pos_eq₂ {a b : Int} {p : Int → Int → Prop} :
     (∃ n, 0 < n ∧ ∃ m, 0 < m ∧ a = n ∧ b = m ∧ p n m) ↔ 0 < a ∧ 0 < b ∧ p a b :=
@@ -119,7 +119,8 @@ theorem rs_ofInt_append {n m p q : Nat} (hp : (p : Int) < 2 ^ n) (hq : (q : Int)
 
 theorem rs_zasr_nat (p f : Nat) : Prim.zasr (p : Int) (f : Int) = ((p >>> f : Nat) : Int) := by
   simp only [Prim.zasr, Int.toNat_natCast, Nat.shiftRight_eq_div_pow]; norm_cast
-theorem rs_toNat_ofInt_nat {w p : Nat} (hp : (p : Int) < 2 ^ w) : (BitVec.ofInt w (p : Int)).toNat = p := by
+theorem rs_toNat_ofInt_nat {w p : Nat} (hp : (p : Int) < 2 ^ w) :
+    (BitVec.ofInt w (p : Int)).toNat = p := by
   have : p < 2 ^ w := by exact_mod_cast hp
   rw [BitVec.ofInt_natCast, BitVec.toNat_ofNat, Nat.mod_eq_of_lt this]
 theorem rs_extractLsb'_ofInt {w f n p : Nat} (hp : (p : Int) < 2 ^ w) :
@@ -377,7 +378,10 @@ elab "bv_rs_rw_tys" : tactic => withMainContext do
           (inv := !a0.isAppOfArity ``Kanon.Sem.ty 2)
         let ctx ← Simp.mkContext {} (simpTheorems := #[thms])
           (congrTheorems := ← getSimpCongrTheorems)
-        return (none, some (← simpGoal g ctx (fvarIdsToSimp := #[h]) (simplifyTarget := false)).1)
+        try
+          let r ← simpGoal g ctx (fvarIdsToSimp := #[h]) (simplifyTarget := false)
+          return (none, some r.1)
+        catch _ => return (none, none)
     if let some t := t? then seen := seen.push (t, h)
     match r with
     | some none => replaceMainGoal []; return
@@ -388,9 +392,21 @@ elab "bv_rs_rw_tys" : tactic => withMainContext do
   if hs.isEmpty then return
   let r ← g.withContext do
     let mut thms : SimpTheorems := {}
+    -- the equations between sorts of terms, kept acyclic (`S.ty v → S.ty u`)
+    let mut edges : Array (Expr × Expr) := #[]
     for h in hs do
       let some d := (← getLCtx).find? h | continue
-      let some (_, a, _) := (← instantiateMVars d.type).eq? | continue
+      let some (_, a, b) := (← instantiateMVars d.type).eq? | continue
+      if a.isAppOfArity ``Kanon.Sem.ty 2 && b.isAppOfArity ``Kanon.Sem.ty 2 then
+        let (v, u) := (a.appArg!, b.appArg!)
+        let mut cur := u
+        let mut cyc := cur == v
+        for _ in [0:edges.size] do
+          match edges.find? (·.1 == cur) with
+          | some (_, nxt) => cur := nxt; if cur == v then cyc := true
+          | none => break
+        if cyc then continue
+        edges := edges.push (v, u)
       thms ← thms.add (.fvar h) #[] d.toExpr (inv := !a.isAppOfArity ``Kanon.Sem.ty 2)
     let ctx ← Simp.mkContext {} (simpTheorems := #[thms])
       (congrTheorems := ← getSimpCongrTheorems)
@@ -398,10 +414,59 @@ elab "bv_rs_rw_tys" : tactic => withMainContext do
     for d in ← getLCtx do
       if d.isImplementationDetail || hs.contains d.fvarId then continue
       if ← isProp d.type then others := others.push d.fvarId
-    return (← simpGoal g ctx (fvarIdsToSimp := others)).1
+    try return some (← simpGoal g ctx (fvarIdsToSimp := others)).1
+    catch _ => return none
   match r with
-  | none => replaceMainGoal []
-  | some (_, g') => replaceMainGoal [g']
+  | none => pure ()
+  | some none => replaceMainGoal []
+  | some (some (_, g')) => replaceMainGoal [g']
+
+open Lean Meta Elab Tactic in
+/-- Replaces the equations between the sorts of two terms (`S.ty v = S.ty u`)
+by the sort of `v` when that of `u` is known (`S.ty u = T`, `T` not a sort of a
+term), so that `simp_all` does not loop on them. -/
+elab "bv_rs_ty_chain" : tactic => withMainContext do
+  for _ in [0:4] do
+    let g ← getMainGoal
+    let r ← g.withContext do
+      let lctx ← getLCtx
+      let isTy (e : Expr) := e.isAppOfArity ``Kanon.Sem.ty 2
+      -- the known sorts, `S.ty u = T`
+      let mut known : Array (Expr × Expr) := #[]
+      for d in lctx do
+        if d.isImplementationDetail then continue
+        let some (_, a, b) := (← instantiateMVars d.type).eq? | continue
+        if isTy a && !isTy b then known := known.push (a.appArg!, d.toExpr)
+        else if isTy b && !isTy a then known := known.push (b.appArg!, ← mkEqSymm d.toExpr)
+      for d in lctx do
+        if d.isImplementationDetail then continue
+        let some (_, a, b) := (← instantiateMVars d.type).eq? | continue
+        unless isTy a && isTy b do continue
+        for (lhs, rhs, pf) in [(a, b, pure d.toExpr), (b, a, mkEqSymm d.toExpr)] do
+          if let some (_, hu) := known.find? (·.1 == rhs.appArg!) then
+            unless known.any (·.1 == lhs.appArg!) do
+              let pf ← mkEqTrans (← pf) hu
+              let (_, g') ← (← g.assert `hty (← inferType pf) pf).intro1P
+              return some (← g'.clear d.fvarId)
+          else if known.any (·.1 == lhs.appArg!) then
+            -- both known: the equation is redundant
+            if known.any (·.1 == rhs.appArg!) then return some (← g.clear d.fvarId)
+      return none
+    match r with
+    | some g' => replaceMainGoal [g']
+    | none => return
+
+open Lean Meta Elab Tactic in
+/-- Clears the equations on the sorts of terms (once the values are unfolded,
+on which `simp_all` may loop). -/
+elab "bv_rs_clear_tys" : tactic => withMainContext do
+  let mut g ← getMainGoal
+  for d in (← getLCtx) do
+    if d.isImplementationDetail then continue
+    let some (_, a, b) := (← instantiateMVars d.type).eq? | continue
+    unless a.isAppOfArity ``Kanon.Sem.ty 2 || b.isAppOfArity ``Kanon.Sem.ty 2 do continue
+    try g ← g.clear d.fvarId catch _ => pure ()
+  replaceMainGoal [g]
 
 open Lean Meta Elab Tactic in
 /-- Case splits on the first proposition `p` of a `decide p` or an `if p` of
@@ -412,7 +477,8 @@ elab "bv_rs_split_decide" : tactic => withMainContext do
       (e.isAppOfArity ``Decidable.decide 2 || e.isAppOfArity ``ite 5 ||
        e.isAppOfArity ``dite 5))
     | throwError "bv_rs_split_decide: no decide"
-  let p ← Term.exprToSyntax (if e.isAppOfArity ``Decidable.decide 2 then e.getArg! 0 else e.getArg! 1)
+  let p ← Term.exprToSyntax
+    (if e.isAppOfArity ``Decidable.decide 2 then e.getArg! 0 else e.getArg! 1)
   evalTactic (← `(tactic| by_cases hp : $p <;> simp only [hp, decide_true, decide_false,
     ↓reduceIte, ↓reduceDIte, Bool.not_true, Bool.not_false, Bool.true_and, Bool.false_and,
     Bool.and_true, Bool.and_false, Bool.true_or, Bool.false_or, Bool.or_true, Bool.or_false]
@@ -457,7 +523,8 @@ macro "bv_rs_facts" : tactic => `(tactic| (
   (try bv_rs_rw_tys)
   (try simp only [bv_wt, bv_lits, true_and, and_true] at *)
   (try kanon_split)
-  (try subst_vars)))
+  (try subst_vars)
+  (try bv_rs_ty_chain)))
 
 set_option hygiene false in
 /-- `bv_sem_core`, with the widths made natural numbers and the sorts of the
@@ -489,7 +556,8 @@ macro "bv_rs_lits" : tactic => `(tactic| (
   (try simp only [rs_bitvec_lsb_eq, rs_bitvec_is_pow2_eq, rs_log2_nat, Int.toNat_zero] at *)
   (try simp (disch := first | assumption | omega) only [rs_ofInt_emod, rs_ofInt_emod_nat,
     rs_ofInt_lit_sext, rs_ofInt_lit_zext, rs_lit_concat_nat, rs_ofInt_append, Prim.lit_extract,
-    rs_zasr_nat, rs_zasr_zero, ofInt_masked, rs_toNat_ofInt_nat, rs_extractLsb'_ofInt, BitVec.shiftLeft_eq',
+    rs_zasr_nat, rs_zasr_zero, ofInt_masked, rs_toNat_ofInt_nat, rs_extractLsb'_ofInt,
+    BitVec.shiftLeft_eq',
     BitVec.ushiftRight_eq', rs_ofInt_zero, BitVec.extractLsb'_add, BitVec.extractLsb'_mul,
     rs_extractLsb'_add_lsb, rs_extractLsb'_add_lsb', rs_extractLsb'_mul_pow2,
     rs_extractLsb'_mul_pow2', rs_extractLsb'_umod_pow2, ↓reduceIte] at *)))
@@ -516,35 +584,14 @@ macro "bv_rs_sem" : tactic => `(tactic| (
     | ((try simp only [↓reduceIte] at *); bv_rs_bits; done)
     | skip))
 
-open Lean Elab Tactic in
-/-- `kanon_lift_body` under the hypothesis `kw` that the spec is well-typed, for
-the bodies whose calls leave subsort hypotheses (`L.Nonzero v'`), on which
-Kanon's fails (an unknown free variable: its `liftGoal` reduces the types of the
-goals out of their context). -/
-elab "bv_rs_lift_body" : tactic => withMainContext do
-  evalTactic (← `(tactic| refine Kanon.Sem.Refines.of_WT (fun kw => ?_)))
-  evalTactic (← `(tactic| apply Kanon.Sem.Refines.of_lift))
-  let gs ← getGoals
-  let some hl ← gs.findM? fun g => return match (← g.getTag) with
-      | .str _ "hl" => true
-      | _ => false
-    | throwError "bv_rs_lift_body: no goal"
-  setGoals [hl]
-  withMainContext (evalTactic (← `(tactic| kanon_lift)))
-  let side ← getGoals
-  let rest ← gs.filterM fun g => return g != hl && !(← g.isAssigned)
-  setGoals (rest ++ side)
-
-/-- `kanon_rule_lift`, with `bv_rs_lift_body`. -/
-macro "bv_rs_rule_lift" : tactic => `(tactic| (
-  intro _
-  intros
+/-- `kanon_rule_lift` after the introductions. -/
+macro "bv_rs_rule_lift_core" : tactic => `(tactic| (
   (try kanon_guards)
   (try kanon_split)
   (try subst_vars)
   (try simp only [kanon_spec, kanon_body])
   (repeat' split)
-  all_goals (try first | kanon_lift_body | bv_rs_lift_body)
+  all_goals (try kanon_lift_body)
   all_goals (try simp only [kanon_spec, kanon_body])
   all_goals (try first
     | kanon_refl
@@ -552,18 +599,17 @@ macro "bv_rs_rule_lift" : tactic => `(tactic| (
     | kanon_rule_close
     | kanon_close_lemmas)))
 
+/-- `kanon_rule_lift`, in two steps (`bv_cmp` unfolds a helper in between). -/
+macro "bv_rs_rule_lift" : tactic => `(tactic| (
+  intro _
+  intros
+  bv_rs_rule_lift_core))
 
-open Lean Elab Tactic in
-/-- `kanon_on_refines bv_apply_den` in the context of the main goal (Kanon's
-reduces the goal out of its context, which fails on the subsort hypotheses that
-`bv_rs_lift_body` leaves). -/
-elab "bv_rs_on_refines" : tactic => withMainContext do
-  evalTactic (← `(tactic| kanon_on_refines bv_apply_den))
 
 /-- Proves an arm of `Bitvec.extract`, `Bitvec.extend_` or `Bitvec.concat`. -/
 macro "bv_rs" : tactic => `(tactic| (
   bv_rs_rule_lift
-  all_goals bv_rs_on_refines
+  bv_rule_apply
   all_goals first
     | exact rs_nonzero_extract_pow2 ‹_› ‹_›
     | bv_rs_sem

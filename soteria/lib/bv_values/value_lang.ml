@@ -129,13 +129,12 @@ module type Base = sig
   (** The children of [v], left to right ([K.iter_children]). *)
   val children : t -> t list
 
-  (** [f] applied to the children of [v], left to right, and [v] rebuilt from
-      them with [K.map_children] if [force] or one changed (physically); [v]
-      itself otherwise, and if it has no children. *)
-  val map_children_changed : force:bool -> (t -> t) -> t -> t
+  (** [K.map_children f v], but [v] is rebuilt even if [f] returns every child
+      unchanged (for [eval ~force]). *)
+  val map_children_forced : (t -> t) -> t -> t
 
-  (** The old [map_operands]: [map_children_changed ~force:false f v] if
-      [K.View.maps_operands v], else [v] itself. *)
+  (** The old [map_operands]: [K.map_children f v] if [K.View.maps_operands v],
+      else [v] itself. *)
   val map_operands : (t -> t) -> t -> t
 
   (** Replaces [Svalue.iter_vars] ([svalue.ml:71-93]): the free variables,
@@ -250,34 +249,17 @@ module Make
     K.iter_children (fun c -> cs := c :: !cs) v;
     List.rev !cs
 
-  let map_children_changed ~force (f : t -> t) (v : t) : t =
-    let changed = ref false in
-    let cs = ref [] in
-    K.iter_children
+  (* a physical copy of an unchanged child makes [K.map_children] rebuild [v];
+     it is [equal] to the child, as the tag is the identity *)
+  let map_children_forced (f : t -> t) (v : t) : t =
+    K.map_children
       (fun c ->
         let c' = f c in
-        if c' != c then changed := true;
-        cs := c' :: !cs)
-      v;
-    match !cs with
-    | [] -> v
-    | _ when not (force || !changed) -> v
-    | rev_cs ->
-        (* [map_children] replaces the children in the order of
-           [iter_children] *)
-        let cs = ref (List.rev rev_cs) in
-        K.map_children
-          (fun _ ->
-            match !cs with
-            | c :: rest ->
-                cs := rest;
-                c
-            | [] -> assert false)
-          v
+        if c' == c then { c with tag = c.tag } else c')
+      v
 
   let map_operands (f : t -> t) (v : t) : t =
-    if not (K.View.maps_operands v) then v
-    else map_children_changed ~force:false f v
+    if not (K.View.maps_operands v) then v else K.map_children f v
 
   let iter_vars (sv : t) (f : Var.t * ty -> unit) : unit =
     let rec aux ~ignore (sv : t) : unit =

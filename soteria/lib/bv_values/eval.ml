@@ -1,9 +1,8 @@
 (** The generic normaliser, over any language: it rebuilds a term from its
-    normalised children ({!Value_lang.Base.map_children_changed}). It
-    substitutes under [Exists], compares the guard of [Ite], and keeps [force],
-    the [eval_var] closure, the laziness of [Ite] and the [Division_by_zero]
-    catch of the first generation of the value language ([eval.ml:73-125] of
-    [fab3ed5]). *)
+    normalised children ([K.map_children]). It substitutes under [Exists],
+    compares the guard of [Ite], and keeps [force], the [eval_var] closure, the
+    laziness of [Ite] and the [Division_by_zero] catch of the first generation
+    of the value language ([eval.ml:73-125] of [fab3ed5]). *)
 
 open Deps
 
@@ -53,7 +52,8 @@ struct
                     && else_ == nelse
                   then x
                   else K.Bool.ite guard nthen nelse
-            | None -> map_children_changed ~force eval x))
+            | None when force -> map_children_forced eval x
+            | None -> K.map_children eval x))
 
   let eval ?(force = false) ?(eval_var : t -> Var.t -> ty -> t = fun x _ _ -> x)
       (x : t) : t =

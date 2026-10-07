@@ -678,7 +678,7 @@ rule lt_zero (v : t) : Lt (true, v, bv_zero (size v)) =
       let pos_r = lt_zero r in
       if pos_l = pos_r then pos_l else Lt (true, v, bv_zero (size v))
 
-rule lt : Lt (signed, v1, v2) [@lean_heartbeats 4000000] =
+rule lt : Lt (signed, v1, v2) =
   | lits: #l, #r ->
       Bool.of_bool (to_z signed (size v1) l < to_z signed (size v1) r)
   | same: v, v -> Bool.v_false
@@ -801,7 +801,7 @@ rule lt : Lt (signed, v1, v2) [@lean_heartbeats 4000000] =
   | to_unsigned_r: _, #c when signed && is_checked_unsigned_op v1 ->
       signed_to_unsigned_cmp false false c v1 v2
 
-rule leq : Leq (signed, v1, v2) [@lean_heartbeats 4000000] =
+rule leq : Leq (signed, v1, v2) =
   | same: v, v -> Bool.v_true
   | lits: #l, #r ->
       Bool.of_bool (to_z signed (size v1) l <= to_z signed (size v1) r)

@@ -15,31 +15,31 @@ namespace BitvecMod
 
 open Classical Kanon
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_lits.main.ok : Bitvec.lt.r_lits.main.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_lits.main)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_same.main.ok : Bitvec.lt.r_same.main.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_same.main)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_negs.main.ok : Bitvec.lt.r_negs.main.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_negs.main)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_neg_l.main.ok : Bitvec.lt.r_neg_l.main.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_neg_l.main)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_neg_r.main.ok : Bitvec.lt.r_neg_r.main.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_neg_r.main)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_const_add.main.ok : Bitvec.lt.r_const_add.main.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_const_add.main)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_const_add.swap.ok : Bitvec.lt.r_const_add.swap.Stmt := by
   intro S _ _ _ _ _ _ O hO signed c t__2 checked x r t__6 t__8 hg
   have : S.Refines (BitvecMod.mk (.Add checked x (BitvecMod.mk (.BitVec r) t__6)) t__8)
@@ -51,19 +51,19 @@ theorem Bitvec.lt.r_const_add.swap.ok : Bitvec.lt.r_const_add.swap.Stmt := by
   simp only [BitvecMod.Bitvec.lt.spec, Kanon.NodeEmbed.ty_inj]
   kanon_congr
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_add_const.main.ok : Bitvec.lt.r_add_const.main.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_add_const.main)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_add_const.swap.ok : Bitvec.lt.r_add_const.swap.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_add_const.swap)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_self_add_r.main.ok : Bitvec.lt.r_self_add_r.main.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_self_add_r.main)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_self_add_r.swap.ok : Bitvec.lt.r_self_add_r.swap.Stmt := by
   intro S _ _ _ _ _ _ O hO signed v1 checked b kanon__4 t__6 hg
   have : S.Refines (BitvecMod.mk (.Add checked b kanon__4) t__6)
@@ -74,19 +74,19 @@ theorem Bitvec.lt.r_self_add_r.swap.ok : Bitvec.lt.r_self_add_r.swap.Stmt := by
   simp only [BitvecMod.Bitvec.lt.spec, Kanon.NodeEmbed.ty_inj]
   kanon_congr
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_self_add_l.main.ok : Bitvec.lt.r_self_add_l.main.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_self_add_l.main)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_self_add_l.swap.ok : Bitvec.lt.r_self_add_l.swap.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_self_add_l.swap)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_add_add.main.ok : Bitvec.lt.r_add_add.main.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_add_add.main)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_add_add.swap2.ok : Bitvec.lt.r_add_add.swap2.Stmt := by
   intro S _ _ _ _ _ _ O hO signed checked_l l t__4 y t__6 checked_r x r t__11 t__13 hg
   have : S.Refines (BitvecMod.mk (.Add checked_r x (BitvecMod.mk (.BitVec r) t__11)) t__13)
@@ -98,55 +98,55 @@ theorem Bitvec.lt.r_add_add.swap2.ok : Bitvec.lt.r_add_add.swap2.Stmt := by
   simp only [BitvecMod.Bitvec.lt.spec, Kanon.NodeEmbed.ty_inj]
   kanon_congr
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_add_add.swap1.ok : Bitvec.lt.r_add_add.swap1.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_add_add.swap1)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_add_add.swap1_swap2.ok : Bitvec.lt.r_add_add.swap1_swap2.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_add_add.swap1_swap2)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_one.main.ok : Bitvec.lt.r_one.main.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_one.main)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_of_bool.main.ok : Bitvec.lt.r_of_bool.main.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_of_bool.main)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_ite_l.main.ok : Bitvec.lt.r_ite_l.main.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_ite_l.main)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_ite_r.main.ok : Bitvec.lt.r_ite_r.main.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_ite_r.main)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_lt_zero.main.ok : Bitvec.lt.r_lt_zero.main.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_lt_zero.main)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_max_l.main.ok : Bitvec.lt.r_max_l.main.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_max_l.main)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_min_r.main.ok : Bitvec.lt.r_min_r.main.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_min_r.main)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_min_l.main.ok : Bitvec.lt.r_min_l.main.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_min_l.main)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_max_r.main.ok : Bitvec.lt.r_max_r.main.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_max_r.main)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_const_mul.main.ok : Bitvec.lt.r_const_mul.main.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_const_mul.main)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_const_mul.swap.ok : Bitvec.lt.r_const_mul.swap.Stmt := by
   intro S _ _ _ _ _ _ O hO signed c2 t__2 checked c1 t__7 x t__9 hg
   have : S.Refines (BitvecMod.mk (.Mul checked (BitvecMod.mk (.BitVec c1) t__7) x) t__9)
@@ -157,19 +157,19 @@ theorem Bitvec.lt.r_const_mul.swap.ok : Bitvec.lt.r_const_mul.swap.Stmt := by
   simp only [BitvecMod.Bitvec.lt.spec, Kanon.NodeEmbed.ty_inj]
   kanon_congr
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_mul_const.main.ok : Bitvec.lt.r_mul_const.main.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_mul_const.main)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_mul_const.swap.ok : Bitvec.lt.r_mul_const.swap.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_mul_const.swap)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_mul_mul.main.ok : Bitvec.lt.r_mul_mul.main.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_mul_mul.main)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_mul_mul.swap2.ok : Bitvec.lt.r_mul_mul.swap2.Stmt := by
   intro S _ _ _ _ _ _ O hO signed checked_l a x t__5 checked_r y kanon__9 t__11 hg
   have : S.Refines (BitvecMod.mk (.Mul checked_r y kanon__9) t__11)
@@ -180,7 +180,7 @@ theorem Bitvec.lt.r_mul_mul.swap2.ok : Bitvec.lt.r_mul_mul.swap2.Stmt := by
   simp only [BitvecMod.Bitvec.lt.spec, Kanon.NodeEmbed.ty_inj]
   kanon_congr
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_mul_mul.swap1.ok : Bitvec.lt.r_mul_mul.swap1.Stmt := by
   intro S _ _ _ _ _ _ O hO signed checked_l x a t__5 checked_r kanon__9 y t__11 hg
   have : S.Refines (BitvecMod.mk (.Mul checked_l x a) t__5)
@@ -191,7 +191,7 @@ theorem Bitvec.lt.r_mul_mul.swap1.ok : Bitvec.lt.r_mul_mul.swap1.Stmt := by
   simp only [BitvecMod.Bitvec.lt.spec, Kanon.NodeEmbed.ty_inj]
   kanon_congr
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_mul_mul.swap1_swap2.ok : Bitvec.lt.r_mul_mul.swap1_swap2.Stmt := by
   intro S _ _ _ _ _ _ O hO signed checked_l x a t__5 checked_r y kanon__9 t__11 hg
   have : S.Refines (BitvecMod.mk (.Mul checked_l x a) t__5)
@@ -205,39 +205,39 @@ theorem Bitvec.lt.r_mul_mul.swap1_swap2.ok : Bitvec.lt.r_mul_mul.swap1_swap2.Stm
   simp only [BitvecMod.Bitvec.lt.spec, Kanon.NodeEmbed.ty_inj]
   kanon_congr
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_const_sub1.main.ok : Bitvec.lt.r_const_sub1.main.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_const_sub1.main)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_const_sub2.main.ok : Bitvec.lt.r_const_sub2.main.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_const_sub2.main)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_sub_const1.main.ok : Bitvec.lt.r_sub_const1.main.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_sub_const1.main)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_sub_const2.main.ok : Bitvec.lt.r_sub_const2.main.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_sub_const2.main)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_ub_r.main.ok : Bitvec.lt.r_ub_r.main.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_ub_r.main)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_ub_l.main.ok : Bitvec.lt.r_ub_l.main.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_ub_l.main)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_to_unsigned_l.main.ok : Bitvec.lt.r_to_unsigned_l.main.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_to_unsigned_l.main)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_to_unsigned_r.main.ok : Bitvec.lt.r_to_unsigned_r.main.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_to_unsigned_r.main)
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 400000 in
 theorem Bitvec.lt.r_default.main.ok : Bitvec.lt.r_default.main.Stmt :=
   no_implicit_lambda% (kanon_proof% Bitvec.lt.r_default.main)
 

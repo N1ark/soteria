@@ -70,8 +70,10 @@ structure Oracle.Compat (f_add f_sub f_mul f_div f_rem f_fmod f_min f_max :
       vlit (D := S.toDom) (f_convert rm p f) = vf p (Values.convert (D := S.toDom) rm f.prec p f.val)
   to_int : ∀ rm s (n : Int) (f : CoreMod.Float) z, f.WF → 0 < n → f_to_int rm s n f = some z →
     Values.toBv (D := S.toDom) rm s n.toNat f.prec f.val = BitVec.ofInt _ z
+  -- prim.ml: `f_of_int … = Some (F.int2float z int_size fp …)`; Floatml's `AnyFloat.int2float`
+  -- is `match precision with F16 -> F16 (…) | …`: of precision `fp` (and fits it) for any `z`.
+  of_int_prec : ∀ rm s p (n z : Int) f, f_of_int rm s p n z = some f → f.prec = p ∧ f.WF
   of_int : ∀ rm s p (n z : Int) f, 0 < n → 0 ≤ z → z < 2 ^ n.toNat → f_of_int rm s p n z = some f →
-    f.prec = p ∧ f.WF ∧
-      vlit (D := S.toDom) f = vf p (Values.ofBv (D := S.toDom) rm s p n.toNat (BitVec.ofInt _ z))
+    vlit (D := S.toDom) f = vf p (Values.ofBv (D := S.toDom) rm s p n.toNat (BitVec.ofInt _ z))
 
 end FloatMod

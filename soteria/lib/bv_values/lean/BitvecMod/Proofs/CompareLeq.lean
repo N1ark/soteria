@@ -1,4 +1,5 @@
 import BitvecMod.Proofs.CompareLib
+import BitvecMod.Proofs.CompareMul
 import BitvecMod.Proofs.IteLib
 import BitvecMod.Statements.Bitvec.leq
 
@@ -68,118 +69,10 @@ commutativity of `Add`. -/
 
 @[kanon_arm] theorem Bitvec.leq.r_const_add.main.proof : Bitvec.leq.r_const_add.main.Stmt := by cmp_rule
 
-/-! The arm `leq.r_const_mul`, one lemma per branch of its body (each branch a few goals of
-`cmp_rule`, within the default budget). -/
-
-theorem cmp_leq_cm_b0 :
-  ∀ {S : Kanon.Sem} [KanonBool.Lang S] [CoreMod.Lang S] [BitvecMod.Lang S] [KanonBool.Typed S] [CoreMod.Typed S] [BitvecMod.Typed S] (O : Ops S), O.Sound →
-  ∀ (signed : Bool) (c2 : Int) (t__2 : S.Ty) (checked : CoreMod.Checked) (x : S.Term) (c1 : Int) (t__7 : S.Ty) (t__9 : S.Ty),
-  ((BitvecMod.Bitvec.checked_has signed checked) && (! (decide (c1 = (0 : Int))))) = true →
-  (let z1 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.BitVec c2) t__2)) c1); let z2 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.BitVec c2) t__2)) c2); ((BitvecMod.divisible z2 z1)) = true) →
-  (let z1 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.BitVec c2) t__2)) c1); ((decide (z1 < (0 : Int)))) = true) →
-  (let z1 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.BitVec c2) t__2)) c1); ((signed && ((decide (z1 = (-1 : Int))) && (BitvecMod.Bitvec.is_int_min (BitvecMod.Bitvec.size (BitvecMod.mk (.BitVec c2) t__2)) c2)))) = true) →
-  S.Refines (BitvecMod.Bitvec.leq.spec signed (BitvecMod.mk (.BitVec c2) t__2) (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__7)) t__9))
-  (KanonBool.v_true) := by
-  intros
-  dsimp only at *
-  cmp_lift
-  cmp_halves
-
-theorem cmp_leq_cm_b1 :
-  ∀ {S : Kanon.Sem} [KanonBool.Lang S] [CoreMod.Lang S] [BitvecMod.Lang S] [KanonBool.Typed S] [CoreMod.Typed S] [BitvecMod.Typed S] (O : Ops S), O.Sound →
-  ∀ (signed : Bool) (c2 : Int) (t__2 : S.Ty) (checked : CoreMod.Checked) (x : S.Term) (c1 : Int) (t__7 : S.Ty) (t__9 : S.Ty),
-  ((BitvecMod.Bitvec.checked_has signed checked) && (! (decide (c1 = (0 : Int))))) = true →
-  (let z1 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.BitVec c2) t__2)) c1); let z2 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.BitVec c2) t__2)) c2); ((BitvecMod.divisible z2 z1)) = true) →
-  (let z1 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.BitVec c2) t__2)) c1); ((decide (z1 < (0 : Int)))) = true) →
-  (let z1 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.BitVec c2) t__2)) c1); ¬((signed && ((decide (z1 = (-1 : Int))) && (BitvecMod.Bitvec.is_int_min (BitvecMod.Bitvec.size (BitvecMod.mk (.BitVec c2) t__2)) c2)))) = true) →
-  S.Refines (BitvecMod.Bitvec.leq.spec signed (BitvecMod.mk (.BitVec c2) t__2) (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__7)) t__9))
-  (O.bitvec_leq signed x (O.bitvec_div signed (BitvecMod.mk (.BitVec c2) t__2) (BitvecMod.mk (.BitVec c1) t__7))) := by
-  intros
-  dsimp only at *
-  cmp_lift
-  cmp_halves
-
-theorem cmp_leq_cm_b2 :
-  ∀ {S : Kanon.Sem} [KanonBool.Lang S] [CoreMod.Lang S] [BitvecMod.Lang S] [KanonBool.Typed S] [CoreMod.Typed S] [BitvecMod.Typed S] (O : Ops S), O.Sound →
-  ∀ (signed : Bool) (c2 : Int) (t__2 : S.Ty) (checked : CoreMod.Checked) (x : S.Term) (c1 : Int) (t__7 : S.Ty) (t__9 : S.Ty),
-  ((BitvecMod.Bitvec.checked_has signed checked) && (! (decide (c1 = (0 : Int))))) = true →
-  (let z1 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.BitVec c2) t__2)) c1); let z2 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.BitVec c2) t__2)) c2); ((BitvecMod.divisible z2 z1)) = true) →
-  (let z1 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.BitVec c2) t__2)) c1); ¬((decide (z1 < (0 : Int)))) = true) →
-  S.Refines (BitvecMod.Bitvec.leq.spec signed (BitvecMod.mk (.BitVec c2) t__2) (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__7)) t__9))
-  (O.bitvec_leq signed (O.bitvec_div signed (BitvecMod.mk (.BitVec c2) t__2) (BitvecMod.mk (.BitVec c1) t__7)) x) := by
-  intros
-  dsimp only at *
-  cmp_lift
-  cmp_halves
-
-theorem cmp_leq_cm_b3 :
-  ∀ {S : Kanon.Sem} [KanonBool.Lang S] [CoreMod.Lang S] [BitvecMod.Lang S] [KanonBool.Typed S] [CoreMod.Typed S] [BitvecMod.Typed S] (O : Ops S), O.Sound →
-  ∀ (signed : Bool) (c2 : Int) (t__2 : S.Ty) (checked : CoreMod.Checked) (x : S.Term) (c1 : Int) (t__7 : S.Ty) (t__9 : S.Ty),
-  ((BitvecMod.Bitvec.checked_has signed checked) && (! (decide (c1 = (0 : Int))))) = true →
-  (let z1 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.BitVec c2) t__2)) c1); let z2 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.BitVec c2) t__2)) c2); ¬((BitvecMod.divisible z2 z1)) = true) →
-  (let z1 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.BitVec c2) t__2)) c1); ((decide (z1 < (0 : Int)))) = true) →
-  (let z2 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.BitVec c2) t__2)) c2); ((decide (z2 < (0 : Int)))) = true) →
-  S.Refines (BitvecMod.Bitvec.leq.spec signed (BitvecMod.mk (.BitVec c2) t__2) (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__7)) t__9))
-  (O.bitvec_leq signed x (O.bitvec_div signed (BitvecMod.mk (.BitVec c2) t__2) (BitvecMod.mk (.BitVec c1) t__7))) := by
-  intros
-  dsimp only at *
-  cmp_lift
-  cmp_halves
-
-theorem cmp_leq_cm_b4 :
-  ∀ {S : Kanon.Sem} [KanonBool.Lang S] [CoreMod.Lang S] [BitvecMod.Lang S] [KanonBool.Typed S] [CoreMod.Typed S] [BitvecMod.Typed S] (O : Ops S), O.Sound →
-  ∀ (signed : Bool) (c2 : Int) (t__2 : S.Ty) (checked : CoreMod.Checked) (x : S.Term) (c1 : Int) (t__7 : S.Ty) (t__9 : S.Ty),
-  ((BitvecMod.Bitvec.checked_has signed checked) && (! (decide (c1 = (0 : Int))))) = true →
-  (let z1 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.BitVec c2) t__2)) c1); let z2 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.BitVec c2) t__2)) c2); ¬((BitvecMod.divisible z2 z1)) = true) →
-  (let z1 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.BitVec c2) t__2)) c1); ((decide (z1 < (0 : Int)))) = true) →
-  (let z2 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.BitVec c2) t__2)) c2); ¬((decide (z2 < (0 : Int)))) = true) →
-  S.Refines (BitvecMod.Bitvec.leq.spec signed (BitvecMod.mk (.BitVec c2) t__2) (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__7)) t__9))
-  (O.bitvec_lt signed x (O.bitvec_div signed (BitvecMod.mk (.BitVec c2) t__2) (BitvecMod.mk (.BitVec c1) t__7))) := by
-  intros
-  dsimp only at *
-  cmp_lift
-  cmp_halves
-
-theorem cmp_leq_cm_b5 :
-  ∀ {S : Kanon.Sem} [KanonBool.Lang S] [CoreMod.Lang S] [BitvecMod.Lang S] [KanonBool.Typed S] [CoreMod.Typed S] [BitvecMod.Typed S] (O : Ops S), O.Sound →
-  ∀ (signed : Bool) (c2 : Int) (t__2 : S.Ty) (checked : CoreMod.Checked) (x : S.Term) (c1 : Int) (t__7 : S.Ty) (t__9 : S.Ty),
-  ((BitvecMod.Bitvec.checked_has signed checked) && (! (decide (c1 = (0 : Int))))) = true →
-  (let z1 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.BitVec c2) t__2)) c1); let z2 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.BitVec c2) t__2)) c2); ¬((BitvecMod.divisible z2 z1)) = true) →
-  (let z1 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.BitVec c2) t__2)) c1); ¬((decide (z1 < (0 : Int)))) = true) →
-  (let z2 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.BitVec c2) t__2)) c2); ((decide (z2 < (0 : Int)))) = true) →
-  S.Refines (BitvecMod.Bitvec.leq.spec signed (BitvecMod.mk (.BitVec c2) t__2) (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__7)) t__9))
-  (O.bitvec_leq signed (O.bitvec_div signed (BitvecMod.mk (.BitVec c2) t__2) (BitvecMod.mk (.BitVec c1) t__7)) x) := by
-  intros
-  dsimp only at *
-  cmp_lift
-  cmp_halves
-
-theorem cmp_leq_cm_b6 :
-  ∀ {S : Kanon.Sem} [KanonBool.Lang S] [CoreMod.Lang S] [BitvecMod.Lang S] [KanonBool.Typed S] [CoreMod.Typed S] [BitvecMod.Typed S] (O : Ops S), O.Sound →
-  ∀ (signed : Bool) (c2 : Int) (t__2 : S.Ty) (checked : CoreMod.Checked) (x : S.Term) (c1 : Int) (t__7 : S.Ty) (t__9 : S.Ty),
-  ((BitvecMod.Bitvec.checked_has signed checked) && (! (decide (c1 = (0 : Int))))) = true →
-  (let z1 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.BitVec c2) t__2)) c1); let z2 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.BitVec c2) t__2)) c2); ¬((BitvecMod.divisible z2 z1)) = true) →
-  (let z1 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.BitVec c2) t__2)) c1); ¬((decide (z1 < (0 : Int)))) = true) →
-  (let z2 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.BitVec c2) t__2)) c2); ¬((decide (z2 < (0 : Int)))) = true) →
-  S.Refines (BitvecMod.Bitvec.leq.spec signed (BitvecMod.mk (.BitVec c2) t__2) (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__7)) t__9))
-  (O.bitvec_lt signed (O.bitvec_div signed (BitvecMod.mk (.BitVec c2) t__2) (BitvecMod.mk (.BitVec c1) t__7)) x) := by
-  intros
-  dsimp only at *
-  cmp_lift
-  cmp_halves
-
+/-- `c2 ≤ x * c1`: `x` against the truncated quotient `c2 / c1` (`CompareMul.lean`). -/
 @[kanon_arm] theorem Bitvec.leq.r_const_mul.main.proof : Bitvec.leq.r_const_mul.main.Stmt := by
   intro S _ _ _ _ _ _ O hO signed c2 t2 checked x c1 t7 t9 hg
-  dsimp only
-  repeat' split
-  all_goals first
-    | exact cmp_leq_cm_b0 O hO signed c2 t2 checked x c1 t7 t9 hg ‹_› ‹_› ‹_›
-    | exact cmp_leq_cm_b1 O hO signed c2 t2 checked x c1 t7 t9 hg ‹_› ‹_› ‹_›
-    | exact cmp_leq_cm_b2 O hO signed c2 t2 checked x c1 t7 t9 hg ‹_› ‹_›
-    | exact cmp_leq_cm_b3 O hO signed c2 t2 checked x c1 t7 t9 hg ‹_› ‹_› ‹_›
-    | exact cmp_leq_cm_b4 O hO signed c2 t2 checked x c1 t7 t9 hg ‹_› ‹_› ‹_›
-    | exact cmp_leq_cm_b5 O hO signed c2 t2 checked x c1 t7 t9 hg ‹_› ‹_› ‹_›
-    | exact cmp_leq_cm_b6 O hO signed c2 t2 checked x c1 t7 t9 hg ‹_› ‹_› ‹_›
+  mul_arm leq_cm_wt leq_cm_lhs
 
 @[kanon_arm] theorem Bitvec.leq.r_const_sub1.main.proof : Bitvec.leq.r_const_sub1.main.Stmt := by cmp_rule
 
@@ -197,118 +90,10 @@ theorem cmp_leq_cm_b6 :
 
 @[kanon_arm] theorem Bitvec.leq.r_min_l.main.proof : Bitvec.leq.r_min_l.main.Stmt := by cmp_rule
 
-/-! The arm `leq.r_mul_const`, one lemma per branch of its body (each branch a few goals of
-`cmp_rule`, within the default budget). -/
-
-theorem cmp_leq_mc_b0 :
-  ∀ {S : Kanon.Sem} [KanonBool.Lang S] [CoreMod.Lang S] [BitvecMod.Lang S] [KanonBool.Typed S] [CoreMod.Typed S] [BitvecMod.Typed S] (O : Ops S), O.Sound →
-  ∀ (signed : Bool) (checked : CoreMod.Checked) (x : S.Term) (c1 : Int) (t__5 : S.Ty) (t__7 : S.Ty) (c2 : Int) (t__10 : S.Ty),
-  ((BitvecMod.Bitvec.checked_has signed checked) && (! (decide (c1 = (0 : Int))))) = true →
-  (let z1 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7)) c1); let z2 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7)) c2); ((BitvecMod.divisible z2 z1)) = true) →
-  (let z1 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7)) c1); ((decide (z1 < (0 : Int)))) = true) →
-  (let z1 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7)) c1); ((signed && ((decide (z1 = (-1 : Int))) && (BitvecMod.Bitvec.is_int_min (BitvecMod.Bitvec.size (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7)) c2)))) = true) →
-  S.Refines (BitvecMod.Bitvec.leq.spec signed (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7) (BitvecMod.mk (.BitVec c2) t__10))
-  (KanonBool.v_false) := by
-  intros
-  dsimp only at *
-  cmp_lift
-  cmp_halves
-
-theorem cmp_leq_mc_b1 :
-  ∀ {S : Kanon.Sem} [KanonBool.Lang S] [CoreMod.Lang S] [BitvecMod.Lang S] [KanonBool.Typed S] [CoreMod.Typed S] [BitvecMod.Typed S] (O : Ops S), O.Sound →
-  ∀ (signed : Bool) (checked : CoreMod.Checked) (x : S.Term) (c1 : Int) (t__5 : S.Ty) (t__7 : S.Ty) (c2 : Int) (t__10 : S.Ty),
-  ((BitvecMod.Bitvec.checked_has signed checked) && (! (decide (c1 = (0 : Int))))) = true →
-  (let z1 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7)) c1); let z2 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7)) c2); ((BitvecMod.divisible z2 z1)) = true) →
-  (let z1 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7)) c1); ((decide (z1 < (0 : Int)))) = true) →
-  (let z1 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7)) c1); ¬((signed && ((decide (z1 = (-1 : Int))) && (BitvecMod.Bitvec.is_int_min (BitvecMod.Bitvec.size (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7)) c2)))) = true) →
-  S.Refines (BitvecMod.Bitvec.leq.spec signed (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7) (BitvecMod.mk (.BitVec c2) t__10))
-  (O.bitvec_leq signed (O.bitvec_div signed (BitvecMod.mk (.BitVec c2) t__10) (BitvecMod.mk (.BitVec c1) t__5)) x) := by
-  intros
-  dsimp only at *
-  cmp_lift
-  cmp_halves
-
-theorem cmp_leq_mc_b2 :
-  ∀ {S : Kanon.Sem} [KanonBool.Lang S] [CoreMod.Lang S] [BitvecMod.Lang S] [KanonBool.Typed S] [CoreMod.Typed S] [BitvecMod.Typed S] (O : Ops S), O.Sound →
-  ∀ (signed : Bool) (checked : CoreMod.Checked) (x : S.Term) (c1 : Int) (t__5 : S.Ty) (t__7 : S.Ty) (c2 : Int) (t__10 : S.Ty),
-  ((BitvecMod.Bitvec.checked_has signed checked) && (! (decide (c1 = (0 : Int))))) = true →
-  (let z1 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7)) c1); let z2 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7)) c2); ((BitvecMod.divisible z2 z1)) = true) →
-  (let z1 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7)) c1); ¬((decide (z1 < (0 : Int)))) = true) →
-  S.Refines (BitvecMod.Bitvec.leq.spec signed (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7) (BitvecMod.mk (.BitVec c2) t__10))
-  (O.bitvec_leq signed x (O.bitvec_div signed (BitvecMod.mk (.BitVec c2) t__10) (BitvecMod.mk (.BitVec c1) t__5))) := by
-  intros
-  dsimp only at *
-  cmp_lift
-  cmp_halves
-
-theorem cmp_leq_mc_b3 :
-  ∀ {S : Kanon.Sem} [KanonBool.Lang S] [CoreMod.Lang S] [BitvecMod.Lang S] [KanonBool.Typed S] [CoreMod.Typed S] [BitvecMod.Typed S] (O : Ops S), O.Sound →
-  ∀ (signed : Bool) (checked : CoreMod.Checked) (x : S.Term) (c1 : Int) (t__5 : S.Ty) (t__7 : S.Ty) (c2 : Int) (t__10 : S.Ty),
-  ((BitvecMod.Bitvec.checked_has signed checked) && (! (decide (c1 = (0 : Int))))) = true →
-  (let z1 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7)) c1); let z2 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7)) c2); ¬((BitvecMod.divisible z2 z1)) = true) →
-  (let z1 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7)) c1); ((decide (z1 < (0 : Int)))) = true) →
-  (let z2 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7)) c2); ((decide (z2 < (0 : Int)))) = true) →
-  S.Refines (BitvecMod.Bitvec.leq.spec signed (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7) (BitvecMod.mk (.BitVec c2) t__10))
-  (O.bitvec_lt signed (O.bitvec_div signed (BitvecMod.mk (.BitVec c2) t__10) (BitvecMod.mk (.BitVec c1) t__5)) x) := by
-  intros
-  dsimp only at *
-  cmp_lift
-  cmp_halves
-
-theorem cmp_leq_mc_b4 :
-  ∀ {S : Kanon.Sem} [KanonBool.Lang S] [CoreMod.Lang S] [BitvecMod.Lang S] [KanonBool.Typed S] [CoreMod.Typed S] [BitvecMod.Typed S] (O : Ops S), O.Sound →
-  ∀ (signed : Bool) (checked : CoreMod.Checked) (x : S.Term) (c1 : Int) (t__5 : S.Ty) (t__7 : S.Ty) (c2 : Int) (t__10 : S.Ty),
-  ((BitvecMod.Bitvec.checked_has signed checked) && (! (decide (c1 = (0 : Int))))) = true →
-  (let z1 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7)) c1); let z2 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7)) c2); ¬((BitvecMod.divisible z2 z1)) = true) →
-  (let z1 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7)) c1); ((decide (z1 < (0 : Int)))) = true) →
-  (let z2 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7)) c2); ¬((decide (z2 < (0 : Int)))) = true) →
-  S.Refines (BitvecMod.Bitvec.leq.spec signed (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7) (BitvecMod.mk (.BitVec c2) t__10))
-  (O.bitvec_leq signed (O.bitvec_div signed (BitvecMod.mk (.BitVec c2) t__10) (BitvecMod.mk (.BitVec c1) t__5)) x) := by
-  intros
-  dsimp only at *
-  cmp_lift
-  cmp_halves
-
-theorem cmp_leq_mc_b5 :
-  ∀ {S : Kanon.Sem} [KanonBool.Lang S] [CoreMod.Lang S] [BitvecMod.Lang S] [KanonBool.Typed S] [CoreMod.Typed S] [BitvecMod.Typed S] (O : Ops S), O.Sound →
-  ∀ (signed : Bool) (checked : CoreMod.Checked) (x : S.Term) (c1 : Int) (t__5 : S.Ty) (t__7 : S.Ty) (c2 : Int) (t__10 : S.Ty),
-  ((BitvecMod.Bitvec.checked_has signed checked) && (! (decide (c1 = (0 : Int))))) = true →
-  (let z1 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7)) c1); let z2 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7)) c2); ¬((BitvecMod.divisible z2 z1)) = true) →
-  (let z1 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7)) c1); ¬((decide (z1 < (0 : Int)))) = true) →
-  (let z2 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7)) c2); ((decide (z2 < (0 : Int)))) = true) →
-  S.Refines (BitvecMod.Bitvec.leq.spec signed (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7) (BitvecMod.mk (.BitVec c2) t__10))
-  (O.bitvec_lt signed x (O.bitvec_div signed (BitvecMod.mk (.BitVec c2) t__10) (BitvecMod.mk (.BitVec c1) t__5))) := by
-  intros
-  dsimp only at *
-  cmp_lift
-  cmp_halves
-
-theorem cmp_leq_mc_b6 :
-  ∀ {S : Kanon.Sem} [KanonBool.Lang S] [CoreMod.Lang S] [BitvecMod.Lang S] [KanonBool.Typed S] [CoreMod.Typed S] [BitvecMod.Typed S] (O : Ops S), O.Sound →
-  ∀ (signed : Bool) (checked : CoreMod.Checked) (x : S.Term) (c1 : Int) (t__5 : S.Ty) (t__7 : S.Ty) (c2 : Int) (t__10 : S.Ty),
-  ((BitvecMod.Bitvec.checked_has signed checked) && (! (decide (c1 = (0 : Int))))) = true →
-  (let z1 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7)) c1); let z2 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7)) c2); ¬((BitvecMod.divisible z2 z1)) = true) →
-  (let z1 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7)) c1); ¬((decide (z1 < (0 : Int)))) = true) →
-  (let z2 := (BitvecMod.Bitvec.to_z signed (BitvecMod.Bitvec.size (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7)) c2); ¬((decide (z2 < (0 : Int)))) = true) →
-  S.Refines (BitvecMod.Bitvec.leq.spec signed (BitvecMod.mk (.Mul checked x (BitvecMod.mk (.BitVec c1) t__5)) t__7) (BitvecMod.mk (.BitVec c2) t__10))
-  (O.bitvec_leq signed x (O.bitvec_div signed (BitvecMod.mk (.BitVec c2) t__10) (BitvecMod.mk (.BitVec c1) t__5))) := by
-  intros
-  dsimp only at *
-  cmp_lift
-  cmp_halves
-
+/-- `x * c1 ≤ c2`: `x` against the truncated quotient `c2 / c1` (`CompareMul.lean`). -/
 @[kanon_arm] theorem Bitvec.leq.r_mul_const.main.proof : Bitvec.leq.r_mul_const.main.Stmt := by
   intro S _ _ _ _ _ _ O hO signed checked x c1 t5 t7 c2 t10 hg
-  dsimp only
-  repeat' split
-  all_goals first
-    | exact cmp_leq_mc_b0 O hO signed checked x c1 t5 t7 c2 t10 hg ‹_› ‹_› ‹_›
-    | exact cmp_leq_mc_b1 O hO signed checked x c1 t5 t7 c2 t10 hg ‹_› ‹_› ‹_›
-    | exact cmp_leq_mc_b2 O hO signed checked x c1 t5 t7 c2 t10 hg ‹_› ‹_›
-    | exact cmp_leq_mc_b3 O hO signed checked x c1 t5 t7 c2 t10 hg ‹_› ‹_› ‹_›
-    | exact cmp_leq_mc_b4 O hO signed checked x c1 t5 t7 c2 t10 hg ‹_› ‹_› ‹_›
-    | exact cmp_leq_mc_b5 O hO signed checked x c1 t5 t7 c2 t10 hg ‹_› ‹_› ‹_›
-    | exact cmp_leq_mc_b6 O hO signed checked x c1 t5 t7 c2 t10 hg ‹_› ‹_› ‹_›
+  mul_arm leq_mc_wt leq_mc_lhs
 
 /-- The swapped arm of `mul_const`, from the main arm by the commutativity of `Mul`. -/
 @[kanon_arm] theorem Bitvec.leq.r_mul_const.swap.proof : Bitvec.leq.r_mul_const.swap.Stmt := by

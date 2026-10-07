@@ -32,9 +32,9 @@ commutativity of `Add`. -/
 @[kanon_arm] theorem Bitvec.lt.r_add_add.swap1.proof : Bitvec.lt.r_add_add.swap1.Stmt := by
   intro S _ _ _ _ _ _ O hO signed cl y l tl t1 cr r tr x t2 hg
   have h1 : S.Refines (mk (.Add cl y (mk (.BitVec l) tl)) t1) (mk (.Add cl (mk (.BitVec l) tl) y) t1) :=
-    cmp_add_comm ..
+    Add.comm.proof ..
   have h1' : S.Refines (mk (.Add cl (mk (.BitVec l) tl) y) t1) (mk (.Add cl y (mk (.BitVec l) tl)) t1) :=
-    cmp_add_comm ..
+    Add.comm.proof ..
   refine Kanon.Sem.Refines.trans ?_
     (Kanon.Sem.Refines.trans (Bitvec.lt.r_add_add.main.proof O hO signed cl l tl y t1 cr r tr x t2 hg) ?_)
   · simp only [Bitvec.lt.spec]
@@ -47,13 +47,13 @@ commutativity of `Add`. -/
     Bitvec.lt.r_add_add.swap1_swap2.Stmt := by
   intro S _ _ _ _ _ _ O hO signed cl y l tl t1 cr x r tr t2 hg
   have h1 : S.Refines (mk (.Add cl y (mk (.BitVec l) tl)) t1) (mk (.Add cl (mk (.BitVec l) tl) y) t1) :=
-    cmp_add_comm ..
+    Add.comm.proof ..
   have h1' : S.Refines (mk (.Add cl (mk (.BitVec l) tl) y) t1) (mk (.Add cl y (mk (.BitVec l) tl)) t1) :=
-    cmp_add_comm ..
+    Add.comm.proof ..
   have h2 : S.Refines (mk (.Add cr x (mk (.BitVec r) tr)) t2) (mk (.Add cr (mk (.BitVec r) tr) x) t2) :=
-    cmp_add_comm ..
+    Add.comm.proof ..
   have h2' : S.Refines (mk (.Add cr (mk (.BitVec r) tr) x) t2) (mk (.Add cr x (mk (.BitVec r) tr)) t2) :=
-    cmp_add_comm ..
+    Add.comm.proof ..
   refine Kanon.Sem.Refines.trans ?_
     (Kanon.Sem.Refines.trans (Bitvec.lt.r_add_add.main.proof O hO signed cl l tl y t1 cr r tr x t2 hg) ?_)
   · simp only [Bitvec.lt.spec]
@@ -269,7 +269,7 @@ theorem cmp_lt_mc_b4 :
 @[kanon_arm] theorem Bitvec.lt.r_mul_const.swap.proof : Bitvec.lt.r_mul_const.swap.Stmt := by
   intro S _ _ _ _ _ _ O hO signed ck c1 t5 x t7 c2 t10 hg
   have h1 : S.Refines (mk (.Mul ck (mk (.BitVec c1) t5) x) t7) (mk (.Mul ck x (mk (.BitVec c1) t5)) t7) :=
-    cmp_mul_comm ..
+    Mul.comm.proof ..
   refine Kanon.Sem.Refines.trans ?_
     (Kanon.Sem.Refines.trans (Bitvec.lt.r_mul_const.main.proof O hO signed ck x c1 t5 t7 c2 t10 hg) ?_)
   · simp only [Bitvec.lt.spec]

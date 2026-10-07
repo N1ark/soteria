@@ -14,8 +14,8 @@ import BitvecMod.Proofs.IteLib
 
 The arms of `Bitvec.add`, `sub`, `mul`, `neg`, `not_`, `and_`, `or_`, `xor`,
 `of_bool`, `to_bool`, `not_bool` and of the overflow functions are proved by
-`bv_arith` (`Proofs/ArithLib.lean`), and the commutativity of `Add`, `Mul`,
-`AddOvf` and `MulOvf` too; `Bitvec.or_.r_extend_shl` by hand, on its bits, and
+`bv_arith` (`Proofs/ArithLib.lean`), and the commutativity of `AddOvf` and
+`MulOvf` too (that of `Add` and `Mul` is in `Proofs/Common.lean`); `Bitvec.or_.r_extend_shl` by hand, on its bits, and
 `Bitvec.sub.r_add_const.swap` from its main arm, and the arms that distribute an operation
 over conditionals by `bv_ite_arm` (`Proofs/IteLib.lean`).
 -/
@@ -27,8 +27,6 @@ attribute [kanon_tactic "bv_arith"] Bitvec.add.spec Bitvec.sub.spec Bitvec.mul.s
   Bitvec.of_bool.spec Bitvec.to_bool.spec Bitvec.not_bool.spec Bitvec.add_overflows.spec
   Bitvec.sub_overflows.spec Bitvec.mul_overflows.spec Bitvec.neg_overflows.spec
 
-@[kanon_arm] theorem Add.comm.proof : Add.comm.Stmt := by bv_arith
-@[kanon_arm] theorem Mul.comm.proof : Mul.comm.Stmt := by bv_arith
 @[kanon_arm] theorem AddOvf.comm.proof : AddOvf.comm.Stmt := by bv_arith
 @[kanon_arm] theorem MulOvf.comm.proof : MulOvf.comm.Stmt := by bv_arith
 

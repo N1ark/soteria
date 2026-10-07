@@ -55,8 +55,8 @@ theorem lit_sure_neq {loc : Bool} {a b : Int} {ta tb : S.Ty} (h : a ≠ b)
   have := ea'.symm.trans eb'
   simp only [Option.some.injEq, bv, Embed.inj_eq_iff, Sigma.mk.injEq, heq_eq_eq, true_and] at this
   have := congrArg BitVec.toNat this
-  rw [Cmp.toNat_ofInt_of_lt ha0 (by exact_mod_cast ha1),
-    Cmp.toNat_ofInt_of_lt hb0 (by exact_mod_cast hb1)] at this
+  rw [BitvecMod.toNat_ofInt_of_lt ha0 (by exact_mod_cast ha1),
+    BitvecMod.toNat_ofInt_of_lt hb0 (by exact_mod_cast hb1)] at this
   omega
 
 end

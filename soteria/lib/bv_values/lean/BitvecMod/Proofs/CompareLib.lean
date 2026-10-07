@@ -1,12 +1,10 @@
-import BitvecMod.Tactic
-import BitvecMod.LitOps
-import BitvecMod.Statements.Comm
+import BitvecMod.Proofs.Common
 
 /-!
 # The lemmas and tactics of the comparisons and of the bool rules on bit-vectors
 
 `cmp_rule` proves an arm as `kanon_rule` does, with the widths of the operands
-unified (`cmp_rw_tys`) and the values of typed bit-vectors read at the width of
+unified (`bv_rw_tys`) and the values of typed bit-vectors read at the width of
 their sort (`cmp_exists_vbv`).
 -/
 
@@ -65,14 +63,9 @@ theorem cmp_slt_zero {n : Nat} (x : BitVec n) : x.slt (BitVec.ofInt n 0) = x.msb
   rw [show BitVec.ofInt n 0 = 0#n by apply BitVec.eq_of_toNat_eq; simp]
   exact BitVec.slt_zero_eq_msb
 
-theorem cmp_ofInt_zero (n : Nat) : BitVec.ofInt n 0 = 0#n := by
-  apply BitVec.eq_of_toNat_eq; simp
-
 theorem cmp_toInt_lt_zero {n : Nat} (x : BitVec n) :
     (x.toInt < (BitVec.ofInt n 0).toInt) = (x.msb = true) := by
   rw [← cmp_slt_zero, BitVec.slt]; simp
-
-theorem cmp_toNat_natCast_add (a b : Nat) : ((a : Int) + (b : Int)).toNat = a + b := by omega
 
 theorem cmp_pite_none {V : Type} (vb : Bool → V) (a b : Option V) :
     KanonBool.pite vb none a b = none := by
@@ -99,12 +92,6 @@ theorem cmp_true_eq (p : Prop) [Decidable p] : (true = decide p) = p := by
 theorem cmp_false_eq (p : Prop) [Decidable p] : (false = decide p) = ¬p := by
   by_cases h : p <;> simp [h]
 
-theorem cmp_exists_sig {m : Nat} {y : BitVec m} {P : (n : Nat) → BitVec n → Prop} :
-    (∃ n x, (⟨m, y⟩ : (n : Nat) × BitVec n) = ⟨n, x⟩ ∧ P n x) ↔ P m y := by
-  constructor
-  · rintro ⟨n, x, h, hp⟩; cases h; exact hp
-  · intro h; exact ⟨m, y, rfl, h⟩
-
 theorem cmp_exists_heq {m : Nat} {y : BitVec m} {P : (n : Nat) → BitVec n → Prop} :
     (∃ n x, (m = n ∧ HEq y x) ∧ P n x) ↔ P m y := by
   constructor
@@ -113,7 +100,7 @@ theorem cmp_exists_heq {m : Nat} {y : BitVec m} {P : (n : Nat) → BitVec n → 
 
 theorem cmp_exists_vbv {m : Nat} {y : BitVec m} {P : (n : Nat) → BitVec n → Prop} :
     (∃ n x, (Values.vbv.inj ⟨m, y⟩ : D.Val) = bv n x ∧ P n x) ↔ P m y := by
-  simp only [bv, Embed.inj_eq_iff]; exact cmp_exists_sig
+  simp only [bv, Embed.inj_eq_iff]; exact exists_sigma_eq
 
 end
 
@@ -133,38 +120,6 @@ end
 namespace Lib
 
 open Lean Meta Elab Tactic
-
-/-- The hypotheses `S.ty x = e` (or `e = S.ty x`) on a term variable `x`. -/
-def tyHyps (g : MVarId) : MetaM (Array FVarId) := g.withContext do
-  let isTyVar (e : Expr) : Bool :=
-    e.isAppOfArity ``Kanon.Sem.ty 2 && e.appArg!.isFVar
-  let mut out := #[]
-  for d in (← getLCtx) do
-    if d.isImplementationDetail then continue
-    let ty ← instantiateMVars d.type
-    if let some (_, a, b) := ty.eq? then
-      if (isTyVar a && !b.containsFVar a.appArg!.fvarId!) ||
-          (isTyVar b && !a.containsFVar b.appArg!.fvarId!) then
-        out := out.push d.fvarId
-  return out
-
-/-- Rewrites, in the other hypotheses and the goal, the sorts of the term
-variables that a hypothesis gives (`S.ty x = e`); the hypothesis is kept. -/
-elab "cmp_rw_tys" : tactic => do
-  for h in ← tyHyps (← getMainGoal) do
-    withMainContext do
-    let some d := (← getLCtx).find? h | return
-    let some (_, a, _) := (← instantiateMVars d.type).eq? | return
-    let hs ← Term.exprToSyntax d.toExpr
-    let stx ← if a.isAppOfArity ``Kanon.Sem.ty 2 then `(tactic| simp only [$hs:term])
-      else `(tactic| simp only [← $hs:term])
-    let { ctx, simprocs, dischargeWrapper, .. } ← mkSimpContext stx (eraseLocal := false)
-    let others := (← (← getMainGoal).getNondepPropHyps).filter (· != h)
-    try
-      dischargeWrapper.with fun dis? => do
-        let (r, _) ← simpGoal (← getMainGoal) ctx simprocs dis? true others
-        replaceMainGoal (match r with | none => [] | some (_, g) => [g])
-    catch _ => pure ()
 
 /-- Replaces the integer variables `w` with a hypothesis `0 < w` (the widths of
 bit-vector sorts) by natural numbers. -/
@@ -302,7 +257,7 @@ def genSumStep : TacticM Bool := withMainContext do
           else none
         else if a.isAppOfArity ``HAdd.hAdd 6 && (a.getArg! 4).isAppOfArity ``Nat.cast 3 &&
             (a.getArg! 5).isAppOfArity ``Nat.cast 3 then
-          some (mkAppM ``BitvecMod.cmp_toNat_natCast_add #[(a.getArg! 4).appArg!, (a.getArg! 5).appArg!])
+          some (mkAppM ``toNat_natCast_add #[(a.getArg! 4).appArg!, (a.getArg! 5).appArg!])
         else none
       -- a width `a` that a hypothesis gives as `↑k`
       let pf? ← if pf?.isSome then pure pf? else do
@@ -439,7 +394,7 @@ macro "cmp_facts" : tactic => `(tactic| (
   (try kanon_split)
   (try subst_vars)
   kanon_wt_simp
-  (try cmp_rw_tys)
+  (try bv_rw_tys)
   (try simp only [sort_inj_iff, KanonBool.sort_inj_iff, Srt.TBitVector.injEq, Srt.TLoc.injEq,
     sort_Bitvec_ne_Bool, true_and, and_true] at *)
   (try subst_vars)
@@ -523,7 +478,6 @@ macro "cmp_sem_core" : tactic => `(tactic| (
   all_goals (try subst e)
   all_goals (try (kanon_split; subst_vars))))
 
-
 end BitvecMod
 
 /-! ## Reasoning on the integer values of the bit-vectors (option B's `bv_cmp_omega`) -/
@@ -531,112 +485,6 @@ end BitvecMod
 namespace BitvecMod.Cmp
 
 open Classical Kanon Prim
-
-theorem two_pow_pos (n : Nat) : (0 : Int) < 2 ^ n := Int.pow_pos (by decide)
-
-theorem cmp_toNat_sub_one (w : Nat) : ((w : Int) - 1).toNat = w - 1 := by omega
-
-theorem z_lsl_one (k : Int) : z_lsl 1 k = 2 ^ k.toNat := by simp [Prim.z_lsl]
-
-theorem signed_extract_zero {n : Nat} (hn : 0 < n) (z : Int) :
-    signed_extract z 0 (n : Int) = (BitVec.ofInt n z).toInt :=
-  LitOps.sext_of_eq hn z
-
-theorem toNat_ofInt_of_lt {n : Nat} {k : Int} (h0 : 0 ≤ k) (h1 : k < 2 ^ n) :
-    (BitVec.ofInt n k).toNat = k.toNat := by
-  rw [BitVec.toNat_ofInt, Int.emod_eq_of_lt h0 (by push_cast; exact h1)]
-
-theorem smtUDiv_toNat {n : Nat} {a b : BitVec n} (hb : b.toNat ≠ 0) :
-    (a.smtUDiv b).toNat = a.toNat / b.toNat := by
-  simp [BitVec.smtUDiv_eq, ← BitVec.toNat_inj, hb]
-
-section
-variable {w : Nat} {x y : BitVec w}
-
-theorem sadd_ok : x.saddOverflow y = false ↔
-    -2 ^ (w - 1) ≤ x.toInt + y.toInt ∧ x.toInt + y.toInt < 2 ^ (w - 1) := by
-  simp [BitVec.saddOverflow]; omega
-
-theorem ssub_ok : x.ssubOverflow y = false ↔
-    -2 ^ (w - 1) ≤ x.toInt - y.toInt ∧ x.toInt - y.toInt < 2 ^ (w - 1) := by
-  simp [BitVec.ssubOverflow]; omega
-
-theorem smul_ok : x.smulOverflow y = false ↔
-    -2 ^ (w - 1) ≤ x.toInt * y.toInt ∧ x.toInt * y.toInt < 2 ^ (w - 1) := by
-  simp [BitVec.smulOverflow]; omega
-
-theorem uadd_ok : x.uaddOverflow y = false ↔ x.toNat + y.toNat < 2 ^ w := by
-  simp [BitVec.uaddOverflow]
-
-theorem usub_ok : x.usubOverflow y = false ↔ y.toNat ≤ x.toNat := by
-  simp [BitVec.usubOverflow]
-
-theorem umul_ok : x.umulOverflow y = false ↔ x.toNat * y.toNat < 2 ^ w := by
-  simp [BitVec.umulOverflow]
-
-theorem toInt_add_ok (h : x.saddOverflow y = false) : (x + y).toInt = x.toInt + y.toInt :=
-  BitVec.toInt_add_of_not_saddOverflow (by simp [h])
-
-theorem toInt_sub_ok (h : x.ssubOverflow y = false) : (x - y).toInt = x.toInt - y.toInt :=
-  BitVec.toInt_sub_of_not_ssubOverflow (by simp [h])
-
-theorem toInt_mul_ok (h : x.smulOverflow y = false) : (x * y).toInt = x.toInt * y.toInt :=
-  BitVec.toInt_mul_of_not_smulOverflow (by simp [h])
-
-theorem toNat_add_ok (h : x.uaddOverflow y = false) : (x + y).toNat = x.toNat + y.toNat :=
-  BitVec.toNat_add_of_not_uaddOverflow (by simp [h])
-
-theorem toNat_sub_ok (h : x.usubOverflow y = false) : (x - y).toNat = x.toNat - y.toNat :=
-  BitVec.toNat_sub_of_not_usubOverflow (by simp [h])
-
-theorem toNat_mul_ok (h : x.umulOverflow y = false) : (x * y).toNat = x.toNat * y.toNat :=
-  BitVec.toNat_mul_of_not_umulOverflow (by simp [h])
-
-end
-
-theorem smulOverflow_neg_swap {n : Nat} {c v : BitVec n} (hc : c ≠ BitVec.intMin n)
-    (hv : v ≠ BitVec.intMin n) : (-c).smulOverflow v = c.smulOverflow (-v) := by
-  simp only [BitVec.smulOverflow, BitVec.toInt_neg_of_ne_intMin hc,
-    BitVec.toInt_neg_of_ne_intMin hv, Int.neg_mul, Int.mul_neg]
-
-theorem umul_assoc_ok {n : Nat} {x y z : BitVec n} (h1 : x.umulOverflow y = false)
-    (h2 : (x * y).umulOverflow z = false) : x.umulOverflow (y * z) = false := by
-  have e := toNat_mul_ok h1
-  rw [umul_ok] at *
-  rw [e] at h2
-  have : (y * z).toNat ≤ y.toNat * z.toNat := by rw [BitVec.toNat_mul]; exact Nat.mod_le _ _
-  calc x.toNat * (y * z).toNat ≤ x.toNat * (y.toNat * z.toNat) := Nat.mul_le_mul_left _ this
-    _ = x.toNat * y.toNat * z.toNat := (Nat.mul_assoc ..).symm
-    _ < 2 ^ n := h2
-
-theorem smul_assoc_ok {n : Nat} {x y z : BitVec n} (h1 : x.smulOverflow y = false)
-    (h2 : (x * y).smulOverflow z = false) (h3 : y.smulOverflow z = false) :
-    x.smulOverflow (y * z) = false := by
-  rwa [← BitVec.smulOverflow_assoc (by simp [h1]) (by simp [h3])]
-
-theorem toInt_bounds {w : Nat} (x : BitVec w) :
-    -2 ^ (w - 1) ≤ x.toInt ∧ x.toInt < 2 ^ (w - 1) :=
-  ⟨BitVec.le_toInt x, BitVec.toInt_lt⟩
-
-open Lean Meta Elab Tactic in
-/-- Adds the integer meaning of the non-overflow hypotheses. -/
-def ovfEqs (g : MVarId) : MetaM MVarId := g.withContext do
-  let mut g := g
-  for d in (← getLCtx) do
-    if d.isImplementationDetail then continue
-    let ty ← instantiateMVars d.type
-    let some (_, lhs, rhs) := ty.eq? | continue
-    unless rhs.isConstOf ``Bool.false do continue
-    let lems := [(``BitVec.saddOverflow, ``toInt_add_ok), (``BitVec.ssubOverflow, ``toInt_sub_ok),
-      (``BitVec.smulOverflow, ``toInt_mul_ok), (``BitVec.uaddOverflow, ``toNat_add_ok),
-      (``BitVec.usubOverflow, ``toNat_sub_ok), (``BitVec.umulOverflow, ``toNat_mul_ok)]
-    for (f, lem) in lems do
-      if lhs.isAppOfArity f 3 then
-        let pf ← mkAppM lem #[d.toExpr]
-        let (_, g') ← (← g.assert `hovf (← inferType pf) pf).intro1P
-        g := g'
-  return g
-
 
 /-- The sign bit of `signed_to_unsigned_cmp`. -/
 theorem cmp_sign_bit {n : Nat} (hn : 0 < n) :
@@ -1168,7 +1016,6 @@ elab "cmpo_dedup_or" : tactic => withMainContext do
       if seen.contains k then dups := dups.push d.fvarId else seen := seen.insert k
   replaceMainGoal [← (← getMainGoal).tryClearMany dups]
 
-
 end BitvecMod.Cmp
 
 namespace BitvecMod
@@ -1197,8 +1044,8 @@ macro "cmpo_pre" : tactic => `(tactic| (
     BitVec.toInt_intMin_of_pos] at *)
   all_goals kanon_split
   all_goals cmpo_ovf_eqs
-  all_goals (try simp only [BitvecMod.Cmp.sadd_ok, BitvecMod.Cmp.ssub_ok, BitvecMod.Cmp.smul_ok,
-    BitvecMod.Cmp.uadd_ok, BitvecMod.Cmp.usub_ok, BitvecMod.Cmp.umul_ok] at *)
+  all_goals (try simp only [BitvecMod.sadd_ok, BitvecMod.ssub_ok, BitvecMod.smul_ok,
+    BitvecMod.uadd_ok, BitvecMod.usub_ok, BitvecMod.umul_ok] at *)
   all_goals (try simp only [BitVec.saddOverflow, BitVec.ssubOverflow, BitVec.smulOverflow,
     BitVec.uaddOverflow, BitVec.usubOverflow, BitVec.umulOverflow, decide_eq_true_eq,
     Bool.or_eq_true] at *)
@@ -1389,7 +1236,6 @@ theorem mul_cancel_ovf {w : Nat} {z : Int} (h0 : 0 ≤ z) (h1 : z < 2 ^ w) (hz :
     rw [toNat_mul_ok ha, toNat_mul_ok hb] at this
     exact Nat.eq_of_mul_eq_mul_left (BitVec.toNat_pos_of_ne_zero hk) this
 
-
 end BitvecMod.Cmp
 
 /-! ## The bound of the values of a term by `msb_of` -/
@@ -1400,17 +1246,6 @@ open Classical Kanon
 
 section
 variable {S : Kanon.Sem} [KanonBool.Lang S] [CoreMod.Lang S] [Lang S] [KanonBool.Typed S] [Typed S]
-
-/-- The values of a term of a sort of bit-vectors. -/
-theorem ev_bv_val {ρ : S.Env} {e : S.Term} {n : Nat} {u : S.Val} (w : S.WT e)
-    (ht : S.ty e = sort (.TBitVector n)) (h : S.ev ρ e = some u) : ∃ y : BitVec n, u = bv n y := by
-  obtain ⟨-, y, rfl⟩ := Typed.ev_sort ρ e u _ w ht h
-  exact ⟨y, rfl⟩
-
-theorem msb_default {v : S.Term} {n : Nat} (ht : S.ty v = sort (.TBitVector n)) (x : BitVec n) :
-    (x.toNat : Int) < 2 ^ (Bitvec.size v - 1 + 1).toNat := by
-  simp only [Bitvec.size, ht, size_of_ty_TBitVector, Int.sub_add_cancel, Int.toNat_natCast]
-  exact_mod_cast x.isLt
 
 /-- The value of a literal of a sort of bit-vectors of positive width. -/
 theorem lit_val {ρ : S.Env} {k : Int} {t : S.Ty} {n : Nat} (w : S.WT (mk (.BitVec k) t))
@@ -1426,300 +1261,6 @@ theorem lit_val {ρ : S.Env} {k : Int} {t : S.Ty} {n : Nat} (w : S.WT (mk (.BitV
   simp only [Node.map, Node.eval, ofBV_some]
   rw [width_eq ρ rfl (.inl rfl) hn, Int.toNat_natCast]
 
-theorem emod_le_self {k y : Int} (hk : 0 ≤ k) : k % y ≤ k := by
-  have pos : ∀ d : Int, 0 < d → k % d ≤ k := fun d hd => by
-    by_cases h : k < d
-    · rw [Int.emod_eq_of_lt hk h]; omega
-    · have := Int.emod_lt_of_pos k hd; omega
-  rcases Int.lt_trichotomy y 0 with h | rfl | h
-  · rw [← Int.emod_neg]; exact pos _ (by omega)
-  · simp
-  · exact pos _ h
-
-theorem toNat_eq_toInt {n : Nat} (x : BitVec n) (h : 0 ≤ x.toInt) : (x.toNat : Int) = x.toInt := by
-  rcases Cmp.cmp_toInt_toNat_cases x with ⟨-, h'⟩ | ⟨h1, h'⟩
-  · exact h'.symm
-  · have := Cmp.cmp_toNat_bounds x; omega
-
-theorem lt_two_pow_log2 {k : Int} (hk : 0 ≤ k) : k < 2 ^ (log2 k + 1).toNat := by
-  have := Nat.lt_log2_self (n := k.toNat)
-  have e2 : ((2 ^ (k.toNat.log2 + 1) : Nat) : Int) = 2 ^ (k.toNat.log2 + 1) := by push_cast; rfl
-  simp only [log2, Prim.log2]
-  rw [show ((k.toNat.log2 : Int) + 1).toNat = k.toNat.log2 + 1 by omega]
-  omega
-
-theorem zmin_cases (a b : Int) : Bitvec.zmin a b = a ∨ Bitvec.zmin a b = b := by
-  unfold Bitvec.zmin; split <;> simp
-theorem zmax_cases (a b : Int) : Bitvec.zmax a b = a ∨ Bitvec.zmax a b = b := by
-  unfold Bitvec.zmax; split <;> simp
-
-theorem pow_mono_toNat {a b : Int} (h : a ≤ b) : (2 : Int) ^ a.toNat ≤ 2 ^ b.toNat := by
-  have := Nat.pow_le_pow_right (n := 2) (by decide) (show a.toNat ≤ b.toNat by omega)
-  exact_mod_cast this
-
-theorem msb_bound (ρ : S.Env) : ∀ (m : Nat) (v : S.Term), S.size v < m → ∀ (n : Nat) (x : BitVec n),
-    S.WT v → S.ty v = sort (.TBitVector n) → S.ev ρ v = some (bv n x) →
-    (x.toNat : Int) < 2 ^ (Bitvec.msb_of v + 1).toNat := by
-  intro m
-  induction m with
-  | zero => intro v h; omega
-  | succ m ih =>
-  intro v hs n x w ht e
-  have hx : (x.toNat : Int) < 2 ^ n := by exact_mod_cast x.isLt
-  have hn : (0 : Int) < n := (Typed.ev_sort ρ _ _ _ w ht e).1
-  rw [Bitvec.msb_of]
-  rcases hp : proj v with _ | nd
-  · rcases hb : KanonBool.proj v with _ | bn
-    · simpa [hb, hp, Kanon.firstSome] using msb_default ht x
-    · obtain ⟨t, rfl⟩ := Kanon.NodeEmbed.exists_of_proj _ hb
-      have hsz := KanonBool.size_proj hb
-      cases bn
-      case Ite g l r =>
-        simp only [KanonBool.Node.All] at hsz
-        simp [Kanon.firstSome, -Bitvec.zmax]
-        rw [KanonBool.WT_mk] at w
-        obtain ⟨⟨-, hrl, rfl⟩, -, wl, wr⟩ := w
-        simp only [KanonBool.ty_mk] at ht
-        rw [KanonBool.ev_mk] at e
-        simp only [KanonBool.Node.map, KanonBool.Node.eval, KanonBool.pite] at e
-        have bl := fun x e => ih l (by omega) n x wl ht e
-        have br := fun x e => ih r (by omega) n x wr (hrl.trans ht) e
-        have hl : Bitvec.msb_of l ≤ Bitvec.zmax (Bitvec.msb_of l) (Bitvec.msb_of r) := by
-          unfold Bitvec.zmax; split <;> rename_i h <;> simp at h <;> omega
-        have hr : Bitvec.msb_of r ≤ Bitvec.zmax (Bitvec.msb_of l) (Bitvec.msb_of r) := by
-          unfold Bitvec.zmax; split <;> rename_i h <;> simp at h <;> omega
-        split at e
-        · exact Int.lt_of_lt_of_le (bl x e) (pow_mono_toNat (by omega))
-        · split at e
-          · exact Int.lt_of_lt_of_le (br x e) (pow_mono_toNat (by omega))
-          · cases e
-      all_goals simpa [Kanon.firstSome] using msb_default ht x
-  · obtain ⟨t, rfl⟩ := Kanon.NodeEmbed.exists_of_proj _ hp
-    have hsz := size_proj hp
-    simp only [ty_mk] at ht
-    subst ht
-    cases nd
-    case BitAnd a b =>
-      simp [Kanon.firstSome, -Bitvec.zmin]
-      simp only [Node.All] at hsz
-      rw [WT_mk] at w
-      obtain ⟨⟨-, hba, hta⟩, wa, wb⟩ := w
-      rw [ev_mk] at e
-      simp only [Node.map, Node.eval] at e
-      rw [width_eq ρ rfl (.inl rfl) (by omega), Int.toNat_natCast] at e
-      have hta' := hta.symm
-      rcases ha : S.ev ρ a with _ | ua
-      · simp [ha] at e
-      obtain ⟨xa, rfl⟩ := ev_bv_val wa hta' ha
-      rcases hb : S.ev ρ b with _ | ub
-      · simp [ha, hb] at e
-      obtain ⟨xb, rfl⟩ := ev_bv_val wb (hba.trans hta') hb
-      simp [ha, hb] at e
-      subst e
-      have h1 := ih a (by omega) n xa wa hta' ha
-      have h2 := ih b (by omega) n xb wb (hba.trans hta') hb
-      have l1 : (xa &&& xb).toNat ≤ xa.toNat := by rw [BitVec.toNat_and]; exact Nat.and_le_left
-      have l2 : (xa &&& xb).toNat ≤ xb.toNat := by rw [BitVec.toNat_and]; exact Nat.and_le_right
-      rcases zmin_cases (Bitvec.msb_of a) (Bitvec.msb_of b) with h | h <;> rw [h] <;> omega
-    case BitVec z =>
-      simp [Kanon.firstSome, Bitvec.size]
-      rw [WT_mk] at w
-      simp only [Node.wt, bv_wf] at w
-      obtain ⟨⟨-, hz⟩, -⟩ := w
-      obtain ⟨h0, h1⟩ := hz n (by simp)
-      rw [ev_mk] at e
-      simp only [Node.map, Node.eval, ofBV_some] at e
-      rw [width_eq ρ rfl (.inl rfl) hn, Int.toNat_natCast] at e
-      simp only [Option.some.injEq, bv, Embed.inj_eq_iff, Sigma.mk.injEq, heq_eq_eq, true_and] at e
-      subst e
-      rw [Cmp.toNat_ofInt_of_lt h0 (by simpa using h1)]
-      by_cases hz0 : 0 < z
-      · simp only [hz0, if_true, Option.getD_some, log2, Prim.log2]
-        have := Nat.lt_log2_self (n := z.toNat)
-        have e2 : ((2 ^ (z.toNat.log2 + 1) : Nat) : Int) = 2 ^ (z.toNat.log2 + 1) := by push_cast; rfl
-        rw [show ((z.toNat.log2 : Int) + 1).toNat = z.toNat.log2 + 1 by omega]
-        omega
-      · simp only [hz0, if_false]
-        split <;> (simp only [Option.getD_some, Option.getD_none, Int.sub_add_cancel, Int.toNat_natCast]; omega)
-    case BvExtend s k a =>
-      cases s
-      · simp [Kanon.firstSome]
-        simp only [Node.All] at hsz
-        rw [WT_mk] at w
-        obtain ⟨⟨m, hm, hta, hk, htm⟩, wa⟩ := w
-        obtain ⟨m', rfl⟩ := Int.eq_ofNat_of_zero_le (Int.le_of_lt hm)
-        rw [ev_mk] at e
-        simp only [Node.map, Node.eval] at e
-        rcases ha : S.ev ρ a with _ | ua
-        · simp [ha] at e
-        obtain ⟨xa, rfl⟩ := ev_bv_val wa hta ha
-        simp only [ha, withW_bv, asBV_bv, Option.map_some, ofBV_some, Bool.false_eq_true, if_false,
-          Option.some.injEq, bv, Embed.inj_eq_iff] at e
-        have h1 := ih a (by omega) m' xa wa hta ha
-        cases e
-        rw [BitVec.toNat_setWidth_of_le (by omega)]
-        exact h1
-      · simpa [Kanon.firstSome] using msb_default (ty_mk _ _) x
-    case Rem s a b =>
-      cases s
-      · simp only [Node.All] at hsz
-        rw [WT_mk] at w
-        obtain ⟨⟨-, hba, hta⟩, wa, wb⟩ := w
-        have hta' := hta.symm
-        rw [ev_mk] at e
-        simp only [Node.map, Node.eval] at e
-        rw [width_eq ρ rfl (.inl rfl) hn, Int.toNat_natCast] at e
-        rcases ha : S.ev ρ a with _ | ua
-        · simp [ha] at e
-        obtain ⟨xa, rfl⟩ := ev_bv_val wa hta' ha
-        rcases hb : S.ev ρ b with _ | ub
-        · simp [ha, hb] at e
-        obtain ⟨xb, rfl⟩ := ev_bv_val wb (hba.trans hta') hb
-        simp only [ha, hb, asBV_bv, binOp_some, ofBV_some, Bool.false_eq_true, if_false,
-          Option.some.injEq, bv, Embed.inj_eq_iff, Sigma.mk.injEq, heq_eq_eq, true_and] at e
-        have hdef := msb_default (v := mk (.Rem false a b) (sort (.TBitVector n))) (ty_mk _ _) x
-        rcases hpb : proj b with _ | nb
-        · simpa [Kanon.firstSome, hpb] using hdef
-        cases nb
-        case BitVec k =>
-          obtain ⟨tb, rfl⟩ := Kanon.NodeEmbed.exists_of_proj _ hpb
-          simp only [ty_mk] at hba
-          obtain ⟨h0, h1, hv⟩ := lit_val (ρ := ρ) wb (hba.trans hta') hn
-          rw [hb] at hv
-          simp only [Option.some.injEq, bv, Embed.inj_eq_iff, Sigma.mk.injEq, heq_eq_eq,
-            true_and] at hv
-          subst hv e
-          by_cases hk : 1 < k
-          all_goals simp [Kanon.firstSome]
-          all_goals split
-          all_goals rename_i heq
-          all_goals (try simp only [proj_mk, Option.some.injEq, Node.BitVec.injEq, reduceCtorEq] at heq)
-          all_goals (try subst heq)
-          all_goals (try simp [hk])
-          case' h_2 => exact (heq k rfl).elim
-          case' h_2 => exact (heq k rfl).elim
-          · have hk1 : k % 2 ^ n = k := Int.emod_eq_of_lt h0 (by exact_mod_cast h1)
-            rw [hk1, show max k 0 = k by omega]
-            have l1 := Int.emod_lt_of_pos (xa.toNat : Int) (show 0 < k by omega)
-            have l2 := Int.emod_nonneg (xa.toNat : Int) (show k ≠ 0 by omega)
-            have := Nat.lt_log2_self (n := (k - 1).toNat)
-            have e2 : ((2 ^ ((k - 1).toNat.log2 + 1) : Nat) : Int) = 2 ^ ((k - 1).toNat.log2 + 1) := by
-              push_cast; rfl
-            simp only [log2, Prim.log2]
-            rw [show (((k - 1).toNat.log2 : Int) + 1).toNat = (k - 1).toNat.log2 + 1 by omega]
-            omega
-          · simpa [Bitvec.size] using hdef
-        all_goals simpa [Kanon.firstSome, hpb] using hdef
-      · simp only [Node.All] at hsz
-        rw [WT_mk] at w
-        obtain ⟨⟨-, hba, hta⟩, wa, wb⟩ := w
-        have hta' := hta.symm
-        rw [ev_mk] at e
-        simp only [Node.map, Node.eval] at e
-        rw [width_eq ρ rfl (.inl rfl) hn, Int.toNat_natCast] at e
-        rcases ha : S.ev ρ a with _ | ua
-        · simp [ha] at e
-        obtain ⟨xa, rfl⟩ := ev_bv_val wa hta' ha
-        rcases hb : S.ev ρ b with _ | ub
-        · simp [ha, hb] at e
-        obtain ⟨xb, rfl⟩ := ev_bv_val wb (hba.trans hta') hb
-        simp only [ha, hb, asBV_bv, binOp_some, ofBV_some, if_true,
-          Option.some.injEq, bv, Embed.inj_eq_iff, Sigma.mk.injEq, heq_eq_eq, true_and] at e
-        have hdef := msb_default (v := mk (.Rem true a b) (sort (.TBitVector n))) (ty_mk _ _) x
-        rcases hpa : proj a with _ | na
-        · simpa [Kanon.firstSome, hpa] using hdef
-        cases na
-        case BitVec k =>
-          obtain ⟨ta, rfl⟩ := Kanon.NodeEmbed.exists_of_proj _ hpa
-          simp only [ty_mk] at hta'
-          obtain ⟨h0, h1, hv⟩ := lit_val (ρ := ρ) wa hta' hn
-          rw [ha] at hv
-          simp only [Option.some.injEq, bv, Embed.inj_eq_iff, Sigma.mk.injEq, heq_eq_eq,
-            true_and] at hv
-          subst hv e
-          simp [Kanon.firstSome]
-          split
-          all_goals rename_i heq
-          all_goals (try simp only [proj_mk, Option.some.injEq, Node.BitVec.injEq] at heq)
-          all_goals (try subst heq)
-          case' h_2 => exact (heq k rfl).elim
-          split
-          · rename_i hk
-            simp only [Bitvec.size, ty_mk, size_of_ty_TBitVector, Cmp.z_lsl_one] at hk
-            obtain ⟨hk0, hk1⟩ := hk
-            have p := Cmp.cmp_two_pow_facts n
-            rw [show ((n : Int) - 1).toNat = n - 1 by omega] at hk1
-            have hl : (BitVec.ofInt n k).toInt = k := by
-              rcases Cmp.cmp_toInt_ofInt_fact h0 (by exact_mod_cast h1) with ⟨h, -⟩ | ⟨-, h⟩
-              · exact h
-              · omega
-            have hs := BitVec.toInt_srem (BitVec.ofInt n k) xb
-            rw [hl, Int.tmod_eq_emod_of_nonneg h0] at hs
-            have l1 := emod_le_self (y := xb.toInt) h0
-            have l2 : 0 ≤ k % xb.toInt := by
-              rw [← Int.tmod_eq_emod_of_nonneg h0]; exact Int.tmod_nonneg _ h0
-            rw [toNat_eq_toInt _ (by omega), hs]
-            have := lt_two_pow_log2 h0
-            simp only [Option.getD_some]
-            omega
-          · simpa [Bitvec.size] using hdef
-        all_goals simpa [Kanon.firstSome, hpa] using hdef
-    case Mod a b =>
-      simp only [Node.All] at hsz
-      rw [WT_mk] at w
-      obtain ⟨⟨-, hba, hta⟩, wa, wb⟩ := w
-      have hta' := hta.symm
-      rw [ev_mk] at e
-      simp only [Node.map, Node.eval] at e
-      rw [width_eq ρ rfl (.inl rfl) hn, Int.toNat_natCast] at e
-      rcases ha : S.ev ρ a with _ | ua
-      · simp [ha] at e
-      obtain ⟨xa, rfl⟩ := ev_bv_val wa hta' ha
-      rcases hb : S.ev ρ b with _ | ub
-      · simp [ha, hb] at e
-      obtain ⟨xb, rfl⟩ := ev_bv_val wb (hba.trans hta') hb
-      simp only [ha, hb, asBV_bv, binOp_some, ofBV_some,
-        Option.some.injEq, bv, Embed.inj_eq_iff, Sigma.mk.injEq, heq_eq_eq, true_and] at e
-      have hdef := msb_default (v := mk (.Mod a b) (sort (.TBitVector n))) (ty_mk _ _) x
-      rcases hpb : proj b with _ | nb
-      · simpa [Kanon.firstSome, hpb] using hdef
-      cases nb
-      case BitVec k =>
-        obtain ⟨tb, rfl⟩ := Kanon.NodeEmbed.exists_of_proj _ hpb
-        simp only [ty_mk] at hba
-        obtain ⟨h0, h1, hv⟩ := lit_val (ρ := ρ) wb (hba.trans hta') hn
-        rw [hb] at hv
-        simp only [Option.some.injEq, bv, Embed.inj_eq_iff, Sigma.mk.injEq, heq_eq_eq,
-          true_and] at hv
-        subst hv e
-        simp [Kanon.firstSome]
-        split
-        all_goals rename_i heq
-        all_goals (try simp only [proj_mk, Option.some.injEq, Node.BitVec.injEq] at heq)
-        all_goals (try subst heq)
-        case' h_2 => exact (heq k rfl).elim
-        split
-        · rename_i hk
-          simp only [Bitvec.size, ty_mk, size_of_ty_TBitVector, Cmp.z_lsl_one] at hk
-          obtain ⟨hk0, hk1⟩ := hk
-          have p := Cmp.cmp_two_pow_facts n
-          rw [show ((n : Int) - 1).toNat = n - 1 by omega] at hk1
-          have hl : (BitVec.ofInt n k).toInt = k := by
-            rcases Cmp.cmp_toInt_ofInt_fact h0 (by exact_mod_cast h1) with ⟨h, -⟩ | ⟨-, h⟩
-            · exact h
-            · omega
-          have hs : (xa.smod (BitVec.ofInt n k)).toInt = xa.toInt.fmod k := by
-            rw [BitVec.toInt_smod, hl]
-          have l1 := Int.fmod_lt_of_pos xa.toInt (show 0 < k by omega)
-          have l2 := Int.fmod_nonneg_of_pos xa.toInt (show 0 < k by omega)
-          rw [toNat_eq_toInt _ (by omega), hs]
-          have := lt_two_pow_log2 (k := k - 1) (by omega)
-          simp only [Option.getD_some]
-          omega
-        · simpa [Bitvec.size] using hdef
-      all_goals simpa [Kanon.firstSome, hpb] using hdef
-    all_goals simpa [Kanon.firstSome] using msb_default (ty_mk _ _) x
-
 /-- A literal that is not zero is in the subsort `Nonzero`. -/
 theorem nonzero_lit {z : Int} {t : S.Ty} (w : S.WT (mk (.BitVec z) t)) (hz : z ≠ 0) :
     Nonzero (mk (.BitVec z) t) := by
@@ -1734,7 +1275,7 @@ theorem nonzero_lit {z : Int} {t : S.Ty} (w : S.WT (mk (.BitVec z) t)) (hz : z �
   cases e
   intro hx
   have := congrArg BitVec.toNat hx
-  rw [Cmp.toNat_ofInt_of_lt h0 h1] at this
+  rw [BitvecMod.toNat_ofInt_of_lt h0 h1] at this
   simp at this; omega
 
 theorem msb_fact (ρ : S.Env) {v : S.Term} {n : Nat} (w : S.WT v)
@@ -1776,8 +1317,8 @@ macro "cmp_norm" : tactic => `(tactic| (
     Kanon.Embed.inj_eq_iff, Sigma.mk.injEq, heq_eq_eq, true_and, and_true, decide_eq_decide,
     exists_and_left, exists_and_right, Int.toNat_natCast, forall_eq, forall_eq',
     Bool.decide_eq_true, Bool.decide_eq_false, decide_eq_true_eq, decide_eq_false_iff_not] at *)
-  all_goals (try simp (disch := first | assumption | omega) only [BitvecMod.Cmp.signed_extract_zero,
-    BitvecMod.Cmp.z_lsl_one, BitvecMod.Cmp.cmp_toNat_sub_one, BitvecMod.Bitvec.unsigned_ub,
+  all_goals (try simp (disch := first | assumption | omega) only [BitvecMod.signed_extract_zero,
+    BitvecMod.z_lsl_one, natCast_sub_one_toNat, BitvecMod.Bitvec.unsigned_ub,
     BitvecMod.Cmp.zland_mask_iff] at *)
   all_goals (try simp (disch := first | assumption | omega) only [BitvecMod.cmp_ofInt_two_pow_pred,
     BitVec.toNat_intMin_of_pos, BitVec.toInt_intMin_of_pos] at *)
@@ -1859,7 +1400,7 @@ macro "cmp_msb_sem" : tactic => `(tactic| (
     | (simp_all [BitVec.msb_signExtend, BitVec.msb_not, BitVec.msb_append, BitVec.msb_setWidth,
         BitVec.msb_srem, BitVec.msb_eq_decide]; omega)
     | (cmpo_omega; done)
-    | (simp only [BitVec.msb_srem, BitvecMod.cmp_ofInt_zero] at *; grind)
+    | (simp only [BitVec.msb_srem, ofInt_zero'] at *; grind)
     | skip))
 
 /-- Proves an arm of a sign test, as far as it can. -/
@@ -1914,24 +1455,6 @@ macro "cmp_halves" : tactic => `(tactic|
   all_goals kanon_on_refines (
     refine Kanon.Sem.Refines.intro (by cmp_wt) ?_
     cmp_sem))
-
-/-- The sum of the operands of `Add` in either order. -/
-theorem cmp_ckOp_add_comm {n : Nat} (c : CoreMod.Checked) (x y : Option (BitVec n)) :
-    ckOp c BitVec.saddOverflow BitVec.uaddOverflow (fun a b => a + b) x y =
-      ckOp c BitVec.saddOverflow BitVec.uaddOverflow (fun a b => a + b) y x := by
-  cases x <;> cases y <;> simp only [ckOp]
-  rename_i a b
-  rw [BitVec.add_comm a b]
-  congr 3 <;> simp [BitVec.saddOverflow, BitVec.uaddOverflow, Int.add_comm, Nat.add_comm]
-
-/-- The commutativity of `Add` (`Add.comm`), for the swapped arms of `add_add`. -/
-theorem cmp_add_comm : Add.comm.Stmt := by
-  intro S _ _ _ _ _ _ c a b t
-  refine Kanon.Sem.Refines.intro (by cmp_wt) ?_
-  intro ρ v w w' e
-  simp only [ev_mk, Node.map, Node.eval] at e ⊢
-  rw [cmp_ckOp_add_comm]
-  exact e
 
 /-- `zmin` is `min` (for `omega`, without splitting). -/
 theorem cmp_zmin_eq_min (a b : Int) : Bitvec.zmin a b = min a b := by
@@ -2019,7 +1542,6 @@ theorem add_add_ule {w : Nat} {l r : Int} {a b : BitVec w}
   obtain ⟨h, e⟩ := add_add_u_core hl hr l0 l1 r0 r1 h
   exact ⟨h, by omega⟩
 
-
 theorem add_add_slt2 {w : Nat} {L R a b : BitVec w}
     (hl : L.saddOverflow a = false) (hr : R.saddOverflow b = false)
     (h1 : min 0 R.toInt ≤ R.toInt - L.toInt) (h2 : R.toInt - L.toInt ≤ max 0 R.toInt) :
@@ -2059,24 +1581,6 @@ theorem add_add_ule2 {w : Nat} {l r : Int} {a b : BitVec w}
 end BitvecMod.Cmp
 
 namespace BitvecMod
-
-/-- The product of the operands of `Mul` in either order. -/
-theorem cmp_ckOp_mul_comm {n : Nat} (c : CoreMod.Checked) (x y : Option (BitVec n)) :
-    ckOp c BitVec.smulOverflow BitVec.umulOverflow (fun a b => a * b) x y =
-      ckOp c BitVec.smulOverflow BitVec.umulOverflow (fun a b => a * b) y x := by
-  cases x <;> cases y <;> simp only [ckOp]
-  rename_i a b
-  rw [BitVec.mul_comm a b]
-  congr 3 <;> simp [BitVec.smulOverflow, BitVec.umulOverflow, Int.mul_comm, Nat.mul_comm]
-
-/-- The commutativity of `Mul` (`Mul.comm`), for the swapped arm of `mul_const`. -/
-theorem cmp_mul_comm : Mul.comm.Stmt := by
-  intro S _ _ _ _ _ _ c a b t
-  refine Kanon.Sem.Refines.intro (by cmp_wt) ?_
-  intro ρ v w w' e
-  simp only [ev_mk, Node.map, Node.eval] at e ⊢
-  rw [cmp_ckOp_mul_comm]
-  exact e
 
 open Lean Elab Tactic in
 /-- Splits the conjunctions of the hypotheses. -/

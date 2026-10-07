@@ -21,46 +21,7 @@ attribute [kanon_tactic "rs_auto"] Bitvec.shl.spec Bitvec.lshr.spec Bitvec.ashr.
   Bitvec.extract.spec Bitvec.extend_.spec Bitvec.concat.spec Bitvec.div.spec Bitvec.rem.spec
   Bitvec.mod_.spec
 
-/-! ## The commutativity of `Add` and `Mul`, for the swapped arms -/
-
-/-- `ckOp` of a commutative operation whose overflow flags are symmetric. -/
-theorem rs_ckOp_comm {n : Nat} (c : CoreMod.Checked) {so uo : BitVec n → BitVec n → Bool}
-    {f : BitVec n → BitVec n → BitVec n} (hs : ∀ a b, so a b = so b a) (hu : ∀ a b, uo a b = uo b a)
-    (hf : ∀ a b, f a b = f b a) (x y : Option (BitVec n)) :
-    ckOp c so uo f x y = ckOp c so uo f y x := by
-  cases x <;> cases y <;> simp only [ckOp, hs, hu, hf]
-
-/-- A refinement between two nodes of the same type with the same typing and values. -/
-theorem rs_comm_refines {S : Kanon.Sem} [KanonBool.Lang S] [CoreMod.Lang S] [Lang S]
-    {n m : Node S.Term} {t : S.Ty} (hw : S.WT (mk n t) → S.WT (mk m t))
-    (he : ∀ ρ, S.ev ρ (mk n t) = S.ev ρ (mk m t)) : S.Refines (mk n t) (mk m t) :=
-  Kanon.Sem.Refines.intro (fun w => ⟨hw w, by simp only [ty_mk]⟩)
-    (fun ρ v _ _ e => (he ρ) ▸ e)
-
-/-- `Add.comm`, for the swapped arms. -/
-theorem rs_add_comm : Add.comm.Stmt := by
-  intro S _ _ _ _ _ _ c a b t
-  refine rs_comm_refines (fun w => ?_) (fun ρ => ?_)
-  · simp only [WT_mk, Node.wt, Node.All] at w ⊢
-    obtain ⟨⟨⟨n, hn, ha⟩, hb, rfl⟩, wa, wb⟩ := w
-    exact ⟨⟨⟨n, hn, hb.trans ha⟩, hb.symm, hb.symm⟩, wb, wa⟩
-  · simp only [ev_mk, Node.map, Node.eval]
-    rw [rs_ckOp_comm c (fun x y => by simp only [BitVec.saddOverflow, Int.add_comm])
-      (fun x y => by simp only [BitVec.uaddOverflow, Nat.add_comm]) BitVec.add_comm]
-
-/-- `Mul.comm`, for the swapped arms. -/
-theorem rs_mul_comm : Mul.comm.Stmt := by
-  intro S _ _ _ _ _ _ c a b t
-  refine rs_comm_refines (fun w => ?_) (fun ρ => ?_)
-  · simp only [WT_mk, Node.wt, Node.All] at w ⊢
-    obtain ⟨⟨⟨n, hn, ha⟩, hb, rfl⟩, wa, wb⟩ := w
-    exact ⟨⟨⟨n, hn, hb.trans ha⟩, hb.symm, hb.symm⟩, wb, wa⟩
-  · simp only [ev_mk, Node.map, Node.eval]
-    rw [rs_ckOp_comm c (fun x y => by simp only [BitVec.smulOverflow, Int.mul_comm])
-      (fun x y => by simp only [BitVec.umulOverflow, Nat.mul_comm]) BitVec.mul_comm]
-
 /-! ## `mod_` -/
-
 
 /-! ## `rem` -/
 
@@ -73,7 +34,7 @@ theorem rs_mul_comm : Mul.comm.Stmt := by
   intro S _ _ _ _ _ _ O hO signed ck r d t__4 t__6 d2 t__9 hnz hg
   refine Kanon.Sem.Refines.trans ?_
     (Bitvec.rem.r_add.main.proof O hO signed ck d t__4 r t__6 d2 t__9 hnz hg)
-  have := rs_add_comm ck r (mk (.BitVec d) t__4) t__6
+  have := Add.comm.proof ck r (mk (.BitVec d) t__4) t__6
   simp only [Bitvec.rem.spec, ty_mk]
   kanon_congr
 
@@ -132,7 +93,7 @@ theorem rs_mul_comm : Mul.comm.Stmt := by
   have hm := Bitvec.div.r_mul_div.main.proof O hO signed s2 n t__5 x t__7 d t__10 hnz hg
   simp only [Bitvec.size, ty_mk] at hm ⊢
   refine Kanon.Sem.Refines.trans ?_ hm
-  have := rs_mul_comm ⟨s2, true⟩ x (mk (.BitVec n) t__5) t__7
+  have := Mul.comm.proof ⟨s2, true⟩ x (mk (.BitVec n) t__5) t__7
   simp only [Bitvec.div.spec, ty_mk]
   kanon_congr
 
@@ -150,7 +111,7 @@ theorem rs_mul_comm : Mul.comm.Stmt := by
   have hm := Bitvec.div.r_div_mul.main.proof O hO signed s2 n t__5 x t__7 d t__10 hnz hg
   simp only [Bitvec.size, ty_mk] at hm ⊢
   refine Kanon.Sem.Refines.trans ?_ hm
-  have := rs_mul_comm ⟨s2, true⟩ x (mk (.BitVec n) t__5) t__7
+  have := Mul.comm.proof ⟨s2, true⟩ x (mk (.BitVec n) t__5) t__7
   simp only [Bitvec.div.spec, ty_mk]
   kanon_congr
 

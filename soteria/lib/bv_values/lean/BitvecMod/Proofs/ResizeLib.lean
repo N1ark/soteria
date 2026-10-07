@@ -1,5 +1,4 @@
-import BitvecMod.Tactic
-import BitvecMod.LitOps
+import BitvecMod.Proofs.Common
 
 /-!
 # Lemmas for the shifts, resizings, divisions and remainders of the bitvec module
@@ -14,14 +13,7 @@ namespace BitvecMod.ResizeLib
 
 open Classical Kanon Prim LitOps
 
-theorem ofInt_emod_two_pow (n : Nat) (z : Int) :
-    BitVec.ofInt n (z % 2 ^ n) = BitVec.ofInt n z := by
-  apply BitVec.eq_of_toNat_eq; simp [BitVec.toNat_ofInt]
-
-theorem zasr_zero (z : Int) : zasr z 0 = z := by simp [zasr]
-
 attribute [local simp] zasr_zero ofInt_emod_two_pow
-
 
 /-! ## Division and remainders of literals -/
 
@@ -225,26 +217,6 @@ end
 
 /-! ## Resizing literals (option B) -/
 
-
-theorem popcountNat_eq_zero : ∀ {m : Nat}, popcountNat m = 0 → m = 0
-  | 0, _ => rfl
-  | k + 1, h => by
-      rw [popcountNat] at h
-      have : (k + 1) / 2 < k + 1 := by omega
-      have := popcountNat_eq_zero (m := (k + 1) / 2) (by omega)
-      omega
-
-theorem popcountNat_eq_one : ∀ {m : Nat}, popcountNat m = 1 → ∃ j, m = 2 ^ j
-  | 0, h => by simp [popcountNat] at h
-  | k + 1, h => by
-      rw [popcountNat] at h
-      have : (k + 1) / 2 < k + 1 := by omega
-      by_cases hm : (k + 1) % 2 = 1
-      · have := popcountNat_eq_zero (m := (k + 1) / 2) (by omega)
-        exact ⟨0, by omega⟩
-      · obtain ⟨j, hj⟩ := popcountNat_eq_one (m := (k + 1) / 2) (by omega)
-        exact ⟨j + 1, by rw [Nat.pow_succ]; omega⟩
-
 theorem rs_ofInt_emod {n : Nat} {k : Int} (hk : k = n) (z : Int) :
     BitVec.ofInt n (z % 2 ^ k.toNat) = BitVec.ofInt n z := by
   subst hk
@@ -257,13 +229,9 @@ theorem rs_ofInt_emod_nat {n k : Nat} (hk : k = n) (z : Int) :
   apply BitVec.eq_of_toNat_eq
   simp [BitVec.toNat_ofInt]
 
-theorem rs_sext_of {n : Nat} (hn : 0 < n) (z : Int) :
-    sext_of (n : Int) z = (BitVec.ofInt n z).toInt := 
-  sext_of_eq hn z
-
 theorem rs_ofInt_lit_sext {n m : Nat} (hn : 0 < n) {k : Int} (hm : (n : Int) + k = m) (a : Int) :
     BitVec.ofInt m (Prim.lit_sext k n a) = (BitVec.ofInt n a).signExtend m := by
-  rw [Prim.lit_sext, ofInt_masked hm, rs_sext_of hn]
+  rw [Prim.lit_sext, ofInt_masked hm, sext_of_eq hn]
   rfl
 
 theorem rs_ofInt_lit_zext {n m : Nat} {a : Int} (ha0 : 0 ≤ a) (ha1 : a < 2 ^ n) :
@@ -324,12 +292,6 @@ theorem rs_extractLsb'_ofInt {w f n p : Nat} (hp : (p : Int) < 2 ^ w) :
     (BitVec.ofInt w (p : Int)).extractLsb' f n = BitVec.ofInt n ((p >>> f : Nat) : Int) := by
   apply BitVec.eq_of_toNat_eq
   rw [BitVec.extractLsb'_toNat, rs_toNat_ofInt_nat hp, BitVec.ofInt_natCast, BitVec.toNat_ofNat]
-
-theorem rs_ofInt_zero (n : Nat) : BitVec.ofInt n 0 = 0#n := by
-  apply BitVec.eq_of_toNat_eq; simp
-
-theorem rs_toNat_natCast_add (a b : Nat) : ((a : Int) + (b : Int)).toNat = a + b := by
-  omega
 
 /-! ## Lowest set bits and powers of two -/
 
@@ -453,7 +415,6 @@ theorem rs_extractLsb'_umod_pow2 {w n p : Nat} (x : BitVec w) (hp : rs_is_pow2 (
   have hp0 : 0 < p := by rw [e]; exact Nat.two_pow_pos _
   exact (Nat.mod_eq_of_lt (Nat.lt_trans (Nat.mod_lt _ hp0) hkn)).symm
 
-
 /-! ## Shift amounts -/
 
 theorem toNat_ofInt_lt {m : Nat} {z : Int} (h0 : 0 ≤ z) (h1 : z < 2 ^ m) :
@@ -483,37 +444,8 @@ theorem sigma_bv_ext {A B : Nat} {x : BitVec A} {y : BitVec B} (h : A = B)
 
 /-! ## Divisions and remainders of values (option B) -/
 
-theorem ovf_comm {n : Nat} (x y : BitVec n) : (x.saddOverflow y = y.saddOverflow x) ∧
-    (x.uaddOverflow y = y.uaddOverflow x) ∧ (x.smulOverflow y = y.smulOverflow x) ∧
-    (x.umulOverflow y = y.umulOverflow x) := by
-  simp [BitVec.saddOverflow, BitVec.uaddOverflow, BitVec.smulOverflow,
-    BitVec.umulOverflow, Int.add_comm, Nat.add_comm, Int.mul_comm, Nat.mul_comm]
-
-theorem smtUDiv_toNat {n : Nat} {a b : BitVec n} (hb : b.toNat ≠ 0) :
-    (a.smtUDiv b).toNat = a.toNat / b.toNat := by
-  simp [BitVec.smtUDiv_eq, ← BitVec.toNat_inj, hb]
-
-section
-variable {w : Nat} {x y : BitVec w}
-
-
-theorem uadd_ok : x.uaddOverflow y = false ↔ x.toNat + y.toNat < 2 ^ w := by
-  simp [BitVec.uaddOverflow]
-
-theorem umul_ok : x.umulOverflow y = false ↔ x.toNat * y.toNat < 2 ^ w := by
-  simp [BitVec.umulOverflow]
-
-theorem toNat_add_ok (h : x.uaddOverflow y = false) : (x + y).toNat = x.toNat + y.toNat :=
-  BitVec.toNat_add_of_not_uaddOverflow (by simp [h])
-
-theorem toNat_mul_ok (h : x.umulOverflow y = false) : (x * y).toNat = x.toNat * y.toNat :=
-  BitVec.toNat_mul_of_not_umulOverflow (by simp [h])
-
-end
-
 section
 variable {w : Nat}
-
 
 theorem umod_add_self {d v : BitVec w} (h : d.uaddOverflow v = false) : (d + v) % d = v % d := by
   apply BitVec.eq_of_toNat_eq
@@ -593,7 +525,6 @@ theorem div_mul_ok' {w : Nat} {n d x : BitVec w} (hn0 : n.toNat ≠ 0) (hd : n.t
   exact div_mul_ok hn0 hd h
 
 end
-
 
 theorem toNat_ofInt_nat {n a : Nat} (ha1 : (a : Int) < 2 ^ n) : (BitVec.ofInt n (a : Int)).toNat = a := by
   rw [toNat_ofInt_lt (by omega) ha1]; simp
@@ -777,8 +708,6 @@ theorem extract_add_lsb {W i n p j : Nat} (x : BitVec W) (h1 : (p : Int) < 2 ^ W
     (hj : (j : Int) < rs_lsb p) (hij : i + n ≤ j + 1) :
     x.extractLsb' i n = (BitVec.ofInt W (p : Int) + x).extractLsb' i n :=
   (rs_extractLsb'_add_lsb x h1 (by omega)).symm
-
-theorem int_two_pow_pos (n : Nat) : (0 : Int) < 2 ^ n := Int.pow_pos (by decide)
 
 theorem emod_range (z : Int) (k : Nat) : 0 ≤ z % 2 ^ k ∧ z % 2 ^ k < 2 ^ k :=
   ⟨Int.emod_nonneg _ (Int.ne_of_gt (Int.pow_pos (by decide))), Int.emod_lt_of_pos _ (Int.pow_pos (by decide))⟩
@@ -1087,7 +1016,7 @@ macro "rs_ranges" : tactic => `(tactic| (
     | exact Nat.two_pow_pos _
     | exact Int.pow_pos (by decide)
     | (simp only [ResizeLib.rs_exists_pos_eq, ResizeLib.rs_exists_pos_eq₂, and_self, and_true,
-        true_and, Nat.two_pow_pos, ResizeLib.int_two_pow_pos]; (repeat' (apply And.intro)) <;> omega))))
+        true_and, Nat.two_pow_pos, two_pow_pos]; (repeat' (apply And.intro)) <;> omega))))
 
 /-- The operations on literals of the arms, at the sorts of bit-vectors of their operands, as
 those of their values, and their ranges. -/
@@ -1098,7 +1027,7 @@ macro "rs_lits" : tactic => `(tactic| (
     true_and, Bool.not_eq_true] at *)
   (try subst_vars)
   (try refine ⟨by omega, ?_⟩)
-  (try simp (disch := first | assumption | omega) only [ResizeLib.ofInt_emod_two_pow,
+  (try simp (disch := first | assumption | omega) only [BitvecMod.ofInt_emod_two_pow,
     LitOps.ofInt_lit_shl', LitOps.ofInt_lit_ashr', ResizeLib.ofInt_lit_smod',
     ResizeLib.ofInt_lit_srem', ResizeLib.ofInt_lit_sdiv', Bool.false_eq_true, ↓reduceIte])
   (try simp (disch := first | assumption | omega) only [LitOps.ofInt_lit_lshr',
@@ -1120,7 +1049,6 @@ elab "bv_rs_split_decide" : tactic => withMainContext do
     ↓reduceIte, ↓reduceDIte, Bool.not_true, Bool.not_false, Bool.true_and, Bool.false_and,
     Bool.and_true, Bool.and_false, Bool.true_or, Bool.false_or, Bool.or_true, Bool.or_false]
     at ⊢))
-
 
 /-- `bv_rs_bits` after the introduction of the index. -/
 macro "rs_bits_core" : tactic => `(tactic| (
@@ -1268,9 +1196,9 @@ macro "rs_res_core" : tactic => `(tactic| (
   (try simp (disch := first | assumption | omega) only [ResizeLib.rs_ofInt_emod,
     ResizeLib.rs_ofInt_emod_nat, ResizeLib.rs_ofInt_lit_sext, ResizeLib.rs_ofInt_lit_zext,
     ResizeLib.rs_lit_concat_nat, ResizeLib.rs_ofInt_append, Prim.lit_extract, ResizeLib.rs_zasr_nat,
-    ResizeLib.zasr_zero, LitOps.ofInt_masked, ResizeLib.rs_toNat_ofInt_nat,
+    BitvecMod.zasr_zero, LitOps.ofInt_masked, ResizeLib.rs_toNat_ofInt_nat,
     ResizeLib.rs_extractLsb'_ofInt, BitVec.shiftLeft_eq', BitVec.ushiftRight_eq',
-    ResizeLib.rs_ofInt_zero, ↓reduceIte, Bool.false_eq_true, Bool.false_and, Bool.or_false,
+    ofInt_zero', ↓reduceIte, Bool.false_eq_true, Bool.false_and, Bool.or_false,
     Bool.and_false, BitVec.extractLsb'_add, BitVec.extractLsb'_mul, Nat.sub_zero,
     Option.some.injEq] at *)
   (try simp only [ofBV_some, Option.some.injEq] at *)
@@ -1320,7 +1248,7 @@ macro "rs_shift" : tactic => `(tactic| (
   (try simp only [decide_eq_true_eq, decide_eq_false_iff_not] at *)
   (try simp (disch := omega) only [ResizeLib.toNat_ofInt_lt, ResizeLib.toNat_ofInt_le,
     BitVec.sshiftRight', Int.toNat_natCast, ResizeLib.ofInt_ones, Prim.lit_sub, Prim.masked,
-    ResizeLib.ofInt_emod_two_pow, Int.toNat_natCast, ← Int.natCast_add, Int.toNat_sub',
+    BitvecMod.ofInt_emod_two_pow, Int.toNat_natCast, ← Int.natCast_add, Int.toNat_sub',
     ← Int.natCast_sub])
   (try simp only [BitVec.shiftLeft_eq', BitVec.ushiftRight_eq'])
   ext i hi

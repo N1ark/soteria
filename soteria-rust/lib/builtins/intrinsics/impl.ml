@@ -1,4 +1,7 @@
 open Syntaxes.FunctionWrap
+
+(* before [open Typed], whose [Core] is the Kanon module *)
+module Builtins_core = Core
 open Charon
 open Svalue
 open Typed
@@ -8,7 +11,7 @@ open Common.Charon_util
 
 module M (StateM : State.StateM.S) : Intf.M(StateM).Impl = struct
   include Stubs.M (StateM)
-  module Core = Core.M (StateM)
+  module Core = Builtins_core.M (StateM)
   open StateM
   open Syntax
 
@@ -162,7 +165,7 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).Impl = struct
       ~ptr_op:(atomic_addr_op ( ^@ ))
 
   let atomic_nand ~t ~u ~ord:_ ~dst ~src =
-    let nand a b = BV.not (a &@ b) in
+    let nand a b = BV.not_ (a &@ b) in
     atomic_rmw ~t ~u ~dst ~src
       ~int_op:(fun _ a b -> ok (nand a b))
       ~ptr_op:(atomic_addr_op nand)
@@ -213,7 +216,9 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).Impl = struct
     let lit = TypesUtils.ty_as_literal t in
     let nbits = 8 * Layout.size_of_literal_ty lit in
     let v = Typed.cast_lit lit x in
-    let bits = List.init nbits (fun i -> BV.extract i i v) in
+    let bits =
+      List.init nbits (fun i -> BV.extract (Z.of_int i) (Z.of_int i) v)
+    in
     let rec aux = function
       | [] -> L.failwith "impossible: no bits"
       | [ last ] -> last
@@ -226,7 +231,8 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).Impl = struct
     let nbytes = Layout.size_of_literal_ty lit in
     let v = Typed.cast_lit lit x in
     let bytes =
-      List.init nbytes (fun i -> BV.extract (i * 8) (((i + 1) * 8) - 1) v)
+      List.init nbytes (fun i ->
+          BV.extract (Z.of_int (i * 8)) (Z.of_int (((i + 1) * 8) - 1)) v)
     in
     let rec aux = function
       | [] -> L.failwith "impossible: no bytes"
@@ -284,7 +290,7 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).Impl = struct
         not_impl "carrying_mul_add: size(U) != size(T)?"
       else ok ()
     in
-    let double_bv = BV.extend ~signed:false (size_t * 8) in
+    let double_bv = BV.extend_ false (Z.of_int (size_t * 8)) in
     let multiplier = double_bv @@ Typed.cast_lit t multiplier in
     let multiplicand = double_bv @@ Typed.cast_lit t multiplicand in
     let addend = double_bv @@ Typed.cast_lit t addend in
@@ -294,16 +300,12 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).Impl = struct
      *   => (2ⁿ-1) × (2ⁿ-1) + (2ⁿ-1) + (2ⁿ-1)
      *   => (2²ⁿ - 2ⁿ⁺¹ + 1) + (2ⁿ⁺¹ - 2)
      *   => 2²ⁿ - 1 *)
-    let ( *!@ ) l r =
-      BV.no_ovf_unsafe @@ BV.mul ~checked:(Typed.checked_of_signed false) l r
-    in
-    let ( +!@ ) l r =
-      BV.no_ovf_unsafe @@ BV.add ~checked:(Typed.checked_of_signed false) l r
-    in
+    let ( *!@ ) l r = BV.mul (Typed.checked_of_signed false) l r in
+    let ( +!@ ) l r = BV.add (Typed.checked_of_signed false) l r in
     let res = (multiplier *!@ multiplicand) +!@ addend +!@ carry in
     let res_l, res_h =
-      ( BV.extract 0 ((size_t * 8) - 1) res,
-        BV.extract (size_t * 8) ((size_t * 16) - 1) res )
+      ( BV.extract Z.zero (Z.of_int ((size_t * 8) - 1)) res,
+        BV.extract (Z.of_int (size_t * 8)) (Z.of_int ((size_t * 16) - 1)) res )
     in
     Typed.Adt.mk_tuple [ res_l; res_h ]
 
@@ -427,20 +429,23 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).Impl = struct
       Z.shift_right (Z.mul (Z.of_int 90253) (Z.shift_left Z.one mant)) 20
     in
     let* bits = Value_codec.float_to_bv_bits x in
-    let lead = if shift = 0 then bits else BV.extract shift (size - 1) bits in
-    let* c = lift_symex @@ Rustsymex.nondet (Typed.t_int word) in
+    let lead =
+      if shift = 0 then bits
+      else BV.extract (Z.of_int shift) (Z.of_int (size - 1)) bits
+    in
+    let* c = lift_symex @@ Rustsymex.nondet (Typed.Bitvec.t_bitvector word) in
     let* () =
       assume_sym
         [
-          BV.leq ~signed:true (BV.mk_masked word (Z.neg tuning)) c;
-          BV.leq ~signed:true c (BV.mki word 1);
+          BV.leq true (BV.mk_masked word (Z.neg tuning)) c;
+          BV.leq true c (BV.mki word 1);
         ]
     in
     (* wrapping is intended: this is bit arithmetic, not a Rust addition *)
-    let base = BV.no_ovf_unsafe (BV.add (BV.mk_masked word bias) c) in
+    let base = BV.wrapping_add (BV.mk_masked word bias) c in
     let scaled =
       BV.to_float ~rounding:NearestTiesToEven ~signed:true ~fp
-        (BV.no_ovf_unsafe (BV.sub lead base))
+        (BV.wrapping_sub lead base)
     in
     let mult = y *.@ scaled in
     (* the exponent field would overflow past this, so saturate as CBMC does *)
@@ -450,15 +455,14 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).Impl = struct
       else ok (Typed.Float.zero fp)
     else
       let res_lead =
-        BV.no_ovf_unsafe
-          (BV.add
-             (BV.of_float ~rounding:Truncate ~signed:true ~size:word mult)
-             base)
+        BV.wrapping_add
+          (Typed.Float.of_float Truncate true (Z.of_int word) mult)
+          base
       in
       let res_bits =
         if shift = 0 then res_lead else BV.concat res_lead (BV.zero shift)
       in
-      ok (BV.to_float_raw res_bits)
+      ok (Typed.Float.to_float_raw res_bits)
 
   let pow_ fp x y =
     let* () = Core.floating_inaccuracy_warn () in
@@ -497,7 +501,7 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).Impl = struct
       Typed.cast_float res
     in
     match
-      Option.map (Typed.BitVec.bv_to_z (Signed I32)) (Typed.BitVec.to_z y)
+      Option.map (Typed.Bitvec.bv_to_z (Signed I32)) (Typed.Bitvec.to_z y)
     with
     | Some n when Z.leq (Z.abs n) (Z.of_int max_pow_expansion) ->
         ok (Typed.cast_float (pow_by_mult fp (Typed.cast_float x) n))
@@ -738,8 +742,8 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).Impl = struct
       let n =
         Iter.fold
           (fun acc off ->
-            let bit = BV.extract off off x in
-            let bit32 = BV.extend ~signed:false 31 bit in
+            let bit = BV.extract (Z.of_int off) (Z.of_int off) x in
+            let bit32 = BV.extend_ false (Z.of_int 31) bit in
             acc +!@ bit32)
           U32.(0s)
           Iter.(0 -- (bits - 1))
@@ -761,7 +765,7 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).Impl = struct
       Iter.fold
         (fun acc off ->
           let off = bits - 1 - off in
-          let bit = BV.extract off off x in
+          let bit = BV.extract (Z.of_int off) (Z.of_int off) x in
           Typed.ite (bit ==@ BV.one 1) (BV.u32i off) acc)
         (BV.u32i bits)
         Iter.(0 -- (bits - 1))
@@ -796,7 +800,7 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).Impl = struct
       Iter.fold
         (fun acc off ->
           let res = bits - 1 - off in
-          let bit = BV.extract off off x in
+          let bit = BV.extract (Z.of_int off) (Z.of_int off) x in
           Typed.ite (bit ==@ BV.one 1) (BV.u32i res) acc)
         (BV.u32i bits)
         Iter.(0 -- (bits - 1))
@@ -836,7 +840,7 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).Impl = struct
     let y = Typed.cast_lit lit y in
     let* res = Core.eval_lit_binop (Div OUB) lit x y in
     let zero = BV.mki_lit lit 0 in
-    let ( %@ ) = BV.rem ~signed:(Layout.is_signed lit) in
+    let ( %@ ) = BV.rem (Layout.is_signed lit) in
     let+ () =
       assert_
         (Typed.not (y ==@ zero) &&@ (x %@ Typed.cast_nonzero y ==@ zero))
@@ -923,7 +927,7 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).Impl = struct
         (min <.@ f &&@ (f <.@ max))
         (`StdErr "float_to_int_unchecked out of int range")
     in
-    BV.of_float ~rounding:Truncate ~signed ~size f
+    Typed.Float.of_float Truncate signed (Z.of_int size) f
 
   let fmul_add ~a ~b ~c = ok (Typed.Float.fma a b c)
   let fmaf16 = fmul_add
@@ -998,8 +1002,8 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).Impl = struct
         assert_ (off >=$@ zero)
           (`StdErr "core::intrinsics::offset_from_unsigned negative offset")
       in
-      BV.no_ovf_unsafe (off /$@ size)
-    else ok (BV.no_ovf_unsafe (off /$@ size))
+      off /$@ size
+    else ok (off /$@ size)
 
   let ptr_offset_from ~t ~ptr ~base =
     ptr_offset_from_ ~unsigned:false ~t ~ptr ~base
@@ -1038,18 +1042,20 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).Impl = struct
         if shift = 0 then ok x
         else
           let shift = if side = `Left then shift else bits - shift in
-          let high = BV.extract (bits - shift) (bits - 1) x in
-          let low = BV.extract 0 (bits - shift - 1) x in
+          let high =
+            BV.extract (Z.of_int (bits - shift)) (Z.of_int (bits - 1)) x
+          in
+          let low = BV.extract Z.zero (Z.of_int (bits - shift - 1)) x in
           let res = BV.concat low high in
           ok res
     | None ->
         let bits' = BV.mki_nz bits bits in
         (* we need shift to be of size [bits] (it originally is of size 32) *)
         let shift =
-          if bits <= 32 then BV.extract 0 (bits - 1) shift
-          else BV.extend ~signed:false (bits - 32) shift
+          if bits <= 32 then BV.extract Z.zero (Z.of_int (bits - 1)) shift
+          else BV.extend_ false (Z.of_int (bits - 32)) shift
         in
-        let shift = BV.no_ovf_unsafe @@ BV.rem ~signed:false shift bits' in
+        let shift = BV.rem false shift bits' in
         let res =
           if side = `Left then x <<@ shift |@ (x >>@ bits' -!@ shift)
           else x >>@ shift |@ (x <<@ bits' -!@ shift)
@@ -1069,17 +1075,17 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).Impl = struct
     let res =
       match op with
       | Add _ ->
-          let ovf = BV.add_overflows ~signed a b in
+          let ovf = BV.add_overflows signed a b in
           let if_ovf =
             if signed then Typed.ite (a <$@ BV.mki_lit t 0) min max else max
           in
-          let res = BV.add ~checked:(Typed.checked_of_signed signed) a b in
-          Typed.ite ovf if_ovf (BV.no_ovf_unsafe res)
+          let res = BV.add (Typed.checked_of_signed signed) a b in
+          Typed.ite ovf if_ovf res
       | Sub _ ->
-          let ovf = BV.sub_overflows ~signed a b in
+          let ovf = BV.sub_overflows signed a b in
           let if_ovf = if signed then Typed.ite (a <$@ b) min max else min in
-          let res = BV.sub ~checked:(Typed.checked_of_signed signed) a b in
-          Typed.ite ovf if_ovf (BV.no_ovf_unsafe res)
+          let res = BV.sub (Typed.checked_of_signed signed) a b in
+          Typed.ite ovf if_ovf res
       | _ -> L.failwith "Unreachable: not add or sub?"
     in
     ok res
@@ -1151,8 +1157,8 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).Impl = struct
     let+ () = assert_ (shift <@ BV.mki 32 bits) `InvalidShift in
     let bits' = BV.mki_nz bits bits in
     let shift =
-      if bits <= 32 then BV.extract 0 (bits - 1) shift
-      else if bits > 32 then BV.extend ~signed:false (bits - 32) shift
+      if bits <= 32 then BV.extract Z.zero (Z.of_int (bits - 1)) shift
+      else if bits > 32 then BV.extend_ false (Z.of_int (bits - 32)) shift
       else (shift :> T.sint Typed.t)
     in
     let inv = bits' -!!@ shift in
@@ -1247,7 +1253,7 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).Impl = struct
      value is [Tuple [ Tuple lanes ]]. *)
   let simd_lanes_with cast (lanes : Typed.([< T.any ] t)) =
     match%ty lanes with
-    | TExtension (TTuple [ TExtension (TArray _) ]) ->
+    | TTuple [ TArray _ ] ->
         let wrapper = Typed.Adt.as_tuple1 @@ lanes in
         let elems = Typed.Adt.as_array @@ Typed.cast_array wrapper in
         ok (Iarray.map cast elems)
@@ -1312,9 +1318,7 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).Impl = struct
       ~t ~u ~x ~y
 
   let simd_ordered_cmp int_cmp float_cmp ~t ~u ~x ~y =
-    let int_cmp a b =
-      int_cmp ~signed:(Layout.is_signed (simd_elem_lit t)) a b
-    in
+    let int_cmp a b = int_cmp (Layout.is_signed (simd_elem_lit t)) a b in
     simd_cmp ~int_cmp ~float_cmp:(fun a b -> float_cmp a b) ~t ~u ~x ~y
 
   let simd_ge ~t ~u ~x ~y = simd_ordered_cmp BV.geq Typed.Float.geq ~t ~u ~x ~y

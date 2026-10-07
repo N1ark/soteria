@@ -46,8 +46,8 @@ module M (StateM : State.StateM.S) = struct
         let l, r = (cast l, cast r) in
         let l_size = Typed.size_of_int l in
         let r_size = Typed.size_of_int r in
-        if l_size > r_size then BV.extend ~signed:false (l_size - r_size) r
-        else if l_size < r_size then BV.extract 0 (l_size - 1) r
+        if l_size > r_size then BV.extend_ false (Z.of_int (l_size - r_size)) r
+        else if l_size < r_size then BV.extract Z.zero (Z.of_int (l_size - 1)) r
         else r
     | _ -> r
 
@@ -61,13 +61,13 @@ module M (StateM : State.StateM.S) = struct
     let* () =
       match bop with
       | Add (OUB | OPanic) ->
-          let overflows = BV.add_overflows ~signed l r in
+          let overflows = BV.add_overflows signed l r in
           assert_not overflows `Overflow
       | Sub (OUB | OPanic) ->
-          let overflows = BV.sub_overflows ~signed l r in
+          let overflows = BV.sub_overflows signed l r in
           assert_not overflows `Overflow
       | Mul (OUB | OPanic) ->
-          let overflows = BV.mul_overflows ~signed l r in
+          let overflows = BV.mul_overflows signed l r in
           assert_not overflows `Overflow
       | Div _ | Rem _ ->
           let* () = assert_not (r ==@ BV.mki_lit ty 0) `DivisionByZero in
@@ -93,18 +93,16 @@ module M (StateM : State.StateM.S) = struct
     in
     let res =
       match bop with
-      | Add om -> BV.add ~checked:(checked_of om) l r
-      | Sub om -> BV.sub ~checked:(checked_of om) l r
-      | Mul om -> BV.mul ~checked:(checked_of om) l r
-      | Div _ -> BV.div ~signed l (cast r)
-      | Rem _ -> BV.rem ~signed l (cast r)
+      | Add om -> BV.add (checked_of om) l r
+      | Sub om -> BV.sub (checked_of om) l r
+      | Mul om -> BV.mul (checked_of om) l r
+      | Div _ -> BV.div signed l (cast r)
+      | Rem _ -> BV.rem signed l (cast r)
       | Shl _ -> BV.shl l r
       | Shr _ -> if signed then BV.ashr l r else BV.lshr l r
       | _ -> L.failwith "Invalid binop in binop_fn"
     in
-    (* SAFETY: Overflows were either already checked for, or it was expected to
-       properly wrap. *)
-    ok (BV.no_ovf_unsafe res)
+    ok res
 
   (** Evaluates the checked operation, returning (wrapped value, overflowed). *)
   let eval_checked_lit_binop (op : Expressions.binop) ty l r =
@@ -128,7 +126,7 @@ module M (StateM : State.StateM.S) = struct
   let meta_as_int meta =
     match%ty meta with
     | TBitVector _ -> ok meta
-    | TExtension TThinPtr -> Sptr.decay meta
+    | TThinPtr -> Sptr.decay meta
     | _ -> failwith "invalid metadata type"
 
   let opt_meta_as_int = function
@@ -232,7 +230,7 @@ module M (StateM : State.StateM.S) = struct
     Typed.Adt.as_array @@ Typed.cast_array str_data
     |> Monad.OptionM.map_m
          (module Iarray)
-         ~f:(fun b -> Typed.BitVec.to_z @@ Typed.cast_i U8 b)
+         ~f:(fun b -> Typed.Bitvec.to_z @@ Typed.cast_i U8 b)
     |> Option.map (fun cs ->
         let cs = List.map (fun z -> Char.chr (Z.to_int z)) cs in
         let str = String.of_seq @@ List.to_seq cs in

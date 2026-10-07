@@ -1,0 +1,110 @@
+(* The rust module: what soteria-rust adds to the value language of Bv_values.
+
+   Soteria's Rust values are the bit-vectors, floats and pointers of the shared
+   modules, plus aggregates (tuples and structs, arrays, enums, unions), thin
+   and full pointers with metadata, and the opaque values of type variables.
+   They used to be an [Extension] of the generic value type, with the sorts
+   [TExtension of ext_ty]; they are now nodes and sorts of the language, and
+   [TExtension X] is the sort [X] itself.
+
+   Every aggregate and pointer node is a LEAF: its operands are the terms
+   inside its arguments ([Tuple of t list]), and its sort is computed by its
+   typing ([Tuple vs] is a [TTuple (types_of vs)]) or given where it is built
+   ([(Enum (var, vs) : TEnum adt)]). The nodes that read a component of an
+   aggregate ([Field], [VariantField], ...) are operators, whose typing computes
+   the sort of the component that they read, and their reductions are rules.
+
+   There is no Lean semantics for these nodes (the old Lean model took the
+   extension as opaque): every function of the module is [@no_lean], and the
+   host types below have no Lean definition. *)
+
+(* {1 Host types}
+
+   Data of Charon (the frontend of Rust), of the interpreter and of the terms,
+   that the nodes and the sorts hold. The abstract ones are compared and hashed
+   as they were when the extension derived [eq] and [hash]: the declarations of
+   types by [Hashtbl.hash], the identifiers by their integer, and the terms by
+   their tags. *)
+
+(* The reference to the declaration of an enum, a union (or a struct) *)
+type decl_ref [@ocaml "Charon.Types.type_decl_ref"]
+    [@equal "Charon.Types.equal_type_decl_ref"] [@hash "Hashtbl.hash"]
+
+type variant_id [@ocaml "Charon.Types.variant_id"]
+    [@equal "Charon.Types.equal_variant_id"]
+    [@hash "Charon.Types.VariantId.to_int"]
+
+type tyvar_id [@ocaml "Charon.Types.type_var_id"]
+    [@equal "Charon.Types.equal_type_var_id"]
+    [@hash "Charon.Types.TypeVarId.to_int"]
+
+(* The type of Rust of the aggregate stored in a block of a union *)
+type rty [@ocaml "Charon.Types.ty"] [@equal "Charon.Types.equal_ty"]
+    [@hash "Hashtbl.hash"]
+
+(* The tag of the provenance of a pointer, if it has one *)
+type ptag [@ocaml "Rust_host.ptag"] [@equal "Rust_host.equal_ptag"]
+    [@hash "Rust_host.hash_ptag"]
+
+(* A thin pointer: a pointer to an allocation, with the size and the alignment
+   of the allocation, and its tag. The fields are named apart from those of
+   [block] and of the terms, for the generated code. *)
+type thin = { ptr : t; ptag : ptag; psize : t; palign : t }
+
+(* A value of a block of a union: a scalar or an aggregate with its type *)
+type block_value = Scalar of t | Aggregate of t * rty
+
+(* A block of an encoded value: a value, the offset it is at and the size it
+   spans *)
+type block = { bvalue : block_value; boffset : t; bsize : t }
+
+(* The metadata of a full pointer *)
+type ptr_meta = MetaLen of t | MetaVTable of t | MetaUnit
+
+(* The parts of a thin pointer, and of the metadata of a full pointer *)
+type ptr_part = PtrInner | PtrSize | PtrAlign
+type meta_part = PartLen | PartVTable
+
+(* {1 Sorts} *)
+
+(* an enum, a union: the reference to their declaration *)
+sort TEnum of decl_ref
+sort TUnion of decl_ref
+(* structs and tuples: ordered fields *)
+sort TTuple of ty list
+(* arrays: all the elements share the same sort *)
+sort TArray of ty * int
+sort TThinPtr
+sort TFullPtr
+(* the sort of the metadata of a pointer; not exposed to the user *)
+sort TPtrMeta
+sort TPolyType
+
+(* {1 Nodes} *)
+
+(* a thin pointer, without metadata but with extra information on the pointer *)
+node ThinPtr of thin
+(* a full pointer: a thin pointer and its metadata *)
+node FullPtr of t * t
+node PtrMeta of ptr_meta
+(* the variant and its fields *)
+node Enum of variant_id * t list
+node Tuple of t list (vs) : TTuple (types_of vs)
+node Array of t array
+node Union of block list
+(* the opaque value of a type variable *)
+node PolyVal of tyvar_id
+
+(* The nodes that read a part of a value, at the sort of that part, which the
+   typing computes from their arguments (and the crate). Their reductions are
+   rules. *)
+node ThinPtrPart of ptr_part (part) : TThinPtr -> thin_part_ty part
+node FullPtrInner : TFullPtr -> TThinPtr
+node FullPtrMeta : TFullPtr -> TPtrMeta
+node PtrMetaAs of meta_part (part) : TPtrMeta -> meta_part_ty part
+node Field of nat (i) : TTuple tys -> nth_ty tys i
+node VariantField of variant_id * nat (var, i) : TEnum adt -> variant_field_ty adt var i
+node IsVariant of variant_id : TEnum d -> TBool
+(* TODO: this could be a binary node, with a (possibly symbolic) index, to allow
+   symbolically sized arrays *)
+node ArrayField of nat : TArray (e, n) -> e

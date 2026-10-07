@@ -12,5 +12,5 @@ let test (x : [< Typed.T.any ] Typed.t) (c : cty) =
   match%ty (x, c) with
   | TBitVector _, CInt -> use_sint x
   | TFloat _, (CFloat | COther) -> use_sfloat x
-  | TExtension TFullPtr, CPtr -> use_sptr_f x
+  | TFullPtr, CPtr -> use_sptr_f x
   | _, _ -> ()

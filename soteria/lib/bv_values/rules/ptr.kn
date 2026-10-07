@@ -2,18 +2,18 @@
 
 (* {1 Helpers} *)
 
-extend fn sure_neq =
-  | Ptr (la, oa), Ptr (lb, ob) -> sure_neq la lb || sure_neq oa ob
+extend fn Bool.sure_neq =
+  | Ptr (la, oa), Ptr (lb, ob) -> Bool.sure_neq la lb || Bool.sure_neq oa ob
 
 (* {1 Rules} *)
 
-rule ptr_loc : GetPtrLoc p =
+rule loc : GetPtrLoc p =
   | ptr: Ptr (l, _) -> l
 
-rule ptr_ofs : GetPtrOfs p =
+rule ofs : GetPtrOfs p =
   | ptr: Ptr (_, o) -> o
 
 (* The rules of the bool module on pointers *)
 
-extend rule sem_eq =
+extend rule Bool.eq =
   | ptrs: Ptr (l1, o1) == Ptr (l2, o2) -> l1 == l2 && o1 == o2

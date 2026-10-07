@@ -1,7 +1,12 @@
 (* The ptr module: pointers, a location and an offset. *)
 
-node Ptr of t * t
+[@@@lean_root "PtrMod"]
+
+use builtin "bool"
+use "bitvec"
+
+node Ptr : TLoc n -> TBitVector n -> TPointer n
 node GetPtrLoc : TPointer n -> TLoc n
 node GetPtrOfs : TPointer n -> TBitVector n
-node TLoc of nat [@get size]
-node TPointer of nat [@get size]
+
+sort TPointer of nat [@get Bitvec.size]

@@ -282,9 +282,7 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).S = struct
   let panic_nounwind_fmt ~fmt:_ ~force_no_backtrace:_ = do_panic ()
 
   let begin_panic ~m:_ ~msg =
-    match%ty msg with
-    | TExtension TFullPtr -> do_panic ~msg ()
-    | _ -> do_panic ()
+    match%ty msg with TFullPtr -> do_panic ~msg () | _ -> do_panic ()
 
   (* ---- hashing ---- *)
 
@@ -301,7 +299,7 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).S = struct
   let hash_one ~types:_ ~t_self:_ ~t:_ ~self:_ ~x:_ =
     if Soteria.Symex.Approx.As_ctx.is_ox () then
       Soteria.Terminal.Warn.warn_once hash_one_ux;
-    ok (Typed.BitVec.u64i 0)
+    ok (Typed.Bitvec.u64i 0)
 
   (* ---- I/O (no-ops) ---- *)
 

@@ -131,11 +131,11 @@ module M (StateM : State.StateM.S) = struct
     in
     let* () = Core.floating_inaccuracy_warn () in
     let host n =
-      Z.to_int_opt (Typed.BitVec.bv_to_z (Signed I32) n)
+      Z.to_int_opt (Typed.Bitvec.bv_to_z (Signed I32) n)
       |> Option.bind (fun n ->
           Typed.Float.approx (fun x -> Stdlib.Float.ldexp x n) x)
     in
-    match Option.bind host (Typed.BitVec.to_z n) with
+    match Option.bind host (Typed.Bitvec.to_z n) with
     | Some res -> ok res
     | None -> over_approximate ~bounds:unbounded ~args:[ x ] x
 

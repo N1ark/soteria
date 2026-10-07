@@ -1,134 +1,60 @@
-open Svalue
-open Soteria_std
+(** The generic normaliser, over any language: it rebuilds a term from its
+    normalised children ([K.map_children]). It substitutes under [Exists],
+    compares the guard of [Ite], and keeps [force], the [eval_var] closure, the
+    laziness of [Ite] and the [Division_by_zero] catch of the first generation
+    of the value language ([eval.ml:73-125] of [fab3ed5]). *)
 
-(** Normalisation of svalues over a {e built} [Svalue] module [V] (the result of
-    {!Svalue.Make}). {{!Make.eval}[eval]} walks a value bottom-up and re-applies
-    the simplifying smart constructors, which both simplifies and rebuilds any
-    value that was assembled directly from raw nodes (e.g. read back from a
-    cache). *)
-module Make (Ext : Value_ext) (V : module type of Svalue.Make (Ext) ()) = struct
+open Deps
+
+module type S = sig
+  type t
+  type ty
+
+  val eval : ?force:bool -> ?eval_var:(t -> Var.t -> ty -> t) -> t -> t
+end
+
+module Make (V : Value_lang.Base) : S with type t = V.t and type ty = V.ty =
+struct
   open V
 
-  let eval_binop : Binop.t -> t -> t -> t = function
-    | And -> Bool.and_
-    | Or -> Bool.or_
-    | Eq -> Bool.sem_eq
-    | FEq -> Float.eq
-    | FLeq -> Float.leq
-    | FLt -> Float.lt
-    | FAdd -> Float.add
-    | FSub -> Float.sub
-    | FMul -> Float.mul
-    | FDiv -> Float.div
-    | FRem -> Float.rem
-    | FMin -> Float.min
-    | FMax -> Float.max
-    | Add checked -> BitVec.add ~checked
-    | Sub checked -> BitVec.sub ~checked
-    | Mul checked -> BitVec.mul ~checked
-    | Div signed -> BitVec.div ~signed
-    | Rem signed -> BitVec.rem ~signed
-    | Mod -> BitVec.mod_
-    | AddOvf signed -> BitVec.add_overflows ~signed
-    | SubOvf signed -> BitVec.sub_overflows ~signed
-    | MulOvf signed -> BitVec.mul_overflows ~signed
-    | Lt signed -> BitVec.lt ~signed
-    | Leq signed -> BitVec.leq ~signed
-    | BvConcat -> BitVec.concat
-    | BitAnd -> BitVec.and_
-    | BitOr -> BitVec.or_
-    | BitXor -> BitVec.xor
-    | Shl -> BitVec.shl
-    | LShr -> BitVec.lshr
-    | AShr -> BitVec.ashr
-
-  let eval_unop : Unop.t -> t -> t = function
-    | Not -> Bool.not
-    | FAbs -> Float.abs
-    | FNeg -> Float.neg
-    | FSqrt -> Float.sqrt
-    | GetPtrLoc -> Ptr.loc
-    | GetPtrOfs -> Ptr.ofs
-    | BvOfBool n -> BitVec.of_bool n
-    | BvOfFloat (rounding, signed, size) ->
-        BitVec.of_float ~rounding ~signed ~size
-    | FloatOfBv (rounding, signed, fp) -> BitVec.to_float ~rounding ~signed ~fp
-    | FloatOfBvRaw _ -> BitVec.to_float_raw
-    | FloatOfFloat (rounding, fp) -> Float.cast ~rounding ~fp
-    | BvExtract (from, to_) -> BitVec.extract from to_
-    | BvExtend (signed, by) -> BitVec.extend ~signed by
-    | BvNot -> BitVec.not
-    | Neg checked -> BitVec.neg ~checked
-    | FIs fc -> Float.is_floatclass fc
-    | FIsNeg -> Float.is_negative
-    | FIsPos -> Float.is_positive
-    | FRound rm -> Float.round rm
-
-  let eval_triop : Triop.t -> t -> t -> t -> t = function
-    | Fma -> Float.fma
-    | Ite -> Bool.ite
-
-  let eval_nop : Nop.t -> t list -> t = function Distinct -> Bool.distinct
+  type nonrec t = t
+  type nonrec ty = ty
 
   let rec eval ~force ~eval_var (x : t) : t =
     let eval' = eval ~force in
     let eval = eval ~force ~eval_var in
-    match x.node.kind with
-    | Var v -> eval_var x v x.node.ty
-    | Bool _ | Float _ | BitVec _ -> x
-    | Ptr (l, o) ->
-        let nl = eval l in
-        let no = eval o in
-        if (not force) && l == nl && o == no then x else Ptr.mk nl no
-    | Unop (unop, v) ->
-        let nv = eval v in
-        if (not force) && v == nv then x else eval_unop unop nv
-    | Binop (binop, v1, v2) ->
-        (* TODO: for binops that may short-circuit such as || or &&, we could do
-           this without evaluating both sides, and deciding if any of either
-           side evaluates properly to e.g. true/false *)
-        let nv1 = eval v1 in
-        let nv2 = eval v2 in
-        if (not force) && v1 == nv1 && v2 == nv2 then x
-        else eval_binop binop nv1 nv2
-    | Triop (Ite, guard, then_, else_) ->
-        (* eval this separately, to have lazy evaluation *)
-        let guard = eval guard in
-        if equal guard Bool.v_true then eval then_
-        else if equal guard Bool.v_false then eval else_
-        else
-          let nthen = eval then_ in
-          let nelse = eval else_ in
-          if (not force) && then_ == nthen && else_ == nelse then x
-          else Bool.ite guard nthen nelse
-    | Triop (triop, a, b, c) ->
-        let na = eval a in
-        let nb = eval b in
-        let nc = eval c in
-        if (not force) && a == na && b == nb && c == nc then x
-        else eval_triop triop na nb nc
-    | Nop (nop, l) ->
-        let l, changed = List.map_changed eval l in
-        if (not force) && not changed then x else eval_nop nop l
-    | Exists (vs, sv) ->
-        let eval_var' sv v ty =
-          if List.exists (fun (v', _) -> Var.equal v v') vs then sv
-          else eval_var sv v ty
-        in
-        let nsv = eval' ~eval_var:eval_var' sv in
-        if (not force) && sv == nsv then x else Bool.mk_exists vs sv
-    | Seq l ->
-        let l, changed = List.map_changed eval l in
-        if (not force) && not changed then x else SSeq.mk ~seq_ty:x.node.ty l
-    | Extension ext ->
-        let ext' = Ext.eval eval ext in
-        if (not force) && ext == ext' then x else Ext.mk ( <| ) x.node.ty ext'
+    match as_var x with
+    | Some (v, ty) -> eval_var x v ty
+    | None -> (
+        match K.Exists.as_exists x with
+        | Some (vs, sv) ->
+            let eval_var' sv v ty =
+              if List.exists (fun (v', _) -> Var.equal v v') vs then sv
+              else eval_var sv v ty
+            in
+            let nsv = eval' ~eval_var:eval_var' sv in
+            if (not force) && sv == nsv then x else K.Exists.mk vs nsv
+        | None -> (
+            match K.Bool.as_ite x with
+            | Some (guard, then_, else_) ->
+                (* eval this separately, to have lazy evaluation *)
+                let old_guard = guard in
+                let guard = eval guard in
+                if equal guard v_true then eval then_
+                else if equal guard v_false then eval else_
+                else
+                  let nthen = eval then_ in
+                  let nelse = eval else_ in
+                  if
+                    (not force)
+                    && guard == old_guard
+                    && then_ == nthen
+                    && else_ == nelse
+                  then x
+                  else K.Bool.ite guard nthen nelse
+            | None when force -> map_children_forced eval x
+            | None -> K.map_children eval x))
 
-  (** Evaluates an expression; will call [eval_var] on each [Var] encountered.
-      If evaluation errors (e.g. from a division by zero), gives up and returns
-      the original expression. The [force] flag forces evaluation to proceed
-      even if no sub-expressions changed (required if evaluating an expression
-      that has not been constructed using smart constructors). *)
   let eval ?(force = false) ?(eval_var : t -> Var.t -> ty -> t = fun x _ _ -> x)
       (x : t) : t =
     try eval ~force ~eval_var x with Division_by_zero -> x

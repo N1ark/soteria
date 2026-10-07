@@ -2,13 +2,33 @@ name = "kanon_bv_values"
 defaultTargets = ["Kanon"]
 
 # The Lean library of Kanon, which the generated proofs build on
-# (run `lake update kanon` after changing the revision)
-# [versionsync: KANON_COMMIT_HASH=cbbccba57e2156777b29389287c128a79e6ee9f0]
+# (run `lake update kanon` after changing the revision).
+# [versionsync: KANON_LEAN_COMMIT_HASH=88ec5e115ac271373681511cdf9222681bf538c3]
 [[require]]
 name = "kanon"
 git = "https://github.com/N1ark/kanon"
-rev = "cbbccba57e2156777b29389287c128a79e6ee9f0"
+rev = "88ec5e115ac271373681511cdf9222681bf538c3"
 subDir = "lean"
 
 [[lean_lib]]
 name = "Kanon"
+
+# The core module (../rules/core.knl), proved once, for every language that uses it.
+[[lean_lib]]
+name = "CoreMod"
+
+# The exists module (../rules/exists.knl), proved once.
+[[lean_lib]]
+name = "ExistsMod"
+
+# The bitvec module (../rules/bitvec.knl), proved once.
+[[lean_lib]]
+name = "BitvecMod"
+
+# The float module (../rules/float.knl), proved once.
+[[lean_lib]]
+name = "FloatMod"
+
+# The ptr module (../rules/ptr.knl), proved once.
+[[lean_lib]]
+name = "PtrMod"

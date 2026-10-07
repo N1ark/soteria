@@ -324,7 +324,7 @@ struct
         let meta =
           match%ty meta with
           | TBitVector _ -> (meta :> Typed.(T.ptr_meta t))
-          | TExtension TFullPtr -> Typed.Ptr.ptr_of meta
+          | TFullPtr -> Typed.Ptr.ptr_of meta
           | _ -> L.failwith "read invalid meta?"
         in
         Typed.Ptr.mk_ptr_f ptr meta
@@ -616,7 +616,7 @@ let cast_literal ~(from_ty : Types.literal_type) ~(to_ty : Types.literal_type)
       Typed.ite (Typed.Float.is_nan sv) (BV.mk_masked size Z.zero)
       @@ Typed.ite (sv <=.@ min_f) (BV.mk_masked size min_z)
       @@ Typed.ite (sv >=.@ max_f) (BV.mk_masked size max_z)
-      @@ BV.of_float ~rounding:Truncate ~signed ~size sv
+      @@ Typed.Float.of_float Truncate signed (Z.of_int size) sv
   | (TInt _ | TUInt _), TFloat fp ->
       let sv = Typed.cast_lit from_ty v in
       let signed = Layout.is_signed from_ty in
@@ -636,8 +636,8 @@ let cast_literal ~(from_ty : Types.literal_type) ~(to_ty : Types.literal_type)
       let v = Typed.cast_lit from_ty v in
       if from_bits = to_bits then v
       else if from_bits < to_bits then
-        BV.extend ~signed:from_signed (to_bits - from_bits) v
-      else BV.extract 0 (to_bits - 1) v
+        BV.extend_ from_signed (Z.of_int (to_bits - from_bits)) v
+      else BV.extract Z.zero (Z.of_int (to_bits - 1)) v
 
 (** Converts a floating value to a bitvector, preserving it's bit
     representation. This is a symbolic process, because SMT-Lib has no operation
@@ -653,8 +653,8 @@ let float_to_bv_bits (f : Typed.([< T.sfloat ] t)) :
   | None ->
       let fp = Typed.Float.fp_of f in
       let size = Typed.FloatPrecision.size fp in
-      let* bv = nondet (Typed.t_int size) in
-      let bv_f = BV.to_float_raw bv in
+      let* bv = nondet (Typed.Bitvec.t_bitvector size) in
+      let bv_f = Typed.Float.to_float_raw bv in
       (* here we use structural equality rather than float equality; this is
          intended. *)
       let+ () = assume [ bv_f ==@ f ] in
@@ -705,17 +705,16 @@ let rec transmute_one ~(to_ty : Types.ty) (v : [< Typed.T.scalar ] Typed.t) :
   | TBitVector _, TLiteral (TInt _ | TUInt _ | TBool | TChar) ->
       return (Typed.as_any v)
   | TFloat _, TLiteral (TFloat _) -> return (Typed.as_any v)
-  | TExtension TFullPtr, (TRawPtr _ | TRef _ | TFnPtr _) ->
-      return (Typed.as_any v)
-  | TBitVector _, TLiteral (TFloat _) -> return (BV.to_float_raw v)
-  | TExtension TFullPtr, TLiteral (TInt _ | TUInt _ | TBool | TChar) ->
+  | TFullPtr, (TRawPtr _ | TRef _ | TFnPtr _) -> return (Typed.as_any v)
+  | TBitVector _, TLiteral (TFloat _) -> return (Typed.Float.to_float_raw v)
+  | TFullPtr, TLiteral (TInt _ | TUInt _ | TBool | TChar) ->
       let ptr = Typed.Ptr.ptr_of v in
       Sptr.decay ptr
   | TFloat _, TLiteral (TInt _ | TUInt _ | TBool | TChar) -> float_to_bv_bits v
   | TBitVector _, (TRawPtr _ | TRef _ | TFnPtr _) ->
       return (Typed.Ptr.of_address_f v)
   | _, TPattern (inner_ty, _) -> transmute_one ~to_ty:inner_ty v
-  | TExtension TPolyType, TVar (Free type_var_id) ->
+  | TPolyType, TVar (Free type_var_id) ->
       let tid = Typed.Adt.as_type_var v in
       if Types.TypeVarId.equal_id type_var_id tid then return (Typed.as_any v)
       else
@@ -787,7 +786,7 @@ let rec nondet_raw :
               | Some s -> return (Z.to_int s)
               | None -> vanish ()
             in
-            let+ bytes = nondet (Typed.t_int (sizei * 8)) in
+            let+ bytes = nondet (Typed.Bitvec.t_bitvector (sizei * 8)) in
             Ok
               (Typed.Adt.mk_union adt
                  [

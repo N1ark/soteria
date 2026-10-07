@@ -46,8 +46,7 @@ module M (StateM : State.StateM.S) = struct
   let align_of_enum align =
     let discr =
       match%ty align with
-      | TExtension (TTuple _) ->
-          Typed.Adt.(discriminant_of (cast_enum (as_tuple1 align)))
+      | TTuple _ -> Typed.Adt.(discriminant_of (cast_enum (as_tuple1 align)))
       | TBitVector _ -> align
       | _ -> L.failwith "align_of_enum: expected enum or integer"
     in
@@ -60,7 +59,7 @@ module M (StateM : State.StateM.S) = struct
       | _ -> L.failwith "alloc: invalid arguments"
     in
     let max_size = Layout.max_value_z (TInt Isize) in
-    let max_size = Typed.BitVec.usize max_size in
+    let max_size = Typed.Bitvec.usize max_size in
     let* () =
       assert_ (Usize.(1s) <=@ align &&@ (size <=@ max_size)) `InvalidAlloc
     in

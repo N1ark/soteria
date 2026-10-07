@@ -1,36 +1,23 @@
-; The Lean types of the language, and the model, statements and assembly proof
-; of the rules, are generated from the declaration of the language and the
-; rules;
-; `dune test` checks that the committed files are up to date (run `dune
-; promote` after changing the rules), and CI checks them with `lake build`.
+;  The Lean types of the language, and the model, statements and assembly proof
+;  of the rules, are generated from the declaration of the language and the
+;  rules (rules/). `dune test` checks that the committed files are up to date:
+;  run `kanon lean-all . ../rules/lang.knl` in lean/ after changing the rules.
+;  CI checks their proofs with `lake build`.
 
 (rule
+ (alias runtest)
  (deps
+  (source_tree .)
+  (source_tree ../CoreMod)
+  (source_tree ../ExistsMod)
+  (source_tree ../BitvecMod)
+  (source_tree ../FloatMod)
+  (source_tree ../PtrMod)
   (glob_files %{project_root}/soteria/lib/bv_values/rules/*.{kn,knl}))
- (targets
-  Types.lean.gen
-  Syntax.lean.gen
-  Signatures.lean.gen
-  Typing.lean.gen
-  Model.lean.gen
-  Statements.lean.gen
-  Lifts.lean.gen
-  Soundness.lean.gen)
  (action
   (run
    %{bin:kanon}
    lean-all
+   --check
+   ..
    %{project_root}/soteria/lib/bv_values/rules/lang.knl)))
-
-(rule
- (alias runtest)
- (action
-  (progn
-   (diff Types.lean Types.lean.gen)
-   (diff Syntax.lean Syntax.lean.gen)
-   (diff Signatures.lean Signatures.lean.gen)
-   (diff Typing.lean Typing.lean.gen)
-   (diff Model.lean Model.lean.gen)
-   (diff Statements.lean Statements.lean.gen)
-   (diff Lifts.lean Lifts.lean.gen)
-   (diff Soundness.lean Soundness.lean.gen))))

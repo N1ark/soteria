@@ -75,7 +75,7 @@ module M (StateM : State.StateM.S) : Intf.M(StateM).S = struct
     let now = Unix.time () in
     let sec = Int.of_float now in
     let nsec = Int.of_float ((now -. Float.of_int sec) *. 1_000_000_000.) in
-    let sec = Typed.BitVec.u64i sec in
-    let nsec = Typed.BitVec.u32i nsec in
+    let sec = Typed.Bitvec.u64i sec in
+    let nsec = Typed.Bitvec.u32i nsec in
     ok Typed.Adt.(mk_tuple [ mk_tuple [ sec; mk_tuple [ nsec ] ] ])
 end

@@ -1,7 +1,7 @@
 module CF = Cerb_frontend
 open CF.Ctype
 open Typed.Syntax
-module BV = Typed.BitVec
+module BV = Typed.Bitvec
 module Agv = Aggregate_val
 
 type bv_info = { bv_size : int; signed : bool }
@@ -56,7 +56,7 @@ end
 
 let is_int (Ctype (_, ty)) = [%matches? Basic (Integer _)] ty
 
-let precision (RealFloating f) : Svalue.FloatPrecision.t =
+let precision (RealFloating f) : Bv_base.FloatPrecision.t =
   match f with Float -> F32 | Double -> F64 | LongDouble -> F128
 
 let normalise_int_ty int_ty =
@@ -342,13 +342,13 @@ let nondet_c_ty_ (ty : ctype_) : Typed.T.cval Typed.t Csymex.t =
       Csymex.return (Typed.Ptr.mk loc ofs)
   | Basic (Integer ity) ->
       let* size = size_of_int_ty_unsupported ity in
-      let* res = Csymex.nondet (Typed.t_int (8 * size)) in
+      let* res = Csymex.nondet (Typed.Bitvec.t_bitvector (8 * size)) in
       let constrs = int_constraints ity |> Option.get in
       let+ () = Csymex.assume (constrs res) in
       (res :> Typed.T.cval Typed.t)
   | Basic (Floating fty) ->
       let precision = precision fty in
-      let* res = Csymex.nondet (Typed.t_float precision) in
+      let* res = Csymex.nondet (Typed.Float.t_float precision) in
       Csymex.return (res :> Typed.T.cval Typed.t)
   | Array _ | Function _ | FunctionNoParams _ | Struct _ | Union _ | Atomic _ ->
       Csymex.not_impl "nondet_c_ty: unsupported type"

@@ -287,7 +287,10 @@ module Make (StateImpl : State.S) = struct
                       ok (Typed.Ptr.of_ptr_t ptr)
                     else
                       let+ ptr_int = Sptr.decay ptr in
-                      BV.extract (from_ * 8) ((from_ + size) * 8) ptr_int
+                      BV.extract
+                        (Z.of_int (from_ * 8))
+                        (Z.of_int ((from_ + size) * 8))
+                        ptr_int
                   in
                   let offset = BV.usizei ofs in
                   let size = BV.usizeinz size in
@@ -734,7 +737,7 @@ module Make (StateImpl : State.S) = struct
             let v = Typed.cast_lit ty v in
             match ty with
             | TBool -> ok (BV.not_bool v)
-            | TInt _ | TUInt _ -> ok (BV.not v)
+            | TInt _ | TUInt _ -> ok (BV.not_ v)
             | _ -> L.failwith "Invalid type for Not")
         | Neg _ -> (
             match type_of_operand e with
@@ -832,7 +835,7 @@ module Make (StateImpl : State.S) = struct
                   | Le -> BV.leq
                   | _ -> assert false
                 in
-                ok (op ~signed v1 v2 |> BV.of_bool)
+                ok (op signed v1 v2 |> BV.of_bool)
             | Eq -> ok (BV.of_bool (v1 ==@ v2))
             | Ne -> ok (BV.of_bool (Typed.not (v1 ==@ v2)))
             | Add _ | Sub _ | Mul _ | Div _ | Rem _ | Shl _ | Shr _ ->

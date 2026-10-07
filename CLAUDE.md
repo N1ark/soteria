@@ -4,6 +4,7 @@ This file provides guidance to AI Agents when working with code in this reposito
 
 This codebase is extremely sensitive to correctness.
 AI Agents are *never allowed* to push code on their own without manual human review and full validation.
+Pushing to a draft PR branch when the user asks for it is allowed: the PR is reviewed by a human before merging.
 
 All code will be reviewed by a human. To facilitate this:
 - Keep the changes minimal

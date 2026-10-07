@@ -1,0 +1,29 @@
+(* The value language of soteria-rust: the shared modules of the
+   Bv_values language (bool, built into kanon; exists, bitvec, float, ptr and
+   the view of the host code) plus the [rust] module, which adds the aggregates
+   (tuples, arrays, enums, unions), the thin and full pointers, the metadata of
+   pointers and the polymorphic values. Kanon generates the types
+   ([Rust_types]) and the simplifying smart constructors ([Rust_rules]).
+
+   The path of the shared modules is written ONCE, here, in the [use]s below:
+   change it when they move. The variables, the sequences and the host types
+   are those of the shared [core] module, which the other shared modules use. *)
+
+[@@@lean_root "Kanon"]
+[@@@ocaml_prims "Rust_prims"]
+[@@@ocaml_types "Rust_types"]
+[@@@ocaml_rules "Rust_rules"]
+[@@@traversals]
+
+
+(* The tags of the Rust values, as in soteria-rust/lib/svalue/typed.ml *)
+
+use "../../../../soteria/lib/bv_values/rules/core"
+use builtin "bool"
+use "../../../../soteria/lib/bv_values/rules/exists"
+use "../../../../soteria/lib/bv_values/rules/bitvec"
+use "../../../../soteria/lib/bv_values/rules/float"
+use "../../../../soteria/lib/bv_values/rules/ptr"
+
+use "../../../../soteria/lib/bv_values/rules/view"
+use "rust"

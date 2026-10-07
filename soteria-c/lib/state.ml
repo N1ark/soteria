@@ -1,7 +1,7 @@
 module Call_trace = Soteria.Terminal.Call_trace
 open Typed.Infix
 open Typed.Syntax
-module BV = Typed.BitVec
+module BV = Typed.Bitvec
 module T = Typed.T
 open Csymex
 module Agv = Aggregate_val

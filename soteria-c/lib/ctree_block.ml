@@ -6,15 +6,22 @@ module Ctype = Cerb_frontend.Ctype
 
 module MemVal = struct
   module TB = Soteria.Sym_states.Tree_block
-  module S_bool = Typed.Bool
+
+  module S_bool = struct
+    include Typed.Bool
+
+    type t = Typed.sbool
+
+    let not = Typed.not
+  end
 
   module S_int = struct
     include Typed
-    include Typed.BitVec
+    include Typed.Bitvec
 
     type t = T.sint Typed.t [@@deriving show { with_path = false }]
 
-    let of_z = Typed.BitVec.usize
+    let of_z = Typed.Bitvec.usize
     let zero () = of_z Z.zero
     let one () = of_z Z.one
     let lt = Typed.Infix.( <$@ )
@@ -28,7 +35,7 @@ module MemVal = struct
 
     let is_in_bound (v : t) : sbool Typed.t =
       let open Typed.Infix in
-      v <=@ Typed.BitVec.isize_max
+      v <=@ Typed.Bitvec.isize_max
 
     type syn = Typed.Expr.t [@@deriving show { with_path = false }]
 
@@ -61,7 +68,7 @@ module MemVal = struct
           Csymex.of_opt_not_impl ~msg:"Int constraints"
             (Layout.int_constraints int_ty)
         in
-        let* value = Csymex.nondet (Typed.t_int (8 * size)) in
+        let* value = Csymex.nondet (Typed.Bitvec.t_bitvector (8 * size)) in
         let+ () = Csymex.assume (constrs value) in
         ((value :> T.cval Typed.t), ty)
     | _ -> Fmt.kstr not_impl "Nondet of type %a" Fmt_ail.pp_ty ty
@@ -72,7 +79,7 @@ module MemVal = struct
     | Uninit Totally, Uninit Totally -> Uninit Totally
     | Uninit _, Uninit _ -> Uninit Partially
     | Init (v1, _), Init (v2, _)
-      when Typed.BitVec.sure_is_zero v1 && Typed.BitVec.sure_is_zero v2 ->
+      when Typed.Bitvec.sure_is_zero v1 && Typed.Bitvec.sure_is_zero v2 ->
         Zeros
     | _, _ -> Lazy
 
@@ -93,7 +100,7 @@ module MemVal = struct
         match ty with
         | Ctype.Ctype (_, Basic (Integer ity)) ->
             let+ size = Layout.size_of_int_ty_unsupported ity in
-            Compo_res.ok (BitVec.zero (8 * size))
+            Compo_res.ok (Bitvec.zero (8 * size))
         | Ctype (_, Basic (Floating fty)) ->
             let precision = Layout.precision fty in
             Result.ok (Typed.Float.zero precision)
@@ -179,10 +186,10 @@ module MemVal = struct
         let*^ size = Layout.size_of_s cty in
         let*^ size =
           of_opt_not_impl ~msg:"Consuming zeros with unknown size"
-          @@ Typed.BitVec.to_z size
+          @@ Typed.Bitvec.to_z size
         in
         let size = Z.to_int size in
-        let zero = Expr.of_value @@ BitVec.zero (8 * size) in
+        let zero = Expr.of_value @@ Bitvec.zero (8 * size) in
         let+ () = learn_eq zero v in
         not_owned t
     | SZeros, _ ->
@@ -220,7 +227,7 @@ module Range = struct
     let+ size = Layout.size_of_s ty in
     of_low_and_size low size
 
-  let size r = Typed.BitVec.cast_nonzero @@ size r
+  let size r = Typed.Bitvec.cast_nonzero @@ size r
 end
 
 let log_fixes fixes =
@@ -228,7 +235,7 @@ let log_fixes fixes =
   fixes
 
 let sval_leaf ~range ~value ~ty =
-  if Typed.BitVec.sure_is_zero value then
+  if Typed.Bitvec.sure_is_zero value then
     Tree.make ~node:(TB.Owned Zeros) ~range ?children:None ()
   else Tree.make ~node:(TB.Owned (Init (value, ty))) ~range ?children:None ()
 

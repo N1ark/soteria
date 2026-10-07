@@ -1,5 +1,6 @@
 import BitvecMod.Proofs.CompareLib
 import BitvecMod.Proofs.IteLib
+import BitvecMod.Statements.Bitvec.lt
 
 /-!
 # The proofs of the arms of `Bitvec.lt`

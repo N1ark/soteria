@@ -1,4 +1,7 @@
-import PtrMod.Statements
+import PtrMod.Statements.Bool.eq
+import PtrMod.Statements.Bool.sure_neq
+import PtrMod.Statements.Ptr.loc
+import PtrMod.Statements.Ptr.ofs
 
 /-!
 # The proofs of the ptr module that the tactics do not find

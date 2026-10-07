@@ -1,4 +1,4 @@
-import BitvecMod.Statements
+import BitvecMod.Lift
 
 /-!
 # The arms that distribute an operation over conditionals

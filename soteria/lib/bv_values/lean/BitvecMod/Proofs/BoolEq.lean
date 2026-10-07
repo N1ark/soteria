@@ -1,4 +1,5 @@
 import BitvecMod.Proofs.ArithLib
+import BitvecMod.Statements.Bool.eq
 
 /-!
 # The proofs of the arms `r_msb` and `r_mul_const` of `Bool.eq`

@@ -1,4 +1,12 @@
 import BitvecMod.Proofs.ArithLib
+import BitvecMod.Statements.Comm
+import BitvecMod.Statements.Bitvec.add
+import BitvecMod.Statements.Bitvec.and_
+import BitvecMod.Statements.Bitvec.mul
+import BitvecMod.Statements.Bitvec.neg
+import BitvecMod.Statements.Bitvec.not_
+import BitvecMod.Statements.Bitvec.or_
+import BitvecMod.Statements.Bitvec.sub
 import BitvecMod.Proofs.IteLib
 
 /-!

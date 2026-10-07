@@ -1,5 +1,6 @@
 import BitvecMod.Tactic
 import BitvecMod.LitOps
+import BitvecMod.Statements.Comm
 
 /-!
 # The lemmas and tactics of the comparisons and of the bool rules on bit-vectors

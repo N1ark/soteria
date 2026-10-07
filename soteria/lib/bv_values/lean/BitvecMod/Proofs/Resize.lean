@@ -1,5 +1,11 @@
 import BitvecMod.Proofs.ResizeLib
 import BitvecMod.Proofs.IteLib
+import BitvecMod.Statements.Comm
+import BitvecMod.Statements.Bitvec.concat
+import BitvecMod.Statements.Bitvec.div
+import BitvecMod.Statements.Bitvec.extend_
+import BitvecMod.Statements.Bitvec.extract
+import BitvecMod.Statements.Bitvec.rem
 
 /-!
 # The arms of the shifts, resizings, divisions and remainders that the tactics do not prove

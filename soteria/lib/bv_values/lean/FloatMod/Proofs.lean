@@ -1,4 +1,30 @@
-import FloatMod.Statements
+import FloatMod.Statements.Comm
+import FloatMod.Statements.Bool.eq
+import FloatMod.Statements.Bool.sure_neq
+import FloatMod.Statements.Float.abs
+import FloatMod.Statements.Float.add
+import FloatMod.Statements.Float.cast
+import FloatMod.Statements.Float.div
+import FloatMod.Statements.Float.eq
+import FloatMod.Statements.Float.fma
+import FloatMod.Statements.Float.fmod
+import FloatMod.Statements.Float.fmod_of_rem
+import FloatMod.Statements.Float.is_floatclass
+import FloatMod.Statements.Float.is_negative
+import FloatMod.Statements.Float.is_positive
+import FloatMod.Statements.Float.leq
+import FloatMod.Statements.Float.lt
+import FloatMod.Statements.Float.max
+import FloatMod.Statements.Float.min
+import FloatMod.Statements.Float.mul
+import FloatMod.Statements.Float.neg
+import FloatMod.Statements.Float.of_float
+import FloatMod.Statements.Float.rem
+import FloatMod.Statements.Float.round
+import FloatMod.Statements.Float.sqrt
+import FloatMod.Statements.Float.sub
+import FloatMod.Statements.Float.to_float
+import FloatMod.Statements.Float.to_float_bits
 
 namespace FloatMod
 

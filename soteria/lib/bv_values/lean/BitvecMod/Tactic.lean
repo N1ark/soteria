@@ -1,4 +1,4 @@
-import BitvecMod.Statements
+import BitvecMod.Lift
 
 /-!
 # The rule tactic of the bitvec module

@@ -1,4 +1,11 @@
 import BitvecMod.Proofs.CompareLib
+import BitvecMod.Statements.Bitvec.lt_zero
+import BitvecMod.Statements.Bool.and_
+import BitvecMod.Statements.Bool.eq
+import BitvecMod.Statements.Bool.ite
+import BitvecMod.Statements.Bool.not_
+import BitvecMod.Statements.Bool.or_
+import BitvecMod.Statements.Bool.sure_neq
 
 /-!
 # The proofs of the comparisons and of the bool rules on bit-vectors

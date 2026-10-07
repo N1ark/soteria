@@ -22,30 +22,30 @@ node BvExtend of bool * nat (_, k) : TBitVector n -> TBitVector (n + k)
 node BvNot : TBitVector n -> TBitVector n [@fold lit_not]
 node Neg of bool : TBitVector n -> TBitVector n
     [@fold lit_neg] [@invol]
-node Add of checked : TBitVector n -> TBitVector n -> TBitVector n [@comm]
+node Add of checked : TBitVector n -> TBitVector n -> TBitVector n [@comm] [@lean_proofs "Common"]
     [@fold lit_add]
 node Sub of checked : TBitVector n -> TBitVector n -> TBitVector n
     [@fold lit_sub]
-node Mul of checked : TBitVector n -> TBitVector n -> TBitVector n [@comm]
+node Mul of checked : TBitVector n -> TBitVector n -> TBitVector n [@comm] [@lean_proofs "Common"]
     [@fold lit_mul]
 node Div of bool : TBitVector n -> TNonzero n -> TBitVector n
 node Rem of bool : TBitVector n -> TNonzero n -> TBitVector n
 node Mod : TBitVector n -> TBitVector n -> TBitVector n [@fold lit_smod]
-node AddOvf of bool : TBitVector n -> TBitVector n -> TBool [@comm]
+node AddOvf of bool : TBitVector n -> TBitVector n -> TBool [@comm] [@lean_proofs "ArithLib"]
     [@fold lit_add_overflows]
 node SubOvf of bool : TBitVector n -> TBitVector n -> TBool
     [@fold lit_sub_overflows]
-node MulOvf of bool : TBitVector n -> TBitVector n -> TBool [@comm]
+node MulOvf of bool : TBitVector n -> TBitVector n -> TBool [@comm] [@lean_proofs "ArithLib"]
     [@fold lit_mul_overflows]
 node Lt of bool : TBitVector n -> TBitVector n -> TBool
 node Leq of bool : TBitVector n -> TBitVector n -> TBool
 node BvConcat : TBitVector n -> TBitVector m -> TBitVector (n + m)
     [@fold lit_concat]
-node BitAnd : TBitVector n -> TBitVector n -> TBitVector n [@comm]
+node BitAnd : TBitVector n -> TBitVector n -> TBitVector n [@comm] [@lean_proofs "Common"]
     [@fold lit_and]
-node BitOr : TBitVector n -> TBitVector n -> TBitVector n [@comm]
+node BitOr : TBitVector n -> TBitVector n -> TBitVector n [@comm] [@lean_proofs "Common"]
     [@fold lit_or]
-node BitXor : TBitVector n -> TBitVector n -> TBitVector n [@comm]
+node BitXor : TBitVector n -> TBitVector n -> TBitVector n [@comm] [@lean_proofs "Common"]
     [@fold lit_xor]
 node Shl : TBitVector n -> TBitVector n -> TBitVector n [@fold lit_shl]
 node LShr : TBitVector n -> TBitVector n -> TBitVector n [@fold lit_lshr]

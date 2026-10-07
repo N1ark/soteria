@@ -178,7 +178,7 @@ fn fold_checked (c : checked) (n a b : int) (is_add : bool) : checked =
   in
   { signed = keep true; unsigned = keep false }
 
-extend fn Bool.sure_neq =
+extend fn Bool.sure_neq [@lean_proofs "Compare"] =
   | BitVec a, BitVec b -> not (a = b)
   | LocLit a, LocLit b -> not (a = b)
 
@@ -1033,7 +1033,7 @@ fn geq (signed : bool) (a b : TBitVector n) : TBool [@no_lean] = leq signed b a
 
 (* The rules of the bool module on bit-vectors *)
 
-extend rule Bool.and_ =
+extend rule Bool.and_ [@lean_proofs "Compare"] =
   (* only for constants: if [bv1] or [bv2] could be undefined (an operation
      whose overflow check does not hold), the conjunction could still be false
      thanks to the other conjunct, while the merged equality would be
@@ -1050,11 +1050,11 @@ extend rule Bool.and_ =
       (Lt (s, #_, a) | Leq (s, #_, a)) && (Lt (s, #_, a) | Leq (s, #_, a)) ->
       if lower_bound v1 >= lower_bound v2 then v1 else v2
 
-extend rule Bool.or_ =
+extend rule Bool.or_ [@lean_proofs "Compare"] =
   | lt_lt: Lt (s, a, b) || Lt (s, b, a) -> not (a == b)
   | lt_leq: Lt (s, a, b) || Leq (s, b, a) -> Bool.v_true
 
-extend rule Bool.or_ =
+extend rule Bool.or_ [@lean_proofs "Compare"] =
   (* an upper and a lower bound on the same value that (at least) touch cover
      the whole domain, e.g. [a <= 2] || [3 <= a] *)
   | complementary:
@@ -1075,18 +1075,18 @@ extend rule Bool.or_ =
       (Lt (s, #_, a) | Leq (s, #_, a)) || (Lt (s, #_, a) | Leq (s, #_, a)) ->
       if lower_bound v1 >= lower_bound v2 then v2 else v1
 
-extend rule Bool.not_ =
+extend rule Bool.not_ [@lean_proofs "Compare"] =
   | lt: Lt (signed, v1, v2) -> leq signed v2 v1
   | leq: Leq (signed, v1, v2) -> lt signed v2 v1
 
-extend rule Bool.not_ =
+extend rule Bool.not_ [@lean_proofs "Compare"] =
   | eq_bit: (BitVec bv as c) == v when type_of c = TBitVector 1 ->
       mk_bv 1 (lit_not (type_of c) bv) == v
 
-extend rule Bool.ite =
+extend rule Bool.ite [@lean_proofs "Compare"] =
   | bv_of_bool: _, 1, 0 when is_bv (type_of if_) -> of_bool (size if_) guard
 
-extend rule Bool.eq =
+extend rule Bool.eq [@lean_proofs "Compare"] =
   | bvs: (BitVec b1, BitVec b2) | (LocLit b1, LocLit b2) -> Bool.of_bool (b1 = b2)
   (* Arithmetics *)
   | neg: (BitVec _ as c) == -x -> -c == x
@@ -1102,6 +1102,8 @@ extend rule Bool.eq =
          sum carries no overflow guarantee, so it stays unchecked. *)
       if bv_l >= bv_r then x == y + (l - r)
       else y == x + (r - l)
+
+extend rule Bool.eq [@lean_proofs "BoolEq"] =
   | mul_const: BitVec n == Mul (ck, #m, x) when is_checked ck ->
       (* the multiplication is exact in a checked signedness, so read the
          constants in that signedness: the result must be a multiple of [m], and
@@ -1123,7 +1125,7 @@ extend rule Bool.eq =
         if fits then x == mk_masked sz q else Bool.v_false
       else Bool.v_false
 
-extend rule Bool.eq =
+extend rule Bool.eq [@lean_proofs "Compare"] =
   (* Cancelling a common factor [a] from [a*b == a*d] is only sound when [a] is
      odd (invertible modulo 2^n), or when [a] is non-zero and both
      multiplications are overflow-checked (so they behave like exact integer
@@ -1174,12 +1176,14 @@ extend rule Bool.eq =
   (* (boolean literals are left to the rules [true_] and [false_]) *)
   | ite_const: Ite (b, l, t) == ((BitVec _ | LocLit _) as c) -> Bool.ite b (l == c) (t == c)
 
-extend rule Bool.eq =
+extend rule Bool.eq [@lean_proofs "Compare"] =
   | of_bools: BvOfBool (_, b) == BvOfBool (_, c) -> b == c
 
-extend rule Bool.eq =
+extend rule Bool.eq [@lean_proofs "Compare"] =
   | of_bool_const: BvOfBool (_, b) == BitVec z ->
       if z = 1 then b else if z = 0 then not b else Bool.v_false
+
+extend rule Bool.eq [@lean_proofs "BoolEq"] =
   (* special case: for BVs, check if we can infer the most significant set bits
      and extract *)
   | msb: _

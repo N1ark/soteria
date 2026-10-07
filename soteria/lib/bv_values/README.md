@@ -141,10 +141,10 @@ module, in `BitvecMod/Proofs/*.lean` by theme (`Arith`, `Resize`, `Compare`,
 `CompareLt`, `CompareLeq`, `BoolEq`) with their lemmas and tactics in
 `Proofs/*Lib.lean`: `[@lean_proofs "Arith"]` on a rule in `rules/bitvec.kn`
 makes the proofs of its function import `BitvecMod/Proofs/Arith.lean` only, so
-editing one file rebuilds only the functions it proves. The commutativity, which
-every function imports, and the cases that the module adds to the functions of
-`bool` import `BitvecMod/Proofs.lean`, which does not import the proofs of the
-bitvec functions. The integers of the bit-vector literals are related to Lean's
+editing one file rebuilds only the functions it proves. So do the cases that the
+module adds to the functions of `bool` (`[@lean_proofs "Compare"]` or
+`"BoolEq"` on each `extend`), and the commutativity, which every function
+imports (`[@lean_proofs "Common"]` or `"ArithLib"` on each `[@comm]` node). The integers of the bit-vector literals are related to Lean's
 `BitVec` by `BitvecMod/LitOps.lean` (the primitives `lit_add`, ..., are defined
 as the OCaml ones, on integers).
 

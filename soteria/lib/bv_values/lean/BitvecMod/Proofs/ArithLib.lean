@@ -1559,8 +1559,8 @@ macro "bv_arith" : tactic => `(tactic| (
 /-! ## The functions that `bv_arith` proves, and the commutativity of `AddOvf` and `MulOvf`
 
 Here, not in `Proofs/Arith.lean`: the commutativity (that of `Add` and `Mul` is in
-`Proofs/Common.lean`), which every function imports, imports `Proofs.lean`, which does not
-import the proofs of the functions. -/
+`Proofs/Common.lean`), which every function imports, imports this file
+(`[@lean_proofs "ArithLib"]`), which does not import the proofs of the functions. -/
 
 attribute [kanon_tactic "bv_arith"] Bitvec.add.spec Bitvec.sub.spec Bitvec.mul.spec
   Bitvec.neg.spec Bitvec.not_.spec Bitvec.and_.spec Bitvec.or_.spec Bitvec.xor.spec

@@ -1387,6 +1387,7 @@ macro "bv_arith_close" : tactic => `(tactic| (
     | split at e)))
   all_goals (try subst e)
   all_goals (try bv_arith_lit_ops)
+  all_goals (try (bv_arith_factor; done))
   all_goals first
     | (bv_arith_bools
        all_goals ((try bv_ground); first

@@ -1356,6 +1356,19 @@ macro "cmp_sem" : tactic => `(tactic| (
     | ((repeat' split at e) <;> (repeat' split) <;> first | kanon_close | (cmpo_omega; done))
     | skip))
 
+set_option hygiene false in
+/-- `cmp_sem`, trying `cmpo_omega` before `kanon_close`: for the comparisons of orders, whose
+value goals `omega` mostly closes (`kanon_close` tries `grind` before failing). -/
+macro "cmp_sem_ord" : tactic => `(tactic| (
+  cmp_sem_pre
+  all_goals first
+    | (cmpo_omega; done)
+    | kanon_close
+    | (exact BitvecMod.Cmp.udiv_big (by assumption) (by assumption) (by assumption)
+        (by assumption) (by omega) _)
+    | ((repeat' split at e) <;> (repeat' split) <;> first | (cmpo_omega; done) | kanon_close)
+    | skip))
+
 /-- The typing half. -/
 macro "cmp_wt" : tactic => `(tactic| (
   intro w
@@ -1457,6 +1470,14 @@ macro "cmp_lift" : tactic => `(tactic| (
   all_goals (try kanon_lift_body)
   all_goals (try simp only [kanon_spec, kanon_body])
   all_goals (try (cmp_nonzero; done))))
+
+/-- `cmp_rule`, with `cmp_sem_ord` (for `lt` and `leq`). -/
+macro "cmp_rule_ord" : tactic => `(tactic| (
+  cmp_lift
+  all_goals kanon_on_refines (
+    refine Kanon.Sem.Refines.intro ?_ ?_
+    · cmp_wt
+    · cmp_sem_ord)))
 
 /-- The typing and value halves of the refinements, as far as `cmp_sem` goes. -/
 macro "cmp_halves" : tactic => `(tactic|
@@ -1588,26 +1609,3 @@ theorem add_add_ule2 {w : Nat} {l r : Int} {a b : BitVec w}
 
 end BitvecMod.Cmp
 
-namespace BitvecMod
-
-open Lean Elab Tactic in
-/-- Splits the conjunctions of the hypotheses. -/
-elab "cmp_cases_and" : tactic => liftMetaTactic1 fun g => some <$> g.casesAnd
-
-/-- Closes the value goals of `lt`/`leq.r_add_add` by their arithmetic. -/
-macro "cmp_add_add_close" : tactic => `(tactic| (
-  all_goals (try (exact absurd trivial ‹¬True›))
-  all_goals simp_all only [Bool.true_and, Bool.false_and, Bool.or_false, Bool.false_or,
-    Bool.or_eq_true, not_or, Bool.not_eq_true, and_self_left]
-  all_goals cmp_cases_and
-  all_goals first
-    | exact BitvecMod.Cmp.add_add_slt ‹_› ‹_› ‹_› ‹_›
-    | exact BitvecMod.Cmp.add_add_sle ‹_› ‹_› ‹_› ‹_›
-    | exact BitvecMod.Cmp.add_add_slt2 ‹_› ‹_› ‹_› ‹_›
-    | exact BitvecMod.Cmp.add_add_sle2 ‹_› ‹_› ‹_› ‹_›
-    | exact BitvecMod.Cmp.add_add_ult ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_›
-    | exact BitvecMod.Cmp.add_add_ule ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_›
-    | exact BitvecMod.Cmp.add_add_ult2 ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_›
-    | exact BitvecMod.Cmp.add_add_ule2 ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_›))
-
-end BitvecMod

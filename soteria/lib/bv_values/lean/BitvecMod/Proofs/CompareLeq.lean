@@ -6,7 +6,7 @@ import BitvecMod.Statements.Bitvec.leq
 /-!
 # The proofs of the arms of `Bitvec.leq`
 
-By `cmp_rule` (`CompareLib.lean`), `bv_ite_arm` (`IteLib.lean`) for the conditionals, or a
+By `cmp_rule_ord` (`CompareLib.lean`), `bv_ite_arm` (`IteLib.lean`) for the conditionals, or a
 closer of their own.
 -/
 
@@ -17,15 +17,8 @@ namespace BitvecMod
 open Classical Kanon
 
 @[kanon_arm] theorem Bitvec.leq.r_add_add.main.proof : Bitvec.leq.r_add_add.main.Stmt := by
-  intro S _ _ _ _ _ _ O hO signed cl l tl y t1 cr r tr x t2 hg
-  simp only [Bitvec.const_keeps_in_range, cmp_zmin_eq_min, cmp_zmax_eq_max]
-  cmp_lift
-  all_goals kanon_on_refines (
-    refine Kanon.Sem.Refines.intro (by cmp_wt) ?_
-    cmp_sem_core
-    cmp_norm
-    cmp_norm
-    cmp_add_add_close)
+  intro S _ _ _ _ _ _ O hO signed cl l _ y _ cr r _ x _ hg
+  aa_arm
 
 /-! The arms of `leq.r_add_add` with the left sum swapped, from the main arm by the
 commutativity of `Add`. -/
@@ -94,11 +87,11 @@ commutativity of `Add`. -/
 @[kanon_arm] theorem Bitvec.leq.r_ite_r.main.proof : Bitvec.leq.r_ite_r.main.Stmt := by
   bv_ite_arm
 
-@[kanon_arm] theorem Bitvec.leq.r_lits.main.proof : Bitvec.leq.r_lits.main.Stmt := by cmp_rule
+@[kanon_arm] theorem Bitvec.leq.r_lits.main.proof : Bitvec.leq.r_lits.main.Stmt := by cmp_rule_ord
 
-@[kanon_arm] theorem Bitvec.leq.r_max_r.main.proof : Bitvec.leq.r_max_r.main.Stmt := by cmp_rule
+@[kanon_arm] theorem Bitvec.leq.r_max_r.main.proof : Bitvec.leq.r_max_r.main.Stmt := by cmp_rule_ord
 
-@[kanon_arm] theorem Bitvec.leq.r_min_l.main.proof : Bitvec.leq.r_min_l.main.Stmt := by cmp_rule
+@[kanon_arm] theorem Bitvec.leq.r_min_l.main.proof : Bitvec.leq.r_min_l.main.Stmt := by cmp_rule_ord
 
 /-- `x * c1 ≤ c2`: `x` against the truncated quotient `c2 / c1` (`CompareMul.lean`). -/
 @[kanon_arm] theorem Bitvec.leq.r_mul_const.main.proof : Bitvec.leq.r_mul_const.main.Stmt := by
@@ -117,21 +110,21 @@ commutativity of `Add`. -/
   · simp only [Bitvec.size, ty_mk]
     exact Kanon.Sem.Refines.refl
 
-@[kanon_arm] theorem Bitvec.leq.r_mul_mul.main.proof : Bitvec.leq.r_mul_mul.main.Stmt := by cmp_rule
+@[kanon_arm] theorem Bitvec.leq.r_mul_mul.main.proof : Bitvec.leq.r_mul_mul.main.Stmt := by cmp_rule_ord
 
-@[kanon_arm] theorem Bitvec.leq.r_neg_l.main.proof : Bitvec.leq.r_neg_l.main.Stmt := by cmp_rule
+@[kanon_arm] theorem Bitvec.leq.r_neg_l.main.proof : Bitvec.leq.r_neg_l.main.Stmt := by cmp_rule_ord
 
-@[kanon_arm] theorem Bitvec.leq.r_neg_r.main.proof : Bitvec.leq.r_neg_r.main.Stmt := by cmp_rule
+@[kanon_arm] theorem Bitvec.leq.r_neg_r.main.proof : Bitvec.leq.r_neg_r.main.Stmt := by cmp_rule_ord
 
-@[kanon_arm] theorem Bitvec.leq.r_negs.main.proof : Bitvec.leq.r_negs.main.Stmt := by cmp_rule
+@[kanon_arm] theorem Bitvec.leq.r_negs.main.proof : Bitvec.leq.r_negs.main.Stmt := by cmp_rule_ord
 
-@[kanon_arm] theorem Bitvec.leq.r_same.main.proof : Bitvec.leq.r_same.main.Stmt := by cmp_rule
+@[kanon_arm] theorem Bitvec.leq.r_same.main.proof : Bitvec.leq.r_same.main.Stmt := by cmp_rule_ord
 
-@[kanon_arm] theorem Bitvec.leq.r_self_add_l.main.proof : Bitvec.leq.r_self_add_l.main.Stmt := by cmp_rule
+@[kanon_arm] theorem Bitvec.leq.r_self_add_l.main.proof : Bitvec.leq.r_self_add_l.main.Stmt := by cmp_rule_ord
 
-@[kanon_arm] theorem Bitvec.leq.r_self_add_l.swap.proof : Bitvec.leq.r_self_add_l.swap.Stmt := by cmp_rule
+@[kanon_arm] theorem Bitvec.leq.r_self_add_l.swap.proof : Bitvec.leq.r_self_add_l.swap.Stmt := by cmp_rule_ord
 
-@[kanon_arm] theorem Bitvec.leq.r_self_add_r.main.proof : Bitvec.leq.r_self_add_r.main.Stmt := by cmp_rule
+@[kanon_arm] theorem Bitvec.leq.r_self_add_r.main.proof : Bitvec.leq.r_self_add_r.main.Stmt := by cmp_rule_ord
 
 @[kanon_arm] theorem Bitvec.leq.r_sub_const1.main.proof : Bitvec.leq.r_sub_const1.main.Stmt := by
   intro S _ _ _ _ _ _ O hO signed checked x k _ _ c _ hg
@@ -155,10 +148,10 @@ commutativity of `Add`. -/
   simp only [kanon_body, Bool.false_eq_true, ite_false, ite_true]
   cmp_auto
 
-@[kanon_arm] theorem Bitvec.leq.r_ub_l.main.proof : Bitvec.leq.r_ub_l.main.Stmt := by cmp_rule
+@[kanon_arm] theorem Bitvec.leq.r_ub_l.main.proof : Bitvec.leq.r_ub_l.main.Stmt := by cmp_rule_ord
 
-@[kanon_arm] theorem Bitvec.leq.r_ub_r.main.proof : Bitvec.leq.r_ub_r.main.Stmt := by cmp_rule
+@[kanon_arm] theorem Bitvec.leq.r_ub_r.main.proof : Bitvec.leq.r_ub_r.main.Stmt := by cmp_rule_ord
 
-@[kanon_arm] theorem Bitvec.leq.r_udiv_big.main.proof : Bitvec.leq.r_udiv_big.main.Stmt := by cmp_rule
+@[kanon_arm] theorem Bitvec.leq.r_udiv_big.main.proof : Bitvec.leq.r_udiv_big.main.Stmt := by cmp_rule_ord
 
 end BitvecMod

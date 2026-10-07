@@ -6,7 +6,8 @@ import BitvecMod.Proofs.CompareMul
 `lt`/`leq` `.r_add_const`, `.r_const_add`, `.r_sub_const1`, `.r_sub_const2`, `.r_const_sub1` and
 `.r_const_sub2` (`x + k ⋚ c`, `c ⋚ k - x`, …), checked in the signedness of the comparison: the
 comparison is one of `x` with the constant `c ∓ k` when that does not overflow, and a constant
-when it does (unsigned).
+when it does (unsigned). `lt`/`leq.r_add_add` (`l + y ⋚ r + x`) move one constant to the other
+side (`aa_arm`, with the lemmas `Cmp.add_add_*`).
 
 The proofs read the value of the left side once (`cc_cmp`, `cc_add`/`cc_sub`, `cc_lit`: the value
 of `x`, the non-overflow of the operation, the comparison of bit-vectors), compute that of the
@@ -49,7 +50,7 @@ theorem cc_cmp {s le : Bool} {A B : S.Term} {ρ : S.Env} {v : S.Val}
     exact ⟨n, by omega, hA, hB, wA, wB, a, b, hv, hv', e.symm⟩
 
 set_option hygiene false in
-/-- The proof of `cc_add` and `cc_sub`. -/
+/-- The proof of `cc_add`, `cc_sub` and `cc_mul`. -/
 macro "cc_op_tac" : tactic => `(tactic| (
   subst ht
   simp only [WT_mk, Node.wt, Node.All] at w
@@ -95,6 +96,17 @@ theorem cc_sub {ck : CoreMod.Checked} {A B : S.Term} {t : S.Ty} {ρ : S.Env} {n 
       ∃ a b : BitVec n, S.ev ρ A = some (bv n a) ∧ S.ev ρ B = some (bv n b) ∧
         (ck.signed = true → a.ssubOverflow b = false) ∧
         (ck.unsigned = true → a.usubOverflow b = false) ∧ r = a - b := by
+  cc_op_tac
+
+omit [KanonBool.Typed S] [CoreMod.Typed S] in
+/-- `cc_add`, for a product. -/
+theorem cc_mul {ck : CoreMod.Checked} {A B : S.Term} {t : S.Ty} {ρ : S.Env} {n : Nat}
+    {r : BitVec n} (w : S.WT (mk (.Mul ck A B) t)) (ht : t = sort (.TBitVector n)) (hn : 0 < n)
+    (e : S.ev ρ (mk (.Mul ck A B) t) = some (bv n r)) :
+    S.ty A = sort (.TBitVector n) ∧ S.ty B = S.ty A ∧ S.WT A ∧ S.WT B ∧
+      ∃ a b : BitVec n, S.ev ρ A = some (bv n a) ∧ S.ev ρ B = some (bv n b) ∧
+        (ck.signed = true → a.smulOverflow b = false) ∧
+        (ck.unsigned = true → a.umulOverflow b = false) ∧ r = a * b := by
   cc_op_tac
 
 omit [KanonBool.Typed S] [CoreMod.Typed S] in
@@ -264,5 +276,85 @@ macro "cc_arm" : tactic => `(tactic| (
        · cc_wt
        · cc_lhs
          cc_close)))
+
+/-! ## `lt`/`leq.r_add_add`: `l + y ⋚ r + x` as `y + (l - r) ⋚ x` or `y ⋚ x + (r - l)` -/
+
+/-- Closes a branch of `lt`/`leq.r_add_add` by an arithmetic lemma `h` of `Cmp`: the moved
+constant does not overflow, and the comparisons agree. -/
+macro "aa_close " h:term : tactic => `(tactic| (
+  obtain ⟨hov, hiff⟩ := $h
+  simp only [hov, Bool.and_false, Bool.or_false, Bool.false_or, Bool.true_and, Bool.false_and,
+    Bool.false_eq_true, ↓reduceIte, ofBV_some, withW_bv, asBV_bv, binB_some, ofB_some,
+    Option.some.injEq, Kanon.Embed.inj_eq_iff, BitVec.slt, BitVec.ult, BitVec.sle, BitVec.ule,
+    decide_eq_decide]
+  exact hiff))
+
+set_option hygiene false in
+/-- The typing of the right side of a branch of `lt`/`leq.r_add_add`. -/
+macro "aa_wt" : tactic => `(tactic| (
+  intro w
+  obtain ⟨N, hN, hA, hB, wA, wB⟩ :=
+    by first | exact cc_cmp_wt (le := false) w | exact cc_cmp_wt (le := true) w
+  obtain ⟨hl1, hl2, -, wY⟩ := cc_op_wt (sub := false) wA
+  obtain ⟨hr1, hr2, -, wX⟩ := cc_op_wt (sub := false) wB
+  simp only [ty_mk] at hA hB hl1 hl2 hr1 hr2
+  have hy : S.ty y = sort (.TBitVector N) := hl2.trans (hl1.symm.trans hA)
+  have hx : S.ty x = sort (.TBitVector N) := hr2.trans (hr1.symm.trans (hB.trans hA))
+  simp only [ty_mk, mk_bv, mk_masked, hA, hx, hy, size_of_ty_TBitVector, WT_mk, Node.wt,
+    Node.All, bv_wf, wX, wY, sort_inj_iff, Srt.TBitVector.injEq, reduceCtorEq, or_false,
+    forall_eq', and_true, true_and]
+  have hp : (0 : Int) < 2 ^ N.toNat := Int.pow_pos (by decide)
+  and_intros
+  all_goals first
+    | assumption
+    | rfl
+    | exact ⟨N, hN, rfl⟩
+    | exact Int.emod_nonneg _ (by omega)
+    | exact Int.emod_lt_of_pos _ hp))
+
+set_option hygiene false in
+/-- The value half of a branch of `lt`/`leq.r_add_add`: the values of `y` and `x` and the
+non-overflow of the two sums, then the lemma of `Cmp` of the branch. -/
+macro "aa_val" : tactic => `(tactic| (
+  obtain ⟨n, hn, hA, hB, wA, wB, a, b, ha, hb, rfl⟩ :=
+    by first | exact cc_cmp (le := false) w e | exact cc_cmp (le := true) w e
+  simp only [ty_mk] at hA hB
+  obtain ⟨hl1, hl2, wL, wY, lv, yv, hlv, hyv, hsl, hul, rfl⟩ := cc_add wA hA hn ha
+  obtain ⟨hr1, hr2, wR, wX, rv, xv, hrv, hxv, hsr, hur, rfl⟩ := cc_add wB (hB.trans hA) hn hb
+  simp only [ty_mk] at hl1 hl2 hr1 hr2
+  cc_lit_side wL hlv l0 l1 hl1
+  cc_lit_side wR hrv r0 r1 hr1
+  have hw : Values.width (D := S.toDom) (sort (.TBitVector n)) = n := by
+    simpa using width_sort (S := S) ρ (.inl rfl) (show (0 : Int) < n by omega)
+  clear e
+  simp only [ev_mk, Node.eval, Node.map, mk_bv, mk_masked, ty_mk, hA, hl2, hl1, hr2, hr1,
+    size_of_ty_TBitVector, lit_sub, hxv, hyv, Int.toNat_natCast, Bool.false_eq_true, ↓reduceIte]
+  rw [hw]
+  simp only [withW_bv, asBV_bv, ofBV_some, ckOp_some, ofInt_emod_two_pow, LitOps.ofInt_lit_sub]
+  (try simp only [hA, ty_mk, size_of_ty_TBitVector, Int.toNat_natCast, signed_extract_zero hn]
+    at cmp_hc)
+  first
+    | aa_close (Cmp.add_add_ult (hul ‹_›) (hur ‹_›) l0 l1 r0 r1 cmp_hc.1)
+    | aa_close (Cmp.add_add_ule (hul ‹_›) (hur ‹_›) l0 l1 r0 r1 cmp_hc.1)
+    | aa_close (Cmp.add_add_ult2 (hul ‹_›) (hur ‹_›) l0 l1 r0 r1 cmp_hc.1)
+    | aa_close (Cmp.add_add_ule2 (hul ‹_›) (hur ‹_›) l0 l1 r0 r1 cmp_hc.1)
+    | aa_close (Cmp.add_add_slt (hsl ‹_›) (hsr ‹_›) cmp_hc.1 cmp_hc.2)
+    | aa_close (Cmp.add_add_sle (hsl ‹_›) (hsr ‹_›) cmp_hc.1 cmp_hc.2)
+    | aa_close (Cmp.add_add_slt2 (hsl ‹_›) (hsr ‹_›) cmp_hc.1 cmp_hc.2)
+    | aa_close (Cmp.add_add_sle2 (hsl ‹_›) (hsr ‹_›) cmp_hc.1 cmp_hc.2)))
+
+set_option hygiene false in
+/-- `lt`/`leq.r_add_add` (`l + y ⋚ r + x`): the constant moved to one side, by `aa_wt` and
+`aa_val`. -/
+macro "aa_arm" : tactic => `(tactic| (
+  simp only [Bitvec.const_keeps_in_range, cmp_zmin_eq_min, cmp_zmax_eq_max]
+  mul_lift
+  all_goals first
+    | bv_vacuous
+    | (simp only [Bool.false_eq_true, Bool.true_eq_false] at *; done)
+    | exact Kanon.Sem.Refines.refl
+    | (refine Kanon.Sem.Refines.intro ?_ (fun ρ v w _ e => ?_)
+       · aa_wt
+       · aa_val)))
 
 end BitvecMod

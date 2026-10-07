@@ -1,4 +1,5 @@
 import BitvecMod.Proofs.ArithLib
+import BitvecMod.Proofs.CompareConst
 import BitvecMod.Statements.Bool.eq
 
 /-!
@@ -113,24 +114,10 @@ theorem toNat_ofInt_lit {z : Int} (h0 : 0 ≤ z) (h1 : z < 2 ^ n) :
     ((BitVec.ofInt n z).toNat : Int) = z :=
   (lit_facts n z).1 h0 h1
 
-theorem ofInt_ne_zero {z : Int} (h0 : 0 ≤ z) (h1 : z < 2 ^ n) (hz : z ≠ 0) :
-    BitVec.ofInt n z ≠ 0#n := by
-  intro h
-  have := toNat_ofInt_lit h0 h1
-  rw [h, BitVec.toNat_zero] at this
-  omega
-
-theorem toNat_dvd_iff {a b : Int} (ha : 0 ≤ a) (hb : 0 ≤ b) : a.toNat ∣ b.toNat ↔ a ∣ b := by
-  rw [← Int.natCast_dvd_natCast, Int.toNat_of_nonneg ha, Int.toNat_of_nonneg hb]
-
 end BoolEq
 
 section
 variable {D : Kanon.Dom} [Values D]
-
-theorem BoolEq.ofBV_ite_eq {n : Nat} {p : Prop} [Decidable p] {v : BitVec n} {w1 : D.Val} :
-    ofBV n (if p then none else some v) = some w1 ↔ ¬p ∧ bv n v = w1 := by
-  split <;> simp_all [ofBV]
 
 theorem BoolEq.bv_inj {n : Nat} {a b : BitVec n} : (bv (D := D) n a = bv n b) ↔ a = b := by
   simp only [bv, Kanon.Embed.inj_eq_iff, Sigma.mk.injEq, heq_eq_eq, true_and]
@@ -166,44 +153,111 @@ end
   all_goals (rw [decide_eq_decide]; apply BoolEq.eq_iff_extract_low
     <;> exact BoolEq.msb_lift (by assumption) (by omega))
 
+section
+variable {S : Kanon.Sem} [KanonBool.Lang S] [CoreMod.Lang S] [Lang S] [KanonBool.Typed S]
+  [CoreMod.Typed S] [Typed S]
+
+omit [KanonBool.Typed S] [CoreMod.Typed S] in
+/-- The value of `n == m * x`: that of `x`, the non-overflow of the product, the equality. -/
+theorem eqm_lhs {n m : Int} {t2 t6 t8 : S.Ty} {ck : CoreMod.Checked} {x : S.Term} {ρ : S.Env}
+    {v : S.Val}
+    (w : S.WT (KanonBool.mk (.Eq (mk (.BitVec n) t2) (mk (.Mul ck (mk (.BitVec m) t6) x) t8))
+      (KanonBool.sort .TBool)))
+    (e : S.ev ρ (KanonBool.mk (.Eq (mk (.BitVec n) t2) (mk (.Mul ck (mk (.BitVec m) t6) x) t8))
+      (KanonBool.sort .TBool)) = some v) :
+    ∃ N : Nat, 0 < N ∧ S.ty x = sort (.TBitVector N) ∧ 0 ≤ n ∧ n < 2 ^ N ∧ 0 ≤ m ∧ m < 2 ^ N ∧
+      ∃ xv : BitVec N, S.ev ρ x = some (bv N xv) ∧
+        (ck.signed = true → (BitVec.ofInt N m).smulOverflow xv = false) ∧
+        (ck.unsigned = true → (BitVec.ofInt N m).umulOverflow xv = false) ∧
+        v = KanonBool.Values.vbool.inj (decide (BitVec.ofInt N n = BitVec.ofInt N m * xv)) := by
+  simp only [KanonBool.WT_mk, KanonBool.Node.wt, KanonBool.Node.All] at w
+  obtain ⟨⟨hB, -⟩, wA, wB⟩ := w
+  have wA' := wA
+  simp only [WT_mk, Node.wt, Node.All] at wA'
+  obtain ⟨⟨⟨N, hN, h2⟩, -⟩, -⟩ := wA'
+  obtain ⟨N, rfl⟩ : ∃ k : Nat, N = k := ⟨N.toNat, by omega⟩
+  obtain ⟨n0, n1, hA⟩ := cc_lit (ρ := ρ) wA h2 (by omega)
+  simp only [ty_mk] at hB
+  simp only [KanonBool.ev_mk, KanonBool.Node.eval, KanonBool.Node.map, hA] at e
+  rcases ev_cases (ρ := ρ) wB (by rw [ty_mk]; exact hB.trans h2) with hv | ⟨_, hv, -, b, rfl⟩
+  · simp [hv, KanonBool.peq] at e
+  replace hv : S.ev ρ (mk (.Mul ck (mk (.BitVec m) t6) x) t8) = some (bv N b) := hv
+  obtain ⟨hM, hX, wM, wX, a, xv, ha, hx, hs, hu, rfl⟩ := cc_mul wB (hB.trans h2) (by omega) hv
+  simp only [ty_mk] at hM hX
+  obtain ⟨m0, m1, hm⟩ := cc_lit (ρ := ρ) wM hM (by omega)
+  rw [hm] at ha
+  obtain rfl := cc_bv_eq ha
+  simp only [hv, KanonBool.peq, Option.some.injEq, BoolEq.bv_inj] at e
+  exact ⟨N, by omega, hX.trans hM, n0, n1, m0, m1, xv, hx, hs, hu, e.symm⟩
+omit [KanonBool.Typed S] [CoreMod.Typed S] [Typed S] in
+/-- The typing of `n == m * x`: that of `x`. -/
+theorem eqm_wt {n m : Int} {t2 t6 t8 : S.Ty} {ck : CoreMod.Checked} {x : S.Term}
+    (w : S.WT (KanonBool.mk (.Eq (mk (.BitVec n) t2) (mk (.Mul ck (mk (.BitVec m) t6) x) t8))
+      (KanonBool.sort .TBool))) :
+    ∃ N : Int, 0 < N ∧ S.ty x = sort (.TBitVector N) ∧ S.WT x := by
+  simp only [KanonBool.WT_mk, KanonBool.Node.wt, KanonBool.Node.All, WT_mk, Node.wt, Node.All,
+    ty_mk] at w
+  obtain ⟨-, -, ⟨⟨⟨N, hN, hM⟩, hX, -⟩, -, wX⟩⟩ := w
+  exact ⟨N, hN, hX.trans hM, wX⟩
+end
+
+set_option hygiene false in
+/-- A branch of `Bool.eq.r_mul_const`: the typing of its right side, and its value from that of
+the left side (`eqm_lhs`) by `BoolEq.mul_eq_s` / `BoolEq.mul_eq_u`. -/
+macro "eqm_branch" : tactic => `(tactic| (
+  refine Kanon.Sem.Refines.intro ?_ (fun ρ v w _ e => ?_)
+  · intro w
+    first
+      | exact ⟨KanonBool.WT_v_true, by rw [KanonBool.ty_v_true, KanonBool.ty_mk]⟩
+      | exact ⟨KanonBool.WT_v_false, by rw [KanonBool.ty_v_false, KanonBool.ty_mk]⟩
+      | (obtain ⟨N, hN, hx, wx⟩ := eqm_wt w
+         simp only [KanonBool.WT_mk, KanonBool.Node.wt, KanonBool.Node.All, KanonBool.ty_mk,
+           WT_mk, Node.wt, Node.All, bv_wf, ty_mk, bv_zero, mk_masked, hx, wx,
+           size_of_ty_TBitVector, sort_inj_iff, Srt.TBitVector.injEq, reduceCtorEq, or_false,
+           forall_eq', and_true, true_and]
+         have hp : (0 : Int) < 2 ^ N.toNat := Int.pow_pos (by decide)
+         and_intros
+         all_goals first
+           | rfl
+           | exact ⟨N, hN, rfl⟩
+           | exact Int.le_refl 0
+           | exact hp
+           | exact Int.emod_nonneg _ (by omega)
+           | exact Int.emod_lt_of_pos _ hp)
+  · obtain ⟨N, hN, hx, n0, n1, m0, m1, xv, hxv, hsm, hum, rfl⟩ := eqm_lhs w e
+    have hw : Values.width (D := S.toDom) (sort (.TBitVector N)) = N := by
+      simpa using width_sort (S := S) ρ (.inl rfl) (show (0 : Int) < N by omega)
+    simp only [KanonBool.ev_v_true, KanonBool.ev_v_false, KanonBool.ev_mk, KanonBool.Node.eval,
+      KanonBool.Node.map, hxv, ev_mk, Node.eval, Node.map, bv_zero, mk_masked, hx,
+      size_of_ty_TBitVector, Int.toNat_natCast]
+    (try rw [hw])
+    simp only [ofBV_some, KanonBool.peq, Option.some.injEq, Kanon.Embed.inj_eq_iff, BoolEq.bv_inj,
+      ofInt_emod_two_pow, ofInt_zero']
+    simp only [hx, size_of_ty_TBitVector, signed_extract_zero hN, z_lsl_one, Int.toNat_natCast,
+      natCast_sub_one_toNat] at *
+    first
+      | (have hsg : ck.signed = true := by simpa [Bitvec.is_checked, hu] using hg
+         simp only [BoolEq.mul_eq_s _ _ _ (hsm hsg)])
+      | simp only [BoolEq.mul_eq_u _ _ _ (hum hu), BoolEq.toNat_ofInt_lit n0 n1,
+          BoolEq.toNat_ofInt_lit m0 m1]
+    simp only [Sigma.mk.injEq, heq_eq_eq, true_and, Prim.divisible, Prim.tdiv, decide_eq_true_eq,
+      Bool.and_eq_true] at *
+    simp_all
+    all_goals (intros; omega)))
+
+
 @[kanon_arm] theorem Bool.eq.r_mul_const.main.proof : Bool.eq.r_mul_const.main.Stmt := by
-  (try intro _)
-  intros
-  kanon_rule_lift
-  all_goals (try simp only [Kanon.Embed.proj_eq_some_iff] at *)
-  all_goals kanon_on_refines (
-    (try dsimp only)
-    bv_split_ifs
-    all_goals (try kanon_lift_body)
-    all_goals (try simp only [kanon_spec, kanon_body])
-    all_goals (try first
-      | kanon_refl
-      | (kanon_comm; done)))
-  all_goals kanon_on_refines (
-    refine Kanon.Sem.Refines.intro ?_ ?_
-    · bv_arith_wt
-    bv_arith_sem_core)
-  all_goals (try (repeat' (first
-    | (simp only [BitvecMod.ckOp_some, BitvecMod.ckOp_none_l, BitvecMod.ckOp_none_r,
-        BitvecMod.binOp_some, BitvecMod.binOp_none_l, BitvecMod.binOp_none_r,
-        BitvecMod.negOp_some, BitvecMod.negOp_none, Option.some.injEq, reduceCtorEq, Option.map_none, Option.map_some, BitvecMod.binB_some, BitvecMod.binB_none_l, BitvecMod.binB_none_r, BitvecMod.ofB_none, BitvecMod.ofB_some] at e)
-    | split at e)))
-  all_goals (try subst e)
-  all_goals (try bv_arith_lit_ops)
-  all_goals (try bv_arith_bools)
-  all_goals (try simp_all)
-  all_goals (try simp only [BoolEq.ofBV_ite_eq] at *)
-  all_goals first
-    | obtain ⟨hov, rfl⟩ := ‹¬_ ∧ bv _ _ = _›
-    | subst ‹bv _ _ = _›
-  all_goals (simp only [BoolEq.bv_inj])
-  all_goals (try simp only [Bool.not_eq_true, not_or] at hov)
-  all_goals (try first
-    | rw [BoolEq.mul_eq_u _ _ _ (by first | exact hov | exact hov.2)]
-    | rw [BoolEq.mul_eq_s _ _ _ (by first | exact hov | exact hov.1)])
-  all_goals (try simp (disch := assumption) only [BoolEq.toNat_ofInt_lit] at *)
-  all_goals (try simp only [BitVec.toInt_ofInt, BitVec.toNat_zero, Int.natCast_zero] at *)
-  all_goals (simp_all [BoolEq.ofInt_ne_zero, Prim.divisible, Prim.tdiv, BoolEq.toNat_dvd_iff])
-  all_goals (intros; omega)
+  intro S _ _ _ _ _ _ O hO n t2 ck m t6 x t8 hg
+  (try kanon_guards)
+  (try kanon_split)
+  (try subst_vars)
+  (try simp only [kanon_spec, kanon_body])
+  (try dsimp only)
+  cases hu : ck.unsigned <;>
+    simp only [Bool.not_true, Bool.not_false, ↓reduceIte, Bool.false_eq_true, Bool.true_eq_false]
+  all_goals (repeat' split)
+  all_goals (try (mul_untag; kanon_lift_body))
+  all_goals (try simp only [kanon_spec, kanon_body, KanonBool.Bool.eq.spec])
+  all_goals eqm_branch
 
 end BitvecMod

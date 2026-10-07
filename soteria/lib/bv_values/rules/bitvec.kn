@@ -222,23 +222,23 @@ fn is_max_of (signed : bool) (n l : int) : bool =
 
 (* {1 Rules} *)
 
-rule of_bool : BvOfBool (n, b) =
+rule of_bool : BvOfBool (n, b) [@lean_proofs "Arith"] =
   | true_: true -> bv_one n
   | false_: false -> bv_zero n
 
-rule to_bool (v : t) : Not (Eq (v, bv_zero (size v))) =
+rule to_bool (v : t) : Not (Eq (v, bv_zero (size v))) [@lean_proofs "Arith"] =
   | lit: BitVec z -> Bool.of_bool (not (z = 0))
   | of_bool: BvOfBool (_, b) -> b
   | default: _ -> not (v == bv_zero (size v))
 
 rule not_bool (v : t) :
-    BvOfBool (size v, Eq (v, bv_zero (size v))) =
+    BvOfBool (size v, Eq (v, bv_zero (size v))) [@lean_proofs "Arith"] =
   | lit: BitVec z ->
       if z = 0 then bv_one (size v) else bv_zero (size v)
   | of_bool: BvOfBool (n, g) -> of_bool n (not g)
   | default: _ -> of_bool (size v) (v == bv_zero (size v))
 
-rule add : Add (checked, v1, v2) =
+rule add : Add (checked, v1, v2) [@lean_proofs "Arith"] =
   | neg: x + -y -> x - y
   | zero: x + 0 -> x
   | not_one: ~x + 1 -> -x
@@ -290,7 +290,7 @@ fn no_wrap (c : checked) (v1 v2 : t) : checked =
     { signed = c.signed; unsigned = true }
   else c
 
-rule sub : Sub (checked, v1, v2) =
+rule sub : Sub (checked, v1, v2) [@lean_proofs "Arith"] =
   | zero_r: _ - 0 -> v1
   | zero_l: 0 - _ ->
       (* 0 - x = -x; the subtraction overflows (signed) iff x = INT_MIN, so a
@@ -337,14 +337,14 @@ rule sub : Sub (checked, v1, v2) =
   | of_bool_l: BvOfBool (n, b) - #_ -> Bool.ite b (bv_one n - v2) (-v2)
   | of_bool_r: #_ - BvOfBool (n, b) -> Bool.ite b (v1 - bv_one n) v1
 
-rule neg : Neg (checked, v) =
+rule neg : Neg (checked, v) [@lean_proofs "Arith"] =
   | ite: Ite (b, l, r) -> Bool.ite b (neg checked l) (neg checked r)
   | of_bool: BvOfBool (n, b) -> Bool.ite b (-bv_one n) (bv_zero n)
 
-rule mod_ : Mod (v1, v2) =
+rule mod_ : Mod (v1, v2) [@lean_proofs "Resize"] =
   | zero_r: _, 0 -> v1
 
-rule rem : Rem (signed, v1, v2) =
+rule rem : Rem (signed, v1, v2) [@lean_proofs "Resize"] =
   | lits: #l, #r ->
       mk_bv (size v1)
         (if signed then lit_srem (type_of v1) (type_of v2) l r
@@ -371,10 +371,10 @@ rule rem : Rem (signed, v1, v2) =
       let rhs = if r1 <= r2 then v_r1 else v2 in
       rem signed r rhs
 
-rule not_ : BvNot v =
+rule not_ : BvNot v [@lean_proofs "Arith"] =
   | ite: Ite (b, l, r) -> Bool.ite b (not_ l) (not_ r)
 
-rule and_ : BitAnd (v1, v2) =
+rule and_ : BitAnd (v1, v2) [@lean_proofs "Arith"] =
   | zero: x land 0 -> bv_zero (size x)
   | ones: #mask land x when is_ones (size x) mask -> x
   (* For (x >> s) & m, the mask is irrelevant if it entirely covers [bitsize -
@@ -401,7 +401,7 @@ rule and_ : BitAnd (v1, v2) =
   | ites: Ite (b1, l1, 0) land Ite (b2, l2, 0) ->
       Bool.ite (b1 && b2) (l1 land l2) (bv_zero (size l1))
 
-rule or_ : BitOr (v1, v2) =
+rule or_ : BitOr (v1, v2) [@lean_proofs "Arith"] =
   | zero: x lor 0 -> x
   | same: x lor x -> x
   | mask_and: (#m1 as v_m1) lor (_ land #m2) when bits_in m2 m1 -> v_m1
@@ -420,7 +420,7 @@ rule or_ : BitOr (v1, v2) =
         new_tail ++ base
   | of_bools: BvOfBool (n, b1) lor BvOfBool (_, b2) -> of_bool n (b1 || b2)
 
-rule xor : BitXor (v1, v2) =
+rule xor : BitXor (v1, v2) [@lean_proofs "Arith"] =
   | zero: x lxor 0 -> x
   | of_bools: BvOfBool (n, b1) lxor BvOfBool (_, b2) ->
       of_bool n (not (b1 == b2))
@@ -429,7 +429,7 @@ rule xor : BitXor (v1, v2) =
    [to_], inclusive. [0 <= from_ <= to_ < size v] must hold. The width is
    [size v], not a sort annotation [(v : TBitVector sz)] on the spec, which makes
    [kanon ocaml-tests] list this rule function as one rule. *)
-rule extract : BvExtract (from_, to_, v) =
+rule extract : BvExtract (from_, to_, v) [@lean_proofs "Resize"] =
   | full: _ when from_ = 0 && to_ = size v - 1 -> v
   | and_: v1 land v2 -> extract from_ to_ v1 land extract from_ to_ v2
   | or_: v1 lor v2 -> extract from_ to_ v1 lor extract from_ to_ v2
@@ -506,7 +506,7 @@ rule extract : BvExtract (from_, to_, v) =
     when from_ = 0 && is_pow2 n && log2 n < to_ ->
       extract from_ to_ l urem mk_bv (to_ - from_ + 1) (lit_extract from_ to_ (type_of v) n)
 
-rule extend_ : BvExtend (signed, extend_by, v) =
+rule extend_ : BvExtend (signed, extend_by, v) [@lean_proofs "Resize"] =
   | zero: _ when extend_by = 0 -> v
   | lit: #bv ->
       mk_bv (size v + extend_by)
@@ -523,7 +523,7 @@ rule extend_ : BvExtend (signed, extend_by, v) =
 (* [concat v1 v2] for [v1] of size [n] and [v2] of size [m] is a bitvector
    of size [n + m] where the first [m] bits are [v2] and the following [n] are
    [v1] *)
-rule concat : BvConcat (v1, v2) =
+rule concat : BvConcat (v1, v2) [@lean_proofs "Resize"] =
   | extracts: BvExtract (from1, to1, v) ++ BvExtract (from2, to2, v)
     when to2 + 1 = from1 ->
       extract from2 to1 v
@@ -537,7 +537,7 @@ rule concat : BvConcat (v1, v2) =
       left ++ (right ++ v2)
   | ites: Ite (b, l1, r1) ++ Ite (b, l2, r2) -> Bool.ite b (l1 ++ l2) (r1 ++ r2)
 
-rule shl : Shl (v1, v2) =
+rule shl : Shl (v1, v2) [@lean_proofs "Resize"] =
   | zero: _ lsl 0 -> v1
   | big: _ lsl #s when s >= size v1 -> bv_zero (size v1)
   | shl: (v lsl #s1) lsl #s2 ->
@@ -561,7 +561,7 @@ rule shl : Shl (v1, v2) =
   | or_mask: (x lor #mask) lsl #s ->
       (x lsl v2) lor mk_bv (size v1) (lit_shl (type_of v1) (type_of v1) mask s)
 
-rule lshr : LShr (v1, v2) =
+rule lshr : LShr (v1, v2) [@lean_proofs "Resize"] =
   | zero: _ lsr 0 -> v1
   | big: _ lsr #s when s >= size v1 -> bv_zero (size v1)
   | lshr: (v lsr #s1) lsr #s2 ->
@@ -572,7 +572,7 @@ rule lshr : LShr (v1, v2) =
   | or_mask: (x lor #mask) lsr #s ->
       (x lsr v2) lor mk_bv (size v1) (lit_lshr (type_of v1) (type_of v1) mask s)
 
-rule ashr : AShr (v1, v2) =
+rule ashr : AShr (v1, v2) [@lean_proofs "Resize"] =
   | zero: _ asr 0 -> v1
   | big: _ asr #s when s >= size v1 ->
       let sz = size v1 in
@@ -581,7 +581,7 @@ rule ashr : AShr (v1, v2) =
       let sz = size v1 in
       v asr mk_masked sz (zmin (s1 + s2) (sz - 1))
 
-rule mul : Mul (checked, v1, v2) =
+rule mul : Mul (checked, v1, v2) [@lean_proofs "Arith"] =
   | one: x * 1 -> x
   | zero: x * 0 -> bv_zero (size x)
   (* c * (-x) = (-c) * x (holds mod 2^n); with a checked negation (x <>
@@ -602,7 +602,7 @@ rule mul : Mul (checked, v1, v2) =
   (* only propagate down ites if we know it's concrete *)
   | ite: Ite (b, l, r) * (#_ as x) -> Bool.ite b (l * x) (r * x)
 
-rule div : Div (signed, v1, v2) =
+rule div : Div (signed, v1, v2) [@lean_proofs "Resize"] =
   | lits: #l, #r ->
       mk_bv (size v1)
         (if signed then lit_sdiv (type_of v1) (type_of v2) l r
@@ -665,7 +665,7 @@ fn cancellable (signed : bool) (a : t) : bool =
   if signed then (match a with BitVec z -> to_z true (size a) z > 0 | _ -> false)
   else Bool.sure_neq a (bv_zero (size a))
 
-rule lt_zero (v : t) : Lt (true, v, bv_zero (size v)) =
+rule lt_zero (v : t) : Lt (true, v, bv_zero (size v)) [@lean_proofs "Compare"] =
   | sext: BvExtend (true, _, x) -> lt_zero x
   | zext: BvExtend (false, k, _) when k > 0 -> Bool.v_false
   | srem: l srem _ ->
@@ -678,7 +678,7 @@ rule lt_zero (v : t) : Lt (true, v, bv_zero (size v)) =
       let pos_r = lt_zero r in
       if pos_l = pos_r then pos_l else Lt (true, v, bv_zero (size v))
 
-rule lt : Lt (signed, v1, v2) =
+rule lt : Lt (signed, v1, v2) [@lean_proofs "CompareLt"] =
   | lits: #l, #r ->
       Bool.of_bool (to_z signed (size v1) l < to_z signed (size v1) r)
   | same: v, v -> Bool.v_false
@@ -801,7 +801,7 @@ rule lt : Lt (signed, v1, v2) =
   | to_unsigned_r: _, #c when signed && is_checked_unsigned_op v1 ->
       signed_to_unsigned_cmp false false c v1 v2
 
-rule leq : Leq (signed, v1, v2) =
+rule leq : Leq (signed, v1, v2) [@lean_proofs "CompareLeq"] =
   | same: v, v -> Bool.v_true
   | lits: #l, #r ->
       Bool.of_bool (to_z signed (size v1) l <= to_z signed (size v1) r)
@@ -947,7 +947,7 @@ fn signed_to_unsigned_cmp (is_leq c_on_left : bool) (c : int) (v1 v2 : t) : t =
 
 (* Overflow checks *)
 
-rule add_overflows : AddOvf (signed, v1, v2) =
+rule add_overflows : AddOvf (signed, v1, v2) [@lean_proofs "Arith"] =
   | zero: 0, _ -> Bool.v_false
   | size1: _ when size v1 = 1 ->
       let one = bv_one 1 in
@@ -974,7 +974,7 @@ rule add_overflows : AddOvf (signed, v1, v2) =
       let n = size other in
       b && other == mk_masked n (max_for signed n)
 
-rule mul_overflows : MulOvf (signed, v1, v2) =
+rule mul_overflows : MulOvf (signed, v1, v2) [@lean_proofs "Arith"] =
   | size1: _ when signed && size v1 = 1 ->
       (* We need to special-case size one because the other simplifications will
          mess with that case, and it's pretty easy to simplify. *)
@@ -1012,10 +1012,10 @@ rule mul_overflows : MulOvf (signed, v1, v2) =
   | div: x, Div (false, _, x) when not signed -> Bool.v_false
 
 rule neg_overflows (v : t) :
-    Eq (mk_masked (size v) (min_for true (size v)), v) =
+    Eq (mk_masked (size v) (min_for true (size v)), v) [@lean_proofs "Arith"] =
   mk_masked (size v) (min_for true (size v)) == v
 
-rule sub_overflows : SubOvf (signed, v1, v2) =
+rule sub_overflows : SubOvf (signed, v1, v2) [@lean_proofs "Arith"] =
   | same: v, v -> Bool.v_false
   | unsigned: _ when not signed -> lt signed v1 v2
 

@@ -17,10 +17,6 @@ open Classical Kanon
 
 set_option linter.unusedSimpArgs false
 
-attribute [kanon_tactic "rs_auto"] Bitvec.shl.spec Bitvec.lshr.spec Bitvec.ashr.spec
-  Bitvec.extract.spec Bitvec.extend_.spec Bitvec.concat.spec Bitvec.div.spec Bitvec.rem.spec
-  Bitvec.mod_.spec
-
 /-! ## `mod_` -/
 
 /-! ## `rem` -/

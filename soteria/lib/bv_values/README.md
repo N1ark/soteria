@@ -134,15 +134,19 @@ generated) and the instances of their `Sem` classes (`Kanon/Lang/M.lean`), and
 only instantiates the module's `M/Soundness/M/f.lean`.
 
 An arm of a module is proved by the theorem tagged `@[kanon_arm]` that proves
-`M.f.r_name.arm.Stmt` in `M/Proofs/M/f.lean` (the commutativity of the
-operators in `M/Proofs/Laws.lean`), if there is one; or else by the tactic
-given to its function by `attribute [kanon_tactic tac] M.f.spec`, in the
-module's library (`M/Lib/`), or else by the default tactic of the module
-(`M/Lib/Rule.lean`, `bv_rule`). The arms of `Bitvec.lt` and `Bitvec.leq` have a
-larger bound on heartbeats (`[@lean_heartbeats]` in `rules/bitvec.kn`). The
-integers of the bit-vector literals are related to Lean's `BitVec` by
-`BitvecMod/Lib/LitOps.lean` (the primitives `lit_add`, ..., are defined as the
-OCaml ones, on integers) and `BitvecMod/Lib/Ovf.lean`.
+`M.f.r_name.arm.Stmt`, if there is one, or else by the tactic given to its
+function by `attribute [kanon_tactic tac] M.f.spec`, or else by the default
+tactic. The hand proofs of a module are in `M/Proofs.lean`, or, for the bitvec
+module, in `BitvecMod/Proofs/*.lean` by theme (`Arith`, `Resize`, `Compare`,
+`CompareLt`, `CompareLeq`, `BoolEq`) with their lemmas and tactics in
+`Proofs/*Lib.lean`: `[@lean_proofs "Arith"]` on a rule in `rules/bitvec.kn`
+makes the proofs of its function import `BitvecMod/Proofs/Arith.lean` only, so
+editing one file rebuilds only the functions it proves. The commutativity, which
+every function imports, and the cases that the module adds to the functions of
+`bool` import `BitvecMod/Proofs.lean`, which does not import the proofs of the
+bitvec functions. The integers of the bit-vector literals are related to Lean's
+`BitVec` by `BitvecMod/LitOps.lean` (the primitives `lit_add`, ..., are defined
+as the OCaml ones, on integers).
 
 To check it, in `lean/` (needs Lean through `elan`):
 

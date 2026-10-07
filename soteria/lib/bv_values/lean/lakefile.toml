@@ -3,11 +3,11 @@ defaultTargets = ["Kanon"]
 
 # The Lean library of Kanon, which the generated proofs build on
 # (run `lake update kanon` after changing the revision).
-# [versionsync: KANON_LEAN_COMMIT_HASH=dd0e91232176ede8f037289899bef34161e04172]
+# [versionsync: KANON_LEAN_COMMIT_HASH=5033c899192a05bf117835f3e20caf6c9911035b]
 [[require]]
 name = "kanon"
 git = "https://github.com/N1ark/kanon"
-rev = "dd0e91232176ede8f037289899bef34161e04172"
+rev = "5033c899192a05bf117835f3e20caf6c9911035b"
 subDir = "lean"
 
 [[lean_lib]]

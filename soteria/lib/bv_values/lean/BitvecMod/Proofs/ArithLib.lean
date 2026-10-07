@@ -1556,4 +1556,18 @@ macro "bv_arith" : tactic => `(tactic| (
     bv_arith_sem_core
     all_goals bv_arith_close)))
 
+/-! ## The functions that `bv_arith` proves, and the commutativity of `AddOvf` and `MulOvf`
+
+Here, not in `Proofs/Arith.lean`: the commutativity (that of `Add` and `Mul` is in
+`Proofs/Common.lean`), which every function imports, imports `Proofs.lean`, which does not
+import the proofs of the functions. -/
+
+attribute [kanon_tactic "bv_arith"] Bitvec.add.spec Bitvec.sub.spec Bitvec.mul.spec
+  Bitvec.neg.spec Bitvec.not_.spec Bitvec.and_.spec Bitvec.or_.spec Bitvec.xor.spec
+  Bitvec.of_bool.spec Bitvec.to_bool.spec Bitvec.not_bool.spec Bitvec.add_overflows.spec
+  Bitvec.sub_overflows.spec Bitvec.mul_overflows.spec Bitvec.neg_overflows.spec
+
+@[kanon_arm] theorem AddOvf.comm.proof : AddOvf.comm.Stmt := by bv_arith
+@[kanon_arm] theorem MulOvf.comm.proof : MulOvf.comm.Stmt := by bv_arith
+
 end BitvecMod

@@ -1342,4 +1342,8 @@ macro "rs_auto_fwd" : tactic => `(tactic| rs_auto_with rs_sem_fwd)
 forward value half would fail on them, after doing most of the work). -/
 macro "rs_auto_sem" : tactic => `(tactic| rs_auto_with rs_sem)
 
+attribute [kanon_tactic "rs_auto"] Bitvec.shl.spec Bitvec.lshr.spec Bitvec.ashr.spec
+  Bitvec.extract.spec Bitvec.extend_.spec Bitvec.concat.spec Bitvec.div.spec Bitvec.rem.spec
+  Bitvec.mod_.spec
+
 end BitvecMod

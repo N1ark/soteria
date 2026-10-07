@@ -575,6 +575,13 @@ theorem ckOp_comm {n : Nat} (c : CoreMod.Checked) {so uo : BitVec n → BitVec n
     ckOp c so uo f x y = ckOp c so uo f y x := by
   cases x <;> cases y <;> simp only [ckOp, hs, hu, hf]
 
+/-- Closes a goal whose context holds `¬True`, `false = true` or `true = false` (the
+branches of the conditionals on constants that the lifting of an arm splits). -/
+macro "bv_vacuous" : tactic => `(tactic| first
+  | exact absurd trivial ‹¬True›
+  | exact absurd ‹false = true› Bool.false_ne_true
+  | exact absurd ‹true = false› Bool.true_ne_false)
+
 /-- A refinement between two nodes of the same type with the same typing and values. -/
 theorem comm_refines {S : Kanon.Sem} [KanonBool.Lang S] [CoreMod.Lang S] [Lang S]
     {n m : Node S.Term} {t : S.Ty} (hw : S.WT (mk n t) → S.WT (mk m t))

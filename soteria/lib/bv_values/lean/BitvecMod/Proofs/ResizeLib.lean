@@ -1317,6 +1317,7 @@ macro "rs_auto_with " sem:tactic : tactic => `(tactic| (
   (try intro _)
   intros
   kanon_rule_lift
+  all_goals (try bv_vacuous)
   all_goals (try rs_pow2)
   all_goals (try (
     (try simp only [] ) <;> (repeat' bv_rs_split_decide) <;> (try rs_lift_body) <;> (try simp only [kanon_spec, kanon_body]) <;>

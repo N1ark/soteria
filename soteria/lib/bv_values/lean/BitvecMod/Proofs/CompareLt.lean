@@ -1,5 +1,5 @@
 import BitvecMod.Proofs.CompareLib
-import BitvecMod.Proofs.CompareMul
+import BitvecMod.Proofs.CompareConst
 import BitvecMod.Proofs.IteLib
 import BitvecMod.Statements.Bitvec.lt
 
@@ -63,20 +63,30 @@ commutativity of `Add`. -/
     simp only [Bitvec.size, ty_mk]
     (repeat' apply Kanon.Refinement.ite_congr) <;> first | exact Kanon.Sem.Refines.refl | kanon_congr
 
-@[kanon_arm] theorem Bitvec.lt.r_add_const.main.proof : Bitvec.lt.r_add_const.main.Stmt := by cmp_rule
+@[kanon_arm] theorem Bitvec.lt.r_add_const.main.proof : Bitvec.lt.r_add_const.main.Stmt := by
+  intro S _ _ _ _ _ _ O hO signed checked l _ x _ c _ hg
+  cc_arm
 
-@[kanon_arm] theorem Bitvec.lt.r_add_const.swap.proof : Bitvec.lt.r_add_const.swap.Stmt := by cmp_rule
+@[kanon_arm] theorem Bitvec.lt.r_add_const.swap.proof : Bitvec.lt.r_add_const.swap.Stmt := by
+  intro S _ _ _ _ _ _ O hO signed checked x l _ _ c _ hg
+  cc_arm
 
-@[kanon_arm] theorem Bitvec.lt.r_const_add.main.proof : Bitvec.lt.r_const_add.main.Stmt := by cmp_rule
+@[kanon_arm] theorem Bitvec.lt.r_const_add.main.proof : Bitvec.lt.r_const_add.main.Stmt := by
+  intro S _ _ _ _ _ _ O hO signed c _ checked r _ x _ hg
+  cc_arm
 
 /-- `c2 < x * c1`: `x` against the truncated quotient `c2 / c1` (`CompareMul.lean`). -/
 @[kanon_arm] theorem Bitvec.lt.r_const_mul.main.proof : Bitvec.lt.r_const_mul.main.Stmt := by
   intro S _ _ _ _ _ _ O hO signed c2 t2 checked x c1 t7 t9 hg
   mul_arm lt_cm_wt lt_cm_lhs
 
-@[kanon_arm] theorem Bitvec.lt.r_const_sub1.main.proof : Bitvec.lt.r_const_sub1.main.Stmt := by cmp_rule
+@[kanon_arm] theorem Bitvec.lt.r_const_sub1.main.proof : Bitvec.lt.r_const_sub1.main.Stmt := by
+  intro S _ _ _ _ _ _ O hO signed c _ checked x k _ _ hg
+  cc_arm
 
-@[kanon_arm] theorem Bitvec.lt.r_const_sub2.main.proof : Bitvec.lt.r_const_sub2.main.Stmt := by cmp_rule
+@[kanon_arm] theorem Bitvec.lt.r_const_sub2.main.proof : Bitvec.lt.r_const_sub2.main.Stmt := by
+  intro S _ _ _ _ _ _ O hO signed c _ checked k _ x _ hg
+  cc_arm
 
 @[kanon_arm] theorem Bitvec.lt.r_ite_l.main.proof : Bitvec.lt.r_ite_l.main.Stmt := by
   bv_ite_arm
@@ -146,9 +156,13 @@ commutativity of `Add`. -/
 
 @[kanon_arm] theorem Bitvec.lt.r_self_add_r.main.proof : Bitvec.lt.r_self_add_r.main.Stmt := by cmp_rule
 
-@[kanon_arm] theorem Bitvec.lt.r_sub_const1.main.proof : Bitvec.lt.r_sub_const1.main.Stmt := by cmp_rule
+@[kanon_arm] theorem Bitvec.lt.r_sub_const1.main.proof : Bitvec.lt.r_sub_const1.main.Stmt := by
+  intro S _ _ _ _ _ _ O hO signed checked x k _ _ c _ hg
+  cc_arm
 
-@[kanon_arm] theorem Bitvec.lt.r_sub_const2.main.proof : Bitvec.lt.r_sub_const2.main.Stmt := by cmp_rule
+@[kanon_arm] theorem Bitvec.lt.r_sub_const2.main.proof : Bitvec.lt.r_sub_const2.main.Stmt := by
+  intro S _ _ _ _ _ _ O hO signed checked k _ x _ c _ hg
+  cc_arm
 
 @[kanon_arm] theorem Bitvec.lt.r_to_unsigned_l.main.proof : Bitvec.lt.r_to_unsigned_l.main.Stmt := by
   intro S _ _ _ _ _ _ O hO s v c t hg

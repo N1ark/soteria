@@ -1,4 +1,4 @@
-import BitvecMod.Proofs.CompareLib
+import BitvecMod.Proofs.CompareBound
 import BitvecMod.Statements.Bitvec.lt_zero
 import BitvecMod.Statements.Bool.and_
 import BitvecMod.Statements.Bool.eq
@@ -181,7 +181,7 @@ theorem cmp_extracts_neg_a {n k m c s p : Nat} {X : BitVec n} {a : BitVec k} {b 
     refine Kanon.Sem.Refines.intro ?_ ?_
     · cmp_wt
       all_goals refine ⟨⟨_, ?_, _, ?_, rfl, rfl, rfl⟩, ?_⟩ <;> omega
-    · cmp_sem
+    · cmp_sem_pre
       all_goals first
         | exact cmp_extracts_pos (by omega) (by assumption) (by assumption) (by omega)
         | exact cmp_extracts_neg_b (by assumption)
@@ -202,21 +202,21 @@ theorem cmp_extracts_neg_a {n k m c s p : Nat} {X : BitVec n} {a : BitVec k} {b 
 
 @[kanon_arm] theorem Bitvec.lt_zero.r_zext.main.proof : Bitvec.lt_zero.r_zext.main.Stmt := by cmp_msb_rule
 
-@[kanon_arm] theorem Bool.and_.r_lower_bounds.leq_leq.proof : Bool.and_.r_lower_bounds.leq_leq.Stmt := by cmp_auto
+@[kanon_arm] theorem Bool.and_.r_lower_bounds.leq_leq.proof : Bool.and_.r_lower_bounds.leq_leq.Stmt := by bnd_arm
 
-@[kanon_arm] theorem Bool.and_.r_lower_bounds.leq_lt.proof : Bool.and_.r_lower_bounds.leq_lt.Stmt := by cmp_auto
+@[kanon_arm] theorem Bool.and_.r_lower_bounds.leq_lt.proof : Bool.and_.r_lower_bounds.leq_lt.Stmt := by bnd_arm
 
-@[kanon_arm] theorem Bool.and_.r_lower_bounds.lt_leq.proof : Bool.and_.r_lower_bounds.lt_leq.Stmt := by cmp_auto
+@[kanon_arm] theorem Bool.and_.r_lower_bounds.lt_leq.proof : Bool.and_.r_lower_bounds.lt_leq.Stmt := by bnd_arm
 
-@[kanon_arm] theorem Bool.and_.r_lower_bounds.lt_lt.proof : Bool.and_.r_lower_bounds.lt_lt.Stmt := by cmp_auto
+@[kanon_arm] theorem Bool.and_.r_lower_bounds.lt_lt.proof : Bool.and_.r_lower_bounds.lt_lt.Stmt := by bnd_arm
 
-@[kanon_arm] theorem Bool.and_.r_upper_bounds.leq_leq.proof : Bool.and_.r_upper_bounds.leq_leq.Stmt := by cmp_auto
+@[kanon_arm] theorem Bool.and_.r_upper_bounds.leq_leq.proof : Bool.and_.r_upper_bounds.leq_leq.Stmt := by bnd_arm
 
-@[kanon_arm] theorem Bool.and_.r_upper_bounds.leq_lt.proof : Bool.and_.r_upper_bounds.leq_lt.Stmt := by cmp_auto
+@[kanon_arm] theorem Bool.and_.r_upper_bounds.leq_lt.proof : Bool.and_.r_upper_bounds.leq_lt.Stmt := by bnd_arm
 
-@[kanon_arm] theorem Bool.and_.r_upper_bounds.lt_leq.proof : Bool.and_.r_upper_bounds.lt_leq.Stmt := by cmp_auto
+@[kanon_arm] theorem Bool.and_.r_upper_bounds.lt_leq.proof : Bool.and_.r_upper_bounds.lt_leq.Stmt := by bnd_arm
 
-@[kanon_arm] theorem Bool.and_.r_upper_bounds.lt_lt.proof : Bool.and_.r_upper_bounds.lt_lt.Stmt := by cmp_auto
+@[kanon_arm] theorem Bool.and_.r_upper_bounds.lt_lt.proof : Bool.and_.r_upper_bounds.lt_lt.Stmt := by bnd_arm
 
 @[kanon_arm] theorem Bool.eq.r_add_add.main.proof : Bool.eq.r_add_add.main.Stmt := by cmp_auto
 
@@ -271,40 +271,40 @@ theorem cmp_extracts_neg_a {n k m c s p : Nat} {X : BitVec n} {a : BitVec k} {b 
 
 @[kanon_arm] theorem Bool.not_.r_lt.main.proof : Bool.not_.r_lt.main.Stmt := by cmp_auto
 
-@[kanon_arm] theorem Bool.or_.r_complementary.leq_leq.proof : Bool.or_.r_complementary.leq_leq.Stmt := by cmp_auto
+@[kanon_arm] theorem Bool.or_.r_complementary.leq_leq.proof : Bool.or_.r_complementary.leq_leq.Stmt := by bnd_arm
 
-@[kanon_arm] theorem Bool.or_.r_complementary.leq_lt.proof : Bool.or_.r_complementary.leq_lt.Stmt := by cmp_auto
+@[kanon_arm] theorem Bool.or_.r_complementary.leq_lt.proof : Bool.or_.r_complementary.leq_lt.Stmt := by bnd_arm
 
-@[kanon_arm] theorem Bool.or_.r_complementary.lt_leq.proof : Bool.or_.r_complementary.lt_leq.Stmt := by cmp_auto
+@[kanon_arm] theorem Bool.or_.r_complementary.lt_leq.proof : Bool.or_.r_complementary.lt_leq.Stmt := by bnd_arm
 
-@[kanon_arm] theorem Bool.or_.r_complementary.lt_lt.proof : Bool.or_.r_complementary.lt_lt.Stmt := by cmp_auto
+@[kanon_arm] theorem Bool.or_.r_complementary.lt_lt.proof : Bool.or_.r_complementary.lt_lt.Stmt := by bnd_arm
 
-@[kanon_arm] theorem Bool.or_.r_lower_bounds.leq_leq.proof : Bool.or_.r_lower_bounds.leq_leq.Stmt := by cmp_auto
+@[kanon_arm] theorem Bool.or_.r_lower_bounds.leq_leq.proof : Bool.or_.r_lower_bounds.leq_leq.Stmt := by bnd_arm
 
-@[kanon_arm] theorem Bool.or_.r_lower_bounds.leq_lt.proof : Bool.or_.r_lower_bounds.leq_lt.Stmt := by cmp_auto
+@[kanon_arm] theorem Bool.or_.r_lower_bounds.leq_lt.proof : Bool.or_.r_lower_bounds.leq_lt.Stmt := by bnd_arm
 
-@[kanon_arm] theorem Bool.or_.r_lower_bounds.lt_leq.proof : Bool.or_.r_lower_bounds.lt_leq.Stmt := by cmp_auto
+@[kanon_arm] theorem Bool.or_.r_lower_bounds.lt_leq.proof : Bool.or_.r_lower_bounds.lt_leq.Stmt := by bnd_arm
 
-@[kanon_arm] theorem Bool.or_.r_lower_bounds.lt_lt.proof : Bool.or_.r_lower_bounds.lt_lt.Stmt := by cmp_auto
+@[kanon_arm] theorem Bool.or_.r_lower_bounds.lt_lt.proof : Bool.or_.r_lower_bounds.lt_lt.Stmt := by bnd_arm
 
-@[kanon_arm] theorem Bool.or_.r_lower_eq.leq.proof : Bool.or_.r_lower_eq.leq.Stmt := by cmp_auto
+@[kanon_arm] theorem Bool.or_.r_lower_eq.leq.proof : Bool.or_.r_lower_eq.leq.Stmt := by bnd_arm
 
-@[kanon_arm] theorem Bool.or_.r_lower_eq.lt.proof : Bool.or_.r_lower_eq.lt.Stmt := by cmp_auto
+@[kanon_arm] theorem Bool.or_.r_lower_eq.lt.proof : Bool.or_.r_lower_eq.lt.Stmt := by bnd_arm
 
 @[kanon_arm] theorem Bool.or_.r_lt_leq.main.proof : Bool.or_.r_lt_leq.main.Stmt := by cmp_auto
 
 @[kanon_arm] theorem Bool.or_.r_lt_lt.main.proof : Bool.or_.r_lt_lt.main.Stmt := by cmp_auto
 
-@[kanon_arm] theorem Bool.or_.r_upper_bounds.leq_leq.proof : Bool.or_.r_upper_bounds.leq_leq.Stmt := by cmp_auto
+@[kanon_arm] theorem Bool.or_.r_upper_bounds.leq_leq.proof : Bool.or_.r_upper_bounds.leq_leq.Stmt := by bnd_arm
 
-@[kanon_arm] theorem Bool.or_.r_upper_bounds.leq_lt.proof : Bool.or_.r_upper_bounds.leq_lt.Stmt := by cmp_auto
+@[kanon_arm] theorem Bool.or_.r_upper_bounds.leq_lt.proof : Bool.or_.r_upper_bounds.leq_lt.Stmt := by bnd_arm
 
-@[kanon_arm] theorem Bool.or_.r_upper_bounds.lt_leq.proof : Bool.or_.r_upper_bounds.lt_leq.Stmt := by cmp_auto
+@[kanon_arm] theorem Bool.or_.r_upper_bounds.lt_leq.proof : Bool.or_.r_upper_bounds.lt_leq.Stmt := by bnd_arm
 
-@[kanon_arm] theorem Bool.or_.r_upper_bounds.lt_lt.proof : Bool.or_.r_upper_bounds.lt_lt.Stmt := by cmp_auto
+@[kanon_arm] theorem Bool.or_.r_upper_bounds.lt_lt.proof : Bool.or_.r_upper_bounds.lt_lt.Stmt := by bnd_arm
 
-@[kanon_arm] theorem Bool.or_.r_upper_eq.leq.proof : Bool.or_.r_upper_eq.leq.Stmt := by cmp_auto
+@[kanon_arm] theorem Bool.or_.r_upper_eq.leq.proof : Bool.or_.r_upper_eq.leq.Stmt := by bnd_arm
 
-@[kanon_arm] theorem Bool.or_.r_upper_eq.lt.proof : Bool.or_.r_upper_eq.lt.Stmt := by cmp_auto
+@[kanon_arm] theorem Bool.or_.r_upper_eq.lt.proof : Bool.or_.r_upper_eq.lt.Stmt := by bnd_arm
 
 end BitvecMod

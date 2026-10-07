@@ -1334,7 +1334,8 @@ macro "cmp_norm" : tactic => `(tactic| (
   cmp_widths))
 
 set_option hygiene false in
-macro "cmp_sem" : tactic => `(tactic| (
+/-- The value half, reduced to the values of the atoms (without the closers of `cmp_sem`). -/
+macro "cmp_sem_pre" : tactic => `(tactic| (
   cmp_sem_core
   cmp_norm
   cmp_norm
@@ -1342,7 +1343,11 @@ macro "cmp_sem" : tactic => `(tactic| (
     true_and, false_and, and_false, and_true, or_false, false_or, decide_eq_true_eq,
     decide_eq_false_iff_not, Bool.decide_eq_true, Bool.decide_eq_false, BitvecMod.cmp_true_eq, BitvecMod.cmp_false_eq, BitvecMod.cmp_append_inj] at *)
   all_goals (try cmp_norm_bv_types)
-  all_goals (try cmp_clear_arith_eqs)
+  all_goals (try cmp_clear_arith_eqs)))
+
+set_option hygiene false in
+macro "cmp_sem" : tactic => `(tactic| (
+  cmp_sem_pre
   all_goals first
     | kanon_close
     | (cmpo_omega; done)
@@ -1362,6 +1367,7 @@ macro "cmp_wt" : tactic => `(tactic| (
 /-- Proves an arm, as far as it can. -/
 macro "cmp_rule" : tactic => `(tactic| (
   kanon_rule_lift
+  all_goals (try bv_vacuous)
   all_goals (try simp only [BitvecMod.proj_mk, KanonBool.proj_mk, Kanon.firstSome_some,
     Kanon.firstSome_none, Kanon.firstSome_nil', Option.getD_some, Option.getD_none,
     BitvecMod.proj_Bool_mk_Bitvec, BitvecMod.proj_Bitvec_mk_Bool, reduceCtorEq] at *)
@@ -1406,6 +1412,7 @@ macro "cmp_msb_sem" : tactic => `(tactic| (
 /-- Proves an arm of a sign test, as far as it can. -/
 macro "cmp_msb_rule" : tactic => `(tactic| (
   kanon_rule_lift
+  all_goals (try bv_vacuous)
   all_goals (try simp only [BitvecMod.proj_mk, KanonBool.proj_mk, Kanon.firstSome_some,
     Kanon.firstSome_none, Kanon.firstSome_nil', Option.getD_some, Option.getD_none,
     BitvecMod.proj_Bool_mk_Bitvec, BitvecMod.proj_Bitvec_mk_Bool, reduceCtorEq] at *)
@@ -1437,6 +1444,7 @@ namespace BitvecMod
 /-- The lifting of an arm, its guards reduced and its conditionals split. -/
 macro "cmp_lift" : tactic => `(tactic| (
   kanon_rule_lift
+  all_goals (try bv_vacuous)
   all_goals (try simp only [BitvecMod.proj_mk, KanonBool.proj_mk, Kanon.firstSome_some,
     Kanon.firstSome_none, Kanon.firstSome_nil', Option.getD_some, Option.getD_none,
     BitvecMod.proj_Bool_mk_Bitvec, BitvecMod.proj_Bitvec_mk_Bool, reduceCtorEq] at *)

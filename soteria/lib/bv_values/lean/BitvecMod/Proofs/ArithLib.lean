@@ -1542,6 +1542,7 @@ macro "bv_arith" : tactic => `(tactic| (
   (try intro _)
   intros
   kanon_rule_lift
+  all_goals (try bv_vacuous)
   all_goals kanon_on_refines (
     (try dsimp only)
     bv_split_ifs
@@ -1555,6 +1556,207 @@ macro "bv_arith" : tactic => `(tactic| (
     · bv_arith_wt
     bv_arith_sem_core
     all_goals bv_arith_close)))
+
+/-! ## The folding of constants (`add`/`sub` `.r_add_const` and the others)
+
+A sum or difference of a term `x` and of two constants `k1`, `k2` is that of `x` and of the
+constant that folds `k1` and `k2`, checked in the signedness of both operations when the folding
+does not overflow (`Bitvec.fold_checked`): the `fold_*` lemmas give the non-overflow of the
+folded operation, in each signedness, from that of the two operations of the term; `bv_fold`
+proves the arms with them. -/
+
+/-- The proof of a `fold_*` lemma: integers, from the non-overflow hypotheses. -/
+macro "bv_fold_lemma" : tactic => `(tactic| (
+  rw [Bool.and_eq_false_imp]
+  intro h3
+  simp only [Bool.not_eq_eq_eq_not, Bool.not_true] at h3
+  bv_arith_ovf_eqs
+  simp only [sadd_ok, ssub_ok, uadd_ok, usub_ok] at *
+  omega))
+
+section
+variable {n : Nat}
+
+/-! The tests of the overflow of two constants, as the rules write them. -/
+
+theorem sovf_cond (a b : BitVec n) :
+    (!(decide (a.toInt + b.toInt < -2 ^ (n - 1)) || decide (a.toInt + b.toInt > 2 ^ (n - 1) - 1))) =
+      !a.saddOverflow b := by
+  cases h : a.saddOverflow b <;> simp only [sadd_ok, ← Arith.sadd_ovf_fold] at h <;> simp <;>
+    omega
+
+theorem ssub_cond (a b : BitVec n) :
+    (!(decide (a.toInt - b.toInt < -2 ^ (n - 1)) || decide (a.toInt - b.toInt > 2 ^ (n - 1) - 1))) =
+      !a.ssubOverflow b := by
+  cases h : a.ssubOverflow b <;> simp only [ssub_ok, ← Arith.ssub_ovf_fold] at h <;> simp <;>
+    omega
+
+theorem uovf_cond {k1 k2 : Int} (h0 : 0 ≤ k1) (h1 : k1 < 2 ^ n) (h2 : 0 ≤ k2)
+    (h3 : k2 < 2 ^ n) :
+    (!(decide (k1 + k2 < 0) || decide (k1 + k2 > 2 ^ n - 1))) =
+      !(BitVec.ofInt n k1).uaddOverflow (BitVec.ofInt n k2) := by
+  have e1 := toNat_ofInt_of_lt h0 h1
+  have e2 := toNat_ofInt_of_lt h2 h3
+  simp only [BitVec.uaddOverflow, e1, e2]
+  rw [Bool.eq_iff_iff]
+  simp only [Bool.or_eq_false_iff, decide_eq_false_iff_not, Bool.not_eq_eq_eq_not, Bool.not_true]
+  have : ((2 ^ n : Nat) : Int) = 2 ^ n := by push_cast; rfl
+  omega
+
+theorem usub_cond {k1 k2 : Int} (h0 : 0 ≤ k1) (h1 : k1 < 2 ^ n) (h2 : 0 ≤ k2)
+    (h3 : k2 < 2 ^ n) :
+    (!(decide (k1 - k2 < 0) || decide (k1 - k2 > 2 ^ n - 1))) =
+      !(BitVec.ofInt n k1).usubOverflow (BitVec.ofInt n k2) := by
+  have e1 := toNat_ofInt_of_lt h0 h1
+  have e2 := toNat_ofInt_of_lt h2 h3
+  simp only [BitVec.usubOverflow, e1, e2]
+  rw [Bool.eq_iff_iff]
+  simp only [Bool.or_eq_false_iff, decide_eq_false_iff_not, Bool.not_eq_eq_eq_not, Bool.not_true]
+  have : ((2 ^ n : Nat) : Int) = 2 ^ n := by push_cast; rfl
+  omega
+
+variable {a b x : BitVec n}
+
+/-! The non-overflow of a folded operation (`s`: signed, `u`: unsigned). -/
+
+theorem fold_s_add_add (h1 : a.saddOverflow x = false) (h2 : (a + x).saddOverflow b = false) :
+    (!a.saddOverflow b && (a + b).saddOverflow x) = false := by bv_fold_lemma
+
+theorem fold_u_add_add (h1 : a.uaddOverflow x = false) (h2 : (a + x).uaddOverflow b = false) :
+    (!a.uaddOverflow b && (a + b).uaddOverflow x) = false := by bv_fold_lemma
+
+theorem fold_s_sub_add (h1 : a.ssubOverflow x = false) (h2 : (a - x).saddOverflow b = false) :
+    (!a.saddOverflow b && (a + b).ssubOverflow x) = false := by bv_fold_lemma
+
+theorem fold_u_sub_add (h1 : a.usubOverflow x = false) (_h2 : (a - x).uaddOverflow b = false) :
+    (!a.uaddOverflow b && (a + b).usubOverflow x) = false := by bv_fold_lemma
+
+theorem fold_s_subr_add (h1 : x.ssubOverflow a = false) (h2 : (x - a).saddOverflow b = false) :
+    (!b.ssubOverflow a && x.saddOverflow (b - a)) = false := by bv_fold_lemma
+
+theorem fold_u_subr_add (h1 : x.usubOverflow a = false) (h2 : (x - a).uaddOverflow b = false) :
+    (!b.usubOverflow a && x.uaddOverflow (b - a)) = false := by bv_fold_lemma
+
+theorem fold_s_sub_sub (h1 : a.ssubOverflow x = false) (h2 : (a - x).ssubOverflow b = false) :
+    (!a.ssubOverflow b && (a - b).ssubOverflow x) = false := by bv_fold_lemma
+
+theorem fold_u_sub_sub (h1 : a.usubOverflow x = false) (h2 : (a - x).usubOverflow b = false) :
+    (!a.usubOverflow b && (a - b).usubOverflow x) = false := by bv_fold_lemma
+
+theorem fold_s_subr_sub (h1 : x.ssubOverflow a = false) (h2 : (x - a).ssubOverflow b = false) :
+    (!a.saddOverflow b && x.ssubOverflow (a + b)) = false := by bv_fold_lemma
+
+theorem fold_u_subr_sub (h1 : x.usubOverflow a = false) (h2 : (x - a).usubOverflow b = false) :
+    (!a.uaddOverflow b && x.usubOverflow (a + b)) = false := by bv_fold_lemma
+
+theorem fold_s_add_subl (h1 : b.saddOverflow x = false) (h2 : a.ssubOverflow (b + x) = false) :
+    (!a.ssubOverflow b && (a - b).ssubOverflow x) = false := by bv_fold_lemma
+
+theorem fold_u_add_subl (h1 : b.uaddOverflow x = false) (h2 : a.usubOverflow (b + x) = false) :
+    (!a.usubOverflow b && (a - b).usubOverflow x) = false := by bv_fold_lemma
+
+theorem fold_s_add_sub_lt (h1 : a.saddOverflow x = false) (h2 : (a + x).ssubOverflow b = false) :
+    (!b.ssubOverflow a && x.ssubOverflow (b - a)) = false := by bv_fold_lemma
+
+theorem fold_u_add_sub_lt (h1 : a.uaddOverflow x = false) (h2 : (a + x).usubOverflow b = false) :
+    (!b.usubOverflow a && x.usubOverflow (b - a)) = false := by bv_fold_lemma
+
+theorem fold_s_add_sub_ge (h1 : a.saddOverflow x = false) (h2 : (a + x).ssubOverflow b = false) :
+    (!a.ssubOverflow b && x.saddOverflow (a - b)) = false := by bv_fold_lemma
+
+theorem fold_u_add_sub_ge (h1 : a.uaddOverflow x = false) (_h2 : (a + x).usubOverflow b = false) :
+    (!a.usubOverflow b && x.uaddOverflow (a - b)) = false := by bv_fold_lemma
+
+end
+
+/-- The value of a folded operation: that of the term, as the condition does not hold. -/
+theorem fold_goal {D : Kanon.Dom} [Values D] {n : Nat} {c : Bool} {A B : BitVec n} (hAB : A = B)
+    (hc : c = false) :
+    Option.map (bv (D := D) n) (if c = true then none else some A) = some (bv n B) := by
+  subst hAB hc; rfl
+
+open Lean Meta Elab Tactic in
+/-- Splits the flags of the checked operations of the goal (`generalize` then `cases`). -/
+partial def foldFlags : TacticM Unit := do
+  let some t ← withMainContext do
+      let e ← instantiateMVars (← getMainTarget)
+      return e.find? (fun t => (t.isAppOfArity ``CoreMod.Checked.signed 1 ||
+        t.isAppOfArity ``CoreMod.Checked.unsigned 1) && !t.hasLooseBVars)
+    | return
+  let ts ← withMainContext (Term.exprToSyntax t)
+  let b := mkIdent `kanon_f
+  evalTactic (← `(tactic| generalize $ts:term = $b:ident at *))
+  evalTactic (← `(tactic| cases $b:ident))
+  let gs ← getGoals
+  let mut out := []
+  for g in gs do
+    setGoals [g]
+    evalTactic (← `(tactic| try simp only [Bool.false_and, Bool.and_false, Bool.true_and,
+      Bool.false_or, Bool.or_false] at *))
+    unless (← getGoals).isEmpty do foldFlags
+    out := out ++ (← getGoals)
+  setGoals out
+
+open Lean Elab Tactic in
+elab "bv_fold_flags" : tactic => foldFlags
+
+open Lean Elab Tactic in
+/-- Splits the conjunctions of the hypotheses. -/
+elab "bv_fold_cases_and" : tactic => liftMetaTactic1 fun g => some <$> g.casesAnd
+
+set_option hygiene false in
+/-- Closes the value goals of a folding of constants: the equality of the bit-vectors, and the
+non-overflow of the folded operation, flag by flag (`fold_*`). -/
+macro "bv_fold_close" : tactic => `(tactic| (
+  (try (repeat' (first
+    | (simp only [BitvecMod.ckOp_some, BitvecMod.ckOp_none_l, BitvecMod.ckOp_none_r,
+        Option.some.injEq, reduceCtorEq, Option.map_none, Option.map_some] at e)
+    | split at e)))
+  all_goals (try subst e)
+  all_goals (try bv_arith_lit_ops)
+  all_goals refine fold_goal ?_ ?_
+  all_goals first
+    | ac_rfl
+    | (simp only [BitVec.sub_eq_add_neg, BitVec.neg_add, BitVec.neg_neg]; ac_rfl)
+    | (simp (disch := omega) only [sovf_cond, ssub_cond, uovf_cond, usub_cond]
+       bv_fold_flags
+       all_goals (try simp only [Bool.not_eq_true, Bool.or_eq_false_iff] at *)
+       all_goals bv_fold_cases_and
+       all_goals (try refine ⟨?_, ?_⟩)
+       all_goals first
+         | with_reducible (apply fold_s_add_add <;> assumption)
+         | with_reducible (apply fold_u_add_add <;> assumption)
+         | with_reducible (apply fold_s_sub_add <;> assumption)
+         | with_reducible (apply fold_u_sub_add <;> assumption)
+         | with_reducible (apply fold_s_subr_add <;> assumption)
+         | with_reducible (apply fold_u_subr_add <;> assumption)
+         | with_reducible (apply fold_s_sub_sub <;> assumption)
+         | with_reducible (apply fold_u_sub_sub <;> assumption)
+         | with_reducible (apply fold_s_subr_sub <;> assumption)
+         | with_reducible (apply fold_u_subr_sub <;> assumption)
+         | with_reducible (apply fold_s_add_subl <;> assumption)
+         | with_reducible (apply fold_u_add_subl <;> assumption)
+         | with_reducible (apply fold_s_add_sub_lt <;> assumption)
+         | with_reducible (apply fold_u_add_sub_lt <;> assumption)
+         | with_reducible (apply fold_s_add_sub_ge <;> assumption)
+         | with_reducible (apply fold_u_add_sub_ge <;> assumption))))
+
+/-- An arm that folds constants: `bv_arith` with the closer `bv_fold_close`. -/
+macro "bv_fold" : tactic => `(tactic| (
+  (try intro _)
+  intros
+  kanon_rule_lift
+  all_goals (try bv_vacuous)
+  all_goals kanon_on_refines (
+    (try dsimp only)
+    bv_split_ifs
+    all_goals (try kanon_lift_body)
+    all_goals (try simp only [kanon_spec, kanon_body]))
+  all_goals kanon_on_refines (
+    refine Kanon.Sem.Refines.intro ?_ ?_
+    · bv_arith_wt
+    bv_arith_sem_core
+    all_goals bv_fold_close)))
 
 /-! ## The functions that `bv_arith` proves, and the commutativity of `AddOvf` and `MulOvf`
 
